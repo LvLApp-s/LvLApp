@@ -4035,11 +4035,7 @@ def admin_dashboard():
         
     # Helper to check token with development fallback
     def is_token_valid(token):
-        expected = os.getenv("LVL_ADMIN_TOKEN", "")
-        if not expected:
-            expected = "admin123" # Secure fallback for local testing
-        import secrets
-        return bool(token and secrets.compare_digest(str(token), expected))
+        return admin_token_is_valid(token)
 
     # Authenticate check from session
     session_token = session.get('admin_token')
@@ -5244,9 +5240,7 @@ def serve_verification_doc(filename):
     session_token = session.get('admin_token')
     is_admin = False
     if session_token:
-        expected = os.getenv("LVL_ADMIN_TOKEN", "admin123")
-        import secrets
-        is_admin = secrets.compare_digest(str(session_token), expected)
+        is_admin = admin_token_is_valid(session_token)
 
     if not is_admin:
         try:

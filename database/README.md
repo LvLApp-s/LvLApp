@@ -2,6 +2,24 @@
 
 The active application uses Supabase/PostgreSQL through `app.py`.
 
+For a fresh Supabase project, run the SQL files in this order:
+
+1. `000_base_schema.sql`
+2. `community_schema.sql`
+3. `migrations/001_product_hardening.sql`
+4. `migrations/002_reels.sql`
+5. `migrations/004_streaks.sql`
+6. `migrations/005_oauth_identity.sql`
+7. `migrations/005_reel_notifications.sql`
+8. `migrations/006_password_reset_tokens.sql`
+9. `migrations/007_comment_interactions.sql`
+10. `migrations/008_careers_schema.sql`
+11. `migrations/009_messages_attachments_deletion.sql`
+12. `migrations/010_contact_suggestions_verification.sql`
+
+`migrations/003_safety_and_demo.sql` is optional demo seed data. Do not run it in production unless you intentionally want demo users/posts.
+
+- `000_base_schema.sql` contains the core app tables required by `app.py`: users, posts, comments, likes, reposts, follows, friendships, messages, notifications, and XP events.
 - `community_schema.sql` contains the current community-related Supabase tables.
 - `migrations/001_product_hardening.sql` adds current production hardening columns, indexes, unique constraints, media support, onboarding fields, and safety-action tables.
 - `migrations/002_reels.sql` adds the first-class Reels tables.

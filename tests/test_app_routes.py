@@ -79,6 +79,15 @@ class AppRouteTests(unittest.TestCase):
         self.assertEqual(source.count("def dedupe_timeline_posts("), 1)
         self.assertEqual(source.count("def create_notification("), 1)
 
+    def test_admin_token_requires_configured_secret(self):
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertFalse(zapp.admin_token_is_valid("admin123"))
+            self.assertFalse(zapp.admin_token_is_valid(""))
+
+        with patch.dict(os.environ, {"LVL_ADMIN_TOKEN": "secret"}, clear=True):
+            self.assertTrue(zapp.admin_token_is_valid("secret"))
+            self.assertFalse(zapp.admin_token_is_valid("admin123"))
+
     def test_recent_duplicate_submission_queries_same_actor_text_and_window(self):
         class Result:
             data = [{"id": 99}]
