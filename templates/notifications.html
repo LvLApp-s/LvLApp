@@ -1,0 +1,97 @@
+{% extends "layout.html" %}
+{% set active_page = "notifications" %}
+{% set show_highlights = True %}
+{% set title = "Notifications" %}
+
+{% block content %}
+<header class="page-header">
+  <div>
+    <h1 data-i18n="notif_alerts_title">Alerts</h1>
+    <p data-i18n="notif_alerts_desc">Short grouped updates for likes, comments, follows, messages, and high-fives.</p>
+  </div>
+  <form action="{{ url_for('mark_notifications_read') }}" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="outline-button" type="submit" data-i18n="notif_mark_read">Mark read</button>
+  </form>
+</header>
+
+<section class="feed">
+  {% if not notifications %}
+    <div class="empty-state">
+      <h2 data-i18n="notif_empty">No notifications yet</h2>
+      <p data-i18n="notif_empty_sub">When people interact with you or your posts, you'll see it here.</p>
+    </div>
+  {% endif %}
+  
+  {% for notification in notifications %}
+    <article class="notification-item {% if not notification.is_read %}unread{% endif %}">
+      <div class="notification-icon type-{{ notification.type }}">
+        {% if notification.type == 'like' %}❤️{% endif %}
+        {% if notification.type == 'reel_like' %}❤️{% endif %}
+        {% if notification.type == 'follow' %}👤{% endif %}
+        {% if notification.type == 'repost' %}🔁{% endif %}
+        {% if notification.type == 'comment' %}💬{% endif %}
+        {% if notification.type == 'comment_reply' %}💬{% endif %}
+        {% if notification.type == 'comment_like' %}❤️{% endif %}
+        {% if notification.type == 'comment_repost' %}🔁{% endif %}
+        {% if notification.type == 'reel_comment' %}💬{% endif %}
+        {% if notification.type == 'message' %}✉️{% endif %}
+        {% if notification.type == 'friend_request' %}🤝{% endif %}
+        {% if notification.type == 'friend_accept' %}✓{% endif %}
+        {% if notification.type == 'high_five' %}🖐{% endif %}
+      </div>
+      <div class="notification-body">
+        <div class="notification-header">
+          <a href="{{ url_for('profile', username=notification.actor_username) }}" class="actor-link">
+            <strong>{{ notification.actor_summary or notification.actor_name }}</strong>
+          </a>
+          <span class="notification-text">
+            {% if notification.type == 'like' %}<span data-i18n="notif_like">liked your post</span>
+            {% elif notification.type == 'reel_like' %}<span data-i18n="notif_reel_like">liked your reel</span>
+            {% elif notification.type == 'repost' %}<span data-i18n="notif_repost">reposted your post</span>
+            {% elif notification.type == 'comment' %}<span data-i18n="notif_comment">commented on your post</span>
+            {% elif notification.type == 'comment_reply' %}<span data-i18n="notif_comment_reply">replied to your comment</span>
+            {% elif notification.type == 'comment_like' %}<span data-i18n="notif_comment_like">liked your comment</span>
+            {% elif notification.type == 'comment_repost' %}<span data-i18n="notif_comment_repost">reposted your comment</span>
+            {% elif notification.type == 'reel_comment' %}<span data-i18n="notif_reel_comment">commented on your reel</span>
+            {% elif notification.type == 'follow' %}<span data-i18n="notif_follow">followed you</span>
+            {% elif notification.type == 'friend_request' %}<span data-i18n="notif_friend_request">sent you a friend request</span>
+            {% elif notification.type == 'friend_accept' %}<span data-i18n="notif_friend_accept">accepted your friend request</span>
+            {% elif notification.type == 'message' %}<span data-i18n="notif_message">sent you a message</span>
+            {% elif notification.type == 'high_five' %}<span data-i18n="notif_high_five">high-fived you</span>
+            {% else %}{{ notification.type }}
+            {% endif %}
+          </span>
+          {% if notification.stack_count and notification.stack_count > 1 %}
+            <span class="notification-stack">{{ notification.stack_count }} <span data-i18n="notif_total">total</span></span>
+          {% endif %}
+          <span class="time">· {{ relative_time(notification.created_at) }}</span>
+        </div>
+        
+        {% if notification.post_id %}
+          <a href="{{ url_for('post', id=notification.post_id) }}" class="notification-action" data-i18n="notif_open_post">Open post</a>
+        {% elif notification.reel_id %}
+          <a href="{{ notification.reel_url or (url_for('reels') ~ '#reel-' ~ notification.reel_id) }}" class="notification-action" data-i18n="notif_open_clip">Open clip</a>
+        {% elif notification.type == 'message' %}
+          <a href="{{ notification.message_url or (url_for('messages', u=notification.actor_username) if notification.actor_username else url_for('messages')) }}" class="notification-action" data-i18n="notif_open_message">Open message</a>
+        {% elif notification.type == 'friend_request' and notification.friendship_status == 'pending' and notification.friendship_action_user_id != viewer.id %}
+          <div class="notification-actions">
+            <form action="{{ url_for('respond_friend_request') }}" method="post">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="target_id" value="{{ notification.actor_id }}">
+              <input type="hidden" name="decision" value="accept">
+              <button type="submit" class="primary-button small" data-i18n="notif_accept">Accept</button>
+            </form>
+            <form action="{{ url_for('respond_friend_request') }}" method="post">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="target_id" value="{{ notification.actor_id }}">
+              <input type="hidden" name="decision" value="decline">
+              <button type="submit" class="outline-button small" data-i18n="notif_decline">Decline</button>
+            </form>
+          </div>
+        {% endif %}
+      </div>
+    </article>
+  {% endfor %}
+</section>
+{% endblock %}

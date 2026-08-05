@@ -1,0 +1,90 @@
+{% extends "layout.html" %}
+{% set active_page = "verification" %}
+{% set title = "Verification Request" %}
+
+{% block content %}
+<div class="settings-container">
+  <header class="page-header">
+    <div class="header-content">
+      <h1 data-i18n="verification_title">Request Profile Verification</h1>
+      <p data-i18n="verification_subtitle">Verify your identity to get a cyan verified badge on your profile.</p>
+    </div>
+  </header>
+
+  <div class="settings-content">
+    <section class="form-section">
+      {% if success %}
+        <div class="flash success" data-i18n="verification_success">Your verification request has been submitted successfully! Admins will review it soon.</div>
+      {% endif %}
+
+      {% if error %}
+        <div class="flash error">{{ error }}</div>
+      {% endif %}
+
+      {# ── Verification status card ── #}
+      {% if current_request %}
+        <div class="guide-form-card" style="margin-bottom: 24px; padding: 20px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--lvl-surface-2);">
+          <h3><span data-i18n="verification_status">Request Status</span>: 
+            <span class="admin-status-pill {% if current_request.status == 'Approved' %}active{% elif current_request.status == 'Rejected' %}danger{% endif %}" style="padding: 4px 8px; border-radius: var(--radius-pill); font-size: 14px;">
+              {{ current_request.status }}
+            </span>
+          </h3>
+          <p style="margin-top: 10px; color: var(--text-secondary);">
+            <span data-i18n="verification_submitted">Submitted on</span>: {{ current_request.created_at[:16] if current_request.created_at else '' }}
+          </p>
+          {% if current_request.status == 'Rejected' %}
+            <p style="margin-top: 10px; color: var(--lvl-danger-text-soft);">
+              <strong data-i18n="verification_admin_notes">Admin Notes:</strong> {{ current_request.admin_notes or 'No notes provided.' }}
+            </p>
+            {% if cooldown_active %}
+              <div class="flash info" style="margin-top: 14px;">
+                Reapplication cooldown is active. You can apply again in: {{ cooldown_remaining }}.
+              </div>
+            {% endif %}
+          {% elif current_request.status == 'Approved' %}
+            <div class="flash success" style="margin-top: 14px;" data-i18n="verification_approved">
+              Congratulations! Your profile has been verified. The cyan badge is active on your profile card.
+            </div>
+          {% else %}
+            <p style="margin-top: 10px; color: var(--text-secondary);" data-i18n="verification_pending">
+              Your request is under review. You will be notified once an admin takes action.
+            </p>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      {# ── Form to request verification ── #}
+      {% if not current_request or current_request.status == 'Rejected' and not cooldown_active %}
+        <div class="guide-form-card" style="padding: 20px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--lvl-surface-2);">
+          <h3>Submit Verification Request</h3>
+          <p style="color: var(--text-secondary); margin-bottom: 20px;">Please provide proof of identity, such as links to official websites or document uploads, and state why your account should be verified.</p>
+          
+          <form class="premium-form" action="{{ url_for('request_verification') }}" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <label class="form-group">
+              <span data-i18n="verification_reason">Reason for Verification</span>
+              <textarea name="reason" rows="4" required data-i18n-placeholder="verification_reason_placeholder" placeholder="Why should your profile be verified? (e.g. public figure, organization representative, content creator...)"></textarea>
+            </label>
+
+            <label class="form-group">
+              <span data-i18n="verification_links">Social Media or Official Website Links</span>
+              <input type="text" name="links" placeholder="e.g. https://twitter.com/username, https://mywebsite.com">
+            </label>
+
+            <label class="form-group">
+              <span data-i18n="verification_document">Proof / Identification Document (optional, Max 15 MB)</span>
+              <input type="file" name="document" accept=".jpg,.jpeg,.png,.pdf,.docx" class="admin-select-input" style="width: 100%; padding: 8px;">
+              <small style="color: var(--text-secondary); margin-top: 4px; display: block;" data-i18n="verification_document_hint">Upload passport, ID card, official letter, or other proof (PDF, JPG, PNG, DOCX).</small>
+            </label>
+
+            <div class="form-actions" style="margin-top: 24px;">
+              <button type="submit" class="primary-button" data-i18n="verification_submit">Submit Request</button>
+            </div>
+          </form>
+        </div>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}

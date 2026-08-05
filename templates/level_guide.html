@@ -1,0 +1,510 @@
+{% extends "layout.html" %}
+{% set active_page = "level_guide" %}
+{% set show_highlights = True %}
+{% set title = "LvL Guide" %}
+
+{% block content %}
+<header class="page-header level-guide-header">
+  <div>
+    <h1 data-i18n="nav_guide">LvL Guide</h1>
+    <p data-i18n="guide_header_desc">Earn XP, unlock profile style, and make your progress visible without reading a rule book.</p>
+  </div>
+</header>
+
+{# ── Tab Navigation ── #}
+<div class="guide-tabs-wrapper">
+  <nav class="guide-tabs" role="tablist" aria-label="LvL Guide sections">
+    <button class="guide-tab active" role="tab" aria-selected="true" aria-controls="tab-guide" id="tab-btn-guide" data-tab="guide" data-i18n="guide_tab_guide">LvL Guide</button>
+    <button class="guide-tab" role="tab" aria-selected="false" aria-controls="tab-contact" id="tab-btn-contact" data-tab="contact" data-i18n="guide_tab_contact">Contact</button>
+    <button class="guide-tab" role="tab" aria-selected="false" aria-controls="tab-verification" id="tab-btn-verification" data-tab="verification" data-i18n="tab_verify_profile">Verify Profile</button>
+    <button class="guide-tab" role="tab" aria-selected="false" aria-controls="tab-careers" id="tab-btn-careers" data-tab="careers" data-i18n="guide_tab_careers">Careers</button>
+  </nav>
+</div>
+
+{# ══════════ TAB: GUIDE ══════════ #}
+<div id="tab-guide" class="guide-tab-panel active" role="tabpanel" aria-labelledby="tab-btn-guide">
+<section class="level-guide-page">
+  <section class="level-guide-hero">
+    <div>
+      <span class="panel-kicker" data-i18n="guide_hero_kicker">🎮 Progress system</span>
+      <h2 data-i18n="guide_hero_title">Use LvL like a social app. Level up like a game.</h2>
+      <p data-i18n="guide_hero_desc">Posting, replying, liking, messaging, and high-fiving all feed your XP track. Higher LvLs unlock style rewards that make your profile feel earned.</p>
+    </div>
+    <div class="level-guide-score-card">
+      <span data-i18n="guide_score_label">⚡ Score track</span>
+      <strong data-i18n="guide_score_value">XP → LvL → Rewards</strong>
+      <p data-i18n="guide_score_desc">Achievements are display badges for now. They show progress, but they do not add bonus XP.</p>
+    </div>
+  </section>
+
+  <section class="level-guide-panel level-path-panel" aria-label="How LvL works">
+    <div class="section-heading">
+      <h3 data-i18n="guide_how_title">How it works</h3>
+      <p data-i18n="guide_how_desc">Three simple steps: interact, fill the bar, unlock a visible reward.</p>
+    </div>
+    <div class="level-step-grid">
+      <article class="level-step-card">
+        <span aria-hidden="true">💬</span>
+        <strong data-i18n="guide_step1_title">1. Join in</strong>
+        <p data-i18n="guide_step1_desc">Post, reply, like, repost, message, or high-five someone.</p>
+      </article>
+      <article class="level-step-card">
+        <span aria-hidden="true">⚡</span>
+        <strong data-i18n="guide_step2_title">2. Gain XP</strong>
+        <p data-i18n="guide_step2_desc">Useful activity fills your LvL bar and helps your profile grow.</p>
+      </article>
+      <article class="level-step-card">
+        <span aria-hidden="true">🏅</span>
+        <strong data-i18n="guide_step3_title">3. Show rewards</strong>
+        <p data-i18n="guide_step3_desc">Unlock badges, borders, colors, titles, and future icon recolors.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="level-guide-panel">
+    <div class="section-heading">
+      <h3 data-i18n="guide_earn_title">Earn XP By</h3>
+      <p data-i18n="guide_earn_desc">Small actions add up. The app should reward real interaction, not spam.</p>
+    </div>
+    <div class="xp-rule-grid">
+      {% set xp_icons = ['📝', '💬', '👍', '🔁', '👋', '🎥', '🔥'] %}
+      {% for reward in xp_rewards %}
+        <article class="xp-rule-card">
+          <i aria-hidden="true">{{ xp_icons[loop.index0 % xp_icons|length] }}</i>
+          <strong>+{{ reward.points }} XP</strong>
+          <span data-i18n="xp_reward_{{ loop.index0 }}_label">{{ reward.label }}</span>
+          <p data-i18n="xp_reward_{{ loop.index0 }}_desc">{{ reward.description }}</p>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="level-guide-panel">
+    <div class="section-heading">
+      <h3 data-i18n="guide_rewards_title">LvL Rewards</h3>
+      <p data-i18n="guide_rewards_desc">Your public profile gets more recognizable as you climb.</p>
+    </div>
+    <div class="reward-ladder">
+      {% for reward in level_rewards %}
+        <article class="reward-ladder-card">
+          <span>LvL {{ reward.level }}</span>
+          <strong data-i18n="lvl_reward_{{ loop.index0 }}_label">{{ reward.label }}</strong>
+          <p data-i18n="xp_reward_{{ loop.index0 }}_desc">{{ reward.description }}</p>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="level-guide-panel reward-roadmap-panel">
+    <div class="section-heading">
+      <h3 data-i18n="guide_roadmap_title">Reward Roadmap</h3>
+      <p data-i18n="guide_roadmap_desc">This is the clean product table for what each reward changes visually.</p>
+    </div>
+    <div class="reward-roadmap" role="table" aria-label="LvL reward roadmap">
+      <div class="reward-roadmap-row reward-roadmap-head" role="row">
+        <span role="columnheader" data-i18n="guide_lvl_col">LvL</span>
+        <span role="columnheader" data-i18n="guide_reward_col">Reward</span>
+        <span role="columnheader" data-i18n="guide_type_col">Type</span>
+        <span role="columnheader" data-i18n="guide_visual_col">Visual change</span>
+        <span role="columnheader" data-i18n="guide_why_col">Why it exists</span>
+      </div>
+      {% for item in reward_product_table %}
+        <article class="reward-roadmap-row" role="row">
+          <span class="reward-level-chip" role="cell">{{ item.level }}</span>
+          <strong role="cell" data-i18n="lvl_roadmap_{{ loop.index0 }}_reward">{{ item.reward }}</strong>
+          <span class="reward-type-pill" role="cell" data-i18n="lvl_roadmap_{{ loop.index0 }}_type">{{ item.type }}</span>
+          <p role="cell" data-i18n="lvl_roadmap_{{ loop.index0 }}_visual">{{ item.visual }}</p>
+          <p role="cell" data-i18n="lvl_roadmap_{{ loop.index0 }}_purpose">{{ item.purpose }}</p>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="level-guide-panel">
+    <div class="section-heading">
+      <h3 data-i18n="guide_requirements_title">Level Requirements</h3>
+      <p data-i18n="guide_requirements_desc">Total XP needed for each LvL.</p>
+    </div>
+    <div class="level-requirement-grid">
+      {% for item in level_requirements %}
+        <div>
+          <span>LvL {{ item.level }}</span>
+          <strong>{{ item.xp }} XP</strong>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="level-guide-panel">
+    <div class="section-heading">
+      <h3 data-i18n="guide_achievements_title">Achievements</h3>
+      <p data-i18n="guide_achievements_desc">These badges appear on profiles so members can show their progress.</p>
+    </div>
+    <div class="achievement-guide-grid">
+      {% for achievement in achievements %}
+        <article>
+          <strong data-i18n="achievement_{{ achievement.id }}_name">{{ achievement.name }}</strong>
+          <p data-i18n="achievement_{{ achievement.id }}_desc">{{ achievement.description }}</p>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+</section>
+</div>
+
+{# ══════════ TAB: CONTACT ══════════ #}
+<div id="tab-contact" class="guide-tab-panel" role="tabpanel" aria-labelledby="tab-btn-contact" hidden>
+  <section class="level-guide-page guide-form-page">
+    <div class="guide-form-hero">
+      <h2 data-i18n="contact_title">Contact Us</h2>
+      <p data-i18n="contact_subtitle">Have a question, feedback, or suggestion? We'd love to hear from you.</p>
+    </div>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, msg in messages %}
+          {% if 'verification' not in msg %}
+            <div class="flash {{ category }}" style="margin-bottom: 20px;">{{ msg }}</div>
+          {% endif %}
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="guide-form-card">
+      <form id="contact-form" class="premium-form guide-contact-form" action="{{ url_for('guide_contact') }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-grid">
+          <label class="form-group">
+            <span data-i18n="contact_name">Full Name</span>
+            <input type="text" name="name" required placeholder="Full Name" value="{{ viewer.display_name if viewer else '' }}">
+          </label>
+          <label class="form-group">
+            <span data-i18n="contact_email">Email Address</span>
+            <input type="email" name="email" required placeholder="Email Address" value="{{ viewer.email if viewer else '' }}">
+          </label>
+        </div>
+
+        <label class="form-group">
+          <span data-i18n="contact_subject">Subject</span>
+          <select name="subject" required class="admin-select-input" style="width:100%; min-height:var(--control-lg); padding:12px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--lvl-surface-3); color:var(--text-primary); font:inherit;">
+            <option value="General Question" data-i18n-option="contact_subject_general">General Question</option>
+            <option value="Technical Support" data-i18n-option="contact_subject_tech">Technical Support</option>
+            <option value="Account Problem" data-i18n-option="contact_subject_account">Account Problem</option>
+            <option value="Verification Request" data-i18n-option="contact_subject_verification">Verification Request</option>
+            <option value="Report a Problem" data-i18n-option="contact_subject_report">Report a Problem</option>
+            <option value="Suggestion" data-i18n-option="contact_subject_suggestion">Suggestion</option>
+            <option value="Partnership" data-i18n-option="contact_subject_partnership">Partnership</option>
+            <option value="Other" data-i18n-option="contact_subject_other">Other</option>
+          </select>
+        </label>
+
+        <label class="form-group">
+          <span data-i18n="contact_message">Message</span>
+          <textarea name="message" rows="6" required placeholder="Write your message here..." data-i18n-placeholder="contact_message_placeholder"></textarea>
+        </label>
+        <div class="form-actions">
+          <button type="submit" class="primary-button" data-i18n="contact_send">Send Message</button>
+        </div>
+      </form>
+    </div>
+  </section>
+</div>
+
+{# ══════════ TAB: VERIFICATION ══════════ #}
+<div id="tab-verification" class="guide-tab-panel" role="tabpanel" aria-labelledby="tab-btn-verification" hidden>
+  <section class="level-guide-page guide-form-page">
+    <div class="guide-form-hero">
+      <h1 data-i18n="verification_title">Request Profile Verification</h1>
+      <p data-i18n="verification_subtitle">Verify your identity to get a cyan verified badge on your profile.</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, msg in messages %}
+          {% if 'verification' in msg or 'cooldown' in msg or 'reapply' in msg or 'Verify' in msg or 'Verify me' in msg %}
+            <div class="flash {{ category }}" style="margin-bottom: 20px;">{{ msg }}</div>
+          {% endif %}
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {# ── Verification status card ── #}
+    {% if current_request %}
+      <div class="guide-form-card" style="margin-bottom: 24px; padding: 20px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--lvl-surface-2);">
+        <h3>Request Status: 
+          <span class="admin-status-pill {% if current_request.status == 'Approved' %}active{% elif current_request.status == 'Rejected' %}danger{% endif %}" style="padding: 4px 8px; border-radius: var(--radius-pill); font-size: 14px;">
+            {{ current_request.status }}
+          </span>
+        </h3>
+        <p style="margin-top: 10px; color: var(--text-secondary);">
+          Submitted on: {{ current_request.created_at[:16] if current_request.created_at else '' }}
+        </p>
+        {% if current_request.status == 'Rejected' %}
+          <p style="margin-top: 10px; color: var(--lvl-danger-text-soft);">
+            <strong>Admin Notes:</strong> {{ current_request.admin_notes or 'No notes provided.' }}
+          </p>
+          {% if cooldown_active %}
+            <div class="flash info" style="margin-top: 14px;">
+              Reapplication cooldown is active. You can apply again in: {{ cooldown_remaining }}.
+            </div>
+          {% endif %}
+        {% elif current_request.status == 'Approved' %}
+          <div class="flash success" style="margin-top: 14px;">
+            Congratulations! Your profile has been verified. The cyan badge is active on your profile card.
+          </div>
+        {% else %}
+          <p style="margin-top: 10px; color: var(--text-secondary);">
+            Your request is under review. You will be notified once an admin takes action.
+          </p>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    {# ── Form to request verification ── #}
+    {% if not current_request or current_request.status == 'Rejected' and not cooldown_active %}
+      {% if viewer %}
+        <div class="guide-form-card">
+          <h3 data-i18n="verification_submit_title">Submit Verification Request</h3>
+          <p style="color: var(--text-secondary); margin-bottom: 20px;" data-i18n="verification_submit_desc">Please provide proof of identity, such as links to official websites or document uploads, and state why your account should be verified.</p>
+          
+          <form class="premium-form" action="{{ url_for('guide_verification') }}" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <label class="form-group">
+              <span data-i18n="verification_reason">Reason for Verification</span>
+              <textarea name="reason" rows="4" required placeholder="Why should your profile be verified? (e.g. public figure, organization representative, content creator...)" data-i18n-placeholder="verification_reason_placeholder"></textarea>
+            </label>
+
+            <label class="form-group">
+              <span data-i18n="verification_links">Social Media or Official Website Links</span>
+              <input type="text" name="links" placeholder="e.g. https://twitter.com/username, https://mywebsite.com">
+            </label>
+
+            <label class="form-group">
+              <span data-i18n="verification_document">Proof / Identification Document (optional, Max 15 MB)</span>
+              <input type="file" name="document" accept=".jpg,.jpeg,.png,.pdf,.docx" class="admin-select-input" style="width: 100%; padding: 8px;">
+              <small style="color: var(--text-secondary); margin-top: 4px; display: block;" data-i18n="verification_document_hint">Upload passport, ID card, official letter, or other proof (PDF, JPG, PNG, DOCX).</small>
+            </label>
+
+            <div class="form-actions" style="margin-top: 24px;">
+              <button type="submit" class="primary-button" data-i18n="verification_submit">Submit Request</button>
+            </div>
+          </form>
+        </div>
+      {% else %}
+        <div class="careers-no-positions">
+          <span>🔒</span>
+          <p>Please log in to submit a verification request.</p>
+          <a href="{{ url_for('auth') }}" class="primary-button" style="margin-top: 12px; display: inline-block;">Log In</a>
+        </div>
+      {% endif %}
+    {% endif %}
+  </section>
+</div>
+
+{# ══════════ TAB: CAREERS ══════════ #}
+<div id="tab-careers" class="guide-tab-panel" role="tabpanel" aria-labelledby="tab-btn-careers" hidden>
+  <section class="level-guide-page guide-form-page">
+    <div class="guide-form-hero">
+      <h2 data-i18n="careers_title">Join Our Team</h2>
+      <p data-i18n="careers_subtitle">We're building the future of social interaction. Come help us shape it.</p>
+    </div>
+
+    {# Open Positions #}
+    <div class="careers-positions-section">
+      <h3 data-i18n="careers_open">Open Positions</h3>
+      {% if open_positions %}
+        <div class="careers-positions-grid">
+          {% for pos in open_positions %}
+            <article class="careers-position-card">
+              <div class="careers-position-header">
+                <strong>{{ pos.title }}</strong>
+                <span class="careers-position-type {% if pos.type == 'Internship' %}careers-type-internship{% elif pos.type == 'Part-time' %}careers-type-parttime{% else %}careers-type-fulltime{% endif %}">{{ pos.type }}</span>
+              </div>
+              {% if pos.department %}
+                <p class="careers-position-dept">{{ pos.department }}</p>
+              {% endif %}
+              {% if pos.description %}
+                <p class="careers-position-desc">{{ pos.description }}</p>
+              {% endif %}
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="careers-no-positions">
+          <span aria-hidden="true">🔍</span>
+          <p data-i18n="careers_no_positions">No open positions at the moment.</p>
+          <p class="careers-no-positions-sub" data-i18n="careers_no_positions_sub">We're not actively hiring right now, but we're always happy to hear from talented people.</p>
+        </div>
+      {% endif %}
+    </div>
+
+    {# Application Form #}
+    <div class="guide-form-card careers-apply-card">
+      <h3 data-i18n="careers_apply_title">Apply Now</h3>
+      <p data-i18n="careers_apply_subtitle">Interested in joining LvL? Fill out the form below.</p>
+      <form id="careers-form" class="premium-form guide-careers-form" action="{{ url_for('guide_careers') }}" method="post" enctype="multipart/form-data" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="form-group">
+          <span data-i18n="careers_position">Position</span>
+          <input type="text" name="position" maxlength="120" required id="careers-position-input" data-i18n-placeholder="careers_position_placeholder" placeholder="Which role are you applying for?">
+        </label>
+        <div class="form-grid">
+          <label class="form-group">
+            <span data-i18n="careers_name">Full Name</span>
+            <input type="text" name="name" maxlength="120" required autocomplete="name" id="careers-name-input" data-i18n-placeholder="careers_name" placeholder="Full Name">
+          </label>
+          <label class="form-group">
+            <span data-i18n="careers_email">Email Address</span>
+            <input type="email" name="email" maxlength="255" required autocomplete="email" id="careers-email-input" data-i18n-placeholder="careers_email" placeholder="Email Address">
+          </label>
+        </div>
+        <label class="form-group">
+          <span data-i18n="careers_message">Cover Letter / Message</span>
+          <textarea name="message" rows="6" maxlength="3000" required id="careers-message-input" data-i18n-placeholder="careers_message_placeholder" placeholder="Tell us about yourself and why you want to join LvL..."></textarea>
+        </label>
+        <label class="form-group">
+          <span data-i18n="careers_cv">CV / Resume (optional)</span>
+          <input type="file" name="cv" accept=".pdf,.doc,.docx" id="careers-cv-input">
+          <small data-i18n="careers_cv_hint">PDF, DOC, or DOCX up to 5 MB</small>
+        </label>
+        {% if careers_success %}
+          <div class="guide-form-success" role="status" data-i18n="careers_success">Your application has been submitted! We'll review it and get back to you.</div>
+        {% endif %}
+        <div class="form-actions">
+          <button type="submit" class="primary-button" data-i18n="careers_submit">Submit Application</button>
+        </div>
+      </form>
+    </div>
+  </section>
+</div>
+
+<style>
+/* ── Guide Tab System ── */
+.guide-tabs-wrapper {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--lvl-black, #000);
+  border-bottom: 1px solid var(--lvl-border, rgba(255,255,255,0.08));
+  padding: 0 20px;
+}
+.guide-tabs {
+  display: flex;
+  gap: 4px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+.guide-tab {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 14px 18px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+  letter-spacing: 0.01em;
+}
+.guide-tab:hover { color: var(--text-primary); }
+.guide-tab.active {
+  color: var(--text-primary);
+  border-bottom-color: var(--lvl-cyan);
+}
+.guide-tab-panel { display: block; }
+.guide-tab-panel[hidden] { display: none; }
+
+/* ── Form Pages ── */
+.guide-form-page { padding: 32px 20px; max-width: 700px; margin: 0 auto; }
+.guide-form-hero { text-align: center; margin-bottom: 32px; }
+.guide-form-hero h2 { font-size: clamp(22px, 4vw, 32px); margin-bottom: 10px; }
+.guide-form-hero p { color: var(--text-secondary); }
+.guide-form-card {
+  background: var(--lvl-black-20, rgba(255,255,255,0.03));
+  border: 1px solid var(--lvl-border, rgba(255,255,255,0.08));
+  border-radius: 20px;
+  padding: 32px;
+  margin-bottom: 32px;
+}
+.guide-form-success {
+  background: var(--lvl-success-soft-10);
+  border: 1px solid var(--lvl-success-border);
+  color: var(--lvl-success);
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+/* ── Careers ── */
+.careers-positions-section { margin-bottom: 32px; }
+.careers-positions-section h3 { font-size: 18px; margin-bottom: 16px; }
+.careers-positions-grid { display: grid; gap: 16px; }
+.careers-position-card {
+  background: var(--lvl-black-20, rgba(255,255,255,0.03));
+  border: 1px solid var(--lvl-border, rgba(255,255,255,0.08));
+  border-radius: 14px;
+  padding: 20px 24px;
+}
+.careers-position-header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.careers-position-header strong { font-size: 16px; }
+.careers-position-type {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+  padding: 3px 10px; border-radius: 20px;
+}
+.careers-type-fulltime { background: rgba(0,240,255,0.12); color: var(--lvl-cyan); }
+.careers-type-internship { background: rgba(120,80,255,0.15); color: var(--lvl-purple); }
+.careers-type-parttime { background: rgba(255,200,0,0.12); color: var(--lvl-warning); }
+.careers-position-dept { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+.careers-position-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin: 0; }
+.careers-no-positions {
+  text-align: center; padding: 40px 20px;
+  background: var(--lvl-black-20, rgba(255,255,255,0.02));
+  border: 1px dashed var(--lvl-border, rgba(255,255,255,0.08));
+  border-radius: 16px;
+}
+.careers-no-positions span { font-size: 32px; display: block; margin-bottom: 12px; }
+.careers-no-positions p { color: var(--text-secondary); margin: 4px 0; }
+.careers-no-positions-sub { font-size: 13px; color: var(--text-muted) !important; }
+.careers-apply-card h3 { font-size: 20px; margin-bottom: 6px; }
+.careers-apply-card > p { color: var(--text-secondary); margin-bottom: 24px; font-size: 14px; }
+
+/* RTL support */
+[dir="rtl"] .guide-tabs { flex-direction: row-reverse; }
+[dir="rtl"] .guide-tab { border-bottom: 2px solid transparent; }
+[dir="rtl"] .guide-tab.active { border-bottom-color: var(--lvl-cyan); }
+[dir="rtl"] .form-grid { direction: rtl; }
+</style>
+
+<script>
+(function() {
+  // Tab switching
+  var tabs = document.querySelectorAll('.guide-tab');
+  var panels = document.querySelectorAll('.guide-tab-panel');
+
+  // Check URL hash for initial tab
+  var initTab = window.location.hash.replace('#', '') || 'guide';
+  function activateTab(name) {
+    tabs.forEach(function(t) {
+      var isActive = t.getAttribute('data-tab') === name;
+      t.classList.toggle('active', isActive);
+      t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+    panels.forEach(function(p) {
+      var show = p.id === 'tab-' + name;
+      p.hidden = !show;
+      p.classList.toggle('active', show);
+    });
+    history.replaceState(null, '', '#' + name);
+  }
+  activateTab(initTab);
+
+  tabs.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      activateTab(this.getAttribute('data-tab'));
+    });
+  });
+})();
+</script>
+{% endblock %}

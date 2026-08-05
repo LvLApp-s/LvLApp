@@ -1,0 +1,73 @@
+{% extends "layout.html" %}
+{% set active_page = "contact" %}
+{% set title = "Contact Us" %}
+
+{% block content %}
+<div class="settings-container">
+  <header class="page-header">
+    <div class="header-content">
+      <h1 data-i18n="contact_title">Contact Us</h1>
+      <p data-i18n="contact_subtitle">Have a question, feedback, or suggestion? We'd love to hear from you.</p>
+    </div>
+  </header>
+
+  <div class="settings-content">
+    <section class="form-section">
+      {% if success %}
+        <div class="flash success">
+          {% if thank_you_message %}
+            {{ thank_you_message }}
+          {% else %}
+            <span data-i18n="contact_success">Your message has been sent successfully! We'll get back to you soon.</span>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      {% if error %}
+        <div class="flash error">{{ error }}</div>
+      {% endif %}
+
+      {% if not success %}
+        <form class="premium-form" action="{{ url_for('contact') }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <div class="form-grid">
+            <label class="form-group">
+              <span data-i18n="contact_name">Full Name</span>
+              <input type="text" name="name" required placeholder="John Doe" value="{{ viewer.display_name if viewer else '' }}">
+            </label>
+
+            <label class="form-group">
+              <span data-i18n="contact_email">Email Address</span>
+              <input type="email" name="email" required placeholder="john@example.com" value="{{ viewer.email if viewer else '' }}">
+            </label>
+          </div>
+
+          <label class="form-group">
+            <span data-i18n="contact_subject">Subject</span>
+            <select name="subject" required class="admin-select-input" style="width:100%; min-height:var(--control-lg); padding:12px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--lvl-surface-3); color:var(--text-primary); font:inherit;">
+              <option value="General Question" data-i18n-option="contact_subject_general">General Question</option>
+              <option value="Technical Support" data-i18n-option="contact_subject_tech">Technical Support</option>
+              <option value="Account Problem" data-i18n-option="contact_subject_account">Account Problem</option>
+              <option value="Verification Request" data-i18n-option="contact_subject_verification">Verification Request</option>
+              <option value="Report a Problem" data-i18n-option="contact_subject_report">Report a Problem</option>
+              <option value="Suggestion" data-i18n-option="contact_subject_suggestion">Suggestion</option>
+              <option value="Partnership" data-i18n-option="contact_subject_partnership">Partnership</option>
+              <option value="Other" data-i18n-option="contact_subject_other">Other</option>
+            </select>
+          </label>
+
+          <label class="form-group">
+            <span data-i18n="contact_message">Message</span>
+            <textarea name="message" rows="6" required data-i18n-placeholder="contact_message_placeholder" placeholder="Write your message here..."></textarea>
+          </label>
+
+          <div class="form-actions" style="margin-top: 24px;">
+            <button type="submit" class="primary-button" data-i18n="contact_send">Send Message</button>
+          </div>
+        </form>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,58 @@
+/* Phone navigation: no sidebar drawer, account actions live in bottom nav. */
+@media (max-width: 767px) {
+  .left-rail-wrapper,
+  .left-rail-wrapper:has(.left-rail.menu-open),
+  .left-rail-wrapper:has(.left-rail.mobile-menu-open) {
+    display: contents !important;
+    width: auto !important;
+  }
+
+  .left-rail,
+  .left-rail.menu-open,
+  .left-rail.mobile-menu-open {
+    display: none !important;
+  }
+}
+
+.mobile-account-menu {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .mobile-account-menu {
+    position: fixed;
+    right: max(10px, env(safe-area-inset-right));
+    bottom: calc(82px + env(safe-area-inset-bottom));
+    z-index: 1200;
+    width: min(220px, calc(100vw - 20px));
+    padding: 8px;
+    border: 1px solid var(--lvl-white-12);
+    border-radius: var(--radius-lg);
+    background: var(--lvl-black-94);
+    box-shadow: 0 18px 44px var(--lvl-black-72);
+    backdrop-filter: blur(18px);
+  }
+
+  .mobile-account-menu:not([hidden]) {
+    display: grid;
+    gap: 4px;
+  }
+
+  .mobile-account-menu a {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .mobile-account-menu a:hover,
+  .mobile-account-menu a:focus-visible {
+    background: var(--hover-bg);
+    text-decoration: none;
+    outline: none;
+  }
+}

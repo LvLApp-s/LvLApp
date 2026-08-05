@@ -1,0 +1,472 @@
+/* ── Responsive Design System ─────────────────────────────────────────────
+   Breakpoints:
+   Mobile portrait  : ≤ 599px
+   Mobile landscape : 600px – 767px
+   Tablet portrait  : 768px – 767px  (iPad portrait → mobile nav shows)
+   Tablet landscape : 768px – 1199px (iPad landscape → collapsed sidebar)
+   Desktop          : ≥ 1200px       (full sidebar + timeline + right rail)
+   ────────────────────────────────────────────────────────────────────── */
+
+/* ═══════════════════════════════════════════════════════════════════════
+   TABLET (768px – 1199px): Collapsed icon-only sidebar
+   ═══════════════════════════════════════════════════════════════════════ */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .app-shell {
+    max-width: 100vw;
+  }
+
+  /* Collapsed sidebar — icon-only */
+  .left-rail {
+    width: 80px;
+    align-items: center;
+    padding: 14px 8px;
+  }
+
+  .left-rail .nav-label,
+  .left-rail .brand-text,
+  .left-rail .mini-profile div,
+  .left-rail .logout-link {
+    display: none;
+  }
+
+  .left-rail .nav-list a {
+    width: var(--control-lg);
+    height: var(--control-lg);
+    padding: 0;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .left-rail .compose-link {
+    width: var(--control-lg);
+    height: var(--control-lg);
+    padding: 0;
+    font-size: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 10px auto;
+  }
+
+  .left-rail .compose-link::before {
+    content: '+';
+    font-size: 24px;
+    font-weight: 700;
+  }
+
+  /* Timeline expands to fill space */
+  .timeline {
+    width: min(640px, calc(100vw - 80px - 280px));
+    flex: 1;
+  }
+
+  /* Right rail narrower */
+  .right-rail {
+    width: 280px;
+    padding: 0 14px;
+  }
+
+  /* Right rail content adjustments */
+  .highlight-scroll-wrap {
+    max-height: 180px;
+  }
+
+  .trends-scroll-wrap {
+    max-height: 320px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DESKTOP (≥ 1200px): Full layout
+   ═══════════════════════════════════════════════════════════════════════ */
+@media (min-width: 1200px) {
+  .app-shell {
+    max-width: 1360px;
+  }
+
+  .timeline {
+    width: min(680px, calc(100vw - var(--shell-left-expanded) - var(--shell-right)));
+  }
+}
+
+@media (min-width: 1440px) {
+  .timeline {
+    width: min(720px, calc(100vw - 300px - 380px));
+  }
+
+  .right-rail {
+    width: 360px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MOBILE LANDSCAPE (600px – 767px): Bottom nav, no sidebar
+   ═══════════════════════════════════════════════════════════════════════ */
+@media (min-width: 600px) and (max-width: 767px) {
+  /* Timeline fills full width minus safe padding */
+  .timeline {
+    width: 100%;
+    max-width: 680px;
+    margin: 0 auto;
+    border-right: none;
+  }
+
+  /* Hide desktop left rail entirely */
+  .left-rail-wrapper {
+    display: none;
+  }
+
+  /* Hide right rail on tablets to give more reading room */
+  .right-rail-wrapper {
+    display: none;
+  }
+
+  /* App shell fills viewport */
+  .app-shell {
+    max-width: 100vw;
+    justify-content: center;
+  }
+
+  /* Feed max-width on tablet */
+  .feed {
+    max-width: 100%;
+  }
+
+  /* Post cards expand properly on tablet */
+  .post {
+    padding: 14px 16px;
+  }
+
+  /* Profile layout on tablet */
+  .profile-header {
+    padding: 0 16px;
+  }
+
+  .profile-stats {
+    gap: 18px;
+  }
+
+  /* Settings page on tablet — single column but wider */
+  .settings-container {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* Messages on tablet — two-pane layout */
+  .timeline-messages {
+    height: calc(100dvh - 64px - 76px - env(safe-area-inset-bottom));
+  }
+
+  .timeline-messages .messages-container {
+    grid-template-columns: minmax(160px, 40vw) minmax(0, 1fr);
+  }
+
+  /* Community on tablet */
+  .community-container {
+    padding: 0 16px;
+  }
+
+  /* Guide on tablet */
+  .guide-container {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  /* Reel on tablet */
+  .reel-player-container {
+    max-height: 75vh;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MOBILE LANDSCAPE (600px – 767px)
+   ═══════════════════════════════════════════════════════════════════════ */
+@media (min-width: 600px) and (max-width: 767px) {
+  .timeline {
+    width: 100%;
+    border-right: none;
+  }
+
+  .left-rail-wrapper,
+  .right-rail-wrapper {
+    display: none;
+  }
+
+  .app-shell {
+    max-width: 100vw;
+  }
+
+  /* Reels — landscape phones can see more video */
+  .reel-player-container {
+    max-height: 100dvh;
+  }
+
+  /* Messages — landscape gives a bit more room */
+  .timeline-messages .messages-container {
+    grid-template-columns: minmax(120px, 35vw) minmax(0, 1fr);
+  }
+
+  /* Post cards on landscape mobile */
+  .post {
+    padding: 12px 14px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MOBILE PORTRAIT (≤ 599px): Full mobile
+   ═══════════════════════════════════════════════════════════════════════ */
+@media (max-width: 599px) {
+  .timeline {
+    width: 100%;
+    border-right: none;
+  }
+
+  .left-rail-wrapper,
+  .right-rail-wrapper {
+    display: none;
+  }
+
+  .app-shell {
+    max-width: 100vw;
+  }
+
+  /* Compact post cards */
+  .post {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .post-actions {
+    gap: 4px;
+  }
+
+  .post-action-link,
+  .post-action-button {
+    min-width: 40px;
+    padding: 0 6px;
+    font-size: 13px;
+  }
+
+  /* Compact avatar on small phones */
+  .avatar {
+    width: 36px;
+    height: 36px;
+  }
+
+  /* Profile on small phones */
+  .profile-stats {
+    gap: 10px;
+    font-size: 13px;
+  }
+
+  .profile-stats a {
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    text-align: center;
+  }
+
+  .profile-actions {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .profile-actions .outline-button {
+    font-size: 13px;
+    padding: 7px 12px;
+  }
+
+  /* Settings compact */
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-container {
+    padding-bottom: 100px;
+  }
+
+  /* Notifications compact */
+  .notification-item {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  /* Community compact */
+  .community-header h1 {
+    font-size: 20px;
+  }
+
+  /* Auth on small phones */
+  .auth-layout {
+    flex-direction: column;
+  }
+
+  .auth-hero {
+    display: none;
+  }
+
+  .auth-panel {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 0;
+  }
+
+  /* Messages full-screen on small phones */
+  .timeline-messages {
+    height: calc(100dvh - 64px - 76px - env(safe-area-inset-bottom));
+  }
+
+  .timeline-messages .messages-container {
+    grid-template-columns: minmax(100px, 32vw) minmax(0, 1fr);
+  }
+
+  /* Reel full-screen */
+  .reel-player-container {
+    max-height: calc(100dvh - 60px - 76px - env(safe-area-inset-bottom));
+  }
+
+  /* Search compact */
+  .search-results {
+    padding: 0 12px;
+  }
+
+  /* Guide compact */
+  .guide-container {
+    padding: 12px;
+  }
+
+  .guide-tab-panel {
+    padding: 12px 0;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   VERY SMALL PHONES (≤ 374px)
+   ═══════════════════════════════════════════════════════════════════════ */
+@media (max-width: 374px) {
+  .post-actions {
+    gap: 2px;
+  }
+
+  .post-action-link,
+  .post-action-button {
+    min-width: 34px;
+    padding: 0 4px;
+    font-size: 12px;
+  }
+
+  .profile-stats a strong {
+    font-size: 15px;
+  }
+
+  .profile-stats a span {
+    font-size: 11px;
+  }
+
+  .mobile-bottom-nav a {
+    min-height: 52px;
+  }
+
+  .nav-badge {
+    font-size: 8px;
+    min-width: 14px;
+    height: 14px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ORIENTATION: LANDSCAPE with short viewport
+   ═══════════════════════════════════════════════════════════════════════ */
+@media (max-height: 500px) and (max-width: 767px) {
+  .mobile-bottom-nav {
+    padding-block: 4px;
+  }
+
+  .mobile-bottom-nav a {
+    min-height: 44px;
+  }
+
+  .mobile-header {
+    min-height: 48px;
+    padding-block: 6px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SAFE AREA & NOTCH SUPPORT
+   ═══════════════════════════════════════════════════════════════════════ */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .mobile-bottom-nav {
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  }
+
+  @media (max-width: 767px) {
+    .timeline {
+      padding-bottom: calc(76px + env(safe-area-inset-bottom));
+    }
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SCREEN ROTATION: Prevent layout break on orientation change
+   ═══════════════════════════════════════════════════════════════════════ */
+@media screen {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   TABLET — specific component fixes
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Reel upload form on tablet */
+@media (min-width: 600px) and (max-width: 767px) {
+  .reel-upload-page {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 20px 16px;
+  }
+
+  /* Community tabs on tablet */
+  .community-tabs {
+    padding-inline: 16px;
+  }
+
+  /* Right-rail panels collapse gracefully on iPad */
+  .community-highlights.panel,
+  .community-trends.panel {
+    max-width: 100%;
+  }
+
+  /* Activity page on tablet */
+  .activity-item {
+    padding: 12px 16px;
+  }
+
+  /* Share modal on tablet */
+  .share-modal {
+    max-width: 480px;
+    width: 92vw;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   HOVER: Disable hover effects on touch-primary devices
+   ═══════════════════════════════════════════════════════════════════════ */
+@media (hover: none) and (pointer: coarse) {
+  .nav-list a:hover,
+  .post-action-button:hover,
+  .post-action-link:hover,
+  .outline-button:hover,
+  .primary-button:hover {
+    background: transparent;
+    text-decoration: none;
+  }
+
+  .post-action-button:active,
+  .post-action-link:active {
+    transform: scale(0.95);
+  }
+}

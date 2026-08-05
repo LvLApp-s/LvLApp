@@ -1,0 +1,24 @@
+LvL Social Media - Admin Panel Erişim Rehberi
+=============================================
+
+Sistemdeki yönetici (admin) paneline erişmek için aşağıdaki adımları izleyebilirsiniz:
+
+1. ERİŞİM URL'Sİ:
+Uygulama çalışırken tarayıcınızdan şu adrese gidin:
+http://127.0.0.1:5000/admin-dashboard
+(veya alanadiniz.com/admin-dashboard)
+
+2. GİRİŞ ŞİFRESİ (TOKEN):
+Admin paneline girmek için bir "Admin Token" gereklidir.
+Yerel test ortamı ve varsayılan geliştirici şifresi şudur:
+
+    admin123
+
+3. ŞİFREYİ DEĞİŞTİRME:
+Eğer bu şifreyi canlı ortam (production) için değiştirmek isterseniz veya kendi özel şifrenizi belirlemek isterseniz, projenin ana dizinindeki `.env` dosyasını açın (yoksa oluşturun) ve içine şu satırı ekleyin:
+
+LVL_ADMIN_TOKEN=benim_gizli_sifrem
+
+Bu işlemden sonra yeni şifreniz geçerli olacaktır.
+
+Not: Admin paneli üzerinden kullanıcı onaylarını, raporları, sistem loglarını, iletişim mesajlarını ve kariyer (iş) başvurularını yönetebilirsiniz.

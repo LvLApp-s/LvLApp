@@ -1,0 +1,621 @@
+{% extends "layout.html" %}
+{% set active_page = "admin" %}
+{% set title = "Admin Dashboard" %}
+
+{% block content %}
+<div class="settings-container admin-container" style="max-width: 900px; margin: 0 auto; padding: 20px 16px;">
+  <header class="page-header">
+    <div class="header-content">
+      <h1>Admin Dashboard</h1>
+      <p>System control panel for verification, reports, users, jobs, and suggestions.</p>
+    </div>
+  </header>
+
+  <div class="settings-content">
+    {% if not is_authenticated %}
+      {# ── Admin Login Form ── #}
+      <section class="form-section login-section">
+        <h3>Admin Authentication</h3>
+        <p>Please enter your system admin token to access the dashboard.</p>
+        <form class="premium-form" action="{{ url_for('admin_dashboard') }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="login">
+          <label class="form-group">
+            <span>Admin Token</span>
+            <input type="password" name="admin_token" required placeholder="Enter token...">
+          </label>
+          {% if login_error %}
+            <div class="flash error login-flash-error">{{ login_error }}</div>
+          {% endif %}
+          <div class="form-actions admin-form-actions">
+            <button type="submit" class="primary-button">Authenticate</button>
+          </div>
+        </form>
+      </section>
+    {% else %}
+      {# ── Authenticated Admin View ── #}
+      <div class="admin-tabs" style="display: flex; gap: 4px; overflow-x: auto; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); margin-bottom: 24px; scrollbar-width: none;">
+        <button class="guide-tab active" onclick="switchAdminTab('positions')">Jobs ({{ positions|length }})</button>
+        <button class="guide-tab" onclick="switchAdminTab('applications')">Apps ({{ applications|length }})</button>
+        <button class="guide-tab" onclick="switchAdminTab('messages')">Contacts ({{ contact_messages|length }})</button>
+        <button class="guide-tab" onclick="switchAdminTab('suggestions')">Suggestions ({{ suggestions|length }})</button>
+        <button class="guide-tab" onclick="switchAdminTab('verifications')">Verif ({{ verification_requests|length }})</button>
+        <button class="guide-tab" onclick="switchAdminTab('reports')">Reports ({{ safety_reports|length }})</button>
+        <button class="guide-tab" onclick="switchAdminTab('users')">Users ({{ system_users|length }})</button>
+        <button class="guide-tab" onclick="switchAdminTab('posts')">Posts ({{ system_posts|length }})</button>
+        <button class="guide-tab" onclick="switchAdminTab('logs')">Audit Logs</button>
+      </div>
+
+      {# ── SECTION 1: MANAGE JOB POSITIONS ── #}
+      <section id="admin-sec-positions" class="admin-section">
+        <div class="admin-section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h3>Job Positions</h3>
+          <button class="primary-button small" onclick="toggleAddPositionForm()">+ Add Position</button>
+        </div>
+
+        {# Add Position Form #}
+        <div id="add-position-form-container" class="guide-form-card add-position-form-card" style="display: none; margin-bottom: 24px; border: 1px solid var(--lvl-cyan); padding: 20px; border-radius: var(--radius-lg); background: var(--lvl-surface-2);">
+          <h4>Add New Position</h4>
+          <form class="premium-form" action="{{ url_for('admin_dashboard') }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="add_position">
+            
+            <div class="form-grid">
+              <label class="form-group">
+                <span>Title</span>
+                <input type="text" name="title" required placeholder="e.g. Senior Backend Engineer">
+              </label>
+              <label class="form-group">
+                <span>Department</span>
+                <input type="text" name="department" required placeholder="e.g. Engineering">
+              </label>
+            </div>
+            
+            <div class="form-grid">
+              <label class="form-group">
+                <span>Type</span>
+                <select name="type" required class="admin-select-input">
+                  <option value="Full-time">Full-time</option>
+                  <option value="Internship">Internship</option>
+                  <option value="Part-time">Part-time</option>
+                </select>
+              </label>
+              <label class="form-group">
+                <span>Status</span>
+                <select name="is_active" required class="admin-select-input">
+                  <option value="true">Active (Visible)</option>
+                  <option value="false">Inactive (Hidden)</option>
+                </select>
+              </label>
+            </div>
+
+            <label class="form-group">
+              <span>Description</span>
+              <textarea name="description" rows="4" required placeholder="Describe the role responsibilities..."></textarea>
+            </label>
+
+            <div class="form-actions" style="margin-top: 12px; display: flex; gap: 8px;">
+              <button type="button" class="outline-button small" onclick="toggleAddPositionForm()">Cancel</button>
+              <button type="submit" class="primary-button small">Save Position</button>
+            </div>
+          </form>
+        </div>
+
+        {# Positions List #}
+        {% if positions %}
+          <div class="careers-positions-grid" style="display: grid; gap: 16px;">
+            {% for pos in positions %}
+              <article class="careers-position-card admin-position-card" style="position: relative; padding: 20px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--lvl-surface-2);">
+                <div class="careers-position-header admin-position-header" style="padding-right: 120px;">
+                  <strong>{{ pos.title }}</strong>
+                  <span class="careers-position-type {% if pos.type == 'Internship' %}careers-type-internship{% elif pos.type == 'Part-time' %}careers-type-parttime{% else %}careers-type-fulltime{% endif %}">{{ pos.type }}</span>
+                  <span class="admin-status-pill {% if pos.is_active %}active{% endif %}">
+                    {{ 'Active' if pos.is_active else 'Inactive' }}
+                  </span>
+                </div>
+                <p class="careers-position-dept">{{ pos.department }}</p>
+                <p class="careers-position-desc admin-position-desc" style="white-space: pre-wrap; margin-top: 8px; font-size: 13px; color: var(--text-secondary);">{{ pos.description }}</p>
+                
+                <div class="admin-action-buttons" style="position: absolute; top: 20px; right: 20px; display: flex; gap: 8px;">
+                  <form action="{{ url_for('admin_dashboard') }}" method="post" class="admin-action-form" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="toggle_position">
+                    <input type="hidden" name="id" value="{{ pos.id }}">
+                    <button type="submit" class="outline-button small" style="padding: 4px 8px; font-size: 11px;">Toggle Status</button>
+                  </form>
+                  <form action="{{ url_for('admin_dashboard') }}" method="post" class="admin-action-form" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this job posting?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="delete_position">
+                    <input type="hidden" name="id" value="{{ pos.id }}">
+                    <button type="submit" class="danger-button small" style="padding: 4px 8px; font-size: 11px; border-radius: 8px;">Delete</button>
+                  </form>
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="careers-no-positions">
+            <span>📝</span>
+            <p>No job positions added yet.</p>
+          </div>
+        {% endif %}
+      </section>
+
+      {# ── SECTION 2: APPLICATIONS ── #}
+      <section id="admin-sec-applications" class="admin-section admin-sec-hidden">
+        <h3>Job Applications</h3>
+        {% if applications %}
+          <div class="admin-grid-container" style="display: grid; gap: 16px;">
+            {% for app in applications %}
+              <div class="guide-form-card admin-application-card" style="padding: 20px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--lvl-surface-2);">
+                <div class="admin-card-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
+                  <div>
+                    <h4 class="admin-card-title" style="margin: 0 0 4px 0; font-size: 16px;">{{ app.name }}</h4>
+                    <span class="admin-application-subtitle" style="font-size: 13px; color: var(--lvl-cyan); font-weight: bold;">Applied for: {{ app.position_title }}</span>
+                  </div>
+                  <span class="admin-card-time" style="font-size: 11px; color: var(--text-muted);">{{ app.created_at[:16] if app.created_at else '' }}</span>
+                </div>
+                
+                <div class="admin-card-body" style="margin-top: 12px; font-size: 13px; color: var(--text-secondary);">
+                  <div class="admin-body-row" style="margin-bottom: 6px;"><strong>Email:</strong> <a href="mailto:{{ app.email }}">{{ app.email }}</a></div>
+                  <div class="admin-body-row admin-message-box" style="margin-bottom: 12px; white-space: pre-wrap;"><strong>Cover Letter:</strong><br>{{ app.message }}</div>
+                  
+                  {% if app.cv_url %}
+                    <div>
+                      <strong>CV / Resume:</strong> 
+                      <a href="{{ url_for('static', filename='uploads/cvs/' ~ app.cv_url) }}" target="_blank" class="outline-button small admin-cv-btn" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; font-size: 12px; margin-left: 8px;">
+                        📄 View Resume
+                      </a>
+                    </div>
+                  {% else %}
+                    <div><strong>CV / Resume:</strong> <span class="admin-text-muted" style="color: var(--text-muted);">Not provided</span></div>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="careers-no-positions">
+            <span>📂</span>
+            <p>No job applications received yet.</p>
+          </div>
+        {% endif %}
+      </section>
+
+      {# ── SECTION 3: CONTACT MESSAGES ── #}
+      <section id="admin-sec-messages" class="admin-section admin-sec-hidden">
+        <h3>Contact Messages</h3>
+        {% if contact_messages %}
+          <div class="admin-grid-container" style="display: grid; gap: 16px;">
+            {% for msg in contact_messages %}
+              <div class="guide-form-card admin-message-card" style="padding: 20px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--lvl-surface-2);">
+                <div class="admin-card-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
+                  <div>
+                    <h4 class="admin-card-title" style="margin: 0 0 4px 0; font-size: 16px;">{{ msg.name }}</h4>
+                    <span class="admin-card-email" style="font-size: 13px; color: var(--text-secondary);"><a href="mailto:{{ msg.email }}">{{ msg.email }}</a></span>
+                  </div>
+                  <span class="admin-card-time" style="font-size: 11px; color: var(--text-muted);">{{ msg.created_at[:16] if msg.created_at else '' }}</span>
+                </div>
+                <div class="admin-card-body admin-message-text" style="white-space: pre-wrap; line-height: 1.5; margin-top: 12px; font-size: 13px; color: var(--text-secondary);">
+                  {{ msg.message }}
+                </div>
+                
+                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13px;">
+                  <div>
+                    <strong>Subject:</strong> {{ msg.subject or 'General Question' }}
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="careers-no-positions">
+            <span>✉️</span>
+            <p>No contact messages received yet.</p>
+          </div>
+        {% endif %}
+      </section>
+
+      {# ── SECTION 4: SUGGESTIONS ── #}
+      <section id="admin-sec-suggestions" class="admin-section admin-sec-hidden">
+        <h3>Suggestions Box</h3>
+        {% if suggestions %}
+          <div class="admin-grid-container" style="display: grid; gap: 16px;">
+            {% for msg in suggestions %}
+              <div class="guide-form-card admin-message-card" style="padding: 20px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--lvl-surface-2);">
+                <div class="admin-card-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
+                  <div>
+                    <h4 class="admin-card-title" style="margin: 0 0 4px 0; font-size: 16px;">{{ msg.name }}</h4>
+                    <span class="admin-card-email" style="font-size: 13px; color: var(--text-secondary);"><a href="mailto:{{ msg.email }}">{{ msg.email }}</a></span>
+                  </div>
+                  <span class="admin-card-time" style="font-size: 11px; color: var(--text-muted);">{{ msg.created_at[:16] if msg.created_at else '' }}</span>
+                </div>
+                <div class="admin-card-body admin-message-text" style="white-space: pre-wrap; line-height: 1.5; margin-top: 12px; font-size: 13px; color: var(--text-secondary);">
+                  {{ msg.message }}
+                </div>
+                
+                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13px;">
+                  <div>
+                    <strong>Status:</strong> 
+                    <span class="admin-status-pill {% if msg.status == 'New' or msg.status == 'Reviewed' or msg.status == 'Planned' %}active{% endif %}">
+                      {{ msg.status or 'New' }}
+                    </span>
+                  </div>
+                  <form action="{{ url_for('admin_dashboard') }}" method="post" style="display: flex; align-items: center; gap: 8px; margin: 0;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="update_suggestion_status">
+                    <input type="hidden" name="id" value="{{ msg.id }}">
+                    <select name="status" class="admin-select-input" style="padding: 4px 8px; font-size: 12px;">
+                      <option value="New" {% if msg.status == 'New' %}selected{% endif %}>New</option>
+                      <option value="Reviewed" {% if msg.status == 'Reviewed' %}selected{% endif %}>Reviewed</option>
+                      <option value="Planned" {% if msg.status == 'Planned' %}selected{% endif %}>Planned</option>
+                      <option value="Closed" {% if msg.status == 'Closed' %}selected{% endif %}>Closed</option>
+                    </select>
+                    <button type="submit" class="outline-button small" style="padding: 4px 8px; font-size: 11px;">Update</button>
+                  </form>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="careers-no-positions">
+            <span>💡</span>
+            <p>No user suggestions received yet.</p>
+          </div>
+        {% endif %}
+      </section>
+
+      {# ── SECTION 5: VERIFICATION REQUESTS ── #}
+      <section id="admin-sec-verifications" class="admin-section admin-sec-hidden">
+        <h3>Verification Requests</h3>
+        {% if verification_requests %}
+          <div class="admin-grid-container" style="display: grid; gap: 16px;">
+            {% for req in verification_requests %}
+              <div class="guide-form-card admin-message-card" style="padding: 20px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--lvl-surface-2);">
+                <div class="admin-card-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
+                  <div>
+                    <h4 class="admin-card-title" style="margin: 0 0 4px 0; font-size: 16px;">{{ req.user.display_name if req.user else 'Unknown' }} (@{{ req.user.username if req.user else '' }})</h4>
+                    <span class="admin-card-email" style="font-size: 13px; color: var(--text-secondary);">Status: 
+                      <span class="admin-status-pill {% if req.status == 'Approved' %}active{% elif req.status == 'Rejected' %}danger{% endif %}">
+                        {{ req.status }}
+                      </span>
+                    </span>
+                  </div>
+                  <span class="admin-card-time" style="font-size: 11px; color: var(--text-muted);">{{ req.created_at[:16] if req.created_at else '' }}</span>
+                </div>
+                <div class="admin-card-body" style="margin-top: 12px; font-size: 13px; color: var(--text-secondary);">
+                  <div class="admin-body-row" style="margin-bottom: 6px;"><strong>Reason:</strong><br>{{ req.reason }}</div>
+                  {% if req.links %}
+                    <div class="admin-body-row" style="margin-bottom: 6px;"><strong>Links:</strong> {{ req.links }}</div>
+                  {% endif %}
+                  {% if req.document_url %}
+                    <div class="admin-body-row" style="margin-bottom: 6px;">
+                      <strong>Document proof:</strong> 
+                      <a href="{{ req.document_url }}" target="_blank" class="outline-button small admin-cv-btn" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; font-size: 12px; margin-left: 0; margin-top: 4px;">
+                        📄 View Document
+                      </a>
+                    </div>
+                  {% endif %}
+                  
+                  {% if req.status == 'Pending' %}
+                    <form action="{{ url_for('admin_dashboard') }}" method="post" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color);">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="action" value="respond_verification">
+                      <input type="hidden" name="id" value="{{ req.id }}">
+                      
+                      <label class="form-group" style="display: block; margin-bottom: 8px;">
+                        <span style="font-weight: bold; display: block; margin-bottom: 4px;">Admin Notes</span>
+                        <input type="text" name="admin_notes" placeholder="Notes or rejection reason..." style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--bg-color); color: var(--text-primary);">
+                      </label>
+                      
+                      <div style="display: flex; gap: 8px; margin-top: 8px;">
+                        <button type="submit" name="status" value="Approved" class="primary-button small" style="background: var(--lvl-success); border-color: var(--lvl-success); color: var(--lvl-white); font-weight: bold; cursor: pointer; padding: 6px 12px; border-radius: 8px;">Approve</button>
+                        <button type="submit" name="status" value="Rejected" class="danger-button small" style="color: var(--lvl-white); font-weight: bold; cursor: pointer; padding: 6px 12px; border-radius: 8px;">Reject</button>
+                      </div>
+                    </form>
+                  {% else %}
+                    <div style="margin-top: 12px; color: var(--text-muted);">
+                      <strong>Admin Notes:</strong> {{ req.admin_notes or 'None' }}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="careers-no-positions">
+            <span>🛡️</span>
+            <p>No verification requests received yet.</p>
+          </div>
+        {% endif %}
+      </section>
+
+      {# ── SECTION 6: REPORTED POSTS ── #}
+      <section id="admin-sec-reports" class="admin-section admin-sec-hidden">
+        <h3>Reported Content & Safety</h3>
+        {% if safety_reports %}
+          <div class="admin-grid-container" style="display: grid; gap: 16px;">
+            {% for report in safety_reports %}
+              <div class="guide-form-card" style="padding: 20px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--lvl-surface-2); position: relative;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                  <div>
+                    <strong>Reporter:</strong> @{{ report.actor.username if report.actor else 'Unknown' }}<br>
+                    <strong>Reason for Report:</strong> <span style="color: var(--lvl-danger-text-soft);">{{ report.reason or 'No reason provided' }}</span>
+                  </div>
+                  <span style="font-size: 11px; color: var(--text-muted);">{{ report.created_at[:16] if report.created_at else '' }}</span>
+                </div>
+
+                {% if report.post %}
+                  <div style="background: var(--lvl-surface-3); border-radius: var(--radius-md); padding: 12px; border: 1px solid var(--border-color); margin-bottom: 16px;">
+                    <strong>Author:</strong> @{{ report.post.user.username if report.post.user else 'Unknown' }}<br>
+                    <p style="margin-top: 6px; font-size: 13px;">{{ report.post.content }}</p>
+                  </div>
+                {% else %}
+                  <p style="color: var(--text-muted); font-style: italic; margin-bottom: 16px;">Associated post was already deleted.</p>
+                {% endif %}
+
+                <div style="display: flex; gap: 8px;">
+                  <form action="{{ url_for('admin_dashboard') }}" method="post" style="margin: 0;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="dismiss_report">
+                    <input type="hidden" name="id" value="{{ report.id }}">
+                    <button type="submit" class="outline-button small">Dismiss Report</button>
+                  </form>
+
+                  {% if report.post %}
+                    <form action="{{ url_for('admin_dashboard') }}" method="post" style="margin: 0;" onsubmit="return confirm('Delete this post for everyone?');">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="action" value="delete_post_global">
+                      <input type="hidden" name="id" value="{{ report.post.id }}">
+                      <button type="submit" class="danger-button small" style="color: var(--lvl-white); padding: 6px 12px; border-radius: 8px;">Remove Post</button>
+                    </form>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="careers-no-positions">
+            <span>🛡️</span>
+            <p>No safety reports submitted yet.</p>
+          </div>
+        {% endif %}
+      </section>
+
+      {# ── SECTION 7: USER MANAGEMENT ── #}
+      <section id="admin-sec-users" class="admin-section admin-sec-hidden">
+        <h3>User Directory</h3>
+        <form method="get" action="{{ url_for('admin_dashboard') }}" style="display: flex; gap: 8px; margin-bottom: 20px;">
+          <input type="hidden" name="tab" value="users">
+          <input type="text" name="q_user" value="{{ q_user }}" placeholder="Search by name, nickname, or email..." style="flex: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--lvl-surface-2); color: var(--text-primary);">
+          <button type="submit" class="primary-button small" style="min-height: 40px; padding: 0 16px;">Search</button>
+        </form>
+
+        {% if system_users %}
+          <div class="admin-grid-container" style="display: grid; gap: 16px;">
+            {% for u in system_users %}
+              <div class="guide-form-card" style="padding: 20px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--lvl-surface-2);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
+                  <div>
+                    <strong>{{ u.display_name }}</strong> (@{{ u.username }})
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+                      Email: {{ u.email }} | Level: {{ u.level or 1 }} | XP: {{ u.total_xp or 0 }}
+                    </div>
+                  </div>
+                  <div style="display: flex; gap: 8px;">
+                    <span class="admin-status-pill {% if u.is_profile_verified %}active{% endif %}">
+                      {{ 'Verified' if u.is_profile_verified else 'Unverified' }}
+                    </span>
+                  </div>
+                </div>
+
+                <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color); display: flex; gap: 8px; flex-wrap: wrap;">
+                  <form action="{{ url_for('admin_dashboard') }}" method="post" style="margin: 0;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="toggle_user_verification">
+                    <input type="hidden" name="id" value="{{ u.id }}">
+                    <button type="submit" class="outline-button small">
+                      {{ 'Unverify Profile' if u.is_profile_verified else 'Verify Profile' }}
+                    </button>
+                  </form>
+
+                  <button type="button" class="outline-button small" onclick="openWarningModal('{{ u.id }}', '{{ u.display_name }}')">
+                    Warn User
+                  </button>
+
+                  <form action="{{ url_for('admin_dashboard') }}" method="post" style="margin: 0;" onsubmit="return confirm('Permanently delete user account? This cannot be undone.');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="delete_user_global">
+                    <input type="hidden" name="id" value="{{ u.id }}">
+                    <button type="submit" class="danger-button small" style="color: var(--lvl-white); padding: 6px 12px; border-radius: 8px;">Delete Account</button>
+                  </form>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="careers-no-positions">
+            <span>👤</span>
+            <p>No members found matching query.</p>
+          </div>
+        {% endif %}
+      </section>
+
+      {# ── SECTION 8: POST MANAGEMENT ── #}
+      <section id="admin-sec-posts" class="admin-section admin-sec-hidden">
+        <h3>Post Directory</h3>
+        <form method="get" action="{{ url_for('admin_dashboard') }}" style="display: flex; gap: 8px; margin-bottom: 20px;">
+          <input type="hidden" name="tab" value="posts">
+          <input type="text" name="q_post" value="{{ q_post }}" placeholder="Search posts content..." style="flex: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--lvl-surface-2); color: var(--text-primary);">
+          <button type="submit" class="primary-button small" style="min-height: 40px; padding: 0 16px;">Search</button>
+        </form>
+
+        {% if system_posts %}
+          <div class="admin-grid-container" style="display: grid; gap: 12px;">
+            {% for p in system_posts %}
+              <div class="guide-form-card" style="padding: 16px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--lvl-surface-2); position: relative;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                  <strong>@{{ p.user.username if p.user else 'Unknown' }}</strong>
+                  <span style="font-size: 11px; color: var(--text-muted);">{{ p.created_at[:16] if p.created_at else '' }}</span>
+                </div>
+                <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.4; margin-bottom: 12px;">{{ p.content }}</p>
+                
+                <form action="{{ url_for('admin_dashboard') }}" method="post" style="margin: 0;" onsubmit="return confirm('Delete this post permanently?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="action" value="delete_post_global">
+                  <input type="hidden" name="id" value="{{ p.id }}">
+                  <button type="submit" class="danger-button small" style="color: var(--lvl-white); padding: 4px 8px; font-size: 11px; border-radius: 8px;">Delete Post</button>
+                </form>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="careers-no-positions">
+            <span>📝</span>
+            <p>No posts found matching query.</p>
+          </div>
+        {% endif %}
+      </section>
+
+      {# ── SECTION 9: AUDIT LOGS ── #}
+      <section id="admin-sec-logs" class="admin-section admin-sec-hidden">
+        <h3>Audit Activity Logs</h3>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">Most recent admin dashboard action records from the log file.</p>
+        
+        {% if admin_logs %}
+          <div style="background: var(--lvl-surface-3); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; max-height: 500px; overflow-y: auto; font-family: monospace; font-size: 12px; line-height: 1.6; color: var(--text-primary);">
+            {% for log in admin_logs %}
+              <div style="border-bottom: 1px solid var(--lvl-border); padding: 6px 0;">
+                {{ log }}
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="careers-no-positions">
+            <span>📋</span>
+            <p>No audit action records logged yet.</p>
+          </div>
+        {% endif %}
+      </section>
+    {% endif %}
+  </div>
+</div>
+
+{# ── WARNING DIALOG MODAL ── #}
+<div id="warning-modal" style="display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; padding: 16px;">
+  <div style="background: var(--lvl-surface-2); border: 1px solid var(--lvl-cyan); border-radius: var(--radius-lg); padding: 24px; width: 100%; max-width: 440px; box-shadow: 0 16px 40px rgba(0,0,0,0.6);">
+    <h4 style="margin: 0 0 10px 0;">Warn User: <span id="warning-target-name" style="color: var(--lvl-cyan);"></span></h4>
+    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Enter a warning text. The user will receive this warning as a direct message alert.</p>
+    
+    <form action="{{ url_for('admin_dashboard') }}" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="warn_user">
+      <input type="hidden" name="id" id="warning-target-id">
+
+      <label class="form-group" style="display: block; margin-bottom: 16px;">
+        <span style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 6px;">Warning Reason / Description</span>
+        <textarea name="warning_text" required rows="4" placeholder="e.g. Please avoid offensive language or spam posts. Multiple warnings will lead to account suspension." style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--bg-color); color: var(--text-primary); font: inherit; resize: vertical;"></textarea>
+      </label>
+
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" class="outline-button small" onclick="closeWarningModal()">Cancel</button>
+        <button type="submit" class="primary-button small">Send Warning</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+/* ── Admin Styles ── */
+.admin-status-pill {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-weight: bold;
+  background: var(--lvl-primary-soft-15);
+  color: var(--text-secondary);
+}
+.admin-status-pill.active {
+  background: var(--lvl-success-soft-10);
+  color: var(--lvl-success);
+}
+.admin-status-pill.danger {
+  background: var(--lvl-danger-soft);
+  color: var(--lvl-danger-text-soft);
+}
+.admin-sec-hidden {
+  display: none;
+}
+.admin-select-input {
+  background: var(--bg-color);
+  color: var(--text-primary);
+  border: 1px solid var(--lvl-border);
+  padding: 8px;
+  border-radius: 8px;
+  font: inherit;
+}
+.admin-grid-container {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+</style>
+
+<script>
+function switchAdminTab(tabName) {
+  // Update buttons active class
+  const buttons = document.querySelectorAll('.admin-tabs button');
+  buttons.forEach(btn => {
+    const isTarget = btn.getAttribute('onclick').includes(tabName);
+    btn.classList.toggle('active', isTarget);
+  });
+  
+  // Hide all sections, show active
+  const sections = document.querySelectorAll('.admin-section');
+  sections.forEach(sec => {
+    if (sec.id === 'admin-sec-' + tabName) {
+      sec.style.display = 'block';
+    } else {
+      sec.style.display = 'none';
+    }
+  });
+
+  // Store in session storage to keep tab after reload
+  sessionStorage.setItem('lvl_admin_tab', tabName);
+}
+
+function toggleAddPositionForm() {
+  const container = document.getElementById('add-position-form-container');
+  if (container.style.display === 'none') {
+    container.style.display = 'block';
+  } else {
+    container.style.display = 'none';
+  }
+}
+
+function openWarningModal(userId, displayName) {
+  document.getElementById('warning-target-id').value = userId;
+  document.getElementById('warning-target-name').textContent = displayName;
+  document.getElementById('warning-modal').style.display = 'flex';
+}
+
+function closeWarningModal() {
+  document.getElementById('warning-modal').style.display = 'none';
+}
+
+// Restore active tab after form submission redirect
+document.addEventListener('DOMContentLoaded', () => {
+  const activeTab = sessionStorage.getItem('lvl_admin_tab') || 'positions';
+  
+  // If search url has query parameters, focus on target tabs
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlTab = urlParams.get('tab');
+  
+  if (urlTab) {
+    switchAdminTab(urlTab);
+  } else {
+    switchAdminTab(activeTab);
+  }
+});
+</script>
+{% endblock %}

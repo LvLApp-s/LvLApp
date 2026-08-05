@@ -1,0 +1,299 @@
+/* Desktop Home reels panel */
+/* ─── Home Reel Panel (right rail compact player) ────────────────────────── */
+.home-reel-panel {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 228px);
+}
+
+.home-reel-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.home-reel-panel-header h2 {
+  font-size: 1rem;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.home-reel-see-all {
+  font-size: 0.8rem;
+  color: var(--lvl-primary);
+  text-decoration: none;
+  white-space: nowrap;
+  margin-top: 4px;
+}
+
+.home-reel-slides {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  max-height: min(62vh, 560px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+  padding-right: 4px;
+}
+
+.home-reel-slides::-webkit-scrollbar {
+  width: 5px;
+}
+
+.home-reel-slides::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.home-reel-slides::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: var(--radius-round);
+}
+
+.home-reel-slide {
+  display: block;
+  scroll-snap-align: start;
+  opacity: 0.68;
+  transform: scale(0.985);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.home-reel-slide.is-active {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.home-reel-video-wrap {
+  position: relative;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--lvl-black);
+  aspect-ratio: 9 / 14;
+  width: 100%;
+}
+
+.home-reel-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  cursor: pointer;
+}
+
+.home-reel-play-btn {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--lvl-black-28);
+  border: none;
+  cursor: pointer;
+  color: var(--lvl-white);
+  transition: background 0.15s;
+}
+
+.home-reel-play-btn:hover {
+  background: var(--lvl-black-48);
+}
+
+.home-reel-play-btn [data-play-icon] {
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+
+.home-reel-mute-btn {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-round);
+  border: none;
+  background: var(--lvl-black-52);
+  color: var(--lvl-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.home-reel-mute-btn.active {
+  background: var(--lvl-primary);
+}
+
+.home-reel-info {
+  padding: 8px 2px 4px;
+}
+
+.home-reel-author {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+
+.home-reel-caption {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin: 0 0 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-reel-counts {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.home-reel-counts span {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.home-reel-open-link {
+  margin-left: auto;
+  color: var(--lvl-primary);
+  font-size: 0.78rem;
+  text-decoration: none;
+}
+
+.demo-badge {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-style: normal;
+  background: var(--lvl-white-05);
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+}
+
+.home-media-panel {
+  margin-top: 16px;
+}
+
+.home-media-list {
+  display: grid;
+  gap: 12px;
+  max-height: min(62vh, 560px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+  padding-right: 4px;
+}
+
+.home-media-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.home-media-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.home-media-list::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: var(--radius-round);
+}
+
+.home-media-card {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 10px;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.home-media-card:hover {
+  text-decoration: none;
+}
+
+.home-media-frame {
+  display: grid;
+  place-items: center;
+  width: 112px;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: radial-gradient(circle at 28% 22%, var(--lvl-primary-soft-24), transparent 38%), var(--lvl-black);
+}
+
+.home-media-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.home-media-placeholder {
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+.home-media-info {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.home-media-caption {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+@media (min-width: 1281px) {
+  .app-shell:has(.timeline-messages):has(.home-reel-panel) {
+    grid-template-columns: auto minmax(0, 760px) var(--shell-right) !important;
+    max-width: 1385px !important;
+  }
+
+  .app-shell:has(.timeline-messages):has(.home-reel-panel) .right-rail-wrapper {
+    display: block !important;
+    width: var(--shell-right) !important;
+  }
+
+  .app-shell:has(.timeline-messages):has(.home-reel-panel) .timeline-messages {
+    width: 760px !important;
+    max-width: 760px !important;
+    border-right: 1px solid var(--border-color);
+  }
+
+  .app-shell:has(.timeline-reels):has(.home-media-panel) {
+    grid-template-columns: auto minmax(0, 760px) var(--shell-right) !important;
+    max-width: 1385px !important;
+  }
+
+  .app-shell:has(.timeline-reels):has(.home-media-panel) .right-rail-wrapper {
+    display: block !important;
+    width: var(--shell-right) !important;
+  }
+
+  .app-shell:has(.timeline-reels):has(.home-media-panel) .timeline-reels {
+    width: 760px !important;
+    max-width: 760px !important;
+    border-right: 1px solid var(--border-color);
+  }
+
+  .app-shell:has(.timeline-reels):has(.home-media-panel) .reels-page {
+    max-width: 760px;
+  }
+}

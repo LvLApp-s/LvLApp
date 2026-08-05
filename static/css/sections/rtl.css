@@ -1,0 +1,471 @@
+/* ── RTL Global Layout Support ──────────────────────────────────────────── */
+/* Applied when lang="ar" sets dir="rtl" on <html> */
+
+/* ── Shell layout: mirror left/right rails ── */
+[dir="rtl"] .app-shell {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .left-rail-wrapper {
+  justify-content: flex-start;
+}
+
+[dir="rtl"] .right-rail-wrapper {
+  justify-content: flex-end;
+}
+
+[dir="rtl"] .left-rail {
+  border-right: none;
+  border-left: 1px solid var(--border-color);
+  direction: rtl;
+}
+
+[dir="rtl"] .timeline {
+  border-right: none;
+  border-left: 1px solid var(--border-color);
+}
+
+/* ── Navigation sidebar ── */
+[dir="rtl"] .sidebar-top {
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+}
+
+[dir="rtl"] .left-rail.menu-open .sidebar-top {
+  justify-content: flex-start;
+}
+
+[dir="rtl"] .nav-list {
+  direction: rtl;
+}
+
+[dir="rtl"] .left-rail.menu-open .nav-list a {
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+}
+
+[dir="rtl"] .nav-list a {
+  direction: rtl;
+  text-align: right;
+}
+
+[dir="rtl"] .nav-badge {
+  margin-inline-start: auto;
+  margin-inline-end: 0;
+}
+
+[dir="rtl"] .mini-profile {
+  flex-direction: row-reverse;
+  direction: rtl;
+}
+
+[dir="rtl"] .mini-profile div {
+  text-align: right;
+}
+
+[dir="rtl"] .compose-link {
+  text-align: center;
+}
+
+[dir="rtl"] .logout-link {
+  text-align: right;
+}
+
+/* ── Mobile header ── */
+[dir="rtl"] .mobile-header {
+  direction: rtl;
+}
+
+[dir="rtl"] .mobile-bottom-nav {
+  direction: rtl;
+}
+
+/* ── Mobile account menu ── */
+[dir="rtl"] .mobile-account-menu {
+  direction: rtl;
+  text-align: right;
+}
+
+[dir="rtl"] .mobile-account-menu a {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .menu-item-icon {
+  margin-inline-start: 8px;
+  margin-inline-end: 0;
+}
+
+/* ── Top bar / search ── */
+[dir="rtl"] .app-topbar {
+  direction: rtl;
+}
+
+[dir="rtl"] .topbar-search {
+  direction: rtl;
+}
+
+/* ── Post cards ── */
+[dir="rtl"] .post {
+  direction: rtl;
+}
+
+[dir="rtl"] .post-header {
+  direction: rtl;
+}
+
+[dir="rtl"] .post-author-link {
+  text-align: right;
+}
+
+[dir="rtl"] .post-body {
+  text-align: right;
+  direction: rtl;
+}
+
+[dir="rtl"] .post-actions {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .post-time {
+  margin-inline-start: auto;
+  margin-inline-end: 0;
+}
+
+[dir="rtl"] .post-menu-wrap {
+  margin-inline-start: 0;
+  margin-inline-end: auto;
+}
+
+[dir="rtl"] .post-menu {
+  right: auto;
+  left: 0;
+}
+
+[dir="rtl"] .repost-indicator {
+  text-align: right;
+  direction: rtl;
+}
+
+[dir="rtl"] .inline-follow-form {
+  margin-inline-start: 0;
+  margin-inline-end: auto;
+}
+
+/* ── Feed ── */
+[dir="rtl"] .feed {
+  direction: rtl;
+}
+
+[dir="rtl"] .page-header {
+  direction: rtl;
+  text-align: right;
+}
+
+[dir="rtl"] .page-header > div {
+  text-align: right;
+}
+
+/* ── Profile ── */
+[dir="rtl"] .profile-header {
+  direction: rtl;
+}
+
+[dir="rtl"] .profile-info-container {
+  direction: rtl;
+}
+
+[dir="rtl"] .profile-top-row {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .profile-actions {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .profile-names {
+  text-align: right;
+}
+
+[dir="rtl"] .profile-stats {
+  flex-direction: row-reverse;
+  direction: rtl;
+}
+
+[dir="rtl"] .profile-meta-grid {
+  justify-content: flex-end;
+}
+
+[dir="rtl"] .profile-xp-card {
+  direction: rtl;
+  text-align: right;
+}
+
+[dir="rtl"] .profile-xp-main {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .next-reward-callout {
+  text-align: right;
+}
+
+[dir="rtl"] .profile-streak-card {
+  flex-direction: row-reverse;
+  direction: rtl;
+}
+
+[dir="rtl"] .xp-score-row {
+  flex-direction: row-reverse;
+}
+
+/* ── Notifications ── */
+[dir="rtl"] .notification-item {
+  flex-direction: row-reverse;
+  direction: rtl;
+}
+
+[dir="rtl"] .notification-body {
+  text-align: right;
+}
+
+[dir="rtl"] .notification-header {
+  flex-direction: row-reverse;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+[dir="rtl"] .notification-actions {
+  flex-direction: row-reverse;
+}
+
+/* ── Messages ── */
+[dir="rtl"] .messages-container {
+  direction: rtl;
+}
+
+[dir="rtl"] .conversations-sidebar {
+  border-right: none;
+  border-left: 1px solid var(--border-color);
+}
+
+[dir="rtl"] .conversation-item {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .conv-info {
+  text-align: right;
+}
+
+[dir="rtl"] .conv-header {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .chat-header {
+  flex-direction: row-reverse;
+  direction: rtl;
+}
+
+[dir="rtl"] .chat-user-info {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+[dir="rtl"] .chat-actions {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .message-bubble-wrapper {
+  direction: rtl;
+}
+
+[dir="rtl"] .message-bubble-wrapper.own {
+  align-items: flex-start;
+}
+
+[dir="rtl"] .message-bubble-wrapper:not(.own) {
+  align-items: flex-end;
+}
+
+[dir="rtl"] .chat-footer {
+  direction: rtl;
+}
+
+[dir="rtl"] .chat-input-form {
+  flex-direction: row-reverse;
+}
+
+/* ── Settings and forms ── */
+[dir="rtl"] .settings-container,
+[dir="rtl"] .settings-content,
+[dir="rtl"] .form-group,
+[dir="rtl"] .form-grid {
+  direction: rtl;
+  text-align: right;
+}
+
+[dir="rtl"] .form-actions {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .danger-zone-form {
+  direction: rtl;
+}
+
+[dir="rtl"] .danger-zone {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .lang-switcher {
+  direction: rtl;
+}
+
+[dir="rtl"] .checkbox-row {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .input-prefix-wrapper {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .input-prefix {
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  border-left: none;
+  border-right: 1px solid var(--border-color);
+}
+
+/* ── Community ── */
+[dir="rtl"] .community-header,
+[dir="rtl"] .community-body {
+  direction: rtl;
+}
+
+[dir="rtl"] .community-highlight-row {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .highlight-item-link {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .highlight-item-body {
+  text-align: right;
+}
+
+[dir="rtl"] .highlight-item-meta {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .trend-card-author {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .trend-card-name {
+  text-align: right;
+}
+
+[dir="rtl"] .trend-card-snippet {
+  text-align: right;
+  direction: rtl;
+}
+
+[dir="rtl"] .trend-card-stats {
+  flex-direction: row-reverse;
+}
+
+/* ── Right rail (becomes left in RTL) ── */
+[dir="rtl"] .right-rail {
+  direction: rtl;
+  text-align: right;
+}
+
+/* ── Toast notifications: mirror to left side ── */
+[dir="rtl"] .toast-container {
+  right: auto;
+  left: 24px;
+}
+
+@media (max-width: 767px) {
+  [dir="rtl"] .toast-container {
+    right: 16px;
+    left: 16px;
+  }
+}
+
+/* ── Search ── */
+[dir="rtl"] .search-results,
+[dir="rtl"] .user-result {
+  direction: rtl;
+  text-align: right;
+}
+
+[dir="rtl"] .user-result {
+  flex-direction: row-reverse;
+}
+
+/* ── Auth page ── */
+[dir="rtl"] .auth-layout {
+  direction: rtl;
+}
+
+[dir="rtl"] .auth-panel {
+  direction: rtl;
+  text-align: right;
+}
+
+[dir="rtl"] .auth-form label {
+  text-align: right;
+}
+
+[dir="rtl"] .auth-tabs {
+  direction: rtl;
+}
+
+[dir="rtl"] .gender-options {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .auth-helper-link {
+  text-align: left;
+}
+
+/* ── Level Guide ── */
+[dir="rtl"] .guide-container,
+[dir="rtl"] .guide-content {
+  direction: rtl;
+  text-align: right;
+}
+
+[dir="rtl"] .guide-tabs-wrapper {
+  direction: rtl;
+}
+
+[dir="rtl"] .guide-step {
+  direction: rtl;
+  text-align: right;
+}
+
+[dir="rtl"] .guide-form-card {
+  direction: rtl;
+  text-align: right;
+}
+
+/* ── Reel cards ── */
+[dir="rtl"] .reel-card-info {
+  direction: rtl;
+  text-align: right;
+}
+
+[dir="rtl"] .reel-actions {
+  direction: rtl;
+}
+
+/* ── Share modal ── */
+[dir="rtl"] .share-modal {
+  direction: rtl;
+  text-align: right;
+}
+
+/* ── Activity ── */
+[dir="rtl"] .activity-item {
+  flex-direction: row-reverse;
+  direction: rtl;
+}

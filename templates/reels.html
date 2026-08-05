@@ -1,0 +1,43 @@
+{% extends "layout.html" %}
+{% set active_page = "reels" %}
+{% set show_highlights = False %}
+{% set show_trends = True %}
+{% set title = "Clips" %}
+
+{% block content %}
+<section class="reels-page">
+  <header class="reels-header">
+    <div class="reels-header-title">
+      <span class="panel-kicker" data-i18n="videos_kicker">Videos</span>
+      <h1 data-i18n="nav_clips">Clips</h1>
+    </div>
+    <nav class="reels-tabs" aria-label="Clips filter">
+      <a href="{{ url_for('reels', tab='for_you') }}" class="reels-tab {% if tab == 'for_you' %}active{% endif %}" data-i18n="feed_for_you">For You</a>
+      <a href="{{ url_for('reels', tab='following') }}" class="reels-tab {% if tab == 'following' %}active{% endif %}" data-i18n="feed_following">Following</a>
+    </nav>
+    <a class="primary-button compact-action" href="{{ url_for('reel_upload') }}" data-i18n="reel_upload_btn">Upload</a>
+  </header>
+  <a class="mobile-reels-upload-cta" href="{{ url_for('reel_upload') }}" data-i18n="reel_upload_clip">Upload clip</a>
+
+  <section class="reels-feed" data-reels-feed aria-label="Clips feed">
+    {% if reels %}
+      {% for reel in reels %}
+        <div id="reel-{{ reel.id }}">
+          {% include "_reel_card.html" %}
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state reels-empty-state">
+        <h2>No real clips yet</h2>
+        <p>Upload the first real LvL clip or check Setup Health if uploads are not appearing.</p>
+        <div class="empty-state-actions">
+          <a class="primary-button" href="{{ url_for('reel_upload') }}">Upload clip</a>
+          <a class="outline-button" href="{{ url_for('setup_health') }}">Setup Health</a>
+        </div>
+      </div>
+    {% endif %}
+  </section>
+
+  <p class="reels-end-note" data-reels-end hidden>No more clips</p>
+</section>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "layout.html" %}
+{% set active_page = "activity" %}
+{% set show_highlights = True %}
+{% set title = "Activity" %}
+
+{% block content %}
+<header class="page-header activity-header">
+  <div>
+    <span class="panel-kicker" data-i18n="activity_kicker">Your history</span>
+    <h1 data-i18n="activity_title">Activity</h1>
+    <p data-i18n="activity_desc">Posts, replies, likes, reposts, and clips you touched recently.</p>
+  </div>
+</header>
+
+<section class="activity-panel panel" aria-label="Recent activity">
+  {% if not activity_items %}
+    <div class="empty-state compact-empty">
+      <h2 data-i18n="activity_empty_title">Nothing here yet</h2>
+      <p data-i18n="activity_empty_desc">Post, comment, like, repost, or upload a reel to build your LvL history.</p>
+    </div>
+  {% endif %}
+
+  {% for item in activity_items %}
+    {% if item.url %}
+      <a class="activity-row" href="{{ item.url }}">
+    {% else %}
+      <div class="activity-row">
+    {% endif %}
+        <span class="activity-icon" aria-hidden="true">{{ item.emoji }}</span>
+        <span class="activity-copy">
+          <strong data-i18n="activity_type_{{ item.kind }}">{{ item.title }}</strong>
+          {% if item.description == 'Picture post' %}
+            <small data-i18n="activity_desc_picture">Picture post</small>
+          {% elif item.description == 'You liked a post.' %}
+            <small data-i18n="activity_desc_like">You liked a post.</small>
+          {% elif item.description == 'You reposted something to your network.' %}
+            <small data-i18n="activity_desc_repost">You reposted something to your network.</small>
+          {% elif item.description == 'You uploaded a reel.' %}
+            <small data-i18n="activity_desc_reel">You uploaded a reel.</small>
+          {% else %}
+            <small>{{ item.description }}</small>
+          {% endif %}
+        </span>
+        {% if item.created_at %}
+          <time datetime="{{ item.created_at }}">{{ relative_time(item.created_at) }}</time>
+        {% endif %}
+    {% if item.url %}
+      </a>
+    {% else %}
+      </div>
+    {% endif %}
+  {% endfor %}
+</section>
+{% endblock %}

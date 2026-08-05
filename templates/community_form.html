@@ -1,0 +1,51 @@
+{% extends "layout.html" %}
+{% set active_page = "community" %}
+{% set show_highlights = True %}
+
+{% block content %}
+<header class="page-header community-header">
+  <div>
+    <h1 data-i18n="community_form_create_btn">{{ title }}</h1>
+    <p data-i18n="community_form_desc">Build a focused space for people, posts, images, and active threads.</p>
+  </div>
+</header>
+
+<section class="community-form-shell">
+  <form class="premium-form community-form" action="{{ form_action }}" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="form-group">
+      <span data-i18n="community_form_name">Name</span>
+      <input name="name" maxlength="80" value="{{ community.name if community else '' }}" required>
+    </label>
+
+    {% if not community %}
+      <label class="form-group">
+        <span data-i18n="community_form_slug">URL slug</span>
+        <input name="slug" maxlength="48" pattern="[a-z0-9-]{3,48}" placeholder="design-lab">
+        <small data-i18n="community_form_slug_hint">Lowercase letters, numbers, and hyphens. Leave blank to generate from the name.</small>
+      </label>
+    {% endif %}
+
+    <label class="form-group">
+      <span data-i18n="community_form_description">Description</span>
+      <textarea name="description" maxlength="240" rows="4">{{ community.description if community else '' }}</textarea>
+    </label>
+
+    <label class="form-group">
+      <span data-i18n="community_form_accent">Accent color</span>
+      {% set default_community_color = community.accent_color if community else display_profile_color(viewer) %}
+      <div class="color-picker-wrapper">
+        <input type="color" name="accent_color" value="{{ default_community_color }}">
+        <input type="text" class="hex-value" value="{{ default_community_color }}" maxlength="7">
+      </div>
+    </label>
+
+    <div class="form-actions">
+      <a class="outline-button" href="{{ url_for('community') }}" data-i18n="settings_cancel">Cancel</a>
+      <button class="primary-button" type="submit">
+        {% if community %}<span data-i18n="settings_save">Save changes</span>{% else %}<span data-i18n="community_form_create_btn">Create community</span>{% endif %}
+      </button>
+    </div>
+  </form>
+</section>
+{% endblock %}

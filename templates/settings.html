@@ -1,0 +1,211 @@
+{% extends "layout.html" %}
+{% set active_page = "settings" %}
+{% set show_highlights = True %}
+{% set title = "Edit Profile" %}
+
+{% block content %}
+<div class="settings-container">
+  <header class="page-header">
+    <div class="header-content">
+      <h1 data-i18n="settings_title">Edit profile</h1>
+      <p data-i18n="settings_subtitle">Update how your account appears to others on LvL.</p>
+    </div>
+  </header>
+
+  <div class="settings-content">
+    <form class="premium-form" action="{{ url_for('settings') }}" method="post" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="update_profile">
+      
+      <div class="form-section">
+        <h3 data-i18n="settings_public_info">Public Information</h3>
+        <div class="form-grid">
+          <label class="form-group">
+            <span data-i18n="settings_first_name">First Name</span>
+            <input name="first_name" maxlength="60" value="{{ viewer.first_name }}" placeholder="e.g. John" required>
+          </label>
+          <label class="form-group">
+            <span data-i18n="settings_last_name">Last Name</span>
+            <input name="last_name" maxlength="60" value="{{ viewer.last_name }}" placeholder="e.g. Doe" required>
+          </label>
+        </div>
+        
+        <label class="form-group">
+          <span data-i18n="settings_username">Username / Nickname</span>
+          <div class="input-prefix-wrapper">
+            <span class="input-prefix">@</span>
+            <input name="nickname" maxlength="24" pattern="[A-Za-z0-9_]{3,24}" minlength="3" title="3-24 letters, numbers, or underscores." value="{{ viewer.nickname or viewer.username }}" required>
+          </div>
+          <small data-i18n="settings_username_hint">3-24 letters, numbers, or underscores. Usernames are saved lowercase.</small>
+        </label>
+
+        <label class="form-group">
+          <span data-i18n="settings_bio">Bio</span>
+          <textarea name="bio" maxlength="180" rows="3" placeholder="Tell us about yourself..." data-i18n-placeholder="settings_bio_placeholder">{{ viewer.bio }}</textarea>
+          <div class="char-counter">0 / 180</div>
+        </label>
+      </div>
+
+      <div class="form-section">
+        <h3 data-i18n="settings_details">Details</h3>
+        <div class="form-grid">
+          <label class="form-group">
+            <span data-i18n="settings_location">Location</span>
+            <input name="location" maxlength="80" value="{{ viewer.location }}" placeholder="City, Country" data-i18n-placeholder="settings_location_placeholder">
+          </label>
+          <label class="form-group">
+            <span data-i18n="settings_website">Website</span>
+            <input type="url" name="website" maxlength="255" value="{{ viewer.website }}" placeholder="https://yourwebsite.com">
+          </label>
+        </div>
+        
+        <div class="form-grid">
+          <fieldset class="gender-field form-group">
+            <legend data-i18n="settings_gender">Gender</legend>
+            <div class="gender-options">
+              <label class="gender-option male-option">
+                <input type="radio" name="gender" value="Male" data-avatar-url="{{ url_for('static', filename='assets/default-male-avatar.svg') }}" data-theme-color="{{ theme_colors.primary }}" {% if viewer.gender == 'Male' %}checked{% endif %} required>
+                <span><b aria-hidden="true">♂</b> <span data-i18n="auth_male">Male</span></span>
+              </label>
+              <label class="gender-option female-option">
+                <input type="radio" name="gender" value="Female" data-avatar-url="{{ url_for('static', filename='assets/default-female-avatar.svg') }}" data-theme-color="{{ theme_colors.female }}" {% if viewer.gender == 'Female' %}checked{% endif %} required>
+                <span><b aria-hidden="true">♀</b> <span data-i18n="auth_female">Female</span></span>
+              </label>
+            </div>
+            <div class="gender-preview" data-gender-preview hidden>
+              <img data-gender-avatar src="" alt="Selected default avatar">
+              <span data-gender-swatch aria-hidden="true"></span>
+            </div>
+          </fieldset>
+          <label class="form-group">
+            <span data-i18n="settings_birthday">Birthday</span>
+            {% set limits = birthday_limits() %}
+            <input type="date" name="birthday" value="{{ viewer.birthday }}" min="{{ limits.min.isoformat() }}" max="{{ limits.max.isoformat() }}" autocomplete="bday">
+          </label>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3 data-i18n="settings_appearance">Appearance</h3>
+        {% set profile_color_is_unlocked = profile_color_unlocked(viewer.level or 1) %}
+        <div class="profile-preview-card" data-profile-preview>
+          <div class="profile-preview-banner"></div>
+          <img class="avatar profile-preview-avatar" src="{{ viewer.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Profile preview">
+          <strong data-preview-name>{{ viewer.display_name }}</strong>
+          <span data-preview-username>@{{ viewer.username }}</span>
+          <p data-preview-bio>{{ viewer.bio or 'No bio yet.' }}</p>
+        </div>
+        <label class="form-group">
+          <span data-i18n="settings_photo">Profile Photo</span>
+          <input type="file" name="profile_photo" accept="image/png,image/jpeg,image/gif,image/webp" data-profile-photo-input>
+          <small data-i18n="settings_photo_hint">Upload JPG, PNG, GIF, or WebP up to 5 MB.</small>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" name="remove_profile_photo" value="1">
+          <span data-i18n="settings_remove_photo">Remove current photo and use the default avatar</span>
+        </label>
+        <label class="form-group">
+          <span data-i18n="settings_banner_color">Profile banner color</span>
+          <div class="color-picker-wrapper">
+            <input type="color" name="profile_pic" value="{{ display_profile_color(viewer) }}" {% if not profile_color_is_unlocked %}disabled{% endif %}>
+            <input type="text" class="hex-value" value="{{ display_profile_color(viewer) }}" maxlength="7" {% if not profile_color_is_unlocked %}disabled{% endif %}>
+          </div>
+          {% if profile_color_is_unlocked %}
+            <small data-i18n="settings_banner_hint">Changes the banner on your profile and the color used for your chat header.</small>
+          {% else %}
+            <small data-i18n="settings_banner_locked_hint">Profile colors unlock at LvL {{ profile_color_unlock_level }}. Until then, accounts stay black and white so reward colors stay meaningful.</small>
+          {% endif %}
+        </label>
+        {% if not profile_color_is_unlocked %}
+          <p class="profile-color-lock-note">
+            <span data-i18n="settings_banner_earn_xp">Earn XP by posting, commenting, liking, and joining conversations.</span>
+            <a href="{{ url_for('level_guide') }}" data-i18n="settings_banner_see_table">See the LvL reward table.</a>
+          </p>
+        {% endif %}
+
+      <div class="form-section">
+        <h3 data-i18n="settings_preferences">Preferences</h3>
+        <label class="checkbox-row">
+          <input type="checkbox" id="autoplay-next-reels-checkbox">
+          <span data-i18n="settings_autoplay_next">Autoplay next Clip automatically</span>
+        </label>
+        <label class="checkbox-row" style="margin-top: 12px;">
+          <input type="checkbox" id="notification-sounds-checkbox" checked>
+          <span data-i18n="settings_notif_sounds">Enable notification sounds</span>
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <a href="{{ url_for('profile', username=viewer.username) }}" class="outline-button" data-i18n="settings_cancel">Cancel</a>
+        <button type="submit" class="primary-button" data-i18n="settings_save">Save Changes</button>
+      </div>
+    </form>
+
+    <section class="form-section">
+      <h3 data-i18n="settings_language_title">Language / Dil / اللغة</h3>
+      <p class="settings-helper-text" data-i18n="settings_language_subtitle">Choose your preferred language. Saved locally on this device.</p>
+      <div class="lang-switcher" role="group" aria-label="Language selection">
+        <button type="button" class="outline-button small" data-lang-btn="en" onclick="LvLI18n.applyLanguage('en')" aria-pressed="false" id="lang-btn-en">
+          🇬🇧 English
+        </button>
+        <button type="button" class="outline-button small" data-lang-btn="tr" onclick="LvLI18n.applyLanguage('tr')" aria-pressed="false" id="lang-btn-tr">
+          🇹🇷 Türkçe
+        </button>
+        <button type="button" class="outline-button small" data-lang-btn="ar" onclick="LvLI18n.applyLanguage('ar')" aria-pressed="false" id="lang-btn-ar">
+          🇸🇦 العربية
+        </button>
+      </div>
+    </section>
+
+    <style>
+    .lang-switcher {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    </style>
+
+    <section class="form-section">
+      <h3 data-i18n="settings_project_setup">Project setup</h3>
+      <p class="settings-helper-text" data-i18n="settings_project_hint">Check database tables, storage, Clips, service worker, and PWA files when the app looks stale or uploads do not appear.</p>
+      <a class="outline-button small" href="{{ url_for('setup_health') }}" data-i18n="settings_open_health">Open Setup Health</a>
+    </section>
+
+    <section class="form-section danger-zone">
+      <div>
+        <h3 data-i18n="settings_delete_title">Delete account</h3>
+        <p data-i18n="settings_delete_desc">This permanently removes your account and the content connected to it. This action cannot be undone.</p>
+      </div>
+      <form action="{{ url_for('delete_account') }}" method="post" class="danger-zone-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="form-group">
+          <span data-i18n="settings_current_password">Current password</span>
+          <input type="password" name="current_password" autocomplete="current-password" required>
+        </label>
+        <label class="form-group">
+          <span><span data-i18n="settings_delete_prefix">Type</span> @{{ viewer.username }} <span data-i18n="settings_delete_suffix">to confirm</span></span>
+          <input name="confirm_username" pattern="{{ viewer.username }}" autocomplete="off" required>
+        </label>
+        <button type="submit" class="danger-button" data-i18n="settings_delete_btn">Delete account</button>
+      </form>
+    </section>
+  </div>
+</div>
+
+<script>
+  // Sync color picker with text input
+  const colorPicker = document.querySelector('input[type="color"]');
+  const hexInput = document.querySelector('.hex-value');
+  if (colorPicker && hexInput) {
+    colorPicker.addEventListener('input', (e) => {
+      hexInput.value = e.target.value.toUpperCase();
+    });
+    hexInput.addEventListener('input', (e) => {
+      if (/^#[0-9A-F]{6}$/i.test(e.target.value)) {
+        colorPicker.value = e.target.value;
+      }
+    });
+  }
+</script>
+{% endblock %}

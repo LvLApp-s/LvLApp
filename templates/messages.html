@@ -1,0 +1,567 @@
+{% extends "layout.html" %}
+{% set active_page = "messages" %}
+{% set show_highlights = True %}
+{% set title = "Messages" %}
+
+{% block head_extra %}
+<style>
+/* Mobile messages — inline bypasses SW cache */
+@media (max-width: 1000px) {
+  /* Full-width layout, no rails */
+  .app-shell {
+    display: block !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    padding-inline: 0 !important;
+  }
+  .left-rail-wrapper, .right-rail-wrapper {
+    display: none !important;
+  }
+  .timeline-messages {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: calc(100dvh - 64px - 76px - env(safe-area-inset-bottom)) !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+  .mobile-header { flex-shrink: 0 !important; }
+
+  .messages-container {
+    flex: 1 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    display: flex !important;
+  }
+
+  /* No chat selected: keep the list visible, then show the guide below it. */
+  .messages-container:has(.chat-unselected) {
+    flex-direction: column !important;
+    overflow-y: auto !important;
+  }
+  .messages-container:has(.chat-unselected) .conversations-sidebar {
+    width: 100% !important;
+    max-height: min(42dvh, 310px) !important;
+    flex-shrink: 0 !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border-color) !important;
+  }
+  .messages-container:has(.chat-unselected) .sidebar-header h2,
+  .messages-container:has(.chat-unselected) .conv-info,
+  .messages-container:has(.chat-unselected) .new-message-btn {
+    display: block !important;
+  }
+  .messages-container:has(.chat-unselected) .sidebar-header {
+    display: flex !important;
+  }
+  .messages-container:has(.chat-unselected) .chat-window {
+    display: flex !important;
+    flex: 0 0 auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+  .messages-container:has(.chat-unselected) .chat-unselected {
+    flex: 0 0 auto !important;
+    overflow: visible !important;
+  }
+
+  /* Chat open: hide sidebar, full-width chat. */
+  .messages-container:has(.messages-feed) .conversations-sidebar {
+    display: none !important;
+  }
+  .chat-window {
+    flex: 1 !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .messages-feed {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+  }
+  .chat-footer { flex-shrink: 0 !important; }
+}
+.chat-input-wrapper {
+  display: flex;
+  align-items: center;
+  background: var(--lvl-white-4);
+  border: 1px solid var(--lvl-white-12);
+  border-radius: 24px;
+  padding: 4px 12px;
+  width: 100%;
+}
+.attachment-btn {
+  background: none;
+  border: none;
+  color: var(--lvl-white-60);
+  font-size: 24px;
+  padding: 0 8px;
+  cursor: pointer;
+  transition: color 0.2s;
+  line-height: 1;
+}
+.attachment-btn:hover {
+  color: var(--lvl-primary);
+}
+.chat-input-wrapper textarea {
+  flex: 1;
+  background: none;
+  border: none;
+  resize: none;
+  outline: none;
+  color: var(--lvl-white);
+  padding: 8px 4px;
+}
+.attachment-preview-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--lvl-white-8);
+  border: 1px solid var(--lvl-white-12);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  font-size: 0.9em;
+}
+.preview-filename {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--lvl-white-80);
+}
+.upload-progress-container {
+  flex: 1;
+  height: 6px;
+  background: var(--lvl-white-12);
+  border-radius: 3px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+.upload-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: var(--lvl-primary);
+  border-radius: 3px;
+  transition: width 0.1s linear;
+}
+.upload-progress-text {
+  font-size: 0.8em;
+  color: var(--lvl-white-60);
+  margin-left: 8px;
+  white-space: nowrap;
+}
+.cancel-upload-btn {
+  background: none;
+  border: none;
+  color: var(--lvl-white-60);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+}
+.cancel-upload-btn:hover {
+  color: var(--lvl-danger);
+}
+.message-image-preview {
+  max-width: 250px;
+  max-height: 250px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  display: block;
+  margin-bottom: 4px;
+}
+.message-video-preview {
+  max-width: 280px;
+  max-height: 200px;
+  border-radius: var(--radius-sm);
+  display: block;
+  margin-bottom: 4px;
+}
+.attachment-download-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--lvl-white-8);
+  padding: 6px 12px;
+  border-radius: var(--radius-xs);
+  color: var(--lvl-primary);
+  text-decoration: none;
+  font-size: 0.9em;
+  margin-bottom: 4px;
+}
+.attachment-download-link:hover {
+  background: var(--lvl-white-12);
+}
+.deleted-message {
+  font-style: italic;
+  color: var(--lvl-white-40) !important;
+}
+.message-delete-dropdown {
+  position: relative;
+  display: inline-block;
+}
+.delete-trigger-btn {
+  background: none;
+  border: none;
+  color: var(--lvl-white-30);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.delete-trigger-btn:hover {
+  color: var(--lvl-danger);
+  background: var(--lvl-white-8);
+}
+.delete-dropdown-menu {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  z-index: 10;
+  background: var(--surface-panel);
+  border: 1px solid var(--lvl-white-12);
+  border-radius: var(--radius-xs);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  min-width: 150px;
+  padding: 4px 0;
+  margin-bottom: 4px;
+}
+.delete-dropdown-menu button {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--lvl-white-80);
+  padding: 8px 12px;
+  font-size: 0.85em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.delete-dropdown-menu button:hover {
+  background: var(--lvl-white-12);
+  color: var(--lvl-danger);
+}
+.shared-reel-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  padding: 0;
+}
+.shared-reel-link {
+  display: block;
+  position: relative;
+  padding: 0;
+}
+.shared-reel-avatar {
+  border: 2px solid white;
+}
+.shared-reel-video {
+  width: 100%;
+  display: block;
+  border-radius: 8px;
+  max-height: 300px;
+  object-fit: cover;
+}
+.new-chat-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--lvl-black-20);
+  color: var(--text-primary);
+}
+.new-chat-search-wrap {
+  padding: 12px 16px 0;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{% set chat_safety_state = chat_safety_state|default({'blocked': False, 'blocked_by': False, 'interaction_blocked': False}) %}
+<div class="messages-container">
+  <aside class="conversations-sidebar">
+    <header class="sidebar-header">
+      <h2 data-i18n="nav_messages">Messages</h2>
+      <button type="button" class="new-message-btn" title="New Message" aria-label="Start a new conversation" aria-controls="new-chat-panel" aria-expanded="false" data-new-chat-toggle data-i18n-title="messages_new" data-i18n-aria="messages_start">+</button>
+    </header>
+    <div class="conversations-list">
+      {% if not conversations %}
+        <div class="empty-conversations">
+          <p data-i18n="messages_empty">Nothing yet, maybe message someone first?</p>
+        </div>
+      {% endif %}
+      {% for conv in conversations %}
+        <a href="{{ url_for('messages', u=conv.username) }}" class="conversation-item {% if target_username == conv.username %}active{% endif %} {% if not conv.is_read and conv.id != viewer.id %}unread{% endif %}">
+          <img class="avatar small-avatar" src="{{ conv.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" />
+          <div class="conv-info">
+            <div class="conv-header">
+              <strong>{{ conv.display_name }}</strong>
+              <span class="time">{{ conv.last_message_at }}</span>
+            </div>
+            <p class="last-message">{{ conv.last_message }}</p>
+          </div>
+          {% if conv.streak_count > 0 %}
+          <span class="streak-badge high-five-streak" title="{{ conv.streak_count }}-day high-five streak">🖐 {{ conv.streak_count }}</span>
+          {% endif %}
+        </a>
+      {% endfor %}
+    </div>
+  </aside>
+
+  {% if target_user %}
+    <main class="chat-window">
+      <header class="chat-header" style="--chat-color: {{ display_profile_color(target_user) }}">
+        <a href="{{ url_for('messages') }}" class="chat-back-link" aria-label="Back to people">
+          <svg viewBox="0 0 24 24" aria-hidden="true" width="22" height="22" fill="currentColor"><path d="M20 11v2H7.83l5.59 5.59L12 20 4 12l8-8 1.42 1.41L7.83 11H20Z"/></svg>
+        </a>
+        <a href="{{ url_for('profile', username=target_user.username) }}" class="chat-user-info">
+          <img class="avatar small-avatar" src="{{ target_user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" />
+          <div>
+            <strong>{{ target_user.display_name }}</strong>
+            <p>@{{ target_user.username }}</p>
+          </div>
+        </a>
+        {% set target_streak_count = target_user.streak_count|default(0)|int %}
+        {% if target_streak_count > 0 %}
+        <span class="streak-badge streak-badge-header high-five-streak" data-chat-streak title="{{ target_streak_count }}-day high-five streak with {{ target_user.display_name }}">🖐 {{ target_streak_count }}</span>
+        {% else %}
+        <span class="streak-badge streak-badge-header streak-badge-zero high-five-streak" data-chat-streak title="Message or high-five daily to build a streak!">🖐 0</span>
+        {% endif %}
+      </header>
+
+      <div class="messages-feed" id="messages-feed" data-message-api="{{ url_for('api_messages', username=target_user.username) }}" data-delete-message-url="{{ url_for('delete_message') }}" data-csrf-token="{{ csrf_token() }}" data-redirect-url="{{ url_for('messages', u=target_user.username) }}" data-viewer-id="{{ viewer.id }}">
+        {% if not messages_list %}
+          <div class="chat-empty-state">
+            <img class="avatar large-avatar" src="{{ target_user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" />
+            <h3>{{ target_user.display_name }}</h3>
+            <p>@{{ target_user.username }}</p>
+            <p class="hint">This is the beginning of your direct message history with @{{ target_user.username }}.</p>
+          </div>
+        {% endif %}
+
+        {% for msg in messages_list %}
+          <div class="message-bubble-wrapper {% if msg.sender_id == viewer.id %}own{% endif %}" data-message-id="{{ msg.id }}">
+            <div class="message-bubble {% if msg.deleted_for_everyone %}deleted-message{% endif %}" title="{{ msg.created_at }}">
+              {% if msg.deleted_for_everyone %}
+                 <span data-i18n="message_deleted">This message was deleted</span>
+              {% elif msg.shared_post %}
+                 <div class="shared-post-label">Shared a post:</div>
+                 <div class="shared-post-card">
+                   <a href="{{ url_for('post', id=msg.shared_post.id) }}" class="shared-post-link">
+                     <div class="shared-post-author-row">
+                       <img class="shared-post-avatar" src="{{ msg.shared_post.user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="">
+                       <strong>{{ msg.shared_post.user.display_name }}</strong>
+                       <span class="shared-post-handle">@{{ msg.shared_post.user.username }}</span>
+                     </div>
+                     <p class="shared-post-content">{{ msg.shared_post.content }}</p>
+                     {% if msg.shared_post.image_url %}
+                       <img class="shared-post-image" src="{{ msg.shared_post.image_url }}" alt="">
+                     {% endif %}
+                   </a>
+                 </div>
+              {% elif msg.shared_reel %}
+                 <div class="shared-post-label">Shared a reel:</div>
+                 <div class="shared-post-card shared-reel-card">
+                    <a href="{{ url_for('reels') }}#reel-{{ msg.shared_reel.id }}" class="shared-post-link shared-reel-link">
+                      <div class="shared-post-author-row" style="position: absolute; top: 12px; left: 12px; z-index: 2; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.8); margin: 0;">
+                        <img class="shared-post-avatar shared-reel-avatar" src="{{ msg.shared_reel.user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="">
+                        <strong>{{ msg.shared_reel.user.display_name }}</strong>
+                      </div>
+                      <video src="{{ msg.shared_reel.video_url }}" class="shared-reel-video" preload="metadata" muted playsinline loop onmouseover="this.play()" onmouseout="this.pause()"></video>
+                      <div style="position: absolute; bottom: 12px; left: 12px; z-index: 2; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.8); width: calc(100% - 24px); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; font-size: 0.9em; margin: 0;">{{ msg.shared_reel.caption }}</div>
+                     <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2; color: white; opacity: 0.8; pointer-events: none;">
+                       <svg viewBox="0 0 24 24" width="48" height="48" fill="currentColor" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"><path d="M8 5v14l11-7z"/></svg>
+                     </div>
+                   </a>
+                 </div>
+              {% else %}
+                 {% if msg.attachment_url %}
+                   <div class="message-attachment">
+                     {% if msg.attachment_type == 'image' %}
+                       <img src="{{ msg.attachment_url }}" alt="Attachment" class="message-image-preview" loading="lazy">
+                     {% elif msg.attachment_type == 'video' %}
+                       <video src="{{ msg.attachment_url }}" controls class="message-video-preview" preload="metadata"></video>
+                     {% else %}
+                       <a href="{{ msg.attachment_url }}" download class="attachment-download-link">
+                         <span class="attachment-icon">📁</span>
+                         <span class="attachment-name-text">{{ msg.attachment_name }}</span>
+                       </a>
+                     {% endif %}
+                   </div>
+                 {% endif %}
+                 {% if msg.content %}
+                   <div class="message-text-content">{{ msg.content|urlize(target='_blank') }}</div>
+                 {% endif %}
+              {% endif %}
+            </div>
+            <div class="message-meta">
+              <span class="message-time">{{ msg.created_at[11:16] }}</span>
+              {% if not msg.deleted_for_everyone and msg.sender_id == viewer.id %}
+              <div class="message-delete-dropdown">
+                <button type="button" class="delete-trigger-btn" aria-label="Delete options">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" width="15" height="15" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12ZM8 4h3l1-1h4l1 1h3v2H8V4Z"/></svg>
+                </button>
+                <div class="delete-dropdown-menu" hidden>
+                  <button type="button" class="delete-menu-item" data-delete-type="me" data-message-id="{{ msg.id }}" data-i18n="delete_for_me">Delete for me</button>
+                  <button type="button" class="delete-menu-item" data-delete-type="everyone" data-message-id="{{ msg.id }}" data-i18n="delete_for_everyone">Delete for everyone</button>
+                </div>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <footer class="chat-footer">
+        {% if chat_safety_state.interaction_blocked %}
+          <p class="chat-blocked-note">
+            {% if chat_safety_state.blocked %}
+              You blocked this user. Unblock to send messages.
+            {% else %}
+              You can't message this user.
+            {% endif %}
+          </p>
+        {% endif %}
+        <div class="attachment-preview-box" id="attachment-preview-box" hidden>
+          <span class="preview-filename" id="preview-filename"></span>
+          <div class="upload-progress-container">
+            <div class="upload-progress-bar" id="upload-progress-bar"></div>
+            <span class="upload-progress-text" id="upload-progress-text">0%</span>
+          </div>
+          <button type="button" class="cancel-upload-btn" id="cancel-upload-btn" aria-label="Cancel upload">✕</button>
+        </div>
+
+        <form action="{{ url_for('send_message') }}" method="post" class="chat-input-form" id="chat-input-form" autocomplete="off">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="receiver_id" value="{{ target_user.id }}">
+          <input type="hidden" name="redirect" value="{{ url_for('messages', u=target_user.username) }}">
+          
+          <input type="hidden" name="temp_filename" id="hidden-temp-filename">
+          <input type="hidden" name="attachment_name" id="hidden-attachment-name">
+          <input type="hidden" name="attachment_type" id="hidden-attachment-type">
+
+          <div class="chat-input-wrapper">
+            <button type="button" class="attachment-btn" id="attachment-trigger-btn" aria-label="Add attachment" {% if chat_safety_state.interaction_blocked %}disabled{% endif %}>+</button>
+            <input type="file" id="chat-file-input" style="display: none;" accept="image/*,video/*,audio/*,application/*,text/*">
+            <textarea name="content" id="message-text-input" placeholder="Start a new message" data-i18n-placeholder="start_message_placeholder" required maxlength="1000" rows="1" {% if chat_safety_state.interaction_blocked %}disabled{% endif %}></textarea>
+            <button type="submit" class="send-btn" aria-label="Send message" {% if chat_safety_state.interaction_blocked %}disabled{% endif %}>
+              <svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20" fill="currentColor"><g><path d="M2.504 21.866l.526-2.108C3.04 19.719 4 15.823 4 12s-.96-7.719-.97-7.757l-.526-2.109L22.247 12 2.504 21.866zM5.981 13c-.072 1.962-.34 3.833-.583 5.183L17.584 12 5.398 5.817c.243 1.35.511 3.221.583 5.183H12v2H5.981z"></path></g></svg>
+            </button>
+          </div>
+        </form>
+      </footer>
+    </main>
+  {% else %}
+    <main class="chat-window chat-window-unselected">
+      <div class="chat-unselected">
+        <h2 data-i18n="messages_select_title">Select a message</h2>
+        <p data-i18n="messages_select_desc">Choose an existing chat, find someone active, or start a new conversation.</p>
+
+        <div class="message-discovery-grid">
+          <section class="message-discovery-panel">
+            <h3 data-i18n="messages_suggested_groups">Suggested groups</h3>
+            <div class="user-selection-list">
+              {% if not suggested_communities %}
+                <p class="empty-conversations" data-i18n="messages_no_suggested_groups">No suggested groups yet.</p>
+              {% endif %}
+              {% for community in suggested_communities %}
+                <a href="{{ url_for('community_detail', slug=community.slug) }}" class="user-select-item" style="--community-color: {{ community.accent_color or theme_colors.primary }};">
+                  <span class="community-dot" aria-hidden="true"></span>
+                  <div class="user-select-info">
+                    <strong>{{ community.name }}</strong>
+                    <span>{% if community.description %}{{ community.description }}{% else %}<span data-i18n="community_join_desc">Join the conversation</span>{% endif %}</span>
+                  </div>
+                  <span class="select-arrow">-&gt;</span>
+                </a>
+              {% endfor %}
+            </div>
+          </section>
+
+          <section class="message-discovery-panel">
+            <h3 data-i18n="messages_people_to_message">People to message</h3>
+            <div class="user-selection-list">
+              {% if not message_people %}
+                <p class="empty-conversations" data-i18n="messages_no_suggested_people">No people suggestions yet.</p>
+              {% endif %}
+              {% for person in message_people %}
+                <a href="{{ url_for('messages', u=person.username) }}" class="user-select-item">
+                  <img class="avatar small-avatar" src="{{ person.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" />
+                  <div class="user-select-info">
+                    <strong>{{ person.display_name }}</strong>
+                    <span>@{{ person.username }}</span>
+                  </div>
+                  <span class="select-arrow">-&gt;</span>
+                </a>
+              {% endfor %}
+            </div>
+          </section>
+        </div>
+
+        <div class="new-chat-section" id="new-chat-inline">
+          <h3 data-i18n="messages_start_new">Start a new conversation</h3>
+          <div style="margin-bottom: 12px;">
+            <input type="search" class="new-chat-search-input" data-new-chat-search placeholder="Search users..." data-i18n-placeholder="search_users">
+          </div>
+          <div class="user-selection-list">
+            {% if not all_users %}
+              <p class="empty-conversations" data-i18n="messages_no_users">No other users are available yet.</p>
+            {% endif %}
+            {% for u in all_users %}
+              <a href="{{ url_for('messages', u=u.username) }}" class="user-select-item">
+                <img class="avatar small-avatar" src="{{ u.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" />
+                <div class="user-select-info">
+                  <strong>{{ u.display_name }}</strong>
+                  <span>@{{ u.username }}</span>
+                </div>
+                <span class="select-arrow">-&gt;</span>
+              </a>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </main>
+  {% endif %}
+</div>
+
+<div class="new-chat-panel" id="new-chat-panel" hidden>
+  <div class="new-chat-backdrop" data-new-chat-close></div>
+  <section class="new-chat-dialog" role="dialog" aria-modal="true" aria-labelledby="new-chat-title">
+    <header>
+      <div>
+        <span class="panel-kicker" data-i18n="nav_messages">Messages</span>
+        <h3 id="new-chat-title" data-i18n="messages_start_new">Start a new conversation</h3>
+      </div>
+      <button type="button" class="new-chat-close" aria-label="Close new conversation panel" data-new-chat-close>x</button>
+    </header>
+    <div class="new-chat-search-wrap">
+      <input type="search" class="new-chat-search-input" data-new-chat-search placeholder="Search users..." data-i18n-placeholder="search_users">
+    </div>
+    <div class="user-selection-list">
+      {% if not all_users %}
+        <p class="empty-conversations" data-i18n="messages_no_users">No other users are available yet.</p>
+      {% endif %}
+      {% for u in all_users %}
+        <a href="{{ url_for('messages', u=u.username) }}" class="user-select-item">
+          <img class="avatar small-avatar" src="{{ u.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" />
+          <div class="user-select-info">
+            <strong>{{ u.display_name }}</strong>
+            <span>@{{ u.username }}</span>
+          </div>
+          <span class="select-arrow">-&gt;</span>
+        </a>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

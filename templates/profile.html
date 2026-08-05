@@ -1,0 +1,334 @@
+{% extends "layout.html" %}
+{% set active_page = "profile" %}
+{% set show_highlights = True %}
+{% set title = profile.display_name %}
+
+{% block content %}
+<section class="profile-header">
+  <div class="profile-banner {{ profile_banner_class }}" style="--profile-color: {{ display_profile_color(profile) }};">
+    <div class="profile-banner-content">
+      <div class="profile-banner-level-card">
+        <span data-i18n="banner_{{ profile_banner.class.replace('-', '_') }}_label">{{ profile_banner.label }}</span>
+        <div>
+          <strong>LvL {{ profile.level or 1 }}</strong>
+          <b>{{ profile_xp_progress|round(0)|int }}%</b>
+        </div>
+        <div class="banner-xp-track" aria-hidden="true">
+          <i style="width: {{ profile_xp_progress }}%;"></i>
+        </div>
+        <small data-i18n="banner_{{ profile_banner.class.replace('-', '_') }}_desc">{{ profile_banner.description }}</small>
+      </div>
+    </div>
+  </div>
+  <div class="profile-info-container">
+    <div class="profile-top-row">
+      <div>
+        <button class="profile-avatar-btn" type="button" data-profile-avatar-open aria-label="View profile picture" style="--avatar-frame-color: {{ profile.badge_color or theme_colors.muted }};">
+          <img class="avatar profile-avatar-large" src="{{ profile.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" />
+        </button>
+      </div>
+      <div class="profile-actions {% if is_own_profile %}profile-owner-actions{% endif %}">
+        {% if is_own_profile %}
+          <a class="outline-button" href="{{ url_for('activity') }}" data-i18n="profile_activity">Activity</a>
+          <a class="outline-button" href="{{ url_for('settings') }}" data-i18n="profile_edit_settings">Settings</a>
+          <a class="outline-button" href="{{ url_for('level_guide') }}" data-i18n="profile_guide">LvL Guide</a>
+        {% else %}
+          {% if safety_state.interaction_blocked %}
+            <span class="profile-safety-note">
+              {% if safety_state.blocked %}Unblock to interact.{% else %}You can't interact with this user.{% endif %}
+            </span>
+          {% else %}
+          <form action="{{ url_for('high_five_profile', username=profile.username) }}" method="post" class="profile-high-five-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="profile-high-five-button" type="submit" aria-label="High-five {{ profile.display_name }}" title="High-five">
+              <span aria-hidden="true">🖐</span>
+            </button>
+          </form>
+          <form action="{{ url_for('toggle_follow') }}" method="post" class="ajax-action-form" data-action="follow">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="target_id" value="{{ profile.id }}">
+            <button class="outline-button {% if is_following %}active{% endif %}" type="submit">
+              {% if is_following %}<span data-i18n="profile_unfollow">Unfollow</span>{% else %}<span data-i18n="profile_follow">Follow</span>{% endif %}
+            </button>
+          </form>
+          <a class="outline-button" href="{{ url_for('messages', u=profile.username) }}" data-i18n="profile_message">Message</a>
+          {% endif %}
+          <form action="{{ url_for('safety_action') }}" method="post" class="ajax-action-form" data-action="mute">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="target_user_id" value="{{ profile.id }}">
+            <input type="hidden" name="action_type" value="mute">
+            <button class="outline-button {% if safety_state.muted %}active{% endif %}" type="submit">{% if safety_state.muted %}<span data-i18n="profile_muted">Muted</span>{% else %}<span data-i18n="profile_mute">Mute</span>{% endif %}</button>
+          </form>
+          <form action="{{ url_for('safety_action') }}" method="post" class="ajax-action-form" data-action="block">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="target_user_id" value="{{ profile.id }}">
+            <input type="hidden" name="action_type" value="block">
+            <button class="outline-button danger-action {% if safety_state.blocked %}active{% endif %}" type="submit">{% if safety_state.blocked %}<span data-i18n="profile_unblock">Unblock</span>{% else %}<span data-i18n="profile_block">Block</span>{% endif %}</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+    
+    <div class="profile-names">
+      <h1>
+        <span class="profile-display-name">
+          {{ profile.display_name }}
+          {% if profile.username in ['ikasfood', 'lvl'] or profile.is_profile_verified %}
+            <svg title="Official Account" viewBox="0 0 24 24" width="1.1em" height="1.1em" style="vertical-align: -0.2em; filter: drop-shadow(0 1px 3px rgba(0, 240, 255, 0.3));"><path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.918-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.337 2.25c-.416-.165-.866-.25-1.336-.25-2.21 0-3.918 1.79-3.918 4 0 .495.084.965.238 1.4-1.273.65-2.148 2.02-2.148 3.6 0 1.46.758 2.75 1.875 3.45-.045.247-.074.5-.074.76 0 2.21 1.71 3.998 3.918 3.998.47 0 .92-.084 1.336-.25C9.182 21.585 10.49 22.5 12 22.5s2.816-.917 3.337-2.25c.416.165.866.25 1.336.25 2.21 0 3.918-1.79 3.918-4 0-.26-.028-.513-.074-.76 1.116-.7 1.875-1.99 1.875-3.45z" fill="var(--lvl-cyan)"/><path d="M10.153 16.52l-3.385-3.385 1.31-1.31 2.075 2.076 5.672-5.672 1.31 1.31-6.982 6.98z" fill="var(--lvl-white)"/></svg>
+          {% endif %}
+        </span>
+        <span class="level-badge" style="--badge-color: {{ profile.badge_color or theme_colors.muted }};" title="{{ level_title(profile.level or 1) }}">LvL {{ profile.level or 1 }}</span>
+      </h1>
+      <p class="handle">@{{ profile.username }}</p>
+    </div>
+
+    {% if profile.bio %}
+      <p class="bio">{{ profile.bio }}</p>
+    {% else %}
+      <p class="bio empty-bio" data-i18n="profile_no_bio">No bio yet.</p>
+    {% endif %}
+
+    <div class="profile-meta-grid">
+      {% if profile.location %}
+        <span title="Location">📍 {{ profile.location }}</span>
+      {% endif %}
+      {% if profile.website %}
+        <span title="Website">🔗 <a href="{{ profile.website }}" target="_blank" rel="nofollow noreferrer">{{ profile.website }}</a></span>
+      {% endif %}
+      {% if profile.gender %}
+        <span class="profile-gender {{ 'female' if profile.gender == 'Female' else 'male' }}" title="Gender">
+          {{ '♀' if profile.gender == 'Female' else '♂' }} {{ profile.gender }}
+        </span>
+      {% endif %}
+      <span>📅 <span data-i18n="joined">Joined</span> {{ profile.created_at[:7] }}</span>
+    </div>
+
+    <div class="profile-stats">
+      <a href="{{ url_for('profile', username=profile.username, m='posts') }}"><strong>{{ stats.posts }}</strong> <span data-i18n="profile_posts">Posts</span></a>
+      <a href="{{ url_for('profile_social_list', username=profile.username, list_type='following') }}"><strong>{{ stats.following }}</strong> <span data-i18n="profile_following">Following</span></a>
+      <a href="{{ url_for('profile_social_list', username=profile.username, list_type='followers') }}"><strong>{{ stats.followers }}</strong> <span data-i18n="profile_followers">Followers</span></a>
+      <a href="{{ url_for('profile_social_list', username=profile.username, list_type='friends') }}"><strong>{{ stats.friends }}</strong> <span data-i18n="profile_friends">Friends</span></a>
+    </div>
+
+    {% if not is_own_profile %}
+      {% set streak = streak_status|default({'count': 0, 'is_friend': false, 'days_until_friend': 7}) %}
+      <div class="profile-streak-card {% if streak.is_friend %}is-friend{% endif %}">
+        <span class="profile-streak-icon" aria-hidden="true">🖐</span>
+        <div>
+          {% if streak.is_friend %}
+            <strong>Friend streak active</strong>
+            <p>You are friends because your streak is {{ streak.count }} days. Keep it alive daily.</p>
+          {% elif streak.count > 0 %}
+            <strong>{{ streak.count }} day high-five streak</strong>
+            <p>{{ streak.days_until_friend }} more daily interactions to become friends.</p>
+          {% else %}
+            <strong>Friendship starts with a streak</strong>
+            <p>High-five or trade messages daily for 7 days to become friends.</p>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+
+    <section class="profile-xp-card" aria-label="Profile XP summary">
+      <div class="profile-xp-main">
+        <div>
+          {% set ltitle = level_title(profile.level or 1) %}
+          {% set ltitle_key = ltitle|lower|replace(' ', '_') %}
+          <span class="xp-kicker" data-i18n="level_title_{{ ltitle_key }}">{{ ltitle }}</span>
+          <strong>LvL {{ profile.level }}</strong>
+        </div>
+        <div class="profile-xp-total">
+          <strong>{{ profile.total_xp }}</strong>
+          <span data-i18n="profile_total_xp">Total XP</span>
+        </div>
+      </div>
+      <div class="xp-progress-track" aria-label="XP progress to next level">
+        <span style="width: {{ profile_xp_progress }}%;"></span>
+      </div>
+      <div class="xp-score-row">
+        <span>{{ profile_xp_current }} / {{ profile_xp_span }} <span data-i18n="profile_xp_this_level">XP this level</span></span>
+        <strong>{{ profile_xp_needed }} <span data-i18n="profile_xp_to_lvl">XP to LvL</span> {{ profile.level + 1 }}</strong>
+      </div>
+      <div class="next-reward-callout">
+        <span data-i18n="profile_next_reward">Next reward</span>
+        <strong>LvL {{ next_level_reward.level }} · <span data-i18n="reward_lvl_{{ next_level_reward.level }}_label">{{ next_level_reward.label }}</span></strong>
+        <p data-i18n="reward_lvl_{{ next_level_reward.level }}_desc">{{ next_level_reward.description }}</p>
+      </div>
+      <a class="level-guide-link" href="{{ url_for('level_guide') }}" data-i18n="profile_open_guide">Open LvL Guide</a>
+    </section>
+
+    <style>
+      .premium-achievements-card {
+        margin-top: 24px;
+        background: rgba(255, 255, 255, 0.02);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 20px;
+        padding: 0;
+        overflow: hidden;
+        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+      }
+      .premium-achievements-card:hover {
+        border-color: rgba(0, 240, 255, 0.25);
+        box-shadow: 0 12px 40px rgba(0, 240, 255, 0.08), inset 0 0 20px rgba(0, 240, 255, 0.03);
+      }
+      .premium-achievements-card summary::-webkit-details-marker { display: none; }
+      .premium-achievements-card[open] .achievement-caret { transform: rotate(180deg); color: var(--lvl-cyan) !important; }
+      .premium-achievements-card[open] .premium-achievements-heading-btn {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        background: rgba(255, 255, 255, 0.015);
+      }
+      .premium-achievements-heading-btn {
+        cursor: pointer;
+        list-style: none;
+        outline: none;
+        padding: 20px 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: background 0.3s ease;
+      }
+      .premium-achievements-heading-btn:hover {
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .premium-achievements-toggle {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+        padding: 8px 18px;
+        border-radius: 30px;
+        border: 1px solid rgba(255,255,255,0.1);
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .premium-achievements-heading-btn:hover .premium-achievements-toggle {
+        background: linear-gradient(135deg, rgba(0,240,255,0.15), rgba(0,240,255,0.05));
+        border-color: rgba(0,240,255,0.3);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0,240,255,0.15);
+      }
+      .premium-achievements-toggle strong {
+        font-size: 15px;
+        color: var(--text-primary);
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        transition: color 0.3s ease;
+      }
+      .premium-achievements-heading-btn:hover .premium-achievements-toggle strong {
+        color: var(--lvl-cyan);
+      }
+      .achievement-grid-wrapper {
+        padding: 24px;
+        background: rgba(0, 0, 0, 0.15);
+      }
+      .profile-display-name {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .premium-achievements-header-left {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        pointer-events: none;
+      }
+      .premium-achievements-icon-box {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, var(--lvl-cyan), var(--lvl-deep-blue));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 8px 24px rgba(0,240,255,0.3);
+        border: 1px solid rgba(255,255,255,0.2);
+      }
+    </style>
+    <details class="premium-achievements-card" aria-label="Profile achievements">
+      <summary class="premium-achievements-heading-btn">
+        <div class="premium-achievements-header-left">
+          <div class="premium-achievements-icon-box">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));"><path d="M12 15l-3.5 2 1-4.5-3-3 4.5-.5L12 5l1 4.5 4.5.5-3 3 1 4.5-3.5-2z"></path></svg>
+          </div>
+          <div>
+            <span class="xp-kicker" style="font-size: 10px; color: var(--lvl-cyan); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 800; display: block; margin-bottom: 4px; text-shadow: 0 0 8px rgba(0,240,255,0.4);" data-i18n="profile_public_progress">Public progress</span>
+            <h2 style="margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.3px; color: #fff;" data-i18n="guide_achievements_title">Achievements</h2>
+          </div>
+        </div>
+        <div class="premium-achievements-toggle">
+          <strong>{{ achievement_summary.unlocked }} / {{ achievement_summary.total }}</strong>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="achievement-caret" style="transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); color: rgba(255,255,255,0.6);"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </div>
+      </summary>
+      <div class="achievement-grid-wrapper">
+        <div class="achievement-grid" style="margin-top: 0;">
+          {% for achievement in achievements %}
+            <article class="achievement-card {% if achievement.unlocked %}unlocked{% else %}locked{% endif %}">
+              <div class="achievement-topline">
+                <span data-i18n="{% if achievement.unlocked %}profile_unlocked{% else %}profile_locked{% endif %}">{{ 'Unlocked' if achievement.unlocked else 'Locked' }}</span>
+                <b>{{ achievement.progress|round(0)|int }}%</b>
+              </div>
+              <strong data-i18n="achievement_{{ achievement.id }}_name">{{ achievement.name }}</strong>
+              <p data-i18n="achievement_{{ achievement.id }}_desc">{{ achievement.description }}</p>
+              <div class="achievement-progress-track" aria-label="{{ achievement.name }} progress">
+                <i style="width: {{ achievement.progress }}%;"></i>
+              </div>
+              <small>{{ achievement.progress_label }}</small>
+            </article>
+          {% endfor %}
+        </div>
+      </div>
+    </details>
+  </div>
+
+    <nav class="profile-tabs" aria-label="Profile tabs">
+      <a href="{{ url_for('profile', username=profile.username, m='posts') }}" 
+         class="{% if mode == 'posts' %}active{% endif %}"
+         {% if mode == 'posts' %}aria-current="page"{% endif %} data-i18n="profile_posts">
+        Posts
+      </a>
+      <a href="{{ url_for('profile', username=profile.username, m='replies') }}"
+         class="{% if mode == 'replies' %}active{% endif %}"
+         {% if mode == 'replies' %}aria-current="page"{% endif %} data-i18n="community_lens_history_desc">
+        Replies
+      </a>
+      <a href="{{ url_for('profile', username=profile.username, m='clips') }}"
+         class="{% if mode == 'clips' %}active{% endif %}"
+         {% if mode == 'clips' %}aria-current="page"{% endif %} data-i18n="nav_clips">
+        Clips
+      </a>
+      <a href="{{ url_for('profile', username=profile.username, m='liked') }}"
+         class="{% if mode == 'liked' %}active{% endif %}"
+         {% if mode == 'liked' %}aria-current="page"{% endif %} data-i18n="profile_likes">
+        Likes
+      </a>
+    </nav>
+  </section>
+
+<section class="feed">
+  {% if not posts %}
+    <div class="empty-state">
+      <h2 {% if mode == 'liked' %}data-i18n="profile_no_liked_posts"{% else %}data-i18n="profile_no_posts"{% endif %}>
+        {{ 'No liked posts' if mode == 'liked' else 'No posts' }}
+      </h2>
+      <p {% if mode == 'liked' %}data-i18n="profile_no_liked_posts_desc"{% else %}data-i18n="profile_no_posts_desc"{% endif %}>
+        {{ "This user hasn't liked any posts yet." if mode == 'liked' else 'This profile has not posted yet.' }}
+      </p>
+    </div>
+  {% else %}
+    {% for post in posts %}
+      {% include "_post_card.html" %}
+    {% endfor %}
+  {% endif %}
+</section>
+<nav class="pagination-controls" aria-label="Profile post pagination">
+  {% if page > 1 %}
+    <a class="outline-button" href="{{ url_for('profile', username=profile.username, m=mode, page=page-1) }}">Previous</a>
+  {% endif %}
+  {% if has_next %}
+    <a class="outline-button" href="{{ url_for('profile', username=profile.username, m=mode, page=page+1) }}">More</a>
+  {% endif %}
+</nav>
+{% endblock %}

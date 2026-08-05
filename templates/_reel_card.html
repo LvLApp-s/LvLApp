@@ -1,0 +1,148 @@
+{% set author = reel.author or reel.user or {} %}
+{% set is_demo = reel.is_demo %}
+<article class="reel-card {% if is_demo %}is-demo{% endif %}"
+         data-reel-card
+         data-reel-id="{{ reel.id }}"
+         data-autoplay-next="{{ 'true' if reel.autoplay_next else 'false' }}"
+         {% if not is_demo %}data-view-url="{{ url_for('record_reel_view', reel_id=reel.id) }}"{% endif %}>
+  <div class="reel-video-frame">
+    <video class="reel-video"
+           data-reel-video
+           playsinline
+           preload="metadata"
+           muted
+           {% if not reel.autoplay_next %}loop{% endif %}
+           {% if reel.cover_url %}poster="{{ reel.cover_url }}"{% endif %}>
+      <source src="{{ reel.video_url }}" type="video/mp4">
+      Your browser does not support short videos.
+    </video>
+    <button class="reel-play-toggle" type="button" data-reel-play aria-label="Play or pause reel">
+      <span data-reel-play-icon>Play</span>
+    </button>
+    <div class="reel-overlay">
+      <div class="reel-meta">
+        <div class="reel-author">
+          {% if author.username %}
+            <a href="{{ url_for('profile', username=author.username) }}">
+              <img class="avatar small-avatar" src="{{ author.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar">
+            </a>
+          {% else %}
+            <img class="avatar small-avatar" src="{{ author.profile_photo_url or url_for('static', filename='assets/icon-192.png') }}" alt="Avatar">
+          {% endif %}
+          <span>
+            <strong>{{ author.display_name or 'LvL' }}</strong>
+            <small>@{{ author.username or 'demo' }}</small>
+          </span>
+          {% if author.level %}
+            <span class="reel-level-badge" style="--badge-color: {{ author.badge_color or theme_colors.muted }};" title="{{ level_title(author.level or 1) }}">LvL {{ author.level or 1 }}</span>
+          {% endif %}
+          {% if is_demo %}
+            <em>Demo</em>
+          {% endif %}
+          {% if not is_demo and author.id != viewer.id and reel.user_id != viewer.id %}
+            <form action="{{ url_for('toggle_follow') }}" method="post" class="ajax-action-form reel-follow-form" data-action="follow">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="target_id" value="{{ author.id or reel.user_id }}">
+              <button class="follow-chip reel-follow-chip {% if reel.author_followed %}active{% endif %}" type="submit">{{ 'Unfollow' if reel.author_followed else 'Follow' }}</button>
+            </form>
+          {% endif %}
+        </div>
+        {% if reel.community %}
+          <a class="reel-community-chip" href="{{ url_for('community_detail', slug=reel.community.slug) }}" style="--community-color: {{ reel.community.accent_color or theme_colors.primary }};">
+            {{ reel.community.name }}
+          </a>
+        {% endif %}
+        {% if reel.caption %}
+          <p>{{ reel.caption | linkify_mentions }}</p>
+        {% endif %}
+      </div>
+    </div>
+    <aside class="reel-actions" aria-label="Clip actions">
+      <button class="reel-action-button" type="button" data-reel-mute aria-label="Toggle sound">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+        <span data-reel-mute-icon class="sr-only">Mute</span>
+      </button>
+      {% if not is_demo %}
+        <form action="{{ url_for('toggle_reel_like', reel_id=reel.id) }}" method="post" class="reel-like-form" data-reel-like-form>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="reel-action-button {% if reel.viewer_liked %}active{% endif %}" type="submit" aria-label="Like reel">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            <strong data-reel-like-count>{{ reel.like_count }}</strong>
+          </button>
+        </form>
+        <button class="reel-action-button" type="button"
+                data-reel-comment-toggle
+                {% if not reel.is_demo %}
+                data-comments-url="{{ url_for('api_reel_comments', reel_id=reel.id) }}"
+                data-comment-action="{{ url_for('add_reel_comment', reel_id=reel.id) }}"
+                data-csrf="{{ csrf_token() }}"
+                {% endif %}
+                aria-label="View comments">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+          <strong data-reel-comment-count>{{ reel.comment_count }}</strong>
+        </button>
+        <button class="reel-action-button share-action-button" type="button" data-share-modal-trigger aria-label="Share Clip to friends">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        </button>
+        {% if reel.allow_downloads %}
+          <a class="reel-action-button" href="{{ reel.video_url }}" download aria-label="Download reel">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+          </a>
+        {% endif %}
+        {% if reel.is_owner %}
+          <form action="{{ url_for('delete_reel', reel_id=reel.id) }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="reel-action-button danger" type="submit" aria-label="Delete reel">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+            </button>
+          </form>
+        {% endif %}
+      {% else %}
+        <button class="reel-action-button" type="button" disabled>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+          <strong>0</strong>
+        </button>
+        <button class="reel-action-button" type="button" disabled>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+          <strong>0</strong>
+        </button>
+      {% endif %}
+    </aside>
+    <div class="share-modal-overlay" data-share-modal hidden>
+      <div class="share-modal-content panel">
+        <div class="share-modal-header">
+        <strong style="white-space: nowrap;" data-i18n="reel_share_send_to">Send to</strong>
+        <input type="text" class="share-search-input" data-share-search placeholder="Search..." data-i18n-placeholder="reel_share_search">
+        <button type="button" class="close-share-modal" data-close-share aria-label="Close" data-i18n-aria="nav_close">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </div>
+        <div class="share-friends-list" data-share-friends-list>
+          <p class="loading-friends" data-i18n="reel_share_loading_friends">Loading friends...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% if not is_demo %}
+  <div class="reel-comment-panel" data-reel-comment-panel aria-label="Clip comments">
+    <div class="reel-comment-panel-header">
+      <strong>Comments</strong>
+      <button class="reel-comment-panel-close" type="button" data-reel-comment-close aria-label="Close comments">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+    </div>
+    <div class="reel-comment-list" data-reel-comment-list>
+      <p class="reel-comment-empty">Loading comments…</p>
+    </div>
+    <form class="reel-comment-submit-form" data-reel-comment-form
+          action="{{ url_for('add_reel_comment', reel_id=reel.id) }}" method="post"
+          data-viewer-name="{{ viewer.display_name }}"
+          data-viewer-username="{{ viewer.username }}"
+          data-viewer-avatar="{{ viewer.profile_photo_url or '' }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input class="reel-comment-input" type="text" name="comment" maxlength="280" placeholder="Add a comment…" autocomplete="off">
+      <button class="reel-comment-post-btn" type="submit">Post</button>
+    </form>
+  </div>
+  {% endif %}
+</article>
