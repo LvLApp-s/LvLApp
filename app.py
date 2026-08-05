@@ -23,14 +23,51 @@ load_dotenv()
 
 from werkzeug.middleware.proxy_fix import ProxyFix
 
+DEFAULT_DEV_SECRET_KEY = "dev-only-insecure-secret"
+
+def env_truthy(value, default=True):
+    if value is None or str(value).strip() == '':
+        return default
+    return str(value).strip().lower() not in {'0', 'false', 'no', 'off'}
+
+def runtime_environment(environ=None):
+    environ = environ or os.environ
+    return (environ.get("FLASK_ENV") or environ.get("APP_ENV") or environ.get("VERCEL_ENV") or '').strip().lower()
+
+def is_production_runtime(environ=None):
+    return runtime_environment(environ) in {'production', 'prod'}
+
+def env_value_present(name, environ=None):
+    environ = environ or os.environ
+    return bool((environ.get(name) or '').strip())
+
+def resolve_flask_secret_key(environ=None):
+    environ = environ or os.environ
+    secret_key = (environ.get("FLASK_SECRET_KEY") or '').strip()
+    if secret_key:
+        return secret_key
+    if is_production_runtime(environ):
+        raise RuntimeError("FLASK_SECRET_KEY must be configured in production.")
+    return DEFAULT_DEV_SECRET_KEY
+
+def session_cookie_config(environ=None):
+    environ = environ or os.environ
+    cookie_secure = env_truthy(environ.get("SESSION_COOKIE_SECURE"), default=is_production_runtime(environ))
+    cookie_samesite = (environ.get("SESSION_COOKIE_SAMESITE") or ('None' if cookie_secure else 'Lax')).strip().capitalize()
+    if cookie_samesite not in {'Lax', 'Strict', 'None'}:
+        cookie_samesite = 'None' if cookie_secure else 'Lax'
+    if cookie_samesite == 'None' and not cookie_secure:
+        cookie_samesite = 'Lax'
+    return {
+        'SESSION_COOKIE_HTTPONLY': True,
+        'SESSION_COOKIE_SAMESITE': cookie_samesite,
+        'SESSION_COOKIE_SECURE': cookie_secure,
+    }
+
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "super-secret-default-key")
-app.config.update(
-    SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE='None',
-    SESSION_COOKIE_SECURE=True
-)
+app.secret_key = resolve_flask_secret_key()
+app.config.update(**session_cookie_config())
 logging.basicConfig(level=logging.INFO)
 
 url: str = os.getenv("SUPABASE_URL", "")
@@ -234,11 +271,6 @@ def parse_int(value):
         return int(value)
     except (TypeError, ValueError):
         return None
-
-def env_truthy(value, default=True):
-    if value is None or str(value).strip() == '':
-        return default
-    return str(value).strip().lower() not in {'0', 'false', 'no', 'off'}
 
 def mail_settings():
     username = os.getenv("MAIL_USERNAME") or os.getenv("SMTP_USERNAME") or os.getenv("SMTP_FROM")
@@ -2019,21 +2051,43 @@ def setup_health_check(label, ready, detail):
 def get_setup_health():
     checks = []
     checks.append(setup_health_check(
+        "Flask secret key",
+        env_value_present("FLASK_SECRET_KEY"),
+        "FLASK_SECRET_KEY is configured." if env_value_present("FLASK_SECRET_KEY") else "Set FLASK_SECRET_KEY in Vercel and local .env before shared testing."
+    ))
+    checks.append(setup_health_check(
+        "Admin token",
+        env_value_present("LVL_ADMIN_TOKEN"),
+        "LVL_ADMIN_TOKEN is configured." if env_value_present("LVL_ADMIN_TOKEN") else "Set LVL_ADMIN_TOKEN before using admin-only backend tools."
+    ))
+    checks.append(setup_health_check(
+        "App base URL",
+        env_value_present("APP_BASE_URL"),
+        "APP_BASE_URL is configured." if env_value_present("APP_BASE_URL") else "Set APP_BASE_URL to the local, preview, or production app URL."
+    ))
+    checks.append(setup_health_check(
+        "OAuth redirect base URL",
+        env_value_present("OAUTH_REDIRECT_BASE_URL") or env_value_present("APP_BASE_URL"),
+        "OAuth redirects have a configured base URL." if (env_value_present("OAUTH_REDIRECT_BASE_URL") or env_value_present("APP_BASE_URL")) else "Set OAUTH_REDIRECT_BASE_URL or APP_BASE_URL for Google OAuth callbacks."
+    ))
+    checks.append(setup_health_check(
         "Supabase connection",
         bool(supabase),
         "Client configured." if supabase else "Add SUPABASE_URL and SUPABASE_SECRET to .env."
     ))
 
-    for table, label in [
-        ('users', 'Users table'),
-        ('posts', 'Posts table'),
-        ('reels', 'Reels table'),
-        ('communities', 'Communities table'),
-        ('user_safety_actions', 'Safety actions table'),
-        ('job_positions', 'Job positions table'),
-        ('job_applications', 'Job applications table'),
-        ('contact_messages', 'Contact messages table'),
-    ]:
+    table_checks = [
+        ('users', 'Users table', 'Run database/000_base_schema.sql in Supabase.'),
+        ('posts', 'Posts table', 'Run database/000_base_schema.sql in Supabase.'),
+        ('reels', 'Reels table', 'Run database/migrations/002_reels.sql in Supabase.'),
+        ('communities', 'Communities table', 'Run database/community_schema.sql in Supabase.'),
+        ('user_safety_actions', 'Safety actions table', 'Run database/migrations/001_product_hardening.sql in Supabase.'),
+        ('job_positions', 'Job positions table', 'Run database/migrations/008_careers_schema.sql in Supabase.'),
+        ('job_applications', 'Job applications table', 'Run database/migrations/008_careers_schema.sql in Supabase.'),
+        ('contact_messages', 'Contact messages table', 'Run database/migrations/010_contact_suggestions_verification.sql in Supabase.'),
+        ('verification_requests', 'Verification requests table', 'Run database/migrations/010_contact_suggestions_verification.sql in Supabase.'),
+    ]
+    for table, label, missing_detail in table_checks:
         if not supabase:
             checks.append(setup_health_check(label, False, "Supabase is not configured."))
             continue
@@ -2041,12 +2095,7 @@ def get_setup_health():
             supabase.table(table).select('id').limit(1).execute()
             checks.append(setup_health_check(label, True, f"The {table} table is queryable."))
         except Exception as exc:
-            if table == 'reels' and reels_table_not_ready(exc):
-                detail = "Run database/migrations/002_reels.sql in Supabase."
-            elif table in ('job_positions', 'job_applications', 'contact_messages'):
-                detail = "Run database/migrations/008_careers_schema.sql in Supabase."
-            else:
-                detail = handle_db_error(exc, f"The {table} table could not be checked.")
+            detail = missing_detail if (table == 'reels' and reels_table_not_ready(exc)) else handle_db_error(exc, missing_detail)
             checks.append(setup_health_check(label, False, detail))
 
     if supabase:
@@ -2506,8 +2555,7 @@ def find_password_reset_user(account):
     return None
 
 def password_reset_memory_fallback_enabled():
-    app_env = (os.getenv("FLASK_ENV") or os.getenv("APP_ENV") or '').strip().lower()
-    return app_env not in {'production', 'prod'}
+    return not is_production_runtime()
 
 def store_password_reset_token(user_id, raw_token):
     token_hash = password_reset_token_hash(raw_token)

@@ -95,7 +95,11 @@ social-media-main/
    SUPABASE_URL=https://your-project.supabase.co
    SUPABASE_SECRET=your-service-role-key
    FLASK_SECRET_KEY=your-secret-key
+   LVL_ADMIN_TOKEN=your-admin-token
+   APP_BASE_URL=http://127.0.0.1:5000
+   OAUTH_REDIRECT_BASE_URL=http://127.0.0.1:5000
    SUPABASE_STORAGE_BUCKET=lvl-media
+   SUPABASE_VIDEO_BUCKET=lvl-media
    ```
 
 2. Install Python dependencies:
@@ -110,7 +114,7 @@ social-media-main/
    flask run
    ```
 
-4. Run Supabase SQL from `database/community_schema.sql` and every file in `database/migrations/` that has not been applied yet.
+4. For a fresh Supabase project, run the SQL files in the order documented in `database/README.md`, starting with `database/000_base_schema.sql`.
 
 5. Create a public Supabase Storage bucket matching `SUPABASE_STORAGE_BUCKET` for uploaded post/profile images.
 
@@ -118,7 +122,24 @@ social-media-main/
 
 ## Vercel Deployment
 
-The project deploys automatically via Vercel. `vercel.json` routes all traffic to `app.py`. Environment variables (`SUPABASE_URL`, `SUPABASE_SECRET`, `FLASK_SECRET_KEY`) must be configured in the Vercel dashboard.
+The project deploys automatically via Vercel. `vercel.json` routes all traffic to `app.py`.
+
+Configure these Vercel environment variables for Production and Preview before shared testing:
+
+```
+SUPABASE_URL
+SUPABASE_SECRET
+FLASK_SECRET_KEY
+LVL_ADMIN_TOKEN
+APP_BASE_URL
+OAUTH_REDIRECT_BASE_URL
+SUPABASE_STORAGE_BUCKET
+SUPABASE_VIDEO_BUCKET
+LOCAL_IMAGE_UPLOAD_FALLBACK
+MAX_VIDEO_BYTES
+```
+
+For production, set `APP_BASE_URL` and `OAUTH_REDIRECT_BASE_URL` to the deployed HTTPS app URL. Local development can keep `SESSION_COOKIE_SECURE=0` and `SESSION_COOKIE_SAMESITE=Lax`; Vercel production defaults to secure cookies.
 
 ## Legacy PHP Version
 

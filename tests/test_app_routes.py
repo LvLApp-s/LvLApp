@@ -88,6 +88,38 @@ class AppRouteTests(unittest.TestCase):
             self.assertTrue(zapp.admin_token_is_valid("secret"))
             self.assertFalse(zapp.admin_token_is_valid("admin123"))
 
+    def test_flask_secret_key_is_required_in_production(self):
+        with self.assertRaises(RuntimeError):
+            zapp.resolve_flask_secret_key({"VERCEL_ENV": "production"})
+
+        self.assertEqual(
+            zapp.resolve_flask_secret_key({"VERCEL_ENV": "production", "FLASK_SECRET_KEY": "configured"}),
+            "configured",
+        )
+        self.assertEqual(zapp.resolve_flask_secret_key({}), zapp.DEFAULT_DEV_SECRET_KEY)
+
+    def test_session_cookie_config_supports_local_and_vercel_runtime(self):
+        local_config = zapp.session_cookie_config({})
+        self.assertFalse(local_config["SESSION_COOKIE_SECURE"])
+        self.assertEqual(local_config["SESSION_COOKIE_SAMESITE"], "Lax")
+
+        production_config = zapp.session_cookie_config({"VERCEL_ENV": "production"})
+        self.assertTrue(production_config["SESSION_COOKIE_SECURE"])
+        self.assertEqual(production_config["SESSION_COOKIE_SAMESITE"], "None")
+
+        invalid_local_none = zapp.session_cookie_config({
+            "SESSION_COOKIE_SECURE": "0",
+            "SESSION_COOKIE_SAMESITE": "None",
+        })
+        self.assertEqual(invalid_local_none["SESSION_COOKIE_SAMESITE"], "Lax")
+
+    def test_password_reset_memory_fallback_is_disabled_on_vercel_production(self):
+        with patch.dict(os.environ, {"VERCEL_ENV": "production"}, clear=True):
+            self.assertFalse(zapp.password_reset_memory_fallback_enabled())
+
+        with patch.dict(os.environ, {"APP_ENV": "development"}, clear=True):
+            self.assertTrue(zapp.password_reset_memory_fallback_enabled())
+
     def test_recent_duplicate_submission_queries_same_actor_text_and_window(self):
         class Result:
             data = [{"id": 99}]
