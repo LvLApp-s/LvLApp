@@ -419,7 +419,7 @@
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   padding: 14px 18px;
   box-shadow: 0 12px 34px rgba(0, 0, 0, 0.45);
   display: flex;
@@ -460,7 +460,7 @@
   align-items: center;
   justify-content: center;
   font-size: 14px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   width: 24px;
   height: 24px;
   transition: background-color 0.2s, color 0.2s;
@@ -473,16 +473,16 @@
 
 /* Status variants */
 .toast-item.success {
-  border-left: 4px solid var(--lvl-success, #00e676);
+  border-left: 4px solid var(--lvl-success);
 }
 .toast-item.error {
-  border-left: 4px solid var(--lvl-danger, #ff1744);
+  border-left: 4px solid var(--lvl-danger);
 }
 .toast-item.warning {
-  border-left: 4px solid var(--lvl-warning, #ffea00);
+  border-left: 4px solid var(--lvl-warning);
 }
 .toast-item.info {
-  border-left: 4px solid var(--lvl-cyan, #00e5ff);
+  border-left: 4px solid var(--lvl-cyan);
 }
 
 @media (max-width: 767px) {
@@ -549,24 +549,24 @@
 }
 
 .app-toast.success {
-  background: rgba(16, 185, 129, 0.18) !important;
-  border: 1px solid rgba(16, 185, 129, 0.45) !important;
-  color: #34d399 !important;
+  background: var(--lvl-success-soft) !important;
+  border: 1px solid var(--lvl-success-border) !important;
+  color: var(--lvl-success-text-soft) !important;
 }
 .app-toast.error {
-  background: rgba(239, 68, 68, 0.18) !important;
-  border: 1px solid rgba(239, 68, 68, 0.45) !important;
-  color: #f87171 !important;
+  background: var(--lvl-danger-soft) !important;
+  border: 1px solid var(--lvl-danger-border) !important;
+  color: var(--lvl-danger-text-soft) !important;
 }
 .app-toast.info {
-  background: rgba(59, 130, 246, 0.18) !important;
-  border: 1px solid rgba(59, 130, 246, 0.45) !important;
-  color: #60a5fa !important;
+  background: var(--lvl-primary-soft-18) !important;
+  border: 1px solid var(--lvl-primary-border) !important;
+  color: var(--lvl-primary-text-soft) !important;
 }
 .app-toast.warning {
-  background: rgba(245, 158, 11, 0.18) !important;
-  border: 1px solid rgba(245, 158, 11, 0.45) !important;
-  color: #fbbf24 !important;
+  background: var(--lvl-warning-soft-34) !important;
+  border: 1px solid var(--lvl-warning-border) !important;
+  color: var(--lvl-warning) !important;
 }
 
 .app-toast::after {
@@ -580,4 +580,3 @@
 .app-toast:hover::after {
   opacity: 1;
 }
-

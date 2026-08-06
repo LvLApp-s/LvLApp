@@ -101,7 +101,7 @@ VIDEO_CONTENT_TYPES = {
     'mov': 'video/quicktime',
     'm4v': 'video/x-m4v',
 }
-ASSET_VERSION = "100"
+ASSET_VERSION = "101"
 HOME_REEL_PREVIEW_LIMIT = 12
 HOME_MEDIA_PREVIEW_LIMIT = 12
 
@@ -2661,15 +2661,12 @@ def oauth_start(provider):
         return redirect(url_for('auth'))
 
     session['oauth_provider'] = provider
-    state = secrets.token_urlsafe(32)
-    session['oauth_state'] = state
 
     try:
         response = supabase.auth.sign_in_with_oauth({
             'provider': provider,
             'options': {
                 'redirect_to': oauth_redirect_url(),
-                'query_params': {'state': state},
             },
         })
         store_oauth_code_verifier(supabase.auth)
@@ -2685,26 +2682,15 @@ def oauth_callback():
         flash("Supabase connection is required for social login.", "error")
         return redirect(url_for('auth'))
 
-    # Handle errors from Supabase/Google - but ignore bad_oauth_state if we have a code
-    # In serverless environments (Vercel), session cookies may not persist between
-    # the oauth_start and oauth_callback requests, causing false bad_oauth_state errors.
+    # Supabase owns the provider OAuth state; LvL only exchanges the returned
+    # PKCE code and bridges the Supabase Auth user into public.users.
     code = request.args.get('code')
-    oauth_error_code = request.args.get('error_code') or ''
     oauth_error = request.args.get('error_description') or request.args.get('error')
 
-    if oauth_error and not (code and oauth_error_code == 'bad_oauth_state'):
-        # Only block on real errors; if we have a code and it's just a state mismatch
-        # (common in serverless), try to proceed with the code exchange anyway.
+    if oauth_error:
         clear_oauth_flow_session()
         flash(f"Social login was cancelled or failed: {oauth_error}", "error")
         return redirect(url_for('auth'))
-
-    expected_state = session.get('oauth_state')
-    returned_state = request.args.get('state')
-    # Skip strict state check in serverless where sessions may not persist
-    if expected_state and returned_state and not secrets.compare_digest(expected_state, returned_state):
-        # Log the mismatch but continue if we have a code — serverless session loss
-        app.logger.warning("OAuth state mismatch (possible serverless session loss), proceeding with code exchange")
 
     if not code:
         clear_oauth_flow_session()

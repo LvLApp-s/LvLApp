@@ -3,7 +3,7 @@
 {% set title = "Admin Dashboard" %}
 
 {% block content %}
-<div class="settings-container admin-container" style="max-width: 900px; margin: 0 auto; padding: 20px 16px;">
+<div class="settings-container admin-container">
   <header class="page-header">
     <div class="header-content">
       <h1>Admin Dashboard</h1>
@@ -34,7 +34,7 @@
       </section>
     {% else %}
       {# ── Authenticated Admin View ── #}
-      <div class="admin-tabs" style="display: flex; gap: 4px; overflow-x: auto; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); margin-bottom: 24px; scrollbar-width: none;">
+      <div class="admin-tabs">
         <button class="guide-tab active" onclick="switchAdminTab('positions')">Jobs ({{ positions|length }})</button>
         <button class="guide-tab" onclick="switchAdminTab('applications')">Apps ({{ applications|length }})</button>
         <button class="guide-tab" onclick="switchAdminTab('messages')">Contacts ({{ contact_messages|length }})</button>
@@ -48,13 +48,13 @@
 
       {# ── SECTION 1: MANAGE JOB POSITIONS ── #}
       <section id="admin-sec-positions" class="admin-section">
-        <div class="admin-section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <div class="admin-section-header">
           <h3>Job Positions</h3>
           <button class="primary-button small" onclick="toggleAddPositionForm()">+ Add Position</button>
         </div>
 
         {# Add Position Form #}
-        <div id="add-position-form-container" class="guide-form-card add-position-form-card" style="display: none; margin-bottom: 24px; border: 1px solid var(--lvl-cyan); padding: 20px; border-radius: var(--radius-lg); background: var(--lvl-surface-2);">
+        <div id="add-position-form-container" class="guide-form-card add-position-form-card admin-panel-card admin-add-position-form" style="display: none;">
           <h4>Add New Position</h4>
           <form class="premium-form" action="{{ url_for('admin_dashboard') }}" method="post">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -94,7 +94,7 @@
               <textarea name="description" rows="4" required placeholder="Describe the role responsibilities..."></textarea>
             </label>
 
-            <div class="form-actions" style="margin-top: 12px; display: flex; gap: 8px;">
+            <div class="form-actions admin-form-actions-tight">
               <button type="button" class="outline-button small" onclick="toggleAddPositionForm()">Cancel</button>
               <button type="submit" class="primary-button small">Save Position</button>
             </div>
@@ -103,10 +103,10 @@
 
         {# Positions List #}
         {% if positions %}
-          <div class="careers-positions-grid" style="display: grid; gap: 16px;">
+          <div class="careers-positions-grid">
             {% for pos in positions %}
-              <article class="careers-position-card admin-position-card" style="position: relative; padding: 20px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--lvl-surface-2);">
-                <div class="careers-position-header admin-position-header" style="padding-right: 120px;">
+              <article class="careers-position-card admin-position-card admin-panel-card">
+                <div class="careers-position-header admin-position-header">
                   <strong>{{ pos.title }}</strong>
                   <span class="careers-position-type {% if pos.type == 'Internship' %}careers-type-internship{% elif pos.type == 'Part-time' %}careers-type-parttime{% else %}careers-type-fulltime{% endif %}">{{ pos.type }}</span>
                   <span class="admin-status-pill {% if pos.is_active %}active{% endif %}">
@@ -114,20 +114,20 @@
                   </span>
                 </div>
                 <p class="careers-position-dept">{{ pos.department }}</p>
-                <p class="careers-position-desc admin-position-desc" style="white-space: pre-wrap; margin-top: 8px; font-size: 13px; color: var(--text-secondary);">{{ pos.description }}</p>
+                <p class="careers-position-desc admin-position-desc">{{ pos.description }}</p>
                 
-                <div class="admin-action-buttons" style="position: absolute; top: 20px; right: 20px; display: flex; gap: 8px;">
+                <div class="admin-action-buttons">
                   <form action="{{ url_for('admin_dashboard') }}" method="post" class="admin-action-form" style="display: inline;">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="action" value="toggle_position">
                     <input type="hidden" name="id" value="{{ pos.id }}">
-                    <button type="submit" class="outline-button small" style="padding: 4px 8px; font-size: 11px;">Toggle Status</button>
+                    <button type="submit" class="outline-button small admin-button-xs">Toggle Status</button>
                   </form>
                   <form action="{{ url_for('admin_dashboard') }}" method="post" class="admin-action-form" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this job posting?');">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="action" value="delete_position">
                     <input type="hidden" name="id" value="{{ pos.id }}">
-                    <button type="submit" class="danger-button small" style="padding: 4px 8px; font-size: 11px; border-radius: 8px;">Delete</button>
+                    <button type="submit" class="danger-button small admin-button-xs">Delete</button>
                   </form>
                 </div>
               </article>
@@ -145,10 +145,10 @@
       <section id="admin-sec-applications" class="admin-section admin-sec-hidden">
         <h3>Job Applications</h3>
         {% if applications %}
-          <div class="admin-grid-container" style="display: grid; gap: 16px;">
+          <div class="admin-grid-container">
             {% for app in applications %}
-              <div class="guide-form-card admin-application-card" style="padding: 20px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--lvl-surface-2);">
-                <div class="admin-card-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
+              <div class="guide-form-card admin-application-card admin-panel-card">
+                <div class="admin-card-header">
                   <div>
                     <h4 class="admin-card-title" style="margin: 0 0 4px 0; font-size: 16px;">{{ app.name }}</h4>
                     <span class="admin-application-subtitle" style="font-size: 13px; color: var(--lvl-cyan); font-weight: bold;">Applied for: {{ app.position_title }}</span>
@@ -163,7 +163,7 @@
                   {% if app.cv_url %}
                     <div>
                       <strong>CV / Resume:</strong> 
-                      <a href="{{ url_for('static', filename='uploads/cvs/' ~ app.cv_url) }}" target="_blank" class="outline-button small admin-cv-btn" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; font-size: 12px; margin-left: 8px;">
+                      <a href="{{ url_for('static', filename='uploads/cvs/' ~ app.cv_url) }}" target="_blank" class="outline-button small admin-cv-btn">
                         📄 View Resume
                       </a>
                     </div>
@@ -186,21 +186,21 @@
       <section id="admin-sec-messages" class="admin-section admin-sec-hidden">
         <h3>Contact Messages</h3>
         {% if contact_messages %}
-          <div class="admin-grid-container" style="display: grid; gap: 16px;">
+          <div class="admin-grid-container">
             {% for msg in contact_messages %}
-              <div class="guide-form-card admin-message-card" style="padding: 20px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--lvl-surface-2);">
-                <div class="admin-card-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
+              <div class="guide-form-card admin-message-card admin-panel-card">
+                <div class="admin-card-header">
                   <div>
                     <h4 class="admin-card-title" style="margin: 0 0 4px 0; font-size: 16px;">{{ msg.name }}</h4>
                     <span class="admin-card-email" style="font-size: 13px; color: var(--text-secondary);"><a href="mailto:{{ msg.email }}">{{ msg.email }}</a></span>
                   </div>
                   <span class="admin-card-time" style="font-size: 11px; color: var(--text-muted);">{{ msg.created_at[:16] if msg.created_at else '' }}</span>
                 </div>
-                <div class="admin-card-body admin-message-text" style="white-space: pre-wrap; line-height: 1.5; margin-top: 12px; font-size: 13px; color: var(--text-secondary);">
+                <div class="admin-card-body admin-message-text">
                   {{ msg.message }}
                 </div>
                 
-                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13px;">
+                <div class="admin-card-footer">
                   <div>
                     <strong>Subject:</strong> {{ msg.subject or 'General Question' }}
                   </div>
@@ -220,38 +220,38 @@
       <section id="admin-sec-suggestions" class="admin-section admin-sec-hidden">
         <h3>Suggestions Box</h3>
         {% if suggestions %}
-          <div class="admin-grid-container" style="display: grid; gap: 16px;">
+          <div class="admin-grid-container">
             {% for msg in suggestions %}
-              <div class="guide-form-card admin-message-card" style="padding: 20px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--lvl-surface-2);">
-                <div class="admin-card-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
+              <div class="guide-form-card admin-message-card admin-panel-card">
+                <div class="admin-card-header">
                   <div>
                     <h4 class="admin-card-title" style="margin: 0 0 4px 0; font-size: 16px;">{{ msg.name }}</h4>
                     <span class="admin-card-email" style="font-size: 13px; color: var(--text-secondary);"><a href="mailto:{{ msg.email }}">{{ msg.email }}</a></span>
                   </div>
                   <span class="admin-card-time" style="font-size: 11px; color: var(--text-muted);">{{ msg.created_at[:16] if msg.created_at else '' }}</span>
                 </div>
-                <div class="admin-card-body admin-message-text" style="white-space: pre-wrap; line-height: 1.5; margin-top: 12px; font-size: 13px; color: var(--text-secondary);">
+                <div class="admin-card-body admin-message-text">
                   {{ msg.message }}
                 </div>
                 
-                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13px;">
+                <div class="admin-card-footer">
                   <div>
                     <strong>Status:</strong> 
                     <span class="admin-status-pill {% if msg.status == 'New' or msg.status == 'Reviewed' or msg.status == 'Planned' %}active{% endif %}">
                       {{ msg.status or 'New' }}
                     </span>
                   </div>
-                  <form action="{{ url_for('admin_dashboard') }}" method="post" style="display: flex; align-items: center; gap: 8px; margin: 0;">
+                  <form action="{{ url_for('admin_dashboard') }}" method="post" class="admin-status-form">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="action" value="update_suggestion_status">
                     <input type="hidden" name="id" value="{{ msg.id }}">
-                    <select name="status" class="admin-select-input" style="padding: 4px 8px; font-size: 12px;">
+                    <select name="status" class="admin-select-input admin-select-compact">
                       <option value="New" {% if msg.status == 'New' %}selected{% endif %}>New</option>
                       <option value="Reviewed" {% if msg.status == 'Reviewed' %}selected{% endif %}>Reviewed</option>
                       <option value="Planned" {% if msg.status == 'Planned' %}selected{% endif %}>Planned</option>
                       <option value="Closed" {% if msg.status == 'Closed' %}selected{% endif %}>Closed</option>
                     </select>
-                    <button type="submit" class="outline-button small" style="padding: 4px 8px; font-size: 11px;">Update</button>
+                    <button type="submit" class="outline-button small admin-button-xs">Update</button>
                   </form>
                 </div>
               </div>
@@ -269,10 +269,10 @@
       <section id="admin-sec-verifications" class="admin-section admin-sec-hidden">
         <h3>Verification Requests</h3>
         {% if verification_requests %}
-          <div class="admin-grid-container" style="display: grid; gap: 16px;">
+          <div class="admin-grid-container">
             {% for req in verification_requests %}
-              <div class="guide-form-card admin-message-card" style="padding: 20px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--lvl-surface-2);">
-                <div class="admin-card-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
+              <div class="guide-form-card admin-message-card admin-panel-card">
+                <div class="admin-card-header">
                   <div>
                     <h4 class="admin-card-title" style="margin: 0 0 4px 0; font-size: 16px;">{{ req.user.display_name if req.user else 'Unknown' }} (@{{ req.user.username if req.user else '' }})</h4>
                     <span class="admin-card-email" style="font-size: 13px; color: var(--text-secondary);">Status: 
@@ -291,7 +291,7 @@
                   {% if req.document_url %}
                     <div class="admin-body-row" style="margin-bottom: 6px;">
                       <strong>Document proof:</strong> 
-                      <a href="{{ req.document_url }}" target="_blank" class="outline-button small admin-cv-btn" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; font-size: 12px; margin-left: 0; margin-top: 4px;">
+                      <a href="{{ req.document_url }}" target="_blank" class="outline-button small admin-cv-btn admin-cv-btn-flush">
                         📄 View Document
                       </a>
                     </div>
@@ -305,12 +305,12 @@
                       
                       <label class="form-group" style="display: block; margin-bottom: 8px;">
                         <span style="font-weight: bold; display: block; margin-bottom: 4px;">Admin Notes</span>
-                        <input type="text" name="admin_notes" placeholder="Notes or rejection reason..." style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--bg-color); color: var(--text-primary);">
+                        <input type="text" name="admin_notes" placeholder="Notes or rejection reason..." class="admin-text-input">
                       </label>
                       
-                      <div style="display: flex; gap: 8px; margin-top: 8px;">
-                        <button type="submit" name="status" value="Approved" class="primary-button small" style="background: var(--lvl-success); border-color: var(--lvl-success); color: var(--lvl-white); font-weight: bold; cursor: pointer; padding: 6px 12px; border-radius: 8px;">Approve</button>
-                        <button type="submit" name="status" value="Rejected" class="danger-button small" style="color: var(--lvl-white); font-weight: bold; cursor: pointer; padding: 6px 12px; border-radius: 8px;">Reject</button>
+                      <div class="admin-button-row">
+                        <button type="submit" name="status" value="Approved" class="primary-button small admin-success-button">Approve</button>
+                        <button type="submit" name="status" value="Rejected" class="danger-button small admin-button-sm">Reject</button>
                       </div>
                     </form>
                   {% else %}
@@ -334,10 +334,10 @@
       <section id="admin-sec-reports" class="admin-section admin-sec-hidden">
         <h3>Reported Content & Safety</h3>
         {% if safety_reports %}
-          <div class="admin-grid-container" style="display: grid; gap: 16px;">
+          <div class="admin-grid-container">
             {% for report in safety_reports %}
-              <div class="guide-form-card" style="padding: 20px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--lvl-surface-2); position: relative;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+              <div class="guide-form-card admin-panel-card admin-report-card">
+                <div class="admin-report-header">
                   <div>
                     <strong>Reporter:</strong> @{{ report.actor.username if report.actor else 'Unknown' }}<br>
                     <strong>Reason for Report:</strong> <span style="color: var(--lvl-danger-text-soft);">{{ report.reason or 'No reason provided' }}</span>
@@ -346,7 +346,7 @@
                 </div>
 
                 {% if report.post %}
-                  <div style="background: var(--lvl-surface-3); border-radius: var(--radius-md); padding: 12px; border: 1px solid var(--border-color); margin-bottom: 16px;">
+                  <div class="admin-reported-post">
                     <strong>Author:</strong> @{{ report.post.user.username if report.post.user else 'Unknown' }}<br>
                     <p style="margin-top: 6px; font-size: 13px;">{{ report.post.content }}</p>
                   </div>
@@ -354,7 +354,7 @@
                   <p style="color: var(--text-muted); font-style: italic; margin-bottom: 16px;">Associated post was already deleted.</p>
                 {% endif %}
 
-                <div style="display: flex; gap: 8px;">
+                <div class="admin-button-row">
                   <form action="{{ url_for('admin_dashboard') }}" method="post" style="margin: 0;">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="action" value="dismiss_report">
@@ -367,7 +367,7 @@
                       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <input type="hidden" name="action" value="delete_post_global">
                       <input type="hidden" name="id" value="{{ report.post.id }}">
-                      <button type="submit" class="danger-button small" style="color: var(--lvl-white); padding: 6px 12px; border-radius: 8px;">Remove Post</button>
+                      <button type="submit" class="danger-button small admin-button-sm">Remove Post</button>
                     </form>
                   {% endif %}
                 </div>
@@ -385,31 +385,31 @@
       {# ── SECTION 7: USER MANAGEMENT ── #}
       <section id="admin-sec-users" class="admin-section admin-sec-hidden">
         <h3>User Directory</h3>
-        <form method="get" action="{{ url_for('admin_dashboard') }}" style="display: flex; gap: 8px; margin-bottom: 20px;">
+        <form method="get" action="{{ url_for('admin_dashboard') }}" class="admin-search-form">
           <input type="hidden" name="tab" value="users">
-          <input type="text" name="q_user" value="{{ q_user }}" placeholder="Search by name, nickname, or email..." style="flex: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--lvl-surface-2); color: var(--text-primary);">
-          <button type="submit" class="primary-button small" style="min-height: 40px; padding: 0 16px;">Search</button>
+          <input type="text" name="q_user" value="{{ q_user }}" placeholder="Search by name, nickname, or email..." class="admin-search-input">
+          <button type="submit" class="primary-button small admin-search-button">Search</button>
         </form>
 
         {% if system_users %}
-          <div class="admin-grid-container" style="display: grid; gap: 16px;">
+          <div class="admin-grid-container">
             {% for u in system_users %}
-              <div class="guide-form-card" style="padding: 20px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--lvl-surface-2);">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
+              <div class="guide-form-card admin-panel-card">
+                <div class="admin-user-summary">
                   <div>
                     <strong>{{ u.display_name }}</strong> (@{{ u.username }})
                     <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
                       Email: {{ u.email }} | Level: {{ u.level or 1 }} | XP: {{ u.total_xp or 0 }}
                     </div>
                   </div>
-                  <div style="display: flex; gap: 8px;">
+                  <div class="admin-button-row">
                     <span class="admin-status-pill {% if u.is_profile_verified %}active{% endif %}">
                       {{ 'Verified' if u.is_profile_verified else 'Unverified' }}
                     </span>
                   </div>
                 </div>
 
-                <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color); display: flex; gap: 8px; flex-wrap: wrap;">
+                <div class="admin-user-actions">
                   <form action="{{ url_for('admin_dashboard') }}" method="post" style="margin: 0;">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="action" value="toggle_user_verification">
@@ -427,7 +427,7 @@
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="action" value="delete_user_global">
                     <input type="hidden" name="id" value="{{ u.id }}">
-                    <button type="submit" class="danger-button small" style="color: var(--lvl-white); padding: 6px 12px; border-radius: 8px;">Delete Account</button>
+                    <button type="submit" class="danger-button small admin-button-sm">Delete Account</button>
                   </form>
                 </div>
               </div>
@@ -444,27 +444,27 @@
       {# ── SECTION 8: POST MANAGEMENT ── #}
       <section id="admin-sec-posts" class="admin-section admin-sec-hidden">
         <h3>Post Directory</h3>
-        <form method="get" action="{{ url_for('admin_dashboard') }}" style="display: flex; gap: 8px; margin-bottom: 20px;">
+        <form method="get" action="{{ url_for('admin_dashboard') }}" class="admin-search-form">
           <input type="hidden" name="tab" value="posts">
-          <input type="text" name="q_post" value="{{ q_post }}" placeholder="Search posts content..." style="flex: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--lvl-surface-2); color: var(--text-primary);">
-          <button type="submit" class="primary-button small" style="min-height: 40px; padding: 0 16px;">Search</button>
+          <input type="text" name="q_post" value="{{ q_post }}" placeholder="Search posts content..." class="admin-search-input">
+          <button type="submit" class="primary-button small admin-search-button">Search</button>
         </form>
 
         {% if system_posts %}
-          <div class="admin-grid-container" style="display: grid; gap: 12px;">
+          <div class="admin-grid-container admin-grid-container-sm">
             {% for p in system_posts %}
-              <div class="guide-form-card" style="padding: 16px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--lvl-surface-2); position: relative;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+              <div class="guide-form-card admin-post-card">
+                <div class="admin-post-header">
                   <strong>@{{ p.user.username if p.user else 'Unknown' }}</strong>
                   <span style="font-size: 11px; color: var(--text-muted);">{{ p.created_at[:16] if p.created_at else '' }}</span>
                 </div>
-                <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.4; margin-bottom: 12px;">{{ p.content }}</p>
+                <p class="admin-post-content">{{ p.content }}</p>
                 
                 <form action="{{ url_for('admin_dashboard') }}" method="post" style="margin: 0;" onsubmit="return confirm('Delete this post permanently?');">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <input type="hidden" name="action" value="delete_post_global">
                   <input type="hidden" name="id" value="{{ p.id }}">
-                  <button type="submit" class="danger-button small" style="color: var(--lvl-white); padding: 4px 8px; font-size: 11px; border-radius: 8px;">Delete Post</button>
+                  <button type="submit" class="danger-button small admin-button-xs">Delete Post</button>
                 </form>
               </div>
             {% endfor %}
@@ -483,9 +483,9 @@
         <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">Most recent admin dashboard action records from the log file.</p>
         
         {% if admin_logs %}
-          <div style="background: var(--lvl-surface-3); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; max-height: 500px; overflow-y: auto; font-family: monospace; font-size: 12px; line-height: 1.6; color: var(--text-primary);">
+          <div class="admin-log-box">
             {% for log in admin_logs %}
-              <div style="border-bottom: 1px solid var(--lvl-border); padding: 6px 0;">
+              <div class="admin-log-entry">
                 {{ log }}
               </div>
             {% endfor %}
@@ -502,8 +502,8 @@
 </div>
 
 {# ── WARNING DIALOG MODAL ── #}
-<div id="warning-modal" style="display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; padding: 16px;">
-  <div style="background: var(--lvl-surface-2); border: 1px solid var(--lvl-cyan); border-radius: var(--radius-lg); padding: 24px; width: 100%; max-width: 440px; box-shadow: 0 16px 40px rgba(0,0,0,0.6);">
+<div id="warning-modal" class="admin-warning-modal" style="display: none;">
+  <div class="admin-warning-dialog">
     <h4 style="margin: 0 0 10px 0;">Warn User: <span id="warning-target-name" style="color: var(--lvl-cyan);"></span></h4>
     <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Enter a warning text. The user will receive this warning as a direct message alert.</p>
     
@@ -514,10 +514,10 @@
 
       <label class="form-group" style="display: block; margin-bottom: 16px;">
         <span style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 6px;">Warning Reason / Description</span>
-        <textarea name="warning_text" required rows="4" placeholder="e.g. Please avoid offensive language or spam posts. Multiple warnings will lead to account suspension." style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--bg-color); color: var(--text-primary); font: inherit; resize: vertical;"></textarea>
+        <textarea name="warning_text" required rows="4" placeholder="e.g. Please avoid offensive language or spam posts. Multiple warnings will lead to account suspension." class="admin-warning-textarea"></textarea>
       </label>
 
-      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+      <div class="admin-warning-actions">
         <button type="button" class="outline-button small" onclick="closeWarningModal()">Cancel</button>
         <button type="submit" class="primary-button small">Send Warning</button>
       </div>
@@ -527,10 +527,257 @@
 
 <style>
 /* ── Admin Styles ── */
+.admin-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px 16px;
+}
+.admin-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 24px;
+  scrollbar-width: none;
+}
+.admin-section-header,
+.admin-card-header,
+.admin-user-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.admin-section-header {
+  align-items: center;
+  margin-bottom: 16px;
+}
+.admin-card-header {
+  gap: 8px;
+}
+.admin-user-summary {
+  gap: 10px;
+}
+.admin-panel-card {
+  padding: 20px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--lvl-surface-2);
+}
+.admin-add-position-form {
+  margin-bottom: 24px;
+  border-color: var(--lvl-cyan);
+}
+.admin-form-actions-tight,
+.admin-button-row,
+.admin-status-form,
+.admin-search-form,
+.admin-warning-actions {
+  display: flex;
+  gap: 8px;
+}
+.admin-form-actions-tight {
+  margin-top: 12px;
+}
+.careers-positions-grid,
+.admin-grid-container {
+  display: grid;
+  gap: 16px;
+}
+.admin-grid-container {
+  margin-top: 16px;
+}
+.admin-grid-container-sm {
+  gap: 12px;
+}
+.admin-position-card,
+.admin-report-card,
+.admin-post-card {
+  position: relative;
+}
+.admin-position-header {
+  padding-right: 120px;
+}
+.admin-position-desc {
+  white-space: pre-wrap;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.admin-action-buttons {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  gap: 8px;
+}
+.admin-button-xs {
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: var(--radius-sm);
+}
+.admin-button-sm {
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--lvl-white);
+  font-weight: bold;
+}
+.admin-cv-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  margin-left: 8px;
+}
+.admin-cv-btn-flush {
+  margin-left: 0;
+  margin-top: 4px;
+}
+.admin-message-text {
+  white-space: pre-wrap;
+  line-height: 1.5;
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.admin-card-footer {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+.admin-status-form {
+  align-items: center;
+  margin: 0;
+}
+.admin-select-compact {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+.admin-text-input,
+.admin-search-input,
+.admin-warning-textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-color);
+  color: var(--text-primary);
+}
+.admin-success-button {
+  background: var(--lvl-success);
+  border-color: var(--lvl-success);
+  color: var(--lvl-white);
+  font-weight: bold;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+}
+.admin-report-header,
+.admin-post-header {
+  display: flex;
+  justify-content: space-between;
+}
+.admin-report-header {
+  margin-bottom: 12px;
+}
+.admin-reported-post {
+  background: var(--lvl-surface-3);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  margin-bottom: 16px;
+}
+.admin-search-form {
+  margin-bottom: 20px;
+}
+.admin-search-input {
+  flex: 1;
+  padding: 10px;
+  background: var(--lvl-surface-2);
+}
+.admin-search-button {
+  min-height: 40px;
+  padding: 0 16px;
+}
+.admin-user-actions {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.admin-post-card {
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--lvl-surface-2);
+}
+.admin-post-header {
+  margin-bottom: 8px;
+}
+.admin-post-content {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin-bottom: 12px;
+}
+.admin-log-box {
+  background: var(--lvl-surface-3);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  max-height: 500px;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+.admin-log-entry {
+  border-bottom: 1px solid var(--lvl-border);
+  padding: 6px 0;
+}
+.admin-warning-modal {
+  position: fixed;
+  z-index: 10000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.8);
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.admin-warning-dialog {
+  background: var(--lvl-surface-2);
+  border: 1px solid var(--lvl-cyan);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.6);
+}
+.admin-warning-textarea {
+  font: inherit;
+  resize: vertical;
+}
+.admin-warning-actions {
+  justify-content: flex-end;
+}
 .admin-status-pill {
   font-size: 11px;
   padding: 3px 8px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   font-weight: bold;
   background: var(--lvl-primary-soft-15);
   color: var(--text-secondary);
@@ -551,13 +798,8 @@
   color: var(--text-primary);
   border: 1px solid var(--lvl-border);
   padding: 8px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font: inherit;
-}
-.admin-grid-container {
-  display: grid;
-  gap: 16px;
-  margin-top: 16px;
 }
 </style>
 
