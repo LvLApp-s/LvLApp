@@ -1,0 +1,32 @@
+# Local environment and tool state
+.env*
+!.env.example
+.vercel/
+.venv/
+__pycache__/
+*.pyc
+.tmp*
+.superpowers/
+.playwright-cli/
+output/
+static/uploads/
+
+# Non-runtime project history, tests, and scratch files
+legacy/
+scratch/
+docs/
+tests/
+test_*.py
+diff.txt
+out.html
+TODO.md
+PROJECT_SEPARATION.md
+AI_GUIDELINES.md
+*.txt
+!requirements.txt
+
+# One-off maintenance scripts
+fix_i18n*.py
+gen_i18n.py
+inject_*.py
+update_*.py
