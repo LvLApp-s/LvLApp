@@ -79,6 +79,7 @@ LOGIN_MAX_ATTEMPTS = 5
 PASSWORD_RESET_TOKENS = {}
 PASSWORD_RESET_TTL = timedelta(minutes=30)
 POSTS_PER_PAGE = 10
+POST_DRAFT_LIMIT = 20
 POST_SELECT_QUERY = '*, user:users!posts_user_id_fkey(*), likes(count), comments(count), reposts(count)'
 MAX_IMAGE_BYTES = 50 * 1024 * 1024
 ALLOWED_IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif', 'webp'}
@@ -1579,6 +1580,21 @@ def reels_table_not_ready(error):
     text = str(error).lower()
     return 'reels' in text and any(marker in text for marker in ['does not exist', 'schema cache', 'relation', 'not found'])
 
+def post_drafts_table_not_ready(error):
+    text = str(error).lower()
+    return 'post_drafts' in text and any(marker in text for marker in ['does not exist', 'schema cache', 'relation', 'not found'])
+
+def request_data():
+    if request.is_json:
+        data = request.get_json(silent=True)
+        return data if isinstance(data, dict) else {}
+    return request.form
+
+def draft_error_message(error, default="Could not update post drafts."):
+    if post_drafts_table_not_ready(error):
+        return "Post drafts table is not ready. Run database/migrations/013_post_drafts.sql in Supabase."
+    return handle_db_error(error, default)
+
 def get_demo_reels(count=5):
     demo_author = {
         'id': 0,
@@ -3003,6 +3019,93 @@ def create_post():
         flash("Post content cannot be empty.", "error")
 
     return redirect(url_for('index'))
+
+@app.route('/api/drafts')
+def api_post_drafts():
+    viewer = get_current_user()
+    if not viewer:
+        return jsonify({'success': False, 'error': 'Authentication required.'}), 401
+
+    try:
+        res = supabase.table('post_drafts') \
+            .select('id,content,image_url,created_at,updated_at') \
+            .eq('user_id', viewer['id']) \
+            .order('updated_at', desc=True) \
+            .limit(POST_DRAFT_LIMIT) \
+            .execute()
+        return jsonify({'success': True, 'drafts': res.data if res and res.data else []})
+    except Exception as exc:
+        return jsonify({'success': False, 'error': draft_error_message(exc, "Could not load post drafts.")}), 400
+
+@app.route('/api/drafts/save', methods=['POST'])
+def api_save_post_draft():
+    viewer = get_current_user()
+    if not viewer:
+        return jsonify({'success': False, 'error': 'Authentication required.'}), 401
+
+    data = request_data()
+    draft_id = parse_int(data.get('draft_id') or data.get('id'))
+    content = (data.get('content') or '').strip()
+    image_url = (data.get('image_url') or '').strip() or None
+
+    if len(content) > 280:
+        return jsonify({'success': False, 'error': 'Draft cannot exceed 280 characters.'}), 400
+    if image_url and len(image_url) > 2048:
+        return jsonify({'success': False, 'error': 'Draft image URL is too long.'}), 400
+    if not content and not image_url:
+        return jsonify({'success': False, 'error': 'Draft content or image is required.'}), 400
+
+    try:
+        now = datetime.now(timezone.utc).isoformat()
+        if draft_id:
+            payload = {
+                'content': content,
+                'image_url': image_url,
+                'updated_at': now,
+            }
+            res = supabase.table('post_drafts') \
+                .update(payload) \
+                .eq('id', draft_id) \
+                .eq('user_id', viewer['id']) \
+                .execute()
+            if not res.data:
+                return jsonify({'success': False, 'error': 'Draft not found.'}), 404
+        else:
+            payload = {
+                'user_id': viewer['id'],
+                'content': content,
+                'image_url': image_url,
+                'updated_at': now,
+            }
+            res = supabase.table('post_drafts').insert(payload).execute()
+
+        draft = res.data[0] if res and res.data else {}
+        return jsonify({'success': True, 'draft': draft})
+    except Exception as exc:
+        return jsonify({'success': False, 'error': draft_error_message(exc)}), 400
+
+@app.route('/api/drafts/delete', methods=['POST'])
+def api_delete_post_draft():
+    viewer = get_current_user()
+    if not viewer:
+        return jsonify({'success': False, 'error': 'Authentication required.'}), 401
+
+    data = request_data()
+    draft_id = parse_int(data.get('draft_id') or data.get('id'))
+    if not draft_id:
+        return jsonify({'success': False, 'error': 'Draft id is required.'}), 400
+
+    try:
+        res = supabase.table('post_drafts') \
+            .delete() \
+            .eq('id', draft_id) \
+            .eq('user_id', viewer['id']) \
+            .execute()
+        if not res.data:
+            return jsonify({'success': False, 'error': 'Draft not found.'}), 404
+        return jsonify({'success': True, 'deleted_id': draft_id})
+    except Exception as exc:
+        return jsonify({'success': False, 'error': draft_error_message(exc, "Could not delete post draft.")}), 400
 
 @app.route('/community/<slug>/post', methods=['POST'])
 def create_community_post(slug):

@@ -16,6 +16,65 @@ import bcrypt
 import app as zapp
 
 
+class FakeDraftsTable:
+    def __init__(self, rows=None):
+        self.rows = rows if rows is not None else []
+        self.action = None
+        self.selected = None
+        self.inserted = None
+        self.updated = None
+        self.filters = []
+        self.ordering = None
+        self.limit_value = None
+
+    def select(self, columns, **kwargs):
+        self.action = "select"
+        self.selected = columns
+        return self
+
+    def insert(self, payload):
+        self.action = "insert"
+        self.inserted = payload
+        return self
+
+    def update(self, payload):
+        self.action = "update"
+        self.updated = payload
+        return self
+
+    def delete(self):
+        self.action = "delete"
+        return self
+
+    def eq(self, key, value):
+        self.filters.append((key, value))
+        return self
+
+    def order(self, key, desc=False):
+        self.ordering = (key, desc)
+        return self
+
+    def limit(self, value):
+        self.limit_value = value
+        return self
+
+    def execute(self):
+        if self.action == "insert":
+            row = {"id": 91, **self.inserted}
+            return SimpleNamespace(data=[row])
+        return SimpleNamespace(data=self.rows)
+
+
+class FakeDraftsSupabase:
+    def __init__(self, table):
+        self.drafts_table = table
+        self.table_names = []
+
+    def table(self, name):
+        self.table_names.append(name)
+        return self.drafts_table
+
+
 class AppRouteTests(unittest.TestCase):
     def setUp(self):
         zapp.app.config.update(TESTING=True, WTF_CSRF_ENABLED=False)
@@ -2139,6 +2198,104 @@ class AppRouteTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(posts_table.inserted["content"], "")
         self.assertEqual(posts_table.inserted["image_url"], "/static/uploads/posts/7/test.png")
+
+    def test_api_post_drafts_lists_viewer_drafts(self):
+        fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
+        drafts_table = FakeDraftsTable(rows=[{
+            "id": 3,
+            "content": "saved text",
+            "image_url": None,
+            "created_at": "2026-08-06T10:00:00+00:00",
+            "updated_at": "2026-08-06T10:05:00+00:00",
+        }])
+
+        with patch.object(zapp, "get_current_user", return_value=fake_user), \
+             patch.object(zapp, "supabase", FakeDraftsSupabase(drafts_table)):
+            response = self.client.get("/api/drafts")
+
+        payload = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["drafts"][0]["content"], "saved text")
+        self.assertEqual(drafts_table.filters, [("user_id", 7)])
+        self.assertEqual(drafts_table.ordering, ("updated_at", True))
+        self.assertEqual(drafts_table.limit_value, zapp.POST_DRAFT_LIMIT)
+
+    def test_api_save_post_draft_creates_viewer_draft(self):
+        token = self.csrf()
+        fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
+        drafts_table = FakeDraftsTable()
+
+        with patch.object(zapp, "get_current_user", return_value=fake_user), \
+             patch.object(zapp, "supabase", FakeDraftsSupabase(drafts_table)):
+            response = self.client.post(
+                "/api/drafts/save",
+                json={"content": "draft body"},
+                headers={"X-CSRF-Token": token},
+            )
+
+        payload = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["draft"]["id"], 91)
+        self.assertEqual(drafts_table.inserted["user_id"], 7)
+        self.assertEqual(drafts_table.inserted["content"], "draft body")
+        self.assertIsNone(drafts_table.inserted["image_url"])
+        self.assertIn("updated_at", drafts_table.inserted)
+
+    def test_api_save_post_draft_updates_only_viewer_draft(self):
+        token = self.csrf()
+        fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
+        drafts_table = FakeDraftsTable(rows=[{"id": 44, "content": "updated"}])
+
+        with patch.object(zapp, "get_current_user", return_value=fake_user), \
+             patch.object(zapp, "supabase", FakeDraftsSupabase(drafts_table)):
+            response = self.client.post(
+                "/api/drafts/save",
+                json={"draft_id": 44, "content": "updated"},
+                headers={"X-CSRF-Token": token},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(drafts_table.updated["content"], "updated")
+        self.assertEqual(drafts_table.filters, [("id", 44), ("user_id", 7)])
+
+    def test_api_save_post_draft_validates_content_length(self):
+        token = self.csrf()
+        fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
+        drafts_table = FakeDraftsTable()
+
+        with patch.object(zapp, "get_current_user", return_value=fake_user), \
+             patch.object(zapp, "supabase", FakeDraftsSupabase(drafts_table)):
+            response = self.client.post(
+                "/api/drafts/save",
+                json={"content": "x" * 281},
+                headers={"X-CSRF-Token": token},
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIsNone(drafts_table.inserted)
+        self.assertIsNone(drafts_table.updated)
+
+    def test_api_delete_post_draft_deletes_only_viewer_draft(self):
+        token = self.csrf()
+        fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
+        drafts_table = FakeDraftsTable(rows=[{"id": 44}])
+
+        with patch.object(zapp, "get_current_user", return_value=fake_user), \
+             patch.object(zapp, "supabase", FakeDraftsSupabase(drafts_table)):
+            response = self.client.post(
+                "/api/drafts/delete",
+                json={"draft_id": 44},
+                headers={"X-CSRF-Token": token},
+            )
+
+        payload = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["deleted_id"], 44)
+        self.assertEqual(drafts_table.action, "delete")
+        self.assertEqual(drafts_table.filters, [("id", 44), ("user_id", 7)])
 
     def test_send_message_blocks_self_message(self):
         fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
