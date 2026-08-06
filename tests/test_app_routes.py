@@ -179,6 +179,9 @@ class AppRouteTests(unittest.TestCase):
         with patch.dict(os.environ, {"APP_ENV": "development"}, clear=True):
             self.assertTrue(zapp.password_reset_memory_fallback_enabled())
 
+    def test_default_video_upload_limit_matches_storage_bucket(self):
+        self.assertEqual(zapp.MAX_VIDEO_BYTES, 50 * 1024 * 1024)
+
     def test_recent_duplicate_submission_queries_same_actor_text_and_window(self):
         class Result:
             data = [{"id": 99}]
