@@ -73,6 +73,12 @@ logging.basicConfig(level=logging.INFO)
 url: str = os.getenv("SUPABASE_URL", "")
 key: str = os.getenv("SUPABASE_SECRET", os.getenv("SUPABASE_KEY", ""))
 supabase: Client = create_client(url, key) if url and key else None
+
+def create_oauth_supabase_client():
+    if url and key:
+        return create_client(url, key)
+    return supabase
+
 LOGIN_ATTEMPTS = {}
 LOGIN_WINDOW = timedelta(minutes=10)
 LOGIN_MAX_ATTEMPTS = 5
@@ -2656,20 +2662,21 @@ def oauth_start(provider):
     if not provider:
         flash("That social login provider is not supported by LvL.", "error")
         return redirect(url_for('auth'))
-    if not supabase:
+    oauth_client = create_oauth_supabase_client()
+    if not oauth_client:
         flash("Supabase connection is required for social login.", "error")
         return redirect(url_for('auth'))
 
     session['oauth_provider'] = provider
 
     try:
-        response = supabase.auth.sign_in_with_oauth({
+        response = oauth_client.auth.sign_in_with_oauth({
             'provider': provider,
             'options': {
                 'redirect_to': oauth_redirect_url(),
             },
         })
-        store_oauth_code_verifier(supabase.auth)
+        store_oauth_code_verifier(oauth_client.auth)
         return redirect(response.url)
     except Exception as exc:
         clear_oauth_flow_session()
@@ -2678,7 +2685,8 @@ def oauth_start(provider):
 
 @app.route('/auth/oauth/callback')
 def oauth_callback():
-    if not supabase:
+    oauth_client = create_oauth_supabase_client()
+    if not supabase or not oauth_client:
         flash("Supabase connection is required for social login.", "error")
         return redirect(url_for('auth'))
 
@@ -2699,7 +2707,7 @@ def oauth_callback():
 
     provider = normalize_oauth_provider(session.get('oauth_provider') or 'google')
     try:
-        restore_oauth_code_verifier(supabase.auth)
+        restore_oauth_code_verifier(oauth_client.auth)
         exchange_params = {
             'auth_code': code,
             'redirect_to': oauth_redirect_url(),
@@ -2707,7 +2715,7 @@ def oauth_callback():
         if session.get('oauth_code_verifier'):
             exchange_params['code_verifier'] = session['oauth_code_verifier']
 
-        response = supabase.auth.exchange_code_for_session(exchange_params)
+        response = oauth_client.auth.exchange_code_for_session(exchange_params)
         auth_user = response.user or (response.session.user if response.session else None)
         if not auth_user:
             raise RuntimeError("Supabase did not return a social login user.")

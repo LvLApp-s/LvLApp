@@ -774,6 +774,102 @@ class AppRouteTests(unittest.TestCase):
             self.assertEqual(sess["user_id"], 44)
             self.assertNotIn("pending_oauth_profile", sess)
 
+    def test_oauth_callback_uses_isolated_auth_client_for_exchange(self):
+        class FakeStorage:
+            def __init__(self):
+                self.items = {}
+
+            def set_item(self, key, value):
+                self.items[key] = value
+
+            def get_item(self, key):
+                return self.items.get(key)
+
+        class IsolatedAuth:
+            def __init__(self):
+                self._storage_key = "supabase.auth.token"
+                self._storage = FakeStorage()
+                self.exchange_params = None
+
+            def exchange_code_for_session(self, params):
+                self.exchange_params = params
+                user = SimpleNamespace(
+                    id="66666666-6666-6666-6666-666666666666",
+                    email="bridge@example.com",
+                    user_metadata={"full_name": "Bridge User"},
+                    app_metadata={"provider": "google"},
+                )
+                return SimpleNamespace(user=user, session=SimpleNamespace(user=user))
+
+        class SharedAuth:
+            _storage_key = "supabase.auth.token"
+            _storage = FakeStorage()
+
+            def exchange_code_for_session(self, _params):
+                raise AssertionError("OAuth exchange must not mutate the shared backend client")
+
+        class FakeUsersTable:
+            def __init__(self, fake):
+                self.fake = fake
+                self.filters = {}
+                self.mode = "select"
+                self.payload = None
+
+            def select(self, *_args, **_kwargs):
+                self.mode = "select"
+                return self
+
+            def update(self, payload):
+                self.mode = "update"
+                self.payload = payload
+                return self
+
+            def eq(self, key, value):
+                self.filters[key] = value
+                return self
+
+            def execute(self):
+                if self.mode == "update":
+                    self.fake.updated_payload = self.payload
+                    return SimpleNamespace(data=[])
+                if self.filters.get("supabase_auth_user_id") == "66666666-6666-6666-6666-666666666666":
+                    return SimpleNamespace(data=[{
+                        "id": 66,
+                        "email": "bridge@example.com",
+                        "username": "bridgeuser",
+                    }])
+                return SimpleNamespace(data=[])
+
+        class SharedSupabase:
+            def __init__(self):
+                self.auth = SharedAuth()
+                self.updated_payload = None
+
+            def table(self, _name):
+                return FakeUsersTable(self)
+
+        shared = SharedSupabase()
+        isolated = SimpleNamespace(auth=IsolatedAuth())
+        with self.client.session_transaction() as sess:
+            sess["oauth_provider"] = "google"
+            sess["oauth_code_verifier"] = "stored-verifier"
+
+        with patch.object(zapp, "supabase", shared), \
+             patch.object(zapp, "url", "https://project.supabase.co"), \
+             patch.object(zapp, "key", "service-role-key"), \
+             patch.object(zapp, "create_client", return_value=isolated) as create_client_mock:
+            response = self.client.get("/auth/oauth/callback?code=abc123")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.location.endswith("/"))
+        create_client_mock.assert_called_once_with("https://project.supabase.co", "service-role-key")
+        self.assertEqual(isolated.auth.exchange_params["auth_code"], "abc123")
+        self.assertEqual(isolated.auth.exchange_params["code_verifier"], "stored-verifier")
+        self.assertEqual(shared.updated_payload["supabase_auth_user_id"], "66666666-6666-6666-6666-666666666666")
+        with self.client.session_transaction() as sess:
+            self.assertEqual(sess["user_id"], 66)
+            self.assertNotIn("pending_oauth_profile", sess)
+
     def test_oauth_callback_sends_new_user_to_social_onboarding(self):
         class FakeAuth:
             _storage_key = "supabase.auth.token"
