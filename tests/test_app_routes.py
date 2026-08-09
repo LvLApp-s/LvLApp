@@ -3362,6 +3362,97 @@ class AppRouteTests(unittest.TestCase):
         self.assertIn(("messages", "update", {"is_read": True}, (("sender_id", 8), ("receiver_id", 7))), fake.calls)
         self.assertIn(("notifications", "update", {"is_read": True}, (("user_id", 7), ("actor_id", 8), ("type", "message"), ("is_read", False))), fake.calls)
 
+    def test_api_messages_supports_before_id_pagination(self):
+        class Result:
+            def __init__(self, data=None):
+                self.data = data or []
+
+        class FakeTable:
+            def __init__(self, db, name):
+                self.db = db
+                self.name = name
+                self.filters = []
+                self.or_filter = None
+                self.lt_filter = None
+                self.gt_filter = None
+                self.ordering = None
+                self.limit_value = None
+
+            def select(self, *_args, **_kwargs):
+                return self
+
+            def eq(self, key, value):
+                self.filters.append((key, value))
+                return self
+
+            def or_(self, value):
+                self.or_filter = value
+                return self
+
+            def lt(self, key, value):
+                self.lt_filter = (key, value)
+                return self
+
+            def gt(self, key, value):
+                self.gt_filter = (key, value)
+                return self
+
+            def order(self, key, desc=False):
+                self.ordering = (key, desc)
+                return self
+
+            def limit(self, value):
+                self.limit_value = value
+                return self
+
+            def execute(self):
+                if self.name == "users":
+                    return Result([{"id": 8, "username": "friend", "display_name": "Friend"}])
+                self.db.message_filters = self.filters
+                self.db.message_or_filter = self.or_filter
+                self.db.message_lt_filter = self.lt_filter
+                self.db.message_gt_filter = self.gt_filter
+                self.db.message_ordering = self.ordering
+                self.db.message_limit = self.limit_value
+                return Result([
+                    {"id": 99, "sender_id": 8, "receiver_id": 7, "content": "newer", "created_at": "2026-08-09T12:03:00+00:00"},
+                    {"id": 98, "sender_id": 7, "receiver_id": 8, "content": "older", "created_at": "2026-08-09T12:02:00+00:00"},
+                    {"id": 97, "sender_id": 8, "receiver_id": 7, "content": "has more", "created_at": "2026-08-09T12:01:00+00:00"},
+                ])
+
+        class FakeSupabase:
+            def __init__(self):
+                self.message_filters = []
+                self.message_or_filter = None
+                self.message_lt_filter = None
+                self.message_gt_filter = None
+                self.message_ordering = None
+                self.message_limit = None
+
+            def table(self, name):
+                return FakeTable(self, name)
+
+        fake = FakeSupabase()
+        with patch.object(zapp, "get_current_user", return_value={"id": 7, "username": "viewer"}), \
+             patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "attach_shared_posts", side_effect=lambda messages: messages), \
+             patch.object(zapp, "mark_message_thread_read") as mark_read:
+            response = self.client.get("/api/messages/friend?before_id=100&limit=2")
+
+        payload = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(payload["success"])
+        self.assertEqual([message["id"] for message in payload["messages"]], [98, 99])
+        self.assertTrue(payload["has_more"])
+        self.assertEqual(payload["oldest_message_id"], 98)
+        self.assertEqual(fake.message_lt_filter, ("id", 100))
+        self.assertIsNone(fake.message_gt_filter)
+        self.assertEqual(fake.message_ordering, ("created_at", True))
+        self.assertEqual(fake.message_limit, 3)
+        self.assertIn("sender_id.eq.7", fake.message_or_filter)
+        self.assertIn("receiver_id.eq.8", fake.message_or_filter)
+        mark_read.assert_called_once_with(7, 8)
+
     def test_share_post_blocks_safety_hidden_recipients(self):
         class Result:
             def __init__(self, data=None):

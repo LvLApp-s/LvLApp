@@ -97,6 +97,7 @@ PASSWORD_RESET_TOKENS = {}
 PASSWORD_RESET_TTL = timedelta(minutes=30)
 POSTS_PER_PAGE = 10
 POST_DRAFT_LIMIT = 20
+MESSAGES_PAGE_SIZE = 50
 POST_SELECT_QUERY = '*, user:users!posts_user_id_fkey(*), likes(count), comments(count), reposts(count)'
 MAX_IMAGE_BYTES = 50 * 1024 * 1024
 ALLOWED_IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif', 'webp'}
@@ -5129,6 +5130,13 @@ def attach_shared_posts(messages_list):
 
     return messages_list
 
+def visible_messages_for_viewer(messages_list, viewer_id):
+    return [
+        message for message in (messages_list or [])
+        if not (message.get('sender_id') == viewer_id and message.get('deleted_by_sender'))
+        and not (message.get('receiver_id') == viewer_id and message.get('deleted_by_receiver'))
+    ]
+
 def mark_message_thread_read(viewer_id, other_user_id):
     if not viewer_id or not other_user_id:
         return
@@ -5159,13 +5167,9 @@ def messages():
                     target_user = None
                 else:
                     chat_safety_state = get_user_safety_state(viewer['id'], target_user['id'])
-                    msg_res = supabase.table('messages').select('*').or_(f"and(sender_id.eq.{viewer['id']},receiver_id.eq.{target_user['id']}),and(sender_id.eq.{target_user['id']},receiver_id.eq.{viewer['id']})").order('created_at', desc=False).execute()
-                    raw_messages = msg_res.data if msg_res.data else []
-                    messages_list = [
-                        m for m in raw_messages
-                        if not (m.get('sender_id') == viewer['id'] and m.get('deleted_by_sender'))
-                        and not (m.get('receiver_id') == viewer['id'] and m.get('deleted_by_receiver'))
-                    ]
+                    msg_res = supabase.table('messages').select('*').or_(f"and(sender_id.eq.{viewer['id']},receiver_id.eq.{target_user['id']}),and(sender_id.eq.{target_user['id']},receiver_id.eq.{viewer['id']})").order('created_at', desc=True).limit(MESSAGES_PAGE_SIZE).execute()
+                    raw_messages = list(reversed(msg_res.data if msg_res and msg_res.data else []))
+                    messages_list = visible_messages_for_viewer(raw_messages, viewer['id'])
                     messages_list = attach_shared_posts(messages_list)
                     mark_message_thread_read(viewer['id'], target_user['id'])
 
@@ -5241,6 +5245,8 @@ def api_messages(username):
         return jsonify({'success': False, 'error': 'Authentication required.'}), 401
 
     since_id = parse_int(request.args.get('since_id')) or 0
+    before_id = parse_int(request.args.get('before_id')) or 0
+    limit = parse_positive_int(request.args.get('limit'), default=MESSAGES_PAGE_SIZE, maximum=100)
     try:
         target_res = supabase.table('users').select('*').eq('username', username).execute()
         if not target_res.data:
@@ -5250,19 +5256,33 @@ def api_messages(username):
             return jsonify({'success': False, 'error': 'Choose someone else to message.'}), 400
 
         query = supabase.table('messages').select('*').or_(f"and(sender_id.eq.{viewer['id']},receiver_id.eq.{target_user['id']}),and(sender_id.eq.{target_user['id']},receiver_id.eq.{viewer['id']})")
-        if since_id:
+        has_more = False
+        if before_id:
+            query = query.lt('id', before_id)
+            msg_res = query.order('created_at', desc=True).limit(limit + 1).execute()
+            raw_messages = msg_res.data if msg_res and msg_res.data else []
+            has_more = len(raw_messages) > limit
+            raw_messages = list(reversed(raw_messages[:limit]))
+        elif since_id:
             query = query.gt('id', since_id)
-        msg_res = query.order('created_at', desc=False).limit(50).execute()
-        raw_messages = msg_res.data if msg_res and msg_res.data else []
-        messages_list = [
-            m for m in raw_messages
-            if not (m.get('sender_id') == viewer['id'] and m.get('deleted_by_sender'))
-            and not (m.get('receiver_id') == viewer['id'] and m.get('deleted_by_receiver'))
-        ]
+            msg_res = query.order('created_at', desc=False).limit(limit).execute()
+            raw_messages = msg_res.data if msg_res and msg_res.data else []
+        else:
+            msg_res = query.order('created_at', desc=True).limit(limit + 1).execute()
+            raw_messages = msg_res.data if msg_res and msg_res.data else []
+            has_more = len(raw_messages) > limit
+            raw_messages = list(reversed(raw_messages[:limit]))
+        messages_list = visible_messages_for_viewer(raw_messages, viewer['id'])
         messages_list = attach_shared_posts(messages_list)
         if messages_list:
             mark_message_thread_read(viewer['id'], target_user['id'])
-        return jsonify({'success': True, 'messages': messages_list, 'viewer_id': viewer['id']})
+        return jsonify({
+            'success': True,
+            'messages': messages_list,
+            'viewer_id': viewer['id'],
+            'has_more': has_more,
+            'oldest_message_id': messages_list[0]['id'] if messages_list else None,
+        })
     except Exception as e:
         return jsonify({'success': False, 'error': handle_db_error(e)}), 400
 
