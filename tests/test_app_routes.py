@@ -75,6 +75,66 @@ class FakeDraftsSupabase:
         return self.drafts_table
 
 
+class FakeDraftPublishTable:
+    def __init__(self, db, name):
+        self.db = db
+        self.name = name
+        self.action = None
+        self.filters = []
+        self.payload = None
+        self.limit_value = None
+
+    def select(self, *_args, **_kwargs):
+        self.action = "select"
+        return self
+
+    def insert(self, payload):
+        self.action = "insert"
+        self.payload = payload
+        return self
+
+    def delete(self):
+        self.action = "delete"
+        return self
+
+    def eq(self, key, value):
+        self.filters.append((key, value))
+        return self
+
+    def limit(self, value):
+        self.limit_value = value
+        return self
+
+    def execute(self):
+        if self.name == "post_drafts" and self.action == "select":
+            self.db.draft_select_filters = self.filters
+            self.db.draft_select_limit = self.limit_value
+            return SimpleNamespace(data=[self.db.draft] if self.db.draft else [])
+        if self.name == "post_drafts" and self.action == "delete":
+            self.db.draft_delete_filters = self.filters
+            return SimpleNamespace(data=[{"id": self.db.draft["id"]}] if self.db.draft and self.db.delete_succeeds else [])
+        if self.name == "posts" and self.action == "insert":
+            self.db.post_inserted = self.payload
+            return SimpleNamespace(data=[{"id": self.db.post_id, **self.payload}])
+        return SimpleNamespace(data=[])
+
+
+class FakeDraftPublishSupabase:
+    def __init__(self, draft=None, delete_succeeds=True):
+        self.draft = draft
+        self.delete_succeeds = delete_succeeds
+        self.post_id = 123
+        self.post_inserted = None
+        self.draft_select_filters = []
+        self.draft_select_limit = None
+        self.draft_delete_filters = []
+        self.table_names = []
+
+    def table(self, name):
+        self.table_names.append(name)
+        return FakeDraftPublishTable(self, name)
+
+
 class AppRouteTests(unittest.TestCase):
     def setUp(self):
         zapp.app.config.update(TESTING=True, WTF_CSRF_ENABLED=False)
@@ -2767,6 +2827,32 @@ class AppRouteTests(unittest.TestCase):
         self.assertEqual(posts_table.inserted["content"], "")
         self.assertEqual(posts_table.inserted["image_url"], "/static/uploads/posts/7/test.png")
 
+    def test_create_post_deletes_viewer_draft_after_publish(self):
+        fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
+        fake_supabase = FakeDraftPublishSupabase(draft={
+            "id": 44,
+            "user_id": 7,
+            "content": "from draft",
+            "image_url": None,
+        })
+
+        with patch.object(zapp, "get_current_user", return_value=fake_user), \
+             patch.object(zapp, "recent_duplicate_submission", return_value=False), \
+             patch.object(zapp, "award_xp"), \
+             patch.object(zapp, "supabase", fake_supabase):
+            response = self.client.post("/create_post", data={
+                "csrf_token": self.csrf(),
+                "content": "from draft",
+                "draft_id": "44",
+            })
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(fake_supabase.post_inserted, {
+            "user_id": 7,
+            "content": "from draft",
+        })
+        self.assertEqual(fake_supabase.draft_delete_filters, [("id", 44), ("user_id", 7)])
+
     def test_api_post_drafts_lists_viewer_drafts(self):
         fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
         drafts_table = FakeDraftsTable(rows=[{
@@ -2864,6 +2950,66 @@ class AppRouteTests(unittest.TestCase):
         self.assertEqual(payload["deleted_id"], 44)
         self.assertEqual(drafts_table.action, "delete")
         self.assertEqual(drafts_table.filters, [("id", 44), ("user_id", 7)])
+
+    def test_api_publish_post_draft_creates_post_and_deletes_draft(self):
+        token = self.csrf()
+        fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
+        fake_supabase = FakeDraftPublishSupabase(draft={
+            "id": 44,
+            "user_id": 7,
+            "content": "draft body",
+            "image_url": "https://example.com/image.png",
+            "created_at": "2026-08-06T10:00:00+00:00",
+            "updated_at": "2026-08-06T10:05:00+00:00",
+        })
+
+        with patch.object(zapp, "get_current_user", return_value=fake_user), \
+             patch.object(zapp, "supabase", fake_supabase), \
+             patch.object(zapp, "recent_duplicate_submission", return_value=False), \
+             patch.object(zapp, "award_xp") as award_xp:
+            response = self.client.post(
+                "/api/drafts/publish",
+                json={"draft_id": 44},
+                headers={"X-CSRF-Token": token},
+            )
+
+        payload = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["post"]["id"], 123)
+        self.assertEqual(payload["deleted_id"], 44)
+        self.assertTrue(payload["draft_deleted"])
+        self.assertEqual(fake_supabase.draft_select_filters, [("id", 44), ("user_id", 7)])
+        self.assertEqual(fake_supabase.draft_select_limit, 1)
+        self.assertEqual(fake_supabase.post_inserted, {
+            "user_id": 7,
+            "content": "draft body",
+            "image_url": "https://example.com/image.png",
+        })
+        self.assertEqual(fake_supabase.draft_delete_filters, [("id", 44), ("user_id", 7)])
+        award_xp.assert_called_once_with(7, "post_created", 10, 123)
+
+    def test_api_publish_post_draft_returns_404_for_missing_viewer_draft(self):
+        token = self.csrf()
+        fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
+        fake_supabase = FakeDraftPublishSupabase(draft=None)
+
+        with patch.object(zapp, "get_current_user", return_value=fake_user), \
+             patch.object(zapp, "supabase", fake_supabase), \
+             patch.object(zapp, "award_xp") as award_xp:
+            response = self.client.post(
+                "/api/drafts/publish",
+                json={"draft_id": 44},
+                headers={"X-CSRF-Token": token},
+            )
+
+        payload = response.get_json()
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(payload["success"])
+        self.assertEqual(fake_supabase.draft_select_filters, [("id", 44), ("user_id", 7)])
+        self.assertIsNone(fake_supabase.post_inserted)
+        self.assertEqual(fake_supabase.draft_delete_filters, [])
+        award_xp.assert_not_called()
 
     def test_send_message_blocks_self_message(self):
         fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}

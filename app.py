@@ -1888,6 +1888,40 @@ def draft_error_message(error, default="Could not update post drafts."):
         return "Post drafts table is not ready. Run database/migrations/013_post_drafts.sql in Supabase."
     return handle_db_error(error, default)
 
+def get_post_draft_for_user(user_id, draft_id):
+    if not user_id or not draft_id:
+        return None
+    res = supabase.table('post_drafts') \
+        .select('id,user_id,content,image_url,created_at,updated_at') \
+        .eq('id', draft_id) \
+        .eq('user_id', user_id) \
+        .limit(1) \
+        .execute()
+    return res.data[0] if res and res.data else None
+
+def delete_post_draft_for_user(user_id, draft_id):
+    if not user_id or not draft_id:
+        return False
+    res = supabase.table('post_drafts') \
+        .delete() \
+        .eq('id', draft_id) \
+        .eq('user_id', user_id) \
+        .execute()
+    return bool(res and res.data)
+
+def insert_user_post(user_id, content, image_url=None):
+    payload = {
+        'user_id': user_id,
+        'content': content or ''
+    }
+    if image_url:
+        payload['image_url'] = image_url
+    res = supabase.table('posts').insert(payload).execute()
+    post = res.data[0] if res and res.data else {}
+    if post.get('id'):
+        award_xp(user_id, 'post_created', 10, post['id'])
+    return post
+
 def get_demo_reels(count=5):
     demo_author = {
         'id': 0,
@@ -3276,6 +3310,7 @@ def create_post():
     if not viewer:
         return redirect(url_for('auth'))
 
+    draft_id = parse_int(request.form.get('draft_id'))
     content = request.form.get('content', '').strip()
     image_url = None
     if request.files.get('image'):
@@ -3292,15 +3327,12 @@ def create_post():
             flash("Already posted.", "info")
         else:
             try:
-                payload = {
-                    'user_id': viewer['id'],
-                    'content': content
-                }
-                if image_url:
-                    payload['image_url'] = image_url
-                res = supabase.table('posts').insert(payload).execute()
-                if res.data:
-                    award_xp(viewer['id'], 'post_created', 10, res.data[0]['id'])
+                insert_user_post(viewer['id'], content, image_url)
+                if draft_id:
+                    try:
+                        delete_post_draft_for_user(viewer['id'], draft_id)
+                    except Exception:
+                        app.logger.warning("Published post but could not remove draft %s for user %s", draft_id, viewer['id'])
                 flash("Post shared.", "success")
             except Exception as e:
                 flash(handle_db_error(e), "error")
@@ -3385,16 +3417,49 @@ def api_delete_post_draft():
         return jsonify({'success': False, 'error': 'Draft id is required.'}), 400
 
     try:
-        res = supabase.table('post_drafts') \
-            .delete() \
-            .eq('id', draft_id) \
-            .eq('user_id', viewer['id']) \
-            .execute()
-        if not res.data:
+        if not delete_post_draft_for_user(viewer['id'], draft_id):
             return jsonify({'success': False, 'error': 'Draft not found.'}), 404
         return jsonify({'success': True, 'deleted_id': draft_id})
     except Exception as exc:
         return jsonify({'success': False, 'error': draft_error_message(exc, "Could not delete post draft.")}), 400
+
+@app.route('/api/drafts/publish', methods=['POST'])
+def api_publish_post_draft():
+    viewer = get_current_user()
+    if not viewer:
+        return jsonify({'success': False, 'error': 'Authentication required.'}), 401
+
+    data = request_data()
+    draft_id = parse_int(data.get('draft_id') or data.get('id'))
+    if not draft_id:
+        return jsonify({'success': False, 'error': 'Draft id is required.'}), 400
+
+    try:
+        draft = get_post_draft_for_user(viewer['id'], draft_id)
+        if not draft:
+            return jsonify({'success': False, 'error': 'Draft not found.'}), 404
+
+        content = (draft.get('content') or '').strip()
+        image_url = (draft.get('image_url') or '').strip() or None
+        if len(content) > 280:
+            return jsonify({'success': False, 'error': 'Draft cannot exceed 280 characters.'}), 400
+        if image_url and len(image_url) > 2048:
+            return jsonify({'success': False, 'error': 'Draft image URL is too long.'}), 400
+        if not content and not image_url:
+            return jsonify({'success': False, 'error': 'Draft content or image is required.'}), 400
+        if content and not image_url and recent_duplicate_submission('posts', {'user_id': viewer['id']}, 'content', content):
+            return jsonify({'success': False, 'error': 'Already posted.'}), 409
+
+        post = insert_user_post(viewer['id'], content, image_url)
+        draft_deleted = delete_post_draft_for_user(viewer['id'], draft_id)
+        return jsonify({
+            'success': True,
+            'post': post,
+            'deleted_id': draft_id if draft_deleted else None,
+            'draft_deleted': draft_deleted,
+        })
+    except Exception as exc:
+        return jsonify({'success': False, 'error': draft_error_message(exc, "Could not publish post draft.")}), 400
 
 @app.route('/community/<slug>/post', methods=['POST'])
 def create_community_post(slug):
