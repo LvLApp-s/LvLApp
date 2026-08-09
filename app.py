@@ -475,12 +475,19 @@ ADMIN_JOB_TYPES = {'Full-time', 'Internship', 'Part-time'}
 ADMIN_SUGGESTION_STATUSES = {'New', 'Reviewed', 'Planned', 'Closed'}
 ADMIN_VERIFICATION_DECISIONS = {'Approved', 'Rejected'}
 ADMIN_SEARCH_UNSAFE_CHARS = re.compile(r"[%*,(){}\[\];\"'\\]")
+ADMIN_UUID_PATTERN = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 
 def parse_positive_id(value):
     parsed = parse_int(value)
     if not parsed or parsed < 1:
         return None
     return parsed
+
+def parse_uuid_id(value):
+    value = str(value or '').strip()
+    if not ADMIN_UUID_PATTERN.fullmatch(value):
+        return None
+    return value.lower()
 
 def admin_search_term(value, max_length=80):
     value = ADMIN_SEARCH_UNSAFE_CHARS.sub(' ', str(value or ''))
@@ -4601,7 +4608,7 @@ def admin_dashboard():
                     return redirect(url_for('admin_dashboard'))
                     
             elif action == 'toggle_position':
-                pos_id = parse_positive_id(request.form.get('id'))
+                pos_id = parse_uuid_id(request.form.get('id'))
                 if pos_id and supabase:
                     try:
                         res = supabase.table('job_positions').select('is_active').eq('id', pos_id).limit(1).execute()
@@ -4614,7 +4621,7 @@ def admin_dashboard():
                 return redirect(url_for('admin_dashboard'))
                 
             elif action == 'delete_position':
-                pos_id = parse_positive_id(request.form.get('id'))
+                pos_id = parse_uuid_id(request.form.get('id'))
                 if pos_id and supabase:
                     try:
                         supabase.table('job_positions').delete().eq('id', pos_id).execute()
@@ -4624,7 +4631,7 @@ def admin_dashboard():
                 return redirect(url_for('admin_dashboard'))
 
             elif action == 'update_suggestion_status':
-                msg_id = parse_positive_id(request.form.get('id'))
+                msg_id = parse_uuid_id(request.form.get('id'))
                 status = request.form.get('status')
                 if status not in ADMIN_SUGGESTION_STATUSES:
                     flash("Invalid suggestion status.", "error")
@@ -4639,7 +4646,7 @@ def admin_dashboard():
                 return redirect(url_for('admin_dashboard'))
 
             elif action == 'respond_verification':
-                req_id = parse_positive_id(request.form.get('id'))
+                req_id = parse_uuid_id(request.form.get('id'))
                 status = request.form.get('status')
                 if status not in ADMIN_VERIFICATION_DECISIONS:
                     flash("Invalid verification decision.", "error")

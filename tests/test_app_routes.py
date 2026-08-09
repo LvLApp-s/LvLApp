@@ -1528,6 +1528,12 @@ class AppRouteTests(unittest.TestCase):
         self.assertIsNone(zapp.parse_positive_id("0"))
         self.assertIsNone(zapp.parse_positive_id("-5"))
         self.assertIsNone(zapp.parse_positive_id("1,posts.delete"))
+        self.assertEqual(
+            zapp.parse_uuid_id("AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA"),
+            "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        )
+        self.assertIsNone(zapp.parse_uuid_id("position-1"))
+        self.assertIsNone(zapp.parse_uuid_id("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa,posts.delete"))
 
         term = zapp.admin_search_term("sina%),email.ilike.%%; drop")
         self.assertEqual(term, "sina email.ilike. drop")
@@ -1592,6 +1598,11 @@ class AppRouteTests(unittest.TestCase):
                 "id": "3",
                 "status": "Pending",
             })
+            invalid_position = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "delete_position",
+                "id": "position-1",
+            })
             invalid_id = self.client.post("/admin-dashboard", data={
                 "csrf_token": "token",
                 "action": "dismiss_report",
@@ -1609,13 +1620,17 @@ class AppRouteTests(unittest.TestCase):
                 "warning_text": "Stop testing yourself.",
             })
 
-        for response in (invalid_suggestion, invalid_verification, invalid_id, self_delete, self_warn):
+        for response in (invalid_suggestion, invalid_verification, invalid_position, invalid_id, self_delete, self_warn):
             self.assertEqual(response.status_code, 302)
             self.assertTrue(response.headers["Location"].endswith("/admin-dashboard"))
         self.assertEqual(fake.calls, [])
         audit.assert_not_called()
 
     def test_admin_dashboard_validates_and_applies_admin_actions(self):
+        suggestion_id = "11111111-1111-1111-1111-111111111111"
+        verification_id = "22222222-2222-2222-2222-222222222222"
+        position_id = "33333333-3333-3333-3333-333333333333"
+
         class Result:
             def __init__(self, data=None):
                 self.data = data or []
@@ -1647,7 +1662,9 @@ class AppRouteTests(unittest.TestCase):
             def execute(self):
                 self.db.calls.append((self.name, self.action, self.values, tuple(self.filters)))
                 if self.name == "verification_requests" and self.action == "select":
-                    return Result([{"id": 3, "user_id": 9, "status": "Pending"}])
+                    return Result([{"id": verification_id, "user_id": 9, "status": "Pending"}])
+                if self.name == "job_positions" and self.action == "select":
+                    return Result([{"id": position_id, "is_active": True}])
                 return Result([self.values or {}])
 
         class FakeSupabase:
@@ -1670,21 +1687,28 @@ class AppRouteTests(unittest.TestCase):
             suggestion = self.client.post("/admin-dashboard", data={
                 "csrf_token": "token",
                 "action": "update_suggestion_status",
-                "id": "12",
+                "id": suggestion_id,
                 "status": "Reviewed",
             })
             verification = self.client.post("/admin-dashboard", data={
                 "csrf_token": "token",
                 "action": "respond_verification",
-                "id": "3",
+                "id": verification_id,
                 "status": "Approved",
                 "admin_notes": "Looks good.",
+            })
+            position = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "toggle_position",
+                "id": position_id,
             })
 
         self.assertEqual(suggestion.status_code, 302)
         self.assertEqual(verification.status_code, 302)
-        self.assertIn(("contact_messages", "update", {"status": "Reviewed"}, (("id", 12),)), fake.calls)
+        self.assertEqual(position.status_code, 302)
+        self.assertIn(("contact_messages", "update", {"status": "Reviewed"}, (("id", suggestion_id),)), fake.calls)
         self.assertIn(("users", "update", {"is_profile_verified": True}, (("id", 9),)), fake.calls)
+        self.assertIn(("job_positions", "update", {"is_active": False}, (("id", position_id),)), fake.calls)
 
         verification_update = next(
             call for call in fake.calls
@@ -1694,9 +1718,10 @@ class AppRouteTests(unittest.TestCase):
         self.assertEqual(verification_update[2]["admin_notes"], "Looks good.")
         self.assertIsNone(verification_update[2]["rejection_cooldown_until"])
         self.assertIsNotNone(datetime.fromisoformat(verification_update[2]["updated_at"]).tzinfo)
-        self.assertEqual(verification_update[3], (("id", 3),))
-        audit.assert_any_call("admin", "update_suggestion_status", 12, "Reviewed")
-        audit.assert_any_call("admin", "respond_verification", 3, "status=Approved")
+        self.assertEqual(verification_update[3], (("id", verification_id),))
+        audit.assert_any_call("admin", "update_suggestion_status", suggestion_id, "Reviewed")
+        audit.assert_any_call("admin", "respond_verification", verification_id, "status=Approved")
+        audit.assert_any_call("admin", "toggle_position", position_id, "new_status=False")
 
     def test_level_guide_page_explains_xp_and_rewards(self):
         fake_user = {
