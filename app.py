@@ -397,6 +397,22 @@ def admin_token_is_valid(token):
     expected = os.getenv("LVL_ADMIN_TOKEN", "")
     return bool(expected and token and secrets.compare_digest(str(token), expected))
 
+ADMIN_JOB_TYPES = {'Full-time', 'Internship', 'Part-time'}
+ADMIN_SUGGESTION_STATUSES = {'New', 'Reviewed', 'Planned', 'Closed'}
+ADMIN_VERIFICATION_DECISIONS = {'Approved', 'Rejected'}
+ADMIN_SEARCH_UNSAFE_CHARS = re.compile(r"[%*,(){}\[\];\"'\\]")
+
+def parse_positive_id(value):
+    parsed = parse_int(value)
+    if not parsed or parsed < 1:
+        return None
+    return parsed
+
+def admin_search_term(value, max_length=80):
+    value = ADMIN_SEARCH_UNSAFE_CHARS.sub(' ', str(value or ''))
+    value = re.sub(r"[\x00-\x1f\x7f]", " ", value)
+    return re.sub(r"\s+", " ", value).strip()[:max_length]
+
 FORCED_LEVEL_ACCOUNT_ALIASES = {'sin', 'sin sin', 'sinsin', 'user sin', 'usersin'}
 FORCED_LEVEL_ACCOUNT_LEVEL = 50
 
@@ -4230,6 +4246,8 @@ def admin_dashboard():
                 title = request.form.get('title', '').strip()
                 department = request.form.get('department', '').strip()
                 type_val = request.form.get('type', 'Full-time')
+                if type_val not in ADMIN_JOB_TYPES:
+                    type_val = 'Full-time'
                 is_active = request.form.get('is_active') == 'true'
                 description = request.form.get('description', '').strip()
                 
@@ -4249,7 +4267,7 @@ def admin_dashboard():
                     return redirect(url_for('admin_dashboard'))
                     
             elif action == 'toggle_position':
-                pos_id = request.form.get('id')
+                pos_id = parse_positive_id(request.form.get('id'))
                 if pos_id and supabase:
                     try:
                         res = supabase.table('job_positions').select('is_active').eq('id', pos_id).limit(1).execute()
@@ -4262,7 +4280,7 @@ def admin_dashboard():
                 return redirect(url_for('admin_dashboard'))
                 
             elif action == 'delete_position':
-                pos_id = request.form.get('id')
+                pos_id = parse_positive_id(request.form.get('id'))
                 if pos_id and supabase:
                     try:
                         supabase.table('job_positions').delete().eq('id', pos_id).execute()
@@ -4272,8 +4290,11 @@ def admin_dashboard():
                 return redirect(url_for('admin_dashboard'))
 
             elif action == 'update_suggestion_status':
-                msg_id = request.form.get('id')
+                msg_id = parse_positive_id(request.form.get('id'))
                 status = request.form.get('status')
+                if status not in ADMIN_SUGGESTION_STATUSES:
+                    flash("Invalid suggestion status.", "error")
+                    return redirect(url_for('admin_dashboard'))
                 if msg_id and status and supabase:
                     try:
                         supabase.table('contact_messages').update({'status': status}).eq('id', msg_id).execute()
@@ -4284,8 +4305,11 @@ def admin_dashboard():
                 return redirect(url_for('admin_dashboard'))
 
             elif action == 'respond_verification':
-                req_id = request.form.get('id')
+                req_id = parse_positive_id(request.form.get('id'))
                 status = request.form.get('status')
+                if status not in ADMIN_VERIFICATION_DECISIONS:
+                    flash("Invalid verification decision.", "error")
+                    return redirect(url_for('admin_dashboard'))
                 admin_notes = request.form.get('admin_notes', '').strip()
                 if req_id and status and supabase:
                     try:
@@ -4309,7 +4333,7 @@ def admin_dashboard():
                 return redirect(url_for('admin_dashboard'))
 
             elif action == 'dismiss_report':
-                report_id = request.form.get('id')
+                report_id = parse_positive_id(request.form.get('id'))
                 if report_id and supabase:
                     try:
                         log_admin_action(viewer['username'], 'dismiss_report', report_id)
@@ -4320,7 +4344,7 @@ def admin_dashboard():
                 return redirect(url_for('admin_dashboard'))
 
             elif action == 'delete_post_global':
-                post_id = request.form.get('id')
+                post_id = parse_positive_id(request.form.get('id'))
                 if post_id and supabase:
                     try:
                         log_admin_action(viewer['username'], 'delete_post_global', post_id)
@@ -4332,8 +4356,11 @@ def admin_dashboard():
                 return redirect(url_for('admin_dashboard'))
 
             elif action == 'warn_user':
-                user_id = request.form.get('id')
+                user_id = parse_positive_id(request.form.get('id'))
                 warning_text = request.form.get('warning_text', '').strip()
+                if user_id == viewer['id']:
+                    flash("Admins cannot warn their own account.", "error")
+                    return redirect(url_for('admin_dashboard'))
                 if user_id and warning_text and supabase:
                     try:
                         log_admin_action(viewer['username'], 'warn_user', user_id, warning_text)
@@ -4350,7 +4377,7 @@ def admin_dashboard():
                 return redirect(url_for('admin_dashboard'))
 
             elif action == 'toggle_user_verification':
-                user_id = request.form.get('id')
+                user_id = parse_positive_id(request.form.get('id'))
                 if user_id and supabase:
                     try:
                         res = supabase.table('users').select('is_profile_verified').eq('id', user_id).limit(1).execute()
@@ -4364,7 +4391,10 @@ def admin_dashboard():
                 return redirect(url_for('admin_dashboard'))
 
             elif action == 'delete_user_global':
-                user_id = request.form.get('id')
+                user_id = parse_positive_id(request.form.get('id'))
+                if user_id == viewer['id']:
+                    flash("Admins cannot delete their own account from the dashboard.", "error")
+                    return redirect(url_for('admin_dashboard'))
                 if user_id and supabase:
                     try:
                         log_admin_action(viewer['username'], 'delete_user_global', user_id)
@@ -4377,6 +4407,9 @@ def admin_dashboard():
                     except Exception as exc:
                         flash(f"Error deleting user: {exc}", "error")
                 return redirect(url_for('admin_dashboard'))
+        else:
+            flash("Admin authentication required.", "error")
+            return redirect(url_for('admin_dashboard'))
 
     # Load data for dashboard if authenticated
     positions = []
@@ -4390,8 +4423,8 @@ def admin_dashboard():
     system_posts = []
     admin_logs = []
     
-    q_user = request.args.get('q_user', '').strip()
-    q_post = request.args.get('q_post', '').strip()
+    q_user = admin_search_term(request.args.get('q_user', ''))
+    q_post = admin_search_term(request.args.get('q_post', ''))
 
     if is_authenticated and supabase:
         try:

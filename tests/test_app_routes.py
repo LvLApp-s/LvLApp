@@ -1463,6 +1463,181 @@ class AppRouteTests(unittest.TestCase):
 
         self.assertEqual(denied.status_code, 403)
 
+    def test_admin_helpers_validate_ids_and_sanitize_search_terms(self):
+        self.assertEqual(zapp.parse_positive_id("42"), 42)
+        self.assertIsNone(zapp.parse_positive_id("0"))
+        self.assertIsNone(zapp.parse_positive_id("-5"))
+        self.assertIsNone(zapp.parse_positive_id("1,posts.delete"))
+
+        term = zapp.admin_search_term("sina%),email.ilike.%%; drop")
+        self.assertEqual(term, "sina email.ilike. drop")
+        self.assertNotIn("%", term)
+        self.assertNotIn(",", term)
+        self.assertNotIn(")", term)
+        self.assertLessEqual(len(zapp.admin_search_term("a" * 200)), 80)
+
+    def test_admin_dashboard_requires_valid_admin_session_for_actions(self):
+        class FakeSupabase:
+            def __init__(self):
+                self.calls = []
+
+            def table(self, name):
+                self.calls.append(("table", name))
+                return self
+
+        fake = FakeSupabase()
+        with self.client.session_transaction() as sess:
+            sess["csrf_token"] = "token"
+
+        with patch.object(zapp, "get_current_user", return_value={"id": 7, "username": "admin"}), \
+             patch.object(zapp, "supabase", fake):
+            response = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "delete_post_global",
+                "id": "42",
+            })
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.headers["Location"].endswith("/admin-dashboard"))
+        self.assertEqual(fake.calls, [])
+
+    def test_admin_dashboard_rejects_invalid_actions_without_mutation(self):
+        class FakeSupabase:
+            def __init__(self):
+                self.calls = []
+
+            def table(self, name):
+                self.calls.append(("table", name))
+                return self
+
+        fake = FakeSupabase()
+        with self.client.session_transaction() as sess:
+            sess["csrf_token"] = "token"
+            sess["admin_token"] = "secret"
+
+        viewer = {"id": 7, "username": "admin"}
+        with patch.dict(os.environ, {"LVL_ADMIN_TOKEN": "secret"}), \
+             patch.object(zapp, "get_current_user", return_value=viewer), \
+             patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "log_admin_action") as audit:
+            invalid_suggestion = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "update_suggestion_status",
+                "id": "12",
+                "status": "DeleteEverything",
+            })
+            invalid_verification = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "respond_verification",
+                "id": "3",
+                "status": "Pending",
+            })
+            invalid_id = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "dismiss_report",
+                "id": "1,posts.delete",
+            })
+            self_delete = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "delete_user_global",
+                "id": "7",
+            })
+            self_warn = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "warn_user",
+                "id": "7",
+                "warning_text": "Stop testing yourself.",
+            })
+
+        for response in (invalid_suggestion, invalid_verification, invalid_id, self_delete, self_warn):
+            self.assertEqual(response.status_code, 302)
+            self.assertTrue(response.headers["Location"].endswith("/admin-dashboard"))
+        self.assertEqual(fake.calls, [])
+        audit.assert_not_called()
+
+    def test_admin_dashboard_validates_and_applies_admin_actions(self):
+        class Result:
+            def __init__(self, data=None):
+                self.data = data or []
+
+        class FakeTable:
+            def __init__(self, db, name):
+                self.db = db
+                self.name = name
+                self.action = None
+                self.values = None
+                self.filters = []
+
+            def select(self, *_args, **_kwargs):
+                self.action = "select"
+                return self
+
+            def update(self, values):
+                self.action = "update"
+                self.values = values
+                return self
+
+            def eq(self, key, value):
+                self.filters.append((key, value))
+                return self
+
+            def limit(self, *_args, **_kwargs):
+                return self
+
+            def execute(self):
+                self.db.calls.append((self.name, self.action, self.values, tuple(self.filters)))
+                if self.name == "verification_requests" and self.action == "select":
+                    return Result([{"id": 3, "user_id": 9, "status": "Pending"}])
+                return Result([self.values or {}])
+
+        class FakeSupabase:
+            def __init__(self):
+                self.calls = []
+
+            def table(self, name):
+                return FakeTable(self, name)
+
+        fake = FakeSupabase()
+        with self.client.session_transaction() as sess:
+            sess["csrf_token"] = "token"
+            sess["admin_token"] = "secret"
+
+        viewer = {"id": 7, "username": "admin"}
+        with patch.dict(os.environ, {"LVL_ADMIN_TOKEN": "secret"}), \
+             patch.object(zapp, "get_current_user", return_value=viewer), \
+             patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "log_admin_action") as audit:
+            suggestion = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "update_suggestion_status",
+                "id": "12",
+                "status": "Reviewed",
+            })
+            verification = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "respond_verification",
+                "id": "3",
+                "status": "Approved",
+                "admin_notes": "Looks good.",
+            })
+
+        self.assertEqual(suggestion.status_code, 302)
+        self.assertEqual(verification.status_code, 302)
+        self.assertIn(("contact_messages", "update", {"status": "Reviewed"}, (("id", 12),)), fake.calls)
+        self.assertIn(("users", "update", {"is_profile_verified": True}, (("id", 9),)), fake.calls)
+
+        verification_update = next(
+            call for call in fake.calls
+            if call[0] == "verification_requests" and call[1] == "update"
+        )
+        self.assertEqual(verification_update[2]["status"], "Approved")
+        self.assertEqual(verification_update[2]["admin_notes"], "Looks good.")
+        self.assertIsNone(verification_update[2]["rejection_cooldown_until"])
+        self.assertIsNotNone(datetime.fromisoformat(verification_update[2]["updated_at"]).tzinfo)
+        self.assertEqual(verification_update[3], (("id", 3),))
+        audit.assert_any_call("admin", "update_suggestion_status", 12, "Reviewed")
+        audit.assert_any_call("admin", "respond_verification", 3, "status=Approved")
+
     def test_level_guide_page_explains_xp_and_rewards(self):
         fake_user = {
             "id": 7,
