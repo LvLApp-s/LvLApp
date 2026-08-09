@@ -151,6 +151,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const clearImageBtn = composer.querySelector('[data-clear-image]');
         const maxLen = textarea ? parseInt(textarea.getAttribute('maxlength') || '280', 10) : 280;
         let previewUrl = null;
+        const draftListUrl = composer.dataset.draftListUrl;
+        const draftSaveUrl = composer.dataset.draftSaveUrl;
+        const draftDeleteUrl = composer.dataset.draftDeleteUrl;
+        const draftIdInput = composer.querySelector('[data-draft-id]');
+        const draftClearImageInput = composer.querySelector('[data-draft-clear-image]');
+        const saveDraftBtn = composer.querySelector('[data-save-draft]');
+        const discardDraftBtn = composer.querySelector('[data-discard-draft]');
+        const draftPicker = composer.querySelector('[data-draft-picker]');
+        const draftStatus = composer.querySelector('[data-draft-status]');
+        const csrfTokenInput = composer.querySelector('input[name="csrf_token"]');
+        let drafts = [];
+        let draftImageUrl = null;
+        let draftImageCleared = false;
+        let savingDraft = false;
+        let autosaveTimer = null;
+        let lastSavedText = '';
 
         if (textarea && charCount) {
             const updateComposerState = () => {
@@ -159,7 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const t = (window.LvLI18n && window.LvLI18n.TRANSLATIONS && window.LvLI18n.TRANSLATIONS[lang]) || {};
                 const suffix = t.composer_char_count_suffix || 'left';
                 charCount.textContent = `${remaining} ${suffix}`;
-                const hasImage = imageInput && imageInput.files && imageInput.files.length > 0;
+                const hasImage = (imageInput && imageInput.files && imageInput.files.length > 0) || Boolean(draftImageUrl);
 
                 if (remaining < 0) {
                     charCount.style.color = 'var(--error-color)';
@@ -174,6 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // auto resize textarea
                 textarea.style.height = 'auto';
                 textarea.style.height = (textarea.scrollHeight) + 'px';
+                updateDraftControls();
             };
 
             const clearImagePreview = () => {
@@ -190,6 +207,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if (imagePreviewImg) imagePreviewImg.removeAttribute('src');
                 if (imagePreview) imagePreview.hidden = true;
+                draftImageUrl = null;
+                draftImageCleared = true;
+                if (draftClearImageInput) draftClearImageInput.value = '1';
                 updateComposerState();
             };
 
@@ -205,6 +225,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     URL.revokeObjectURL(previewUrl);
                     previewUrl = null;
                 }
+                draftImageUrl = null;
+                draftImageCleared = false;
+                if (draftClearImageInput) draftClearImageInput.value = '0';
                 if (imagePreview && imagePreviewImg && file.type && file.type.startsWith('image/')) {
                     previewUrl = URL.createObjectURL(file);
                     imagePreviewImg.src = previewUrl;
@@ -214,15 +237,209 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
 
-            textarea.addEventListener('input', updateComposerState);
+            const setDraftStatus = (message, isError = false) => {
+                if (!draftStatus) return;
+                draftStatus.textContent = message || '';
+                draftStatus.style.color = isError ? 'var(--error-color)' : 'var(--text-muted)';
+            };
+
+            const currentDraftId = () => draftIdInput ? draftIdInput.value.trim() : '';
+
+            function updateDraftControls() {
+                const hasContent = textarea.value.trim().length > 0 || Boolean(draftImageUrl) || (imageInput && imageInput.files && imageInput.files.length > 0);
+                if (saveDraftBtn) saveDraftBtn.disabled = savingDraft || !hasContent || textarea.value.length > maxLen;
+                if (discardDraftBtn) discardDraftBtn.hidden = !currentDraftId() && !hasContent;
+            }
+
+            const showDraftImage = (imageUrl) => {
+                draftImageUrl = imageUrl || null;
+                draftImageCleared = false;
+                if (draftClearImageInput) draftClearImageInput.value = '0';
+                if (!imagePreview || !imagePreviewImg || !draftImageUrl) return;
+                if (previewUrl) {
+                    URL.revokeObjectURL(previewUrl);
+                    previewUrl = null;
+                }
+                if (imageInput) imageInput.value = '';
+                imagePreviewImg.src = draftImageUrl;
+                imagePreview.hidden = false;
+                if (imageLabel) imageLabel.textContent = 'Saved image attached';
+            };
+
+            const renderDraftPicker = () => {
+                if (!draftPicker) return;
+                const selectedId = currentDraftId();
+                draftPicker.innerHTML = '<option value="">Drafts</option>';
+                drafts.forEach((draft) => {
+                    const option = document.createElement('option');
+                    option.value = String(draft.id);
+                    const label = (draft.content || '').trim() || (draft.image_url ? 'Image draft' : 'Untitled draft');
+                    option.textContent = label.length > 40 ? `${label.slice(0, 40)}...` : label;
+                    draftPicker.appendChild(option);
+                });
+                draftPicker.value = selectedId;
+                draftPicker.hidden = drafts.length === 0;
+            };
+
+            const rememberDraft = (draft) => {
+                if (!draft || !draft.id) return;
+                const existingIndex = drafts.findIndex((item) => String(item.id) === String(draft.id));
+                if (existingIndex >= 0) {
+                    drafts.splice(existingIndex, 1);
+                }
+                drafts.unshift(draft);
+                drafts = drafts.slice(0, 20);
+                renderDraftPicker();
+            };
+
+            const saveCurrentDraft = async (silent = false) => {
+                if (!draftSaveUrl || savingDraft) return;
+                const content = textarea.value.trim();
+                const selectedFile = imageInput && imageInput.files && imageInput.files.length ? imageInput.files[0] : null;
+                if (!content && !selectedFile && !draftImageUrl && !draftImageCleared) return;
+
+                savingDraft = true;
+                updateDraftControls();
+                if (!silent) setDraftStatus('Saving...');
+
+                const formData = new FormData();
+                formData.append('content', content);
+                if (currentDraftId()) formData.append('draft_id', currentDraftId());
+                if (draftImageCleared) formData.append('clear_image', '1');
+                if (selectedFile) formData.append('image', selectedFile);
+
+                try {
+                    const headers = { 'Accept': 'application/json' };
+                    if (csrfTokenInput) headers['X-CSRF-Token'] = csrfTokenInput.value;
+                    const response = await fetch(draftSaveUrl, {
+                        method: 'POST',
+                        body: formData,
+                        headers
+                    });
+                    const result = await response.json();
+                    if (!response.ok || !result.success || !result.draft) {
+                        throw new Error(result.error || 'Could not save draft.');
+                    }
+                    if (draftIdInput) draftIdInput.value = String(result.draft.id || '');
+                    draftImageUrl = result.draft.image_url || null;
+                    draftImageCleared = false;
+                    if (draftClearImageInput) draftClearImageInput.value = '0';
+                    if (selectedFile && imageInput) imageInput.value = '';
+                    if (draftImageUrl) showDraftImage(draftImageUrl);
+                    rememberDraft(result.draft);
+                    lastSavedText = content;
+                    setDraftStatus('Draft saved');
+                } catch (error) {
+                    console.error('Draft save failed:', error);
+                    setDraftStatus(error.message || 'Draft save failed', true);
+                    if (!silent) showAppToast(error.message || 'Draft save failed', 'error');
+                } finally {
+                    savingDraft = false;
+                    updateDraftControls();
+                }
+            };
+
+            const loadDrafts = async () => {
+                if (!draftListUrl) return;
+                try {
+                    const response = await fetch(draftListUrl, { headers: { 'Accept': 'application/json' } });
+                    const result = await response.json();
+                    if (!response.ok || !result.success || !Array.isArray(result.drafts)) return;
+                    drafts = result.drafts;
+                    renderDraftPicker();
+                } catch (error) {
+                    console.error('Draft load failed:', error);
+                }
+            };
+
+            const restoreDraft = (draftId) => {
+                const draft = drafts.find((item) => String(item.id) === String(draftId));
+                if (!draft) return;
+                if (draftIdInput) draftIdInput.value = String(draft.id);
+                textarea.value = draft.content || '';
+                lastSavedText = textarea.value.trim();
+                if (draft.image_url) {
+                    showDraftImage(draft.image_url);
+                } else {
+                    draftImageUrl = null;
+                    draftImageCleared = false;
+                    if (draftClearImageInput) draftClearImageInput.value = '0';
+                    if (imagePreviewImg) imagePreviewImg.removeAttribute('src');
+                    if (imagePreview) imagePreview.hidden = true;
+                }
+                textarea.dispatchEvent(new Event('input'));
+                textarea.focus();
+                setDraftStatus('Draft restored');
+            };
+
+            const discardCurrentDraft = async () => {
+                const draftId = currentDraftId();
+                if (draftId && draftDeleteUrl) {
+                    const formData = new FormData();
+                    formData.append('draft_id', draftId);
+                    try {
+                        const headers = { 'Accept': 'application/json' };
+                        if (csrfTokenInput) headers['X-CSRF-Token'] = csrfTokenInput.value;
+                        const response = await fetch(draftDeleteUrl, {
+                            method: 'POST',
+                            body: formData,
+                            headers
+                        });
+                        const result = await response.json();
+                        if (!response.ok || !result.success) {
+                            throw new Error(result.error || 'Could not discard draft.');
+                        }
+                        drafts = drafts.filter((item) => String(item.id) !== String(draftId));
+                    } catch (error) {
+                        console.error('Draft discard failed:', error);
+                        showAppToast(error.message || 'Could not discard draft.', 'error');
+                        return;
+                    }
+                }
+                if (draftIdInput) draftIdInput.value = '';
+                textarea.value = '';
+                lastSavedText = '';
+                clearImagePreview();
+                draftImageCleared = false;
+                if (draftClearImageInput) draftClearImageInput.value = '0';
+                renderDraftPicker();
+                setDraftStatus('Draft discarded');
+                textarea.dispatchEvent(new Event('input'));
+            };
+
+            const scheduleDraftAutosave = () => {
+                if (!draftSaveUrl) return;
+                window.clearTimeout(autosaveTimer);
+                const content = textarea.value.trim();
+                if (!content || content === lastSavedText || textarea.value.length > maxLen) return;
+                autosaveTimer = window.setTimeout(() => saveCurrentDraft(true), 1500);
+            };
+
+            textarea.addEventListener('input', () => {
+                updateComposerState();
+                scheduleDraftAutosave();
+            });
             if (imageInput) {
                 imageInput.addEventListener('change', () => {
                     refreshImagePreview();
                     updateComposerState();
+                    scheduleDraftAutosave();
                 });
             }
             if (clearImageBtn) {
-                clearImageBtn.addEventListener('click', clearImagePreview);
+                clearImageBtn.addEventListener('click', () => {
+                    clearImagePreview();
+                    scheduleDraftAutosave();
+                });
+            }
+            if (saveDraftBtn) {
+                saveDraftBtn.addEventListener('click', () => saveCurrentDraft(false));
+            }
+            if (discardDraftBtn) {
+                discardDraftBtn.addEventListener('click', discardCurrentDraft);
+            }
+            if (draftPicker) {
+                draftPicker.addEventListener('change', () => restoreDraft(draftPicker.value));
             }
             composer.addEventListener('submit', (event) => {
                 if (submitBtn && submitBtn.disabled) {
@@ -235,6 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             // trigger on load
             textarea.dispatchEvent(new Event('input'));
+            loadDrafts();
         }
     });
 

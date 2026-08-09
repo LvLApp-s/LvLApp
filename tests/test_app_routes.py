@@ -303,11 +303,17 @@ class AppRouteTests(unittest.TestCase):
 
     def test_submit_script_locks_content_forms_without_native_fallback_duplicates(self):
         script = Path("static/js/script.js").read_text(encoding="utf-8")
+        home_template = Path("templates/index.html").read_text(encoding="utf-8")
 
         self.assertIn("function lockSubmitForm(form, submitBtn)", script)
         self.assertIn("composer.addEventListener('submit'", script)
         self.assertIn("chatForm.dataset.submitting === '1'", script)
         self.assertIn("commentForm.dataset.submitting === '1'", script)
+        self.assertIn("data-draft-save-url", home_template)
+        self.assertIn("data-save-draft", home_template)
+        self.assertIn("draftDeleteUrl", script)
+        self.assertIn("saveCurrentDraft", script)
+        self.assertIn("restoreDraft", script)
         self.assertNotIn("chatForm.submit();", script)
         self.assertNotIn("commentForm.submit();", script)
 
@@ -2858,7 +2864,7 @@ class AppRouteTests(unittest.TestCase):
             "id": 44,
             "user_id": 7,
             "content": "from draft",
-            "image_url": None,
+            "image_url": "https://example.com/draft.png",
         })
 
         with patch.object(zapp, "get_current_user", return_value=fake_user), \
@@ -2875,7 +2881,9 @@ class AppRouteTests(unittest.TestCase):
         self.assertEqual(fake_supabase.post_inserted, {
             "user_id": 7,
             "content": "from draft",
+            "image_url": "https://example.com/draft.png",
         })
+        self.assertEqual(fake_supabase.draft_select_filters, [("id", 44), ("user_id", 7)])
         self.assertEqual(fake_supabase.draft_delete_filters, [("id", 44), ("user_id", 7)])
 
     def test_api_post_drafts_lists_viewer_drafts(self):
@@ -2937,6 +2945,50 @@ class AppRouteTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(drafts_table.updated["content"], "updated")
+        self.assertNotIn("image_url", drafts_table.updated)
+        self.assertEqual(drafts_table.filters, [("id", 44), ("user_id", 7)])
+
+    def test_api_save_post_draft_uploads_image_file(self):
+        token = self.csrf()
+        fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
+        drafts_table = FakeDraftsTable()
+
+        with patch.object(zapp, "get_current_user", return_value=fake_user), \
+             patch.object(zapp, "upload_image_to_storage", return_value="/static/uploads/drafts/7/draft.png"), \
+             patch.object(zapp, "supabase", FakeDraftsSupabase(drafts_table)):
+            response = self.client.post(
+                "/api/drafts/save",
+                data={
+                    "content": "draft with image",
+                    "image": (io.BytesIO(b"image-bytes"), "draft.png"),
+                },
+                headers={"X-CSRF-Token": token},
+                content_type="multipart/form-data",
+            )
+
+        payload = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(payload["success"])
+        self.assertEqual(drafts_table.inserted["user_id"], 7)
+        self.assertEqual(drafts_table.inserted["content"], "draft with image")
+        self.assertEqual(drafts_table.inserted["image_url"], "/static/uploads/drafts/7/draft.png")
+
+    def test_api_save_post_draft_can_clear_existing_image(self):
+        token = self.csrf()
+        fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
+        drafts_table = FakeDraftsTable(rows=[{"id": 44, "content": "updated", "image_url": None}])
+
+        with patch.object(zapp, "get_current_user", return_value=fake_user), \
+             patch.object(zapp, "supabase", FakeDraftsSupabase(drafts_table)):
+            response = self.client.post(
+                "/api/drafts/save",
+                json={"draft_id": 44, "content": "updated", "clear_image": "1"},
+                headers={"X-CSRF-Token": token},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(drafts_table.updated["content"], "updated")
+        self.assertIsNone(drafts_table.updated["image_url"])
         self.assertEqual(drafts_table.filters, [("id", 44), ("user_id", 7)])
 
     def test_api_save_post_draft_validates_content_length(self):

@@ -3319,6 +3319,7 @@ def create_post():
         return redirect(url_for('auth'))
 
     draft_id = parse_int(request.form.get('draft_id'))
+    draft_image_cleared = request.form.get('draft_clear_image') == '1'
     content = request.form.get('content', '').strip()
     image_url = None
     if request.files.get('image'):
@@ -3327,6 +3328,12 @@ def create_post():
         except (ValueError, RuntimeError) as exc:
             flash(str(exc), "error")
             return redirect(url_for('index'))
+    elif draft_id and not draft_image_cleared:
+        try:
+            draft = get_post_draft_for_user(viewer['id'], draft_id)
+            image_url = (draft.get('image_url') or '').strip() if draft else None
+        except Exception:
+            image_url = None
 
     if content or image_url:
         if len(content) > 280:
@@ -3376,12 +3383,20 @@ def api_save_post_draft():
     draft_id = parse_int(data.get('draft_id') or data.get('id'))
     content = (data.get('content') or '').strip()
     image_url = (data.get('image_url') or '').strip() or None
+    clear_image = str(data.get('clear_image') or '').strip() == '1'
+
+    if request.files.get('image'):
+        try:
+            image_url = upload_image_to_storage(request.files['image'], f"drafts/{viewer['id']}")
+            clear_image = False
+        except (ValueError, RuntimeError) as exc:
+            return jsonify({'success': False, 'error': str(exc)}), 400
 
     if len(content) > 280:
         return jsonify({'success': False, 'error': 'Draft cannot exceed 280 characters.'}), 400
     if image_url and len(image_url) > 2048:
         return jsonify({'success': False, 'error': 'Draft image URL is too long.'}), 400
-    if not content and not image_url:
+    if not content and not image_url and not clear_image:
         return jsonify({'success': False, 'error': 'Draft content or image is required.'}), 400
 
     try:
@@ -3389,9 +3404,10 @@ def api_save_post_draft():
         if draft_id:
             payload = {
                 'content': content,
-                'image_url': image_url,
                 'updated_at': now,
             }
+            if image_url or clear_image:
+                payload['image_url'] = image_url
             res = supabase.table('post_drafts') \
                 .update(payload) \
                 .eq('id', draft_id) \

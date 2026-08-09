@@ -40,6 +40,62 @@
   align-items: center;
   border-top: 1px solid var(--border-color);
   padding-top: 12px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.composer-draft-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.composer-draft-button,
+.composer-draft-picker {
+  min-height: 32px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 13px;
+}
+
+.composer-draft-button {
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+.composer-draft-button:hover:not(:disabled),
+.composer-draft-picker:hover {
+  color: var(--text-primary);
+  border-color: var(--accent-color);
+}
+
+.composer-draft-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.composer-draft-button.secondary {
+  color: var(--error-color);
+}
+
+.composer-draft-picker {
+  max-width: min(220px, 100%);
+  padding: 0 8px;
+}
+
+.draft-status {
+  color: var(--text-muted);
+  font-size: 12px;
+  min-height: 16px;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .post-submit-btn {
