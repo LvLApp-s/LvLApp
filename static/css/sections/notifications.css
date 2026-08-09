@@ -16,6 +16,21 @@
   background-color: var(--lvl-primary-softer);
 }
 
+.notification-item.new-notification {
+  animation: notification-arrive 0.35s ease-out;
+}
+
+@keyframes notification-arrive {
+  from {
+    background-color: var(--lvl-primary-soft);
+    transform: translateY(-4px);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
 .notification-icon {
   font-size: 20px;
   width: var(--avatar-sm);

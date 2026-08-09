@@ -320,6 +320,22 @@ class AppRouteTests(unittest.TestCase):
         self.assertNotIn("chatForm.submit();", script)
         self.assertNotIn("commentForm.submit();", script)
 
+    def test_notifications_page_and_live_script_use_event_ids(self):
+        script = Path("static/js/script.js").read_text(encoding="utf-8")
+        template = Path("templates/notifications.html").read_text(encoding="utf-8")
+        css = Path("static/css/sections/notifications.css").read_text(encoding="utf-8")
+
+        self.assertIn("data-notifications-feed", template)
+        self.assertIn("data-latest-notification-id", template)
+        self.assertIn("data-notification-id", template)
+        self.assertIn("data-notifications-empty", template)
+        self.assertIn("latest_notification_id", script)
+        self.assertIn("latest_message_id", script)
+        self.assertIn("refreshNotificationFeed", script)
+        self.assertIn("/api/notifications?", script)
+        self.assertIn("updateBadgeGroup('more'", script)
+        self.assertIn("new-notification", css)
+
     def test_login_requires_credentials(self):
         with patch.object(zapp, "supabase", object()):
             response = self.client.post("/auth", data={
@@ -2418,6 +2434,34 @@ class AppRouteTests(unittest.TestCase):
         reel_9 = next(item for item in stacked if item["reel_id"] == 9)
         self.assertEqual(reel_9["stack_count"], 2)
         self.assertEqual(reel_9["actor_summary"], "Ada and Sam")
+
+    def test_notifications_template_marks_live_feed_rows(self):
+        viewer = {"id": 7, "username": "demo", "display_name": "Demo User", "profile_photo_url": ""}
+        notification = {
+            "id": 44,
+            "type": "message",
+            "actor_username": "friend",
+            "actor_name": "Friend User",
+            "actor_summary": "Friend User",
+            "is_read": False,
+            "stack_count": 1,
+            "created_at": "2026-08-09T12:00:00+00:00",
+            "message_url": "/messages?u=friend",
+            "friendship_status": "accepted",
+            "friendship_action_user_id": 8,
+        }
+        with zapp.app.test_request_context("/notifications"):
+            html = zapp.render_template(
+                "notifications.html",
+                viewer=viewer,
+                notifications=[notification],
+                highlights=[],
+            )
+
+        self.assertIn('data-notifications-feed data-latest-notification-id="44"', html)
+        self.assertIn('data-notification-id="44"', html)
+        self.assertIn("Friend User", html)
+        self.assertIn("/messages?u=friend", html)
 
     def test_create_notification_validates_type_and_inserts_payload(self):
         class Result:

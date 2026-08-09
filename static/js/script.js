@@ -1465,10 +1465,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function initLiveStatusBadges() {
         const badges = document.querySelectorAll('[data-live-badge]');
-        if (!badges.length) return;
+        const notificationFeed = document.querySelector('[data-notifications-feed]');
+        if (!badges.length && !notificationFeed) return;
 
         let lastNotifCount = null;
         let lastMessageCount = null;
+        let lastNotificationId = notificationFeed
+            ? parseEventId(notificationFeed.dataset.latestNotificationId, 0)
+            : null;
+        let lastMessageId = null;
+        let notificationFeedRefreshing = false;
+
+        const notificationCopy = {
+            like: ['❤️', 'liked your post', 'Open post'],
+            reel_like: ['❤️', 'liked your reel', 'Open clip'],
+            repost: ['🔁', 'reposted your post', 'Open post'],
+            comment: ['💬', 'commented on your post', 'Open post'],
+            comment_reply: ['💬', 'replied to your comment', 'Open post'],
+            comment_like: ['❤️', 'liked your comment', 'Open post'],
+            comment_repost: ['🔁', 'reposted your comment', 'Open post'],
+            reel_comment: ['💬', 'commented on your reel', 'Open clip'],
+            follow: ['👤', 'followed you', 'View profile'],
+            friend_request: ['🤝', 'sent you a friend request', 'View profile'],
+            friend_accept: ['✓', 'accepted your friend request', 'View profile'],
+            message: ['✉️', 'sent you a message', 'Open message'],
+            high_five: ['🖐', 'high-fived you', 'View profile'],
+        };
+
+        function parseEventId(value, fallback = null) {
+            const parsed = Number(value);
+            return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+        }
 
         const formatCount = (count) => {
             const safeCount = Number.isFinite(Number(count)) ? Math.max(0, Number(count)) : 0;
@@ -1478,23 +1505,87 @@ document.addEventListener('DOMContentLoaded', () => {
         const updateBadgeGroup = (name, count) => {
             const safeCount = Number.isFinite(Number(count)) ? Math.max(0, Number(count)) : 0;
 
-            if (name === 'notifications') {
-                if (lastNotifCount !== null && safeCount > lastNotifCount) {
-                    SoundEffects.play('notification');
-                }
-                lastNotifCount = safeCount;
-            } else if (name === 'messages') {
-                if (lastMessageCount !== null && safeCount > lastMessageCount) {
-                    SoundEffects.play('message');
-                }
-                lastMessageCount = safeCount;
-            }
-
             document.querySelectorAll(`[data-live-badge="${name}"]`).forEach((badge) => {
                 badge.hidden = safeCount <= 0;
                 badge.textContent = formatCount(safeCount);
                 badge.setAttribute('aria-label', `${safeCount} unread ${name}`);
             });
+        };
+
+        const notificationUrl = (notification) => {
+            if (notification.post_id) return `/post/${encodeURIComponent(String(notification.post_id))}`;
+            if (notification.reel_id) return notification.reel_url || `/reels#reel-${encodeURIComponent(String(notification.reel_id))}`;
+            if (notification.type === 'message') return notification.message_url || (notification.actor_username ? `/messages?u=${encodeURIComponent(notification.actor_username)}` : '/messages');
+            if (notification.actor_username) return `/profile/${encodeURIComponent(notification.actor_username)}`;
+            return '';
+        };
+
+        const notificationTime = (value) => {
+            const created = new Date(value);
+            if (Number.isNaN(created.getTime())) return 'just now';
+            const seconds = Math.max(0, Math.floor((Date.now() - created.getTime()) / 1000));
+            if (seconds < 60) return 'just now';
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes}m`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours}h`;
+            return created.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        };
+
+        const renderNotificationItem = (notification) => {
+            const info = notificationCopy[notification.type] || ['ℹ️', notification.type || 'sent an update', 'Open'];
+            const actorUsername = notification.actor_username || '';
+            const actorName = notification.actor_summary || notification.actor_name || 'Someone';
+            const actionUrl = notificationUrl(notification);
+            const article = document.createElement('article');
+            article.className = `notification-item ${notification.is_read ? '' : 'unread'} new-notification`.trim();
+            article.dataset.notificationId = String(notification.id || '');
+            article.innerHTML = `
+                <div class="notification-icon type-${escapeHTML(notification.type || 'update')}">${escapeHTML(info[0])}</div>
+                <div class="notification-body">
+                    <div class="notification-header">
+                        <a href="${actorUsername ? `/profile/${encodeURIComponent(actorUsername)}` : '#'}" class="actor-link">
+                            <strong>${escapeHTML(actorName)}</strong>
+                        </a>
+                        <span class="notification-text">${escapeHTML(info[1])}</span>
+                        <span class="time">· ${escapeHTML(notificationTime(notification.created_at))}</span>
+                    </div>
+                    ${actionUrl ? `<a href="${escapeHTML(actionUrl)}" class="notification-action">${escapeHTML(info[2])}</a>` : ''}
+                </div>
+            `;
+            return article;
+        };
+
+        const refreshNotificationFeed = async (sinceId) => {
+            if (!notificationFeed || notificationFeedRefreshing) return null;
+            notificationFeedRefreshing = true;
+            try {
+                const params = new URLSearchParams({ since_id: String(sinceId || 0), limit: '10' });
+                const response = await fetch(`/api/notifications?${params.toString()}`, { headers: { 'Accept': 'application/json' } });
+                if (!response.ok) return null;
+                const result = await response.json();
+                if (!result.success || !Array.isArray(result.notifications)) return result;
+
+                const existingIds = new Set(Array.from(notificationFeed.querySelectorAll('[data-notification-id]')).map((item) => item.dataset.notificationId));
+                const freshNotifications = result.notifications.filter((item) => item && item.id && !existingIds.has(String(item.id)));
+                if (freshNotifications.length) {
+                    const emptyState = notificationFeed.querySelector('[data-notifications-empty]');
+                    if (emptyState) emptyState.remove();
+                    freshNotifications.slice().reverse().forEach((item) => {
+                        notificationFeed.prepend(renderNotificationItem(item));
+                    });
+                }
+
+                const returnedLatestId = parseEventId(result.latest_notification_id, sinceId || 0);
+                const itemLatestId = freshNotifications.reduce((maxId, item) => Math.max(maxId, parseEventId(item.id, 0)), returnedLatestId || 0);
+                notificationFeed.dataset.latestNotificationId = String(itemLatestId || 0);
+                return result;
+            } catch (error) {
+                console.error('Notification feed refresh failed:', error);
+                return null;
+            } finally {
+                notificationFeedRefreshing = false;
+            }
         };
 
         const refresh = async () => {
@@ -1503,8 +1594,44 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!response.ok) return;
                 const result = await response.json();
                 if (!result.success) return;
-                updateBadgeGroup('notifications', result.unread_notifications);
-                updateBadgeGroup('messages', result.unread_messages);
+
+                const notifCount = Number.isFinite(Number(result.unread_notifications)) ? Math.max(0, Number(result.unread_notifications)) : 0;
+                const messageCount = Number.isFinite(Number(result.unread_messages)) ? Math.max(0, Number(result.unread_messages)) : 0;
+                const currentNotificationId = parseEventId(result.latest_notification_id);
+                const currentMessageId = parseEventId(result.latest_message_id);
+                const hasNewNotificationId = lastNotificationId !== null && currentNotificationId !== null && currentNotificationId > lastNotificationId;
+                const hasNewMessageId = lastMessageId !== null && currentMessageId !== null && currentMessageId > lastMessageId;
+
+                if ((hasNewNotificationId || (lastNotifCount !== null && notifCount > lastNotifCount))) {
+                    SoundEffects.play('notification');
+                }
+                if ((hasNewMessageId || (lastMessageCount !== null && messageCount > lastMessageCount))) {
+                    SoundEffects.play('message');
+                }
+
+                const previousNotificationId = lastNotificationId;
+                if (currentMessageId !== null) {
+                    lastMessageId = Math.max(lastMessageId || 0, currentMessageId);
+                }
+
+                if (hasNewNotificationId && notificationFeed) {
+                    const feedResult = await refreshNotificationFeed(previousNotificationId || 0);
+                    if (feedResult && feedResult.success && currentNotificationId !== null) {
+                        const feedLatestId = parseEventId(notificationFeed.dataset.latestNotificationId, currentNotificationId);
+                        lastNotificationId = Math.max(lastNotificationId || 0, feedLatestId || 0, currentNotificationId);
+                    }
+                } else if (currentNotificationId !== null) {
+                    lastNotificationId = Math.max(lastNotificationId || 0, currentNotificationId);
+                }
+                if (notificationFeed && lastNotificationId !== null) {
+                    notificationFeed.dataset.latestNotificationId = String(lastNotificationId);
+                }
+
+                lastNotifCount = notifCount;
+                lastMessageCount = messageCount;
+                updateBadgeGroup('notifications', notifCount);
+                updateBadgeGroup('messages', messageCount);
+                updateBadgeGroup('more', notifCount + messageCount);
             } catch (error) {
                 console.error('Live status refresh failed:', error);
             }
