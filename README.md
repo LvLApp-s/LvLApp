@@ -101,7 +101,9 @@ social-media-main/
    REMEMBER_SESSION_DAYS=30
    SUPABASE_STORAGE_BUCKET=lvl-media
    SUPABASE_VIDEO_BUCKET=lvl-media
+   SUPABASE_ATTACHMENT_BUCKET=lvl-attachments
    MAX_VIDEO_BYTES=52428800
+   MAX_ATTACHMENT_BYTES=15728640
    ```
 
 2. Install Python dependencies:
@@ -138,11 +140,14 @@ OAUTH_REDIRECT_BASE_URL
 REMEMBER_SESSION_DAYS
 SUPABASE_STORAGE_BUCKET
 SUPABASE_VIDEO_BUCKET
+SUPABASE_ATTACHMENT_BUCKET
 LOCAL_IMAGE_UPLOAD_FALLBACK
+LOCAL_ATTACHMENT_UPLOAD_FALLBACK
 MAX_VIDEO_BYTES
+MAX_ATTACHMENT_BYTES
 ```
 
-Use `MAX_VIDEO_BYTES=52428800` unless the Supabase `lvl-media` bucket limit is changed. `REMEMBER_SESSION_DAYS` defaults to 30 and is clamped between 1 and 90 days. For production, set `APP_BASE_URL` and `OAUTH_REDIRECT_BASE_URL` to the deployed HTTPS app URL. Local development can keep `SESSION_COOKIE_SECURE=0` and `SESSION_COOKIE_SAMESITE=Lax`; Vercel production defaults to secure cookies.
+Use `MAX_VIDEO_BYTES=52428800` unless the Supabase `lvl-media` bucket limit is changed. Message attachments default to `MAX_ATTACHMENT_BYTES=15728640` and use a private Supabase Storage bucket named by `SUPABASE_ATTACHMENT_BUCKET`; local fallback is for development only. `REMEMBER_SESSION_DAYS` defaults to 30 and is clamped between 1 and 90 days. For production, set `APP_BASE_URL` and `OAUTH_REDIRECT_BASE_URL` to the deployed HTTPS app URL. Local development can keep `SESSION_COOKIE_SECURE=0` and `SESSION_COOKIE_SAMESITE=Lax`; Vercel production defaults to secure cookies.
 
 ## Legacy PHP Version
 

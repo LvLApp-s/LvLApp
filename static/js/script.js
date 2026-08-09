@@ -299,14 +299,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Validate file extension
                 const filename = file.name;
                 const ext = filename.substring(filename.lastIndexOf('.')).toLowerCase();
-                const blockedExtensions = [
-                    '.exe', '.bat', '.cmd', '.sh', '.php', '.py', '.js', '.vbs', '.msi', '.scr', '.jar', '.com', '.pif', '.wsf', '.hta', '.cpl'
+                const allowedExtensions = [
+                    '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp',
+                    '.mp4', '.webm', '.mov', '.m4v',
+                    '.mp3', '.wav', '.ogg', '.m4a',
+                    '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt'
                 ];
                 
                 const lang = window.LvLI18n ? window.LvLI18n.getCurrentLang() : 'en';
                 const t = (window.LvLI18n && window.LvLI18n.TRANSLATIONS && window.LvLI18n.TRANSLATIONS[lang]) || {};
 
-                if (blockedExtensions.includes(ext)) {
+                if (!allowedExtensions.includes(ext)) {
                     showAppToast(t.error_unsupported_file || 'This file type is not supported for security reasons.');
                     fileInput.value = '';
                     return;

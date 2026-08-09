@@ -5,7 +5,7 @@ import uuid
 import hashlib
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
-from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory, jsonify, get_flashed_messages
+from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory, jsonify, get_flashed_messages, abort, Response
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import HTTPException
 from dotenv import load_dotenv
@@ -105,6 +105,9 @@ MAX_VIDEO_BYTES = int(os.getenv("MAX_VIDEO_BYTES", 50 * 1024 * 1024))
 ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'webm', 'mov', 'm4v'}
 SUPABASE_VIDEO_BUCKET = os.getenv("SUPABASE_VIDEO_BUCKET", STORAGE_BUCKET)
 LOCAL_IMAGE_UPLOAD_FALLBACK = os.getenv("LOCAL_IMAGE_UPLOAD_FALLBACK", "true").lower() not in {"0", "false", "no"}
+MAX_ATTACHMENT_BYTES = int(os.getenv("MAX_ATTACHMENT_BYTES", 15 * 1024 * 1024))
+SUPABASE_ATTACHMENT_BUCKET = os.getenv("SUPABASE_ATTACHMENT_BUCKET", "lvl-attachments")
+LOCAL_ATTACHMENT_UPLOAD_FALLBACK = env_truthy(os.getenv("LOCAL_ATTACHMENT_UPLOAD_FALLBACK"), default=not is_production_runtime())
 IMAGE_CONTENT_TYPES = {
     'jpg': 'image/jpeg',
     'jpeg': 'image/jpeg',
@@ -117,6 +120,54 @@ VIDEO_CONTENT_TYPES = {
     'webm': 'video/webm',
     'mov': 'video/quicktime',
     'm4v': 'video/x-m4v',
+}
+ATTACHMENT_EXTENSION_TYPES = {
+    'jpg': 'image',
+    'jpeg': 'image',
+    'png': 'image',
+    'gif': 'image',
+    'webp': 'image',
+    'bmp': 'image',
+    'mp4': 'video',
+    'webm': 'video',
+    'mov': 'video',
+    'm4v': 'video',
+    'mp3': 'audio',
+    'wav': 'audio',
+    'ogg': 'audio',
+    'm4a': 'audio',
+    'pdf': 'document',
+    'doc': 'document',
+    'docx': 'document',
+    'xls': 'document',
+    'xlsx': 'document',
+    'ppt': 'document',
+    'pptx': 'document',
+    'txt': 'document',
+}
+ATTACHMENT_CONTENT_TYPES = {
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'png': 'image/png',
+    'gif': 'image/gif',
+    'webp': 'image/webp',
+    'bmp': 'image/bmp',
+    'mp4': 'video/mp4',
+    'webm': 'video/webm',
+    'mov': 'video/quicktime',
+    'm4v': 'video/x-m4v',
+    'mp3': 'audio/mpeg',
+    'wav': 'audio/wav',
+    'ogg': 'audio/ogg',
+    'm4a': 'audio/mp4',
+    'pdf': 'application/pdf',
+    'doc': 'application/msword',
+    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'xls': 'application/vnd.ms-excel',
+    'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'ppt': 'application/vnd.ms-powerpoint',
+    'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'txt': 'text/plain',
 }
 ASSET_VERSION = "101"
 HOME_REEL_PREVIEW_LIMIT = 12
@@ -973,17 +1024,154 @@ def allowed_image_file(filename):
 def allowed_video_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_VIDEO_EXTENSIONS
 
-def ensure_media_bucket(bucket_name, file_size_limit, allowed_mime_types):
+def attachment_upload_dir():
+    return os.path.join(app.root_path, 'uploads', 'attachments')
+
+def use_supabase_attachment_storage():
+    return bool(supabase and not app.config.get('TESTING'))
+
+def attachment_storage_path(filename):
+    return f"message-attachments/{filename}"
+
+def attachment_content_type(extension):
+    return ATTACHMENT_CONTENT_TYPES.get(extension, 'application/octet-stream')
+
+def attachment_extension(filename):
+    safe_name = secure_filename(filename or '')
+    if not safe_name or '.' not in safe_name:
+        raise ValueError("This file type is not supported for security reasons.")
+    ext = safe_name.rsplit('.', 1)[1].lower()
+    if ext not in ATTACHMENT_EXTENSION_TYPES:
+        raise ValueError("This file type is not supported for security reasons.")
+    return ext
+
+def attachment_display_name(filename, extension):
+    safe_name = secure_filename(filename or f"attachment.{extension}")
+    if not safe_name:
+        safe_name = f"attachment.{extension}"
+    base, current_ext = os.path.splitext(safe_name)
+    if current_ext.lower().lstrip('.') != extension:
+        safe_name = f"{base or 'attachment'}.{extension}"
+    if len(safe_name) > 140:
+        base, current_ext = os.path.splitext(safe_name)
+        safe_name = f"{base[:max(1, 140 - len(current_ext))]}{current_ext}"
+    return safe_name
+
+def attachment_type_for_extension(extension):
+    return ATTACHMENT_EXTENSION_TYPES[extension]
+
+def temporary_attachment_filename(user_id, extension):
+    return f"u{int(user_id)}_{uuid.uuid4().hex}.{extension}"
+
+def parse_temporary_attachment_filename(filename, user_id=None):
+    safe_name = secure_filename(filename or '')
+    match = re.fullmatch(r"u(\d+)_([0-9a-f]{32})\.([a-z0-9]+)", safe_name)
+    if not match:
+        return None
+    owner_id = parse_int(match.group(1))
+    extension = match.group(3)
+    if extension not in ATTACHMENT_EXTENSION_TYPES:
+        return None
+    if user_id is not None and owner_id != parse_int(user_id):
+        return None
+    return {
+        'filename': safe_name,
+        'owner_id': owner_id,
+        'extension': extension,
+        'attachment_type': attachment_type_for_extension(extension),
+    }
+
+def prepare_message_attachment(user_id, temp_filename, attachment_name):
+    parsed = parse_temporary_attachment_filename(temp_filename, user_id=user_id)
+    if not parsed:
+        raise ValueError("Invalid attachment upload. Upload the file again.")
+    temp_storage_path = attachment_storage_path(parsed['filename'])
+    if use_supabase_attachment_storage():
+        try:
+            bucket = supabase.storage.from_(SUPABASE_ATTACHMENT_BUCKET)
+            if bucket.exists(temp_storage_path):
+                return {
+                    **parsed,
+                    'storage': 'supabase',
+                    'storage_path': temp_storage_path,
+                    'display_name': attachment_display_name(attachment_name, parsed['extension']),
+                }
+        except Exception as exc:
+            if not LOCAL_ATTACHMENT_UPLOAD_FALLBACK:
+                raise RuntimeError("Attachment storage is not ready. Try again later.") from exc
+
+    upload_dir = attachment_upload_dir()
+    temp_path = os.path.join(upload_dir, parsed['filename'])
+    if not os.path.exists(temp_path):
+        raise ValueError("Attachment expired or missing. Upload the file again.")
+    return {
+        **parsed,
+        'storage': 'local',
+        'path': temp_path,
+        'display_name': attachment_display_name(attachment_name, parsed['extension']),
+    }
+
+def finalize_message_attachment(pending_attachment, message_id):
+    final_filename = f"{int(message_id)}.{pending_attachment['extension']}"
+    if pending_attachment.get('storage') == 'supabase':
+        final_storage_path = attachment_storage_path(final_filename)
+        supabase.storage.from_(SUPABASE_ATTACHMENT_BUCKET).move(pending_attachment['storage_path'], final_storage_path)
+    else:
+        final_path = os.path.join(attachment_upload_dir(), final_filename)
+        os.replace(pending_attachment['path'], final_path)
+    return url_for('download_attachment', message_id=message_id)
+
+def stored_attachment_filename_for_message(message):
+    message_id = parse_positive_id((message or {}).get('id'))
+    try:
+        extension = attachment_extension((message or {}).get('attachment_name'))
+    except ValueError:
+        extension = None
+    if message_id and extension:
+        return f"{message_id}.{extension}"
+
+    legacy_name = secure_filename(os.path.basename((message or {}).get('attachment_url') or ''))
+    if legacy_name.startswith('temp_'):
+        legacy_name = legacy_name[5:]
+    legacy_temp = parse_temporary_attachment_filename(legacy_name)
+    if legacy_temp:
+        return legacy_temp['filename']
+    return None
+
+def remove_stored_attachment_file(message):
+    filename = stored_attachment_filename_for_message(message)
+    if not filename:
+        return
+    if use_supabase_attachment_storage():
+        try:
+            supabase.storage.from_(SUPABASE_ATTACHMENT_BUCKET).remove([attachment_storage_path(filename)])
+            return
+        except Exception:
+            if not LOCAL_ATTACHMENT_UPLOAD_FALLBACK:
+                raise
+    file_path = os.path.join(attachment_upload_dir(), filename)
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+def ensure_media_bucket(bucket_name, file_size_limit, allowed_mime_types, public=True):
     if not supabase:
         raise RuntimeError("Supabase is not configured.")
     try:
         supabase.storage.get_bucket(bucket_name)
     except Exception:
         supabase.storage.create_bucket(bucket_name, options={
-            "public": True,
+            "public": public,
             "file_size_limit": file_size_limit,
             "allowed_mime_types": allowed_mime_types
         })
+
+def ensure_attachment_bucket():
+    ensure_media_bucket(
+        SUPABASE_ATTACHMENT_BUCKET,
+        MAX_ATTACHMENT_BYTES,
+        sorted(set(ATTACHMENT_CONTENT_TYPES.values())),
+        public=False,
+    )
 
 def ensure_storage_bucket(bucket_name):
     ensure_media_bucket(bucket_name, MAX_IMAGE_BYTES, [
@@ -2184,6 +2372,15 @@ def get_setup_health():
             checks.append(setup_health_check("Media storage bucket", False, f"Create or allow the {STORAGE_BUCKET} Supabase storage bucket."))
     else:
         checks.append(setup_health_check("Media storage bucket", False, "Supabase is not configured."))
+
+    if supabase:
+        try:
+            supabase.storage.get_bucket(SUPABASE_ATTACHMENT_BUCKET)
+            checks.append(setup_health_check("Private attachment bucket", True, f"{SUPABASE_ATTACHMENT_BUCKET} is available."))
+        except Exception:
+            checks.append(setup_health_check("Private attachment bucket", False, f"Create or allow the private {SUPABASE_ATTACHMENT_BUCKET} Supabase storage bucket."))
+    else:
+        checks.append(setup_health_check("Private attachment bucket", False, "Supabase is not configured."))
 
     for relative_path, label in [
         ('static/manifest.json', 'PWA manifest'),
@@ -3609,10 +3806,16 @@ def send_message():
     redirect_url = safe_redirect_url(request.form.get('redirect'), 'messages')
 
     temp_filename = request.form.get('temp_filename', '').strip()
-    if temp_filename:
-        temp_filename = secure_filename(temp_filename)
     attachment_name = request.form.get('attachment_name', '').strip()
-    attachment_type = request.form.get('attachment_type', '').strip()
+    pending_attachment = None
+    if temp_filename:
+        try:
+            pending_attachment = prepare_message_attachment(viewer['id'], temp_filename, attachment_name)
+        except ValueError as exc:
+            if request.form.get('ajax') == '1':
+                return jsonify({'success': False, 'error': str(exc)}), 400
+            flash(str(exc), "error")
+            return redirect(redirect_url)
 
     if receiver_id and receiver_id != viewer['id'] and (content or temp_filename):
         if len(content) > 1000:
@@ -3641,22 +3844,19 @@ def send_message():
                     'content': content
                 }
 
-                if temp_filename:
-                    # Check file existence
-                    upload_dir = os.path.join(app.root_path, 'uploads', 'attachments')
-                    file_path = os.path.join(upload_dir, temp_filename)
-                    if os.path.exists(file_path):
-                        insert_data['attachment_type'] = attachment_type
-                        insert_data['attachment_name'] = attachment_name
-                        insert_data['attachment_url'] = f"/attachment/temp_{temp_filename}" # Temporary URL
+                if pending_attachment:
+                    insert_data['attachment_type'] = pending_attachment['attachment_type']
+                    insert_data['attachment_name'] = pending_attachment['display_name']
 
                 res = supabase.table('messages').insert(insert_data).execute()
                 if res.data:
                     msg_id = res.data[0]['id']
-                    if temp_filename:
-                        real_url = f"/attachment/{msg_id}"
+                    if pending_attachment:
+                        real_url = finalize_message_attachment(pending_attachment, msg_id)
                         supabase.table('messages').update({'attachment_url': real_url}).eq('id', msg_id).execute()
                         res.data[0]['attachment_url'] = real_url
+                        res.data[0]['attachment_type'] = pending_attachment['attachment_type']
+                        res.data[0]['attachment_name'] = pending_attachment['display_name']
 
                     create_notification(receiver_id, viewer['id'], 'message', message_id=msg_id)
                     streak_count, streak_xp = update_streak(viewer['id'], receiver_id)
@@ -3719,15 +3919,11 @@ def delete_message():
                 except Exception:
                     pass
 
-                attachment_url = message.get('attachment_url')
-                if attachment_url:
-                    filename = os.path.basename(attachment_url)
-                    file_path = os.path.join(app.root_path, 'uploads', 'attachments', filename)
-                    if os.path.exists(file_path):
-                        try:
-                            os.remove(file_path)
-                        except Exception:
-                            pass
+                if message.get('attachment_url'):
+                    try:
+                        remove_stored_attachment_file(message)
+                    except Exception:
+                        pass
 
                 supabase.table('messages').update({
                     'content': 'This message was deleted',
@@ -4946,56 +5142,56 @@ def api_upload_attachment():
     if not file or file.filename == '':
         return jsonify({'success': False, 'error': 'No file selected.'}), 400
 
-    filename = file.filename
-    ext = os.path.splitext(filename)[1].lower()
-
-    # Block malicious executable file extensions
-    blocked_extensions = {
-        '.exe', '.bat', '.cmd', '.sh', '.php', '.py', '.js', '.vbs', '.msi', '.scr', '.jar', '.com', '.pif', '.wsf', '.hta', '.cpl'
-    }
-    if ext in blocked_extensions:
-        return jsonify({'success': False, 'error': 'This file type is not supported for security reasons.'}), 400
-
-    # Limit file size to 15 MB
-    file.seek(0, os.SEEK_END)
-    size = file.tell()
-    file.seek(0)
-
-    MAX_SIZE = 15 * 1024 * 1024
-    if size > MAX_SIZE:
-        return jsonify({'success': False, 'error': 'File size exceeds the limit of 15 MB.'}), 400
-
-    # Create private upload directory if not exists
-    upload_dir = os.path.join(app.root_path, 'uploads', 'attachments')
-    os.makedirs(upload_dir, exist_ok=True)
-
-    import uuid
-    unique_filename = f"{uuid.uuid4()}{ext}"
-    save_path = os.path.join(upload_dir, unique_filename)
+    try:
+        extension = attachment_extension(file.filename)
+    except ValueError as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 400
 
     try:
-        file.save(save_path)
+        file.stream.seek(0)
+    except (AttributeError, OSError):
+        pass
+    payload = file.read()
+    if not payload:
+        return jsonify({'success': False, 'error': 'Selected file is empty.'}), 400
+    if len(payload) > MAX_ATTACHMENT_BYTES:
+        return jsonify({'success': False, 'error': 'File size exceeds the limit of 15 MB.'}), 400
 
-        attachment_type = 'file'
-        img_exts = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp'}
-        vid_exts = {'.mp4', '.webm', '.ogg', '.mov', '.avi'}
-        aud_exts = {'.mp3', '.wav', '.ogg', '.m4a'}
-        doc_exts = {'.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt'}
+    unique_filename = temporary_attachment_filename(viewer['id'], extension)
+    saved_locally = False
 
-        if ext in img_exts:
-            attachment_type = 'image'
-        elif ext in vid_exts:
-            attachment_type = 'video'
-        elif ext in aud_exts:
-            attachment_type = 'audio'
-        elif ext in doc_exts:
-            attachment_type = 'document'
+    try:
+        if use_supabase_attachment_storage():
+            try:
+                ensure_attachment_bucket()
+                supabase.storage.from_(SUPABASE_ATTACHMENT_BUCKET).upload(
+                    attachment_storage_path(unique_filename),
+                    payload,
+                    file_options={
+                        "content-type": attachment_content_type(extension),
+                        "upsert": "false",
+                    },
+                )
+            except Exception as exc:
+                if not LOCAL_ATTACHMENT_UPLOAD_FALLBACK:
+                    raise RuntimeError("Attachment upload failed. Check the private Supabase attachment bucket.") from exc
+                app.logger.warning("Supabase attachment upload failed; using local fallback: %s", exc)
+                saved_locally = True
+        else:
+            saved_locally = True
+
+        if saved_locally:
+            upload_dir = attachment_upload_dir()
+            os.makedirs(upload_dir, exist_ok=True)
+            save_path = os.path.join(upload_dir, unique_filename)
+            with open(save_path, 'wb') as attachment_file:
+                attachment_file.write(payload)
 
         return jsonify({
             'success': True,
             'temp_filename': unique_filename,
-            'attachment_name': filename,
-            'attachment_type': attachment_type
+            'attachment_name': attachment_display_name(file.filename, extension),
+            'attachment_type': attachment_type_for_extension(extension)
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -5027,9 +5223,25 @@ def download_attachment(message_id):
         if not attachment_url:
             return abort(404)
 
-        filename = os.path.basename(attachment_url)
-        upload_dir = os.path.join(app.root_path, 'uploads', 'attachments')
+        filename = stored_attachment_filename_for_message(msg)
+        if not filename:
+            return abort(404)
+        extension = attachment_extension(filename)
+        if use_supabase_attachment_storage():
+            try:
+                payload = supabase.storage.from_(SUPABASE_ATTACHMENT_BUCKET).download(attachment_storage_path(filename))
+                if hasattr(payload, 'content'):
+                    payload = payload.content
+                if not isinstance(payload, (bytes, bytearray)):
+                    payload = bytes(payload)
+                return Response(payload, mimetype=attachment_content_type(extension))
+            except Exception:
+                if not LOCAL_ATTACHMENT_UPLOAD_FALLBACK:
+                    return abort(404)
+        upload_dir = attachment_upload_dir()
         return send_from_directory(upload_dir, filename, download_name=msg.get('attachment_name'))
+    except HTTPException:
+        raise
     except Exception:
         return abort(500)
 

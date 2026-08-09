@@ -2711,6 +2711,292 @@ class AppRouteTests(unittest.TestCase):
         self.assertIn(b"Already sent.", response.data)
         fake_supabase.table.assert_not_called()
 
+    def test_attachment_upload_enforces_allowlist_and_owner_bound_temp_file(self):
+        fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
+        token = self.csrf()
+
+        with tempfile.TemporaryDirectory() as tmpdir, \
+             patch.object(zapp.app, "root_path", tmpdir), \
+             patch.object(zapp, "get_current_user", return_value=fake_user):
+            rejected = self.client.post(
+                "/api/upload_attachment",
+                data={"file": (io.BytesIO(b"<svg></svg>"), "icon.svg")},
+                headers={"X-CSRF-Token": token},
+                content_type="multipart/form-data",
+            )
+            self.assertEqual(rejected.status_code, 400)
+            self.assertFalse(rejected.get_json()["success"])
+
+            accepted = self.client.post(
+                "/api/upload_attachment",
+                data={"file": (io.BytesIO(b"%PDF-1.4"), "Report Final.pdf")},
+                headers={"X-CSRF-Token": token},
+                content_type="multipart/form-data",
+            )
+
+            payload = accepted.get_json()
+            self.assertEqual(accepted.status_code, 200)
+            self.assertTrue(payload["success"])
+            self.assertRegex(payload["temp_filename"], r"^u7_[0-9a-f]{32}\.pdf$")
+            self.assertEqual(payload["attachment_name"], "Report_Final.pdf")
+            self.assertEqual(payload["attachment_type"], "document")
+            self.assertTrue(os.path.exists(os.path.join(tmpdir, "uploads", "attachments", payload["temp_filename"])))
+
+    def test_attachment_upload_uses_private_supabase_bucket_outside_testing(self):
+        class FakeBucket:
+            def __init__(self):
+                self.uploads = []
+
+            def upload(self, path, payload, file_options=None):
+                self.uploads.append((path, payload, file_options))
+
+        class FakeStorage:
+            def __init__(self):
+                self.bucket = FakeBucket()
+                self.created = None
+
+            def get_bucket(self, name):
+                raise RuntimeError("missing bucket")
+
+            def create_bucket(self, name, options=None):
+                self.created = (name, options)
+
+            def from_(self, name):
+                self.selected = name
+                return self.bucket
+
+        fake_storage = FakeStorage()
+        fake_supabase = SimpleNamespace(storage=fake_storage)
+        token = self.csrf()
+
+        with patch.dict(zapp.app.config, {"TESTING": False}), \
+             patch.object(zapp, "supabase", fake_supabase), \
+             patch.object(zapp, "get_current_user", return_value={"id": 7, "username": "demo"}):
+            response = self.client.post(
+                "/api/upload_attachment",
+                data={"file": (io.BytesIO(b"%PDF-1.4"), "report.pdf")},
+                headers={"X-CSRF-Token": token},
+                content_type="multipart/form-data",
+            )
+
+        payload = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(payload["success"])
+        self.assertEqual(fake_storage.created[0], zapp.SUPABASE_ATTACHMENT_BUCKET)
+        self.assertFalse(fake_storage.created[1]["public"])
+        uploaded_path, uploaded_payload, options = fake_storage.bucket.uploads[0]
+        self.assertEqual(uploaded_path, zapp.attachment_storage_path(payload["temp_filename"]))
+        self.assertEqual(uploaded_payload, b"%PDF-1.4")
+        self.assertEqual(options["content-type"], "application/pdf")
+
+    def test_send_message_finalizes_private_attachment_file(self):
+        class Result:
+            def __init__(self, data=None):
+                self.data = data or []
+
+        class FakeTable:
+            def __init__(self, db, name):
+                self.db = db
+                self.name = name
+                self.action = None
+                self.values = None
+                self.filters = []
+
+            def select(self, *_args, **_kwargs):
+                self.action = "select"
+                return self
+
+            def insert(self, values):
+                self.action = "insert"
+                self.values = values
+                return self
+
+            def update(self, values):
+                self.action = "update"
+                self.values = values
+                return self
+
+            def eq(self, key, value):
+                self.filters.append((key, value))
+                return self
+
+            def execute(self):
+                self.db.calls.append((self.name, self.action, self.values, tuple(self.filters)))
+                if self.name == "users" and self.action == "select":
+                    return Result([{"id": 8}])
+                if self.name == "messages" and self.action == "insert":
+                    return Result([{"id": 91, **self.values}])
+                return Result([self.values or {}])
+
+        class FakeSupabase:
+            def __init__(self):
+                self.calls = []
+
+            def table(self, name):
+                return FakeTable(self, name)
+
+        fake = FakeSupabase()
+        fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
+        temp_filename = zapp.temporary_attachment_filename(7, "pdf")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            upload_dir = os.path.join(tmpdir, "uploads", "attachments")
+            os.makedirs(upload_dir, exist_ok=True)
+            temp_path = os.path.join(upload_dir, temp_filename)
+            with open(temp_path, "wb") as attachment_file:
+                attachment_file.write(b"%PDF-1.4")
+
+            with patch.object(zapp.app, "root_path", tmpdir), \
+                 patch.object(zapp, "get_current_user", return_value=fake_user), \
+                 patch.object(zapp, "supabase", fake), \
+                 patch.object(zapp, "interaction_blocked", return_value=False), \
+                 patch.object(zapp, "recent_duplicate_submission", return_value=False), \
+                 patch.object(zapp, "create_notification"), \
+                 patch.object(zapp, "update_streak", return_value=(0, 0)):
+                response = self.client.post("/send_message", data={
+                    "csrf_token": self.csrf(),
+                    "receiver_id": "8",
+                    "content": "",
+                    "temp_filename": temp_filename,
+                    "attachment_name": "Report Final.pdf",
+                    "ajax": "1",
+                })
+
+            payload = response.get_json()
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(payload["success"])
+            self.assertFalse(os.path.exists(temp_path))
+            self.assertTrue(os.path.exists(os.path.join(upload_dir, "91.pdf")))
+            self.assertIn(("messages", "insert", {
+                "sender_id": 7,
+                "receiver_id": 8,
+                "content": "",
+                "attachment_type": "document",
+                "attachment_name": "Report_Final.pdf",
+            }, ()), fake.calls)
+            self.assertIn(("messages", "update", {"attachment_url": "/attachment/91"}, (("id", 91),)), fake.calls)
+
+    def test_send_message_rejects_cross_user_temp_attachment(self):
+        fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
+        temp_filename = zapp.temporary_attachment_filename(8, "pdf")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            upload_dir = os.path.join(tmpdir, "uploads", "attachments")
+            os.makedirs(upload_dir, exist_ok=True)
+            with open(os.path.join(upload_dir, temp_filename), "wb") as attachment_file:
+                attachment_file.write(b"%PDF-1.4")
+
+            with patch.object(zapp.app, "root_path", tmpdir), \
+                 patch.object(zapp, "get_current_user", return_value=fake_user), \
+                 patch.object(zapp, "supabase") as fake_supabase:
+                response = self.client.post("/send_message", data={
+                    "csrf_token": self.csrf(),
+                    "receiver_id": "8",
+                    "content": "",
+                    "temp_filename": temp_filename,
+                    "attachment_name": "Report.pdf",
+                    "ajax": "1",
+                })
+
+            self.assertEqual(response.status_code, 400)
+            self.assertIn("Invalid attachment upload", response.get_json()["error"])
+            fake_supabase.table.assert_not_called()
+
+    def test_send_message_moves_supabase_attachment_to_message_key(self):
+        class Result:
+            def __init__(self, data=None):
+                self.data = data or []
+
+        class FakeBucket:
+            def __init__(self, files):
+                self.files = files
+                self.moves = []
+
+            def exists(self, path):
+                return path in self.files
+
+            def move(self, source, target):
+                self.moves.append((source, target))
+                self.files[target] = self.files.pop(source)
+
+        class FakeStorage:
+            def __init__(self, bucket):
+                self.bucket = bucket
+
+            def from_(self, name):
+                self.selected = name
+                return self.bucket
+
+        class FakeTable:
+            def __init__(self, db, name):
+                self.db = db
+                self.name = name
+                self.action = None
+                self.values = None
+                self.filters = []
+
+            def select(self, *_args, **_kwargs):
+                self.action = "select"
+                return self
+
+            def insert(self, values):
+                self.action = "insert"
+                self.values = values
+                return self
+
+            def update(self, values):
+                self.action = "update"
+                self.values = values
+                return self
+
+            def eq(self, key, value):
+                self.filters.append((key, value))
+                return self
+
+            def execute(self):
+                self.db.calls.append((self.name, self.action, self.values, tuple(self.filters)))
+                if self.name == "users" and self.action == "select":
+                    return Result([{"id": 8}])
+                if self.name == "messages" and self.action == "insert":
+                    return Result([{"id": 91, **self.values}])
+                return Result([self.values or {}])
+
+        class FakeSupabase:
+            def __init__(self, storage):
+                self.storage = storage
+                self.calls = []
+
+            def table(self, name):
+                return FakeTable(self, name)
+
+        temp_filename = zapp.temporary_attachment_filename(7, "pdf")
+        temp_path = zapp.attachment_storage_path(temp_filename)
+        bucket = FakeBucket({temp_path: b"%PDF-1.4"})
+        fake = FakeSupabase(FakeStorage(bucket))
+
+        with patch.dict(zapp.app.config, {"TESTING": False}), \
+             patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "get_current_user", return_value={"id": 7, "username": "demo"}), \
+             patch.object(zapp, "interaction_blocked", return_value=False), \
+             patch.object(zapp, "recent_duplicate_submission", return_value=False), \
+             patch.object(zapp, "create_notification"), \
+             patch.object(zapp, "update_streak", return_value=(0, 0)):
+            response = self.client.post("/send_message", data={
+                "csrf_token": self.csrf(),
+                "receiver_id": "8",
+                "content": "",
+                "temp_filename": temp_filename,
+                "attachment_name": "Report.pdf",
+                "ajax": "1",
+            })
+
+        self.assertEqual(response.status_code, 200)
+        final_path = zapp.attachment_storage_path("91.pdf")
+        self.assertEqual(bucket.moves, [(temp_path, final_path)])
+        self.assertNotIn(temp_path, bucket.files)
+        self.assertEqual(bucket.files[final_path], b"%PDF-1.4")
+        self.assertIn(("messages", "update", {"attachment_url": "/attachment/91"}, (("id", 91),)), fake.calls)
+
     def test_mark_message_thread_read_clears_messages_and_notifications(self):
         class FakeTable:
             def __init__(self, db, name):
@@ -3236,6 +3522,82 @@ class AppRouteTests(unittest.TestCase):
             "attachment_name": None
         }, (("id", 42),)), fake.calls)
 
+    def test_delete_message_removes_private_attachment_file(self):
+        class Result:
+            def __init__(self, data=None):
+                self.data = data or []
+
+        class FakeTable:
+            def __init__(self, db, name):
+                self.db = db
+                self.name = name
+                self.action = None
+                self.values = None
+                self.filters = []
+
+            def select(self, *_args, **_kwargs):
+                self.action = "select"
+                return self
+
+            def update(self, values):
+                self.action = "update"
+                self.values = values
+                return self
+
+            def eq(self, key, value):
+                self.filters.append((key, value))
+                return self
+
+            def execute(self):
+                if self.name == "messages" and self.action == "select":
+                    return Result([{
+                        "id": 42,
+                        "sender_id": 7,
+                        "receiver_id": 8,
+                        "created_at": datetime.now(timezone.utc).isoformat(),
+                        "attachment_url": "/attachment/42",
+                        "attachment_name": "Report.pdf",
+                    }])
+                self.db.calls.append((self.name, self.action, self.values, tuple(self.filters)))
+                return Result()
+
+        class FakeSupabase:
+            def __init__(self):
+                self.calls = []
+
+            def table(self, name):
+                return FakeTable(self, name)
+
+        fake = FakeSupabase()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            upload_dir = os.path.join(tmpdir, "uploads", "attachments")
+            os.makedirs(upload_dir, exist_ok=True)
+            attachment_path = os.path.join(upload_dir, "42.pdf")
+            with open(attachment_path, "wb") as attachment_file:
+                attachment_file.write(b"%PDF-1.4")
+
+            with self.client.session_transaction() as sess:
+                sess["csrf_token"] = "token"
+            with patch.object(zapp.app, "root_path", tmpdir), \
+                 patch.object(zapp, "get_current_user", return_value={"id": 7, "username": "viewer"}), \
+                 patch.object(zapp, "supabase", fake):
+                response = self.client.post("/delete_message", data={
+                    "csrf_token": "token",
+                    "message_id": "42",
+                    "delete_type": "everyone",
+                    "redirect": "/messages?u=demo",
+                })
+
+            self.assertEqual(response.status_code, 302)
+            self.assertFalse(os.path.exists(attachment_path))
+            self.assertIn(("messages", "update", {
+                "content": "This message was deleted",
+                "deleted_for_everyone": True,
+                "attachment_url": None,
+                "attachment_type": None,
+                "attachment_name": None
+            }, (("id", 42),)), fake.calls)
+
     def test_delete_message_rejects_non_participant(self):
         class Result:
             def __init__(self, data=None):
@@ -3290,6 +3652,112 @@ class AppRouteTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertNotIn(("messages", "delete", (("id", 42),)), fake.calls)
+
+    def test_download_attachment_requires_participant_and_serves_private_file(self):
+        class Result:
+            def __init__(self, data=None):
+                self.data = data or []
+
+        class FakeTable:
+            def __init__(self, row):
+                self.row = row
+
+            def select(self, *_args, **_kwargs):
+                return self
+
+            def eq(self, *_args, **_kwargs):
+                return self
+
+            def execute(self):
+                return Result([self.row])
+
+        row = {
+            "id": 91,
+            "sender_id": 7,
+            "receiver_id": 8,
+            "attachment_url": "/attachment/91",
+            "attachment_name": "Report.pdf",
+            "deleted_for_everyone": False,
+            "deleted_by_sender": False,
+            "deleted_by_receiver": False,
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            upload_dir = os.path.join(tmpdir, "uploads", "attachments")
+            os.makedirs(upload_dir, exist_ok=True)
+            with open(os.path.join(upload_dir, "91.pdf"), "wb") as attachment_file:
+                attachment_file.write(b"%PDF-1.4")
+
+            with patch.object(zapp.app, "root_path", tmpdir), \
+                 patch.object(zapp, "supabase", SimpleNamespace(table=lambda _name: FakeTable(row))), \
+                 patch.object(zapp, "get_current_user", return_value={"id": 7, "username": "sender"}):
+                allowed = self.client.get("/attachment/91")
+                allowed_data = allowed.get_data()
+                allowed.close()
+
+            with patch.object(zapp.app, "root_path", tmpdir), \
+                 patch.object(zapp, "supabase", SimpleNamespace(table=lambda _name: FakeTable(row))), \
+                 patch.object(zapp, "get_current_user", return_value={"id": 9, "username": "stranger"}):
+                denied = self.client.get("/attachment/91")
+
+        self.assertEqual(allowed.status_code, 200)
+        self.assertEqual(allowed_data, b"%PDF-1.4")
+        self.assertEqual(denied.status_code, 403)
+
+    def test_download_attachment_streams_supabase_private_file(self):
+        class Result:
+            def __init__(self, data=None):
+                self.data = data or []
+
+        class FakeTable:
+            def select(self, *_args, **_kwargs):
+                return self
+
+            def eq(self, *_args, **_kwargs):
+                return self
+
+            def execute(self):
+                return Result([{
+                    "id": 91,
+                    "sender_id": 7,
+                    "receiver_id": 8,
+                    "attachment_url": "/attachment/91",
+                    "attachment_name": "Report.pdf",
+                    "deleted_for_everyone": False,
+                    "deleted_by_sender": False,
+                    "deleted_by_receiver": False,
+                }])
+
+        class FakeBucket:
+            def __init__(self):
+                self.downloads = []
+
+            def download(self, path):
+                self.downloads.append(path)
+                return b"%PDF-1.4"
+
+        class FakeStorage:
+            def __init__(self, bucket):
+                self.bucket = bucket
+
+            def from_(self, name):
+                self.selected = name
+                return self.bucket
+
+        bucket = FakeBucket()
+        fake_supabase = SimpleNamespace(
+            table=lambda _name: FakeTable(),
+            storage=FakeStorage(bucket),
+        )
+
+        with patch.dict(zapp.app.config, {"TESTING": False}), \
+             patch.object(zapp, "supabase", fake_supabase), \
+             patch.object(zapp, "get_current_user", return_value={"id": 7, "username": "sender"}):
+            response = self.client.get("/attachment/91")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, b"%PDF-1.4")
+        self.assertEqual(bucket.downloads, [zapp.attachment_storage_path("91.pdf")])
 
     def test_delete_post_updates_only_owner_with_timezone_timestamp(self):
         class Result:
