@@ -698,8 +698,51 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Live Poll refreshing
         const pollUrl = messagesFeed.dataset.messageApi;
+        const loadOlderBtn = messagesFeed.querySelector('[data-load-older-messages]');
+        if (pollUrl && loadOlderBtn) {
+            loadOlderBtn.addEventListener('click', async () => {
+                const firstMessage = messagesFeed.querySelector('[data-message-id]');
+                if (!firstMessage || loadOlderBtn.disabled) return;
+
+                loadOlderBtn.disabled = true;
+                const previousScrollHeight = messagesFeed.scrollHeight;
+                const previousScrollTop = messagesFeed.scrollTop;
+
+                try {
+                    const beforeId = firstMessage.dataset.messageId;
+                    const response = await fetch(`${pollUrl}?before_id=${encodeURIComponent(beforeId)}`, {
+                        headers: { 'Accept': 'application/json' }
+                    });
+                    const result = await response.json();
+                    if (!response.ok || !result.success || !Array.isArray(result.messages)) {
+                        throw new Error(result.error || 'Could not load older messages.');
+                    }
+
+                    const existing = new Set(Array.from(messagesFeed.querySelectorAll('[data-message-id]')).map(el => el.dataset.messageId));
+                    const fragment = document.createDocumentFragment();
+                    result.messages.forEach((message) => {
+                        if (existing.has(String(message.id))) return;
+                        fragment.appendChild(renderMessage(message, message.sender_id === result.viewer_id));
+                    });
+                    if (fragment.childNodes.length) {
+                        messagesFeed.insertBefore(fragment, firstMessage);
+                        messagesFeed.scrollTop = messagesFeed.scrollHeight - previousScrollHeight + previousScrollTop;
+                    }
+                    if (!result.has_more) {
+                        loadOlderBtn.remove();
+                    } else {
+                        loadOlderBtn.disabled = false;
+                    }
+                } catch (error) {
+                    console.error('Older messages load failed:', error);
+                    showAppToast(error.message || 'Could not load older messages.', 'error');
+                    loadOlderBtn.disabled = false;
+                }
+            });
+        }
+
+        // Live Poll refreshing
         if (pollUrl) {
             window.setInterval(async () => {
                 const messageEls = Array.from(messagesFeed.querySelectorAll('[data-message-id]'));

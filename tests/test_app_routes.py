@@ -314,6 +314,9 @@ class AppRouteTests(unittest.TestCase):
         self.assertIn("draftDeleteUrl", script)
         self.assertIn("saveCurrentDraft", script)
         self.assertIn("restoreDraft", script)
+        self.assertIn("data-load-older-messages", Path("templates/messages.html").read_text(encoding="utf-8"))
+        self.assertIn("before_id", script)
+        self.assertIn("loadOlderBtn", script)
         self.assertNotIn("chatForm.submit();", script)
         self.assertNotIn("commentForm.submit();", script)
 
@@ -3851,6 +3854,7 @@ class AppRouteTests(unittest.TestCase):
                 target_user=target,
                 conversations=[],
                 all_users=[],
+                has_older_messages=True,
                 messages_list=[{
                     "id": 42,
                     "sender_id": 7,
@@ -3865,6 +3869,7 @@ class AppRouteTests(unittest.TestCase):
 
         self.assertIn('data-delete-message-url="/delete_message"', html)
         self.assertIn('data-message-id="42"', html)
+        self.assertIn('data-load-older-messages', html)
         self.assertIn('delete_for_me', html)
 
     def test_messages_empty_state_restores_discovery_content(self):

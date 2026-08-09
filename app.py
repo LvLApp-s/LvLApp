@@ -5179,6 +5179,7 @@ def messages():
     target_user = None
     chat_safety_state = {'blocked': False, 'blocked_by': False, 'interaction_blocked': False}
     messages_list = []
+    has_older_messages = False
 
     try:
         if target_username:
@@ -5190,8 +5191,10 @@ def messages():
                     target_user = None
                 else:
                     chat_safety_state = get_user_safety_state(viewer['id'], target_user['id'])
-                    msg_res = supabase.table('messages').select('*').or_(f"and(sender_id.eq.{viewer['id']},receiver_id.eq.{target_user['id']}),and(sender_id.eq.{target_user['id']},receiver_id.eq.{viewer['id']})").order('created_at', desc=True).limit(MESSAGES_PAGE_SIZE).execute()
-                    raw_messages = list(reversed(msg_res.data if msg_res and msg_res.data else []))
+                    msg_res = supabase.table('messages').select('*').or_(f"and(sender_id.eq.{viewer['id']},receiver_id.eq.{target_user['id']}),and(sender_id.eq.{target_user['id']},receiver_id.eq.{viewer['id']})").order('created_at', desc=True).limit(MESSAGES_PAGE_SIZE + 1).execute()
+                    raw_desc = msg_res.data if msg_res and msg_res.data else []
+                    has_older_messages = len(raw_desc) > MESSAGES_PAGE_SIZE
+                    raw_messages = list(reversed(raw_desc[:MESSAGES_PAGE_SIZE]))
                     messages_list = visible_messages_for_viewer(raw_messages, viewer['id'])
                     messages_list = attach_shared_posts(messages_list)
                     mark_message_thread_read(viewer['id'], target_user['id'])
@@ -5244,6 +5247,7 @@ def messages():
         flash(handle_db_error(e), "error")
         conversations = []
         all_users = []
+        has_older_messages = False
 
     explore = get_explore_context(viewer)
 
@@ -5255,6 +5259,7 @@ def messages():
                            conversations=conversations,
                            all_users=all_users,
                            messages_list=messages_list,
+                           has_older_messages=has_older_messages,
                            suggested_communities=explore['communities'][:3],
                            message_trending_posts=explore['trending_posts'][:3],
                            message_people=explore['popular_users'][:4],

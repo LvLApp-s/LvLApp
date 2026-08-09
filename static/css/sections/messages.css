@@ -183,6 +183,29 @@
   gap: 6px;
 }
 
+.load-older-messages {
+  align-self: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.load-older-messages:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: var(--accent-color);
+}
+
+.load-older-messages:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .chat-empty-state {
   padding: 40px 20px;
   text-align: center;
