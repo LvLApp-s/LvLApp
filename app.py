@@ -64,10 +64,21 @@ def session_cookie_config(environ=None):
         'SESSION_COOKIE_SECURE': cookie_secure,
     }
 
+def remember_session_lifetime(environ=None):
+    environ = environ or os.environ
+    raw_days = (environ.get("REMEMBER_SESSION_DAYS") or "30").strip()
+    try:
+        days = int(raw_days)
+    except ValueError:
+        days = 30
+    days = min(max(days, 1), 90)
+    return timedelta(days=days)
+
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.secret_key = resolve_flask_secret_key()
 app.config.update(**session_cookie_config())
+app.permanent_session_lifetime = remember_session_lifetime()
 logging.basicConfig(level=logging.INFO)
 
 url: str = os.getenv("SUPABASE_URL", "")
@@ -279,6 +290,11 @@ def parse_int(value):
     except (TypeError, ValueError):
         return None
 
+EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+def is_valid_email(value):
+    return bool(EMAIL_PATTERN.match((value or '').strip()))
+
 def mail_settings():
     username = os.getenv("MAIL_USERNAME") or os.getenv("SMTP_USERNAME") or os.getenv("SMTP_FROM")
     password = os.getenv("MAIL_PASSWORD") or os.getenv("SMTP_PASSWORD")
@@ -305,7 +321,7 @@ def login_attempt_key(username):
     return f"{request.remote_addr or 'local'}:{(username or '').strip().lower()}"
 
 def login_is_limited(username):
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     key = login_attempt_key(username)
     record = LOGIN_ATTEMPTS.get(key, {'count': 0, 'first_seen': now})
     if now - record['first_seen'] > LOGIN_WINDOW:
@@ -314,7 +330,7 @@ def login_is_limited(username):
     return record['count'] >= LOGIN_MAX_ATTEMPTS
 
 def record_login_failure(username):
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     key = login_attempt_key(username)
     record = LOGIN_ATTEMPTS.get(key, {'count': 0, 'first_seen': now})
     if now - record['first_seen'] > LOGIN_WINDOW:
@@ -743,6 +759,12 @@ def get_current_user():
         except Exception:
             return None
     return None
+
+def start_user_session(user_id, remember=False):
+    session.clear()
+    session.permanent = bool(remember)
+    session['user_id'] = user_id
+    get_csrf_token()
 
 def handle_db_error(e, default_msg="An error occurred. Please try again."):
     error_msg = str(e)
@@ -2462,7 +2484,7 @@ def delete_reel(reel_id):
         else:
             supabase.table('reels').update({
                 'status': 'deleted',
-                'deleted_at': datetime.utcnow().isoformat(),
+                'deleted_at': datetime.now(timezone.utc).isoformat(),
             }).eq('id', reel_id).execute()
             flash("Reel deleted.", "success")
     except Exception as exc:
@@ -2731,7 +2753,7 @@ def oauth_callback():
         app_user = first_oauth_user_match(profile)
         if app_user:
             sync_oauth_user_fields(app_user, profile)
-            session['user_id'] = app_user['id']
+            start_user_session(app_user['id'])
             clear_oauth_flow_session(include_pending=True)
             award_xp(app_user['id'], 'daily_login', 5)
             flash(f"Signed in with {oauth_provider_label(profile['provider'])}.", "success")
@@ -2780,8 +2802,7 @@ def oauth_onboarding():
         existing_user = first_oauth_user_match({**profile, 'email': email})
         if existing_user:
             sync_oauth_user_fields(existing_user, profile)
-            session['user_id'] = existing_user['id']
-            session.pop('pending_oauth_profile', None)
+            start_user_session(existing_user['id'])
             award_xp(existing_user['id'], 'daily_login', 5)
             flash("Your social login is now connected to your existing LvL account.", "success")
             return redirect(url_for('index'))
@@ -2812,8 +2833,7 @@ def oauth_onboarding():
         try:
             new_user = supabase.table('users').insert(payload).execute()
             if new_user.data:
-                session['user_id'] = new_user.data[0]['id']
-                session.pop('pending_oauth_profile', None)
+                start_user_session(new_user.data[0]['id'])
                 award_xp(new_user.data[0]['id'], 'account_created', 20)
                 flash(f"Welcome to LvL, {first_name}! Your social login is connected.", "success")
                 return redirect(url_for('index'))
@@ -2837,6 +2857,7 @@ def auth():
         if action == 'login':
             username = request.form.get('username', '')
             password = request.form.get('password', '')
+            remember = request.form.get('remember_me') == '1'
             if not username or not password:
                 flash("Username and password are required.", "error")
                 return render_template('auth.html')
@@ -2852,7 +2873,7 @@ def auth():
                 if res.data:
                     user = res.data[0]
                     if bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
-                        session['user_id'] = user['id']
+                        start_user_session(user['id'], remember=remember)
                         clear_login_failures(username)
                         award_xp(user['id'], 'daily_login', 5)
                         return redirect(url_for('index'))
@@ -2908,7 +2929,7 @@ def auth():
                 }).execute()
 
                 if new_user.data:
-                    session['user_id'] = new_user.data[0]['id']
+                    start_user_session(new_user.data[0]['id'])
                     award_xp(new_user.data[0]['id'], 'account_created', 20)
                     flash(f"Welcome to LvL, {first_name}! You've earned 20 XP for joining.", "success")
                     return redirect(url_for('index'))
@@ -3196,7 +3217,7 @@ def delete_post():
         elif post_res.data[0].get('user_id') != viewer['id']:
             flash("You can only delete your own posts.", "error")
         else:
-            supabase.table('posts').update({'deleted_at': datetime.utcnow().isoformat()}).eq('id', post_id).execute()
+            supabase.table('posts').update({'deleted_at': datetime.now(timezone.utc).isoformat()}).eq('id', post_id).execute()
             flash("Post deleted.", "success")
     except Exception as e:
         flash(handle_db_error(e, "Could not delete that post."), "error")
@@ -3990,7 +4011,7 @@ def guide_contact():
     
     if not name or not email or not message:
         flash("All fields are required.", "error")
-    elif not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+    elif not is_valid_email(email):
         flash("Please enter a valid email address.", "error")
     else:
         last_submit = session.get('last_contact_submit')
@@ -4117,20 +4138,24 @@ def guide_careers():
     cv_file = request.files.get('cv')
     
     cv_filename = None
-    if cv_file and cv_file.filename:
-        import os
-        allowed_ext = {'.pdf', '.doc', '.docx'}
-        ext = os.path.splitext(cv_file.filename.lower())[1]
-        if ext in allowed_ext:
-            import uuid
+    if not name or not email or not position_title or not message:
+        flash("All fields are required.", "error")
+    elif not is_valid_email(email):
+        flash("Please enter a valid email address.", "error")
+    else:
+        if cv_file and cv_file.filename:
+            allowed_ext = {'.pdf', '.doc', '.docx'}
+            ext = os.path.splitext(cv_file.filename.lower())[1]
+            if ext not in allowed_ext:
+                flash("CV must be a PDF, DOC, or DOCX file.", "error")
+                return redirect(url_for('level_guide') + '#careers')
             safe_name = f"cv_{uuid.uuid4().hex}{ext}"
             upload_dir = os.path.join(app.root_path, 'static', 'uploads', 'cvs')
             os.makedirs(upload_dir, exist_ok=True)
             cv_path = os.path.join(upload_dir, safe_name)
             cv_file.save(cv_path)
             cv_filename = safe_name
-            
-    if name and email and position_title and message:
+
         # Resolve position_id if matches an active posting
         position_id = None
         if supabase:
@@ -5335,28 +5360,42 @@ def api_share_friends():
 @app.route('/api/share/send', methods=['POST'])
 def api_share_send():
     viewer = get_current_user()
-    if not viewer: return jsonify({'success': False, 'error': 'Not logged in'})
+    if not viewer:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
     
-    data = request.json or {}
-    user_id = data.get('receiver_id') or data.get('user_id')
-    clip_id = data.get('clip_id')
-    url = data.get('url')
+    data = request.get_json(silent=True) or {}
+    receiver_id = parse_int(data.get('receiver_id') or data.get('user_id'))
+    clip_id = parse_int(data.get('clip_id'))
+    url = (data.get('url') or '').strip()
     
-    if not user_id:
-        return jsonify({'success': False, 'error': 'Missing parameters'})
+    if not receiver_id or not (url or clip_id):
+        return jsonify({'success': False, 'error': 'Missing parameters'}), 400
+    if receiver_id == viewer['id']:
+        return jsonify({'success': False, 'error': 'Choose someone else to share with.'}), 400
+    if interaction_blocked(viewer['id'], receiver_id):
+        return jsonify({'success': False, 'error': 'You cannot share posts with this user.'}), 403
         
     content = f"Check this out! {url}" if url else f"Check this out! /post/{clip_id}"
+    if len(content) > 1000:
+        return jsonify({'success': False, 'error': 'Message cannot exceed 1000 characters.'}), 400
+    if recent_duplicate_submission('messages', {'sender_id': viewer['id'], 'receiver_id': receiver_id}, 'content', content):
+        return jsonify({'success': False, 'error': 'Already sent.'}), 409
     
     try:
         # Create a direct message with the shared post link
-        supabase.table('messages').insert({
+        res = supabase.table('messages').insert({
             'sender_id': viewer['id'],
-            'receiver_id': user_id,
+            'receiver_id': receiver_id,
             'content': content
         }).execute()
+        message_id = None
+        if res and getattr(res, 'data', None):
+            message_id = res.data[0].get('id')
+        if message_id:
+            create_notification(receiver_id, viewer['id'], 'message', message_id=message_id)
         return jsonify({'success': True})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        return jsonify({'success': False, 'error': handle_db_error(e)}), 400
 
 @app.route('/api/share/search')
 def api_share_search():

@@ -275,6 +275,13 @@
   font-size: 15px;
 }
 
+.auth-form .checkbox-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+
 .auth-form input, .auth-form select {
   background-color: transparent;
   border: 1px solid var(--lvl-border-strong);
@@ -285,6 +292,12 @@
   outline: none;
   transition: border-color 0.2s;
   font-family: inherit;
+}
+
+.auth-form .checkbox-row input {
+  width: 18px;
+  height: 18px;
+  padding: 0;
 }
 
 .auth-form input:focus {
@@ -423,4 +436,3 @@
     min-height: 42px;
   }
 }
-
