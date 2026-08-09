@@ -277,6 +277,28 @@ def unread_message_count(user_id):
     except Exception:
         return 0
 
+def latest_notification_id(user_id):
+    if not user_id or not supabase:
+        return None
+    try:
+        res = supabase.table('notifications').select('id').eq('user_id', user_id).order('id', desc=True).limit(1).execute()
+        if res and res.data:
+            return res.data[0].get('id')
+    except Exception:
+        pass
+    return None
+
+def latest_message_id(user_id):
+    if not user_id or not supabase:
+        return None
+    try:
+        res = supabase.table('messages').select('id').or_(f"sender_id.eq.{user_id},receiver_id.eq.{user_id}").order('id', desc=True).limit(1).execute()
+        if res and res.data:
+            return res.data[0].get('id')
+    except Exception:
+        pass
+    return None
+
 import markupsafe
 
 @app.template_filter('linkify_mentions')
@@ -1488,11 +1510,30 @@ def dedupe_timeline_posts(posts):
         deduped.append(post)
     return deduped
 
+NOTIFICATION_TYPES = {
+    'like',
+    'repost',
+    'comment',
+    'comment_reply',
+    'comment_like',
+    'comment_repost',
+    'reel_like',
+    'reel_comment',
+    'follow',
+    'friend_request',
+    'friend_accept',
+    'message',
+    'high_five',
+}
+
 def create_notification(user_id, actor_id, notif_type, post_id=None, reel_id=None, message_id=None):
     if not user_id or not actor_id or user_id == actor_id:
-        return
+        return False
+    if notif_type not in NOTIFICATION_TYPES:
+        app.logger.warning("Skipped unsupported notification type: %s", notif_type)
+        return False
     if interaction_blocked(actor_id, user_id):
-        return
+        return False
     payload = {
         'user_id': user_id,
         'actor_id': actor_id,
@@ -1506,11 +1547,31 @@ def create_notification(user_id, actor_id, notif_type, post_id=None, reel_id=Non
         payload['message_id'] = message_id
     try:
         supabase.table('notifications').insert(payload).execute()
+        return True
     except Exception:
         if not reel_id:
             raise
         payload.pop('reel_id', None)
         supabase.table('notifications').insert(payload).execute()
+        return True
+
+def format_notification_row(notification, viewer_id):
+    item = dict(notification or {})
+    actor = item.get('actor') or {}
+    item['actor_username'] = actor.get('username', '')
+    item['actor_name'] = actor.get('display_name') or actor.get('username') or 'Someone'
+    item['friendship_status'] = item.get('friendship_status') or 'pending'
+    item['friendship_action_user_id'] = item.get('friendship_action_user_id') or actor.get('id')
+    if item.get('type') == 'message':
+        item['message_url'] = url_for('messages', u=item['actor_username']) if item['actor_username'] else url_for('messages')
+    if item.get('reel_id'):
+        item['reel_url'] = f"{url_for('reels')}#reel-{item['reel_id']}"
+    return item
+
+def visible_notification_rows(rows, viewer_id):
+    rows = list(rows or [])
+    hidden_actor_ids = blocked_user_ids_for_viewer(viewer_id, [item.get('actor_id') for item in rows], include_mutes=False)
+    return [item for item in rows if item.get('actor_id') not in hidden_actor_ids]
 
 def get_feed_posts(viewer_id, limit=POSTS_PER_PAGE, page=1):
     offset = (page - 1) * limit
@@ -3950,11 +4011,22 @@ def delete_message():
 @app.route('/mark_notifications_read', methods=['POST'])
 def mark_notifications_read():
     viewer = get_current_user()
+    wants_json = request.form.get('ajax') == '1' or 'application/json' in (request.headers.get('Accept') or '')
+    if not viewer:
+        if wants_json:
+            return jsonify({'success': False, 'error': 'Authentication required.'}), 401
+        return redirect(url_for('auth'))
     if viewer:
         try:
             supabase.table('notifications').update({'is_read': True}).eq('user_id', viewer['id']).execute()
         except Exception:
-            pass
+            if wants_json:
+                return jsonify({'success': False, 'error': 'Could not mark notifications read.'}), 400
+    if wants_json:
+        return jsonify({
+            'success': True,
+            'unread_notifications': unread_notification_count(viewer['id']),
+        })
     return redirect(url_for('notifications'))
 
 @app.route('/admin/users/level', methods=['POST'])
@@ -5254,7 +5326,37 @@ def api_live_status():
         'success': True,
         'unread_notifications': unread_notification_count(viewer['id']),
         'unread_messages': unread_message_count(viewer['id']),
+        'latest_notification_id': latest_notification_id(viewer['id']),
+        'latest_message_id': latest_message_id(viewer['id']),
+        'server_time': datetime.now(timezone.utc).isoformat(),
     })
+
+@app.route('/api/notifications')
+def api_notifications():
+    viewer = get_current_user()
+    if not viewer:
+        return jsonify({'success': False, 'error': 'Authentication required.'}), 401
+
+    since_id = parse_positive_int(request.args.get('since_id'), default=0, maximum=10**12)
+    limit = parse_positive_int(request.args.get('limit'), default=20, maximum=50)
+
+    try:
+        query = supabase.table('notifications').select('*, actor:users!actor_id(*)').eq('user_id', viewer['id'])
+        if since_id:
+            query = query.gt('id', since_id)
+        notif_res = query.order('id', desc=True).limit(limit).execute()
+        rows = apply_forced_user_levels(notif_res.data if notif_res and notif_res.data else [])
+        rows = visible_notification_rows(rows, viewer['id'])
+        formatted = [format_notification_row(row, viewer['id']) for row in rows]
+        return jsonify({
+            'success': True,
+            'notifications': formatted,
+            'unread_notifications': unread_notification_count(viewer['id']),
+            'latest_notification_id': max([item.get('id') or 0 for item in formatted], default=latest_notification_id(viewer['id'])),
+            'server_time': datetime.now(timezone.utc).isoformat(),
+        })
+    except Exception as exc:
+        return jsonify({'success': False, 'error': handle_db_error(exc)}), 400
 
 @app.route('/notifications')
 def notifications():
@@ -5265,19 +5367,11 @@ def notifications():
     try:
         notif_res = supabase.table('notifications').select('*, actor:users!actor_id(*)').eq('user_id', viewer['id']).order('created_at', desc=True).limit(50).execute()
         raw_notifications = apply_forced_user_levels(notif_res.data if notif_res and notif_res.data else [])
-        hidden_actor_ids = blocked_user_ids_for_viewer(viewer['id'], [item.get('actor_id') for item in raw_notifications], include_mutes=False)
-        raw_notifications = [item for item in raw_notifications if item.get('actor_id') not in hidden_actor_ids]
+        raw_notifications = visible_notification_rows(raw_notifications, viewer['id'])
 
         formatted = []
         for n in raw_notifications:
-            actor = n.get('actor', {})
-            n['actor_username'] = actor.get('username', '')
-            n['actor_name'] = actor.get('display_name', '')
-            n['friendship_status'] = 'pending'
-            n['friendship_action_user_id'] = actor.get('id')
-            if n.get('type') == 'message':
-                n['message_url'] = url_for('messages', u=n['actor_username']) if n['actor_username'] else url_for('messages')
-            formatted.append(n)
+            formatted.append(format_notification_row(n, viewer['id']))
         formatted = stack_notifications(formatted)
         post_ids = [item['post_id'] for item in formatted if item.get('post_id')]
         if post_ids:

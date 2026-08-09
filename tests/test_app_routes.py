@@ -2325,6 +2325,189 @@ class AppRouteTests(unittest.TestCase):
         self.assertEqual(reel_9["stack_count"], 2)
         self.assertEqual(reel_9["actor_summary"], "Ada and Sam")
 
+    def test_create_notification_validates_type_and_inserts_payload(self):
+        class Result:
+            data = []
+
+        class FakeTable:
+            def __init__(self):
+                self.inserted = []
+
+            def insert(self, payload):
+                self.inserted.append(payload)
+                return self
+
+            def execute(self):
+                return Result()
+
+        fake_table = FakeTable()
+        fake_supabase = SimpleNamespace(table=lambda _name: fake_table)
+
+        with patch.object(zapp, "supabase", fake_supabase), \
+             patch.object(zapp, "interaction_blocked", return_value=False):
+            self.assertFalse(zapp.create_notification(7, 7, "like", post_id=5))
+            self.assertFalse(zapp.create_notification(7, 8, "unsupported", post_id=5))
+            self.assertTrue(zapp.create_notification(7, 8, "like", post_id=5))
+
+        self.assertEqual(fake_table.inserted, [{
+            "user_id": 7,
+            "actor_id": 8,
+            "type": "like",
+            "post_id": 5,
+        }])
+
+    def test_live_status_includes_latest_event_ids(self):
+        with patch.object(zapp, "get_current_user", return_value={"id": 7, "username": "demo"}), \
+             patch.object(zapp, "unread_notification_count", return_value=2), \
+             patch.object(zapp, "unread_message_count", return_value=3), \
+             patch.object(zapp, "latest_notification_id", return_value=44), \
+             patch.object(zapp, "latest_message_id", return_value=91):
+            response = self.client.get("/api/live-status")
+
+        payload = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["unread_notifications"], 2)
+        self.assertEqual(payload["unread_messages"], 3)
+        self.assertEqual(payload["latest_notification_id"], 44)
+        self.assertEqual(payload["latest_message_id"], 91)
+        self.assertIsNotNone(datetime.fromisoformat(payload["server_time"]).tzinfo)
+
+    def test_api_notifications_returns_visible_recent_notifications(self):
+        class Result:
+            def __init__(self, data=None):
+                self.data = data or []
+
+        class FakeTable:
+            def __init__(self, db):
+                self.db = db
+                self.filters = []
+                self.limit_value = None
+
+            def select(self, *_args, **_kwargs):
+                return self
+
+            def eq(self, key, value):
+                self.filters.append((key, value))
+                return self
+
+            def gt(self, key, value):
+                self.filters.append((key, value))
+                return self
+
+            def order(self, key, desc=False):
+                self.db.ordering = (key, desc)
+                return self
+
+            def limit(self, value):
+                self.limit_value = value
+                return self
+
+            def execute(self):
+                self.db.filters = self.filters
+                self.db.limit_value = self.limit_value
+                return Result([
+                    {
+                        "id": 44,
+                        "user_id": 7,
+                        "actor_id": 8,
+                        "type": "message",
+                        "message_id": 91,
+                        "is_read": False,
+                        "created_at": "2026-08-09T12:00:00+00:00",
+                        "actor": {"id": 8, "username": "friend", "display_name": "Friend User"},
+                    },
+                    {
+                        "id": 43,
+                        "user_id": 7,
+                        "actor_id": 99,
+                        "type": "like",
+                        "post_id": 5,
+                        "is_read": False,
+                        "created_at": "2026-08-09T11:00:00+00:00",
+                        "actor": {"id": 99, "username": "blocked", "display_name": "Blocked User"},
+                    },
+                ])
+
+        class FakeSupabase:
+            def __init__(self):
+                self.filters = []
+                self.ordering = None
+                self.limit_value = None
+
+            def table(self, name):
+                self.table_name = name
+                return FakeTable(self)
+
+        fake = FakeSupabase()
+        with patch.object(zapp, "get_current_user", return_value={"id": 7, "username": "demo"}), \
+             patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "blocked_user_ids_for_viewer", return_value={99}), \
+             patch.object(zapp, "unread_notification_count", return_value=1), \
+             patch.object(zapp, "latest_notification_id", return_value=44):
+            response = self.client.get("/api/notifications?since_id=40&limit=5")
+
+        payload = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(payload["success"])
+        self.assertEqual(fake.table_name, "notifications")
+        self.assertEqual(fake.filters, [("user_id", 7), ("id", 40)])
+        self.assertEqual(fake.ordering, ("id", True))
+        self.assertEqual(fake.limit_value, 5)
+        self.assertEqual(len(payload["notifications"]), 1)
+        self.assertEqual(payload["notifications"][0]["id"], 44)
+        self.assertEqual(payload["notifications"][0]["message_url"], "/messages?u=friend")
+        self.assertEqual(payload["unread_notifications"], 1)
+
+    def test_mark_notifications_read_supports_json_response(self):
+        class Result:
+            data = []
+
+        class FakeTable:
+            def __init__(self, db):
+                self.db = db
+                self.values = None
+                self.filters = []
+
+            def update(self, values):
+                self.values = values
+                return self
+
+            def eq(self, key, value):
+                self.filters.append((key, value))
+                return self
+
+            def execute(self):
+                self.db.calls.append((self.values, tuple(self.filters)))
+                return Result()
+
+        class FakeSupabase:
+            def __init__(self):
+                self.calls = []
+
+            def table(self, name):
+                self.table_name = name
+                return FakeTable(self)
+
+        fake = FakeSupabase()
+        with self.client.session_transaction() as sess:
+            sess["csrf_token"] = "token"
+
+        with patch.object(zapp, "get_current_user", return_value={"id": 7, "username": "demo"}), \
+             patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "unread_notification_count", return_value=0):
+            response = self.client.post("/mark_notifications_read", data={
+                "csrf_token": "token",
+                "ajax": "1",
+            })
+
+        payload = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["unread_notifications"], 0)
+        self.assertEqual(fake.table_name, "notifications")
+        self.assertEqual(fake.calls, [({"is_read": True}, (("user_id", 7),))])
+
     def test_profile_stats_are_ordered_without_duplicate_metric_card(self):
         fake_user = {
             "id": 7,
