@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+{% set active_page = "home" %}
+{% set title = "Edit post" %}
+{% block content %}
+<header class="page-header compact"><div><h1>Edit post</h1><p>Review your text before saving or publishing.</p></div></header>
+<form class="composer premium-composer edit-post-composer" method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="composer-main">
+    <textarea name="content" maxlength="280" rows="6">{{ post.content }}</textarea>
+    {% if post.image_url %}<img class="edit-post-image" src="{{ post.image_url }}" alt="Post image">{% endif %}
+    <div class="composer-actions">
+      <span class="char-count">{{ 280 - (post.content|length) }} left</span>
+      {% if post.status == 'draft' %}<button class="outline-button" type="submit" name="intent" value="draft">Save draft</button>{% endif %}
+      <button class="post-submit-btn" type="submit" name="intent" value="publish">{{ 'Publish' if post.status == 'draft' else 'Save changes' }}</button>
+    </div>
+  </div>
+</form>
+{% endblock %}

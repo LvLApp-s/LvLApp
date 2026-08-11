@@ -122,6 +122,7 @@
 }
 
 .reel-video-frame {
+  background: linear-gradient(135deg, var(--lvl-surface-5), var(--lvl-surface-9));
   position: relative;
   width: min(calc(var(--max-reel-height) * 9 / 16), 420px, 100%);
   height: auto;

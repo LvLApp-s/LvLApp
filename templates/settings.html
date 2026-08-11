@@ -100,6 +100,16 @@
           <input type="file" name="profile_photo" accept="image/png,image/jpeg,image/gif,image/webp" data-profile-photo-input>
           <small data-i18n="settings_photo_hint">Upload JPG, PNG, GIF, or WebP up to 5 MB.</small>
         </label>
+        <div class="profile-cropper" data-profile-cropper hidden>
+          <div class="profile-crop-stage">
+            <img data-crop-image alt="Crop profile photo">
+          </div>
+          <label class="profile-crop-zoom">
+            <span>Crop and zoom</span>
+            <input type="range" min="1" max="3" step="0.01" value="1" data-crop-zoom>
+          </label>
+          <p class="settings-helper-text">Drag the image to reposition it. The saved photo uses the square preview.</p>
+        </div>
         <label class="checkbox-row">
           <input type="checkbox" name="remove_profile_photo" value="1">
           <span data-i18n="settings_remove_photo">Remove current photo and use the default avatar</span>
@@ -122,6 +132,7 @@
             <a href="{{ url_for('level_guide') }}" data-i18n="settings_banner_see_table">See the LvL reward table.</a>
           </p>
         {% endif %}
+      </div>
 
       <div class="form-section">
         <h3 data-i18n="settings_preferences">Preferences</h3>
@@ -207,5 +218,79 @@
       }
     });
   }
+
+  (() => {
+    const input = document.querySelector('[data-profile-photo-input]');
+    const cropper = document.querySelector('[data-profile-cropper]');
+    const image = document.querySelector('[data-crop-image]');
+    const zoom = document.querySelector('[data-crop-zoom]');
+    const preview = document.querySelector('.profile-preview-avatar');
+    if (!input || !cropper || !image || !zoom) return;
+    let sourceFile = null;
+    let objectUrl = '';
+    let offsetX = 0;
+    let offsetY = 0;
+    let dragging = false;
+    let startX = 0;
+    let startY = 0;
+    const renderTransform = () => {
+      image.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${zoom.value})`;
+    };
+    input.addEventListener('change', () => {
+      sourceFile = input.files && input.files[0];
+      if (!sourceFile) { cropper.hidden = true; return; }
+      if (sourceFile.size > 5 * 1024 * 1024) {
+        input.setCustomValidity('Profile photos must be 5 MB or smaller.');
+        input.reportValidity();
+        input.value = '';
+        sourceFile = null;
+        cropper.hidden = true;
+        return;
+      }
+      input.setCustomValidity('');
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl = URL.createObjectURL(sourceFile);
+      image.src = objectUrl;
+      if (preview) preview.src = objectUrl;
+      offsetX = 0; offsetY = 0; zoom.value = '1';
+      renderTransform();
+      cropper.hidden = false;
+    });
+    zoom.addEventListener('input', renderTransform);
+    image.addEventListener('pointerdown', (event) => {
+      dragging = true;
+      startX = event.clientX - offsetX;
+      startY = event.clientY - offsetY;
+      image.setPointerCapture(event.pointerId);
+    });
+    image.addEventListener('pointermove', (event) => {
+      if (!dragging) return;
+      offsetX = event.clientX - startX;
+      offsetY = event.clientY - startY;
+      renderTransform();
+    });
+    image.addEventListener('pointerup', () => { dragging = false; });
+    input.closest('form').addEventListener('submit', (event) => {
+      if (!sourceFile || !image.naturalWidth || !window.DataTransfer) return;
+      event.preventDefault();
+      const canvas = document.createElement('canvas');
+      canvas.width = 640; canvas.height = 640;
+      const context = canvas.getContext('2d');
+      if (!context) return;
+      const scale = Math.max(640 / image.naturalWidth, 640 / image.naturalHeight) * Number(zoom.value);
+      const width = image.naturalWidth * scale;
+      const height = image.naturalHeight * scale;
+      const ratio = 640 / 240;
+      context.drawImage(image, (640 - width) / 2 + offsetX * ratio, (640 - height) / 2 + offsetY * ratio, width, height);
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const transfer = new DataTransfer();
+          transfer.items.add(new File([blob], 'profile-photo.webp', { type: 'image/webp' }));
+          input.files = transfer.files;
+        }
+        event.target.submit();
+      }, 'image/webp', 0.9);
+    });
+  })();
 </script>
 {% endblock %}

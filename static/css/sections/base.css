@@ -176,10 +176,10 @@
   --avatar-sm: 40px;
   --avatar-md: 48px;
   --avatar-lg: 64px;
-  --shell-left-expanded: 275px;
+  --shell-left-expanded: 248px;
   --shell-left-collapsed: 88px;
-  --shell-main: 600px;
-  --shell-right: 350px;
+  --shell-main: 680px;
+  --shell-right: 320px;
   --line-default: 1px solid var(--border-color);
   --bg-color: var(--lvl-black);
   --text-primary: var(--lvl-text-primary);

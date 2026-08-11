@@ -26,10 +26,12 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "super-secret-default-key")
+is_production = os.getenv("VERCEL") == "1" or os.getenv("FLASK_ENV", "").lower() == "production"
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE='None',
-    SESSION_COOKIE_SECURE=True
+    SESSION_COOKIE_SAMESITE='None' if is_production else 'Lax',
+    SESSION_COOKIE_SECURE=is_production,
+    PERMANENT_SESSION_LIFETIME=timedelta(days=30)
 )
 logging.basicConfig(level=logging.INFO)
 
@@ -44,6 +46,7 @@ PASSWORD_RESET_TTL = timedelta(minutes=30)
 POSTS_PER_PAGE = 10
 POST_SELECT_QUERY = '*, user:users!posts_user_id_fkey(*), likes(count), comments(count), reposts(count)'
 MAX_IMAGE_BYTES = 50 * 1024 * 1024
+MAX_PROFILE_IMAGE_BYTES = 5 * 1024 * 1024
 ALLOWED_IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif', 'webp'}
 STORAGE_BUCKET = os.getenv("SUPABASE_STORAGE_BUCKET", "lvl-media")
 MAX_VIDEO_BYTES = int(os.getenv("MAX_VIDEO_BYTES", 100 * 1024 * 1024))
@@ -63,7 +66,7 @@ VIDEO_CONTENT_TYPES = {
     'mov': 'video/quicktime',
     'm4v': 'video/x-m4v',
 }
-ASSET_VERSION = "100"
+ASSET_VERSION = "103"
 HOME_REEL_PREVIEW_LIMIT = 12
 HOME_MEDIA_PREVIEW_LIMIT = 12
 
@@ -946,7 +949,7 @@ def store_video_locally(payload, folder, extension):
     public_path = '/'.join(relative_path.split(os.sep))
     return url_for('static', filename=public_path)
 
-def upload_image_to_storage(file_storage, folder):
+def upload_image_to_storage(file_storage, folder, max_bytes=MAX_IMAGE_BYTES):
     if not file_storage or not file_storage.filename:
         return None
     if not allowed_image_file(file_storage.filename):
@@ -959,8 +962,9 @@ def upload_image_to_storage(file_storage, folder):
     payload = file_storage.read()
     if not payload:
         raise ValueError("Selected image is empty.")
-    if len(payload) > MAX_IMAGE_BYTES:
-        raise ValueError("Images must be 50 MB or smaller.")
+    if len(payload) > max_bytes:
+        max_megabytes = max(1, max_bytes // (1024 * 1024))
+        raise ValueError(f"Images must be {max_megabytes} MB or smaller.")
 
     filename = secure_filename(file_storage.filename)
     extension = filename.rsplit('.', 1)[1].lower()
@@ -1101,7 +1105,20 @@ def visible_post_filter(posts, viewer_id):
         return []
     author_ids = {post.get('user_id') for post in posts if post.get('user_id') and post.get('user_id') != viewer_id}
     hidden_ids = blocked_user_ids_for_viewer(viewer_id, author_ids, include_mutes=True)
-    return [post for post in posts if post.get('user_id') not in hidden_ids]
+    return [post for post in posts if post.get('user_id') not in hidden_ids and post.get('status', 'published') == 'published']
+
+def execute_published_posts(query_factory):
+    """Filter drafts in the database while remaining compatible with pre-011 schemas."""
+    try:
+        return query_factory().eq('status', 'published').execute()
+    except Exception as exc:
+        message = str(exc).lower()
+        missing_status = 'status' in message and any(marker in message for marker in (
+            'schema cache', 'column', 'does not exist', 'not found'
+        ))
+        if not missing_status:
+            raise
+        return query_factory().execute()
 
 def slugify(value):
     value = (value or '').strip().lower()
@@ -1125,6 +1142,13 @@ def enrich_posts(posts, viewer_id):
     reposts_res = supabase.table('reposts').select('post_id').eq('user_id', viewer_id).in_('post_id', post_ids).execute()
     viewer_reposted_ids = {r['post_id'] for r in reposts_res.data} if reposts_res.data else set()
 
+    viewer_bookmarked_ids = set()
+    try:
+        bookmarks_res = supabase.table('bookmarks').select('post_id').eq('user_id', viewer_id).in_('post_id', post_ids).execute()
+        viewer_bookmarked_ids = {row['post_id'] for row in bookmarks_res.data or []}
+    except Exception:
+        pass
+
     followed_author_ids = set()
     if author_ids:
         try:
@@ -1140,6 +1164,7 @@ def enrich_posts(posts, viewer_id):
         p['repost_count'] = p.get('reposts', [{}])[0].get('count', 0) if p.get('reposts') else 0
         p['viewer_liked'] = p['id'] in viewer_liked_ids
         p['viewer_reposted'] = p['id'] in viewer_reposted_ids
+        p['viewer_bookmarked'] = p['id'] in viewer_bookmarked_ids
         p['author_followed'] = author_id in followed_author_ids
     return posts
 
@@ -1192,7 +1217,7 @@ def get_following_feed_posts(viewer_id, limit=POSTS_PER_PAGE, page=1):
     if not following_ids:
         return []
     offset = (page - 1) * limit
-    posts_res = supabase.table('posts').select(POST_SELECT_QUERY).in_('user_id', following_ids).is_('deleted_at', 'null').order('created_at', desc=True).range(offset, offset + limit - 1).execute()
+    posts_res = execute_published_posts(lambda: supabase.table('posts').select(POST_SELECT_QUERY).in_('user_id', following_ids).is_('deleted_at', 'null').order('created_at', desc=True).range(offset, offset + limit - 1))
     posts = posts_res.data if posts_res and posts_res.data else []
     return rank_timeline_posts(enrich_posts(visible_post_filter(posts, viewer_id), viewer_id), relationship_user_ids=following_ids)[:limit]
 
@@ -1249,7 +1274,7 @@ def create_notification(user_id, actor_id, notif_type, post_id=None, reel_id=Non
 
 def get_feed_posts(viewer_id, limit=POSTS_PER_PAGE, page=1):
     offset = (page - 1) * limit
-    posts_res = supabase.table('posts').select(POST_SELECT_QUERY).is_('deleted_at', 'null').order('created_at', desc=True).range(offset, offset + limit - 1).execute()
+    posts_res = execute_published_posts(lambda: supabase.table('posts').select(POST_SELECT_QUERY).is_('deleted_at', 'null').order('created_at', desc=True).range(offset, offset + limit - 1))
     direct_posts = posts_res.data if posts_res and posts_res.data else []
 
     reposts_res = supabase.table('reposts').select('user_id, post_id, created_at').order('created_at', desc=True).range(offset, offset + limit - 1).execute()
@@ -1290,7 +1315,7 @@ def get_feed_posts(viewer_id, limit=POSTS_PER_PAGE, page=1):
 
 def get_profile_posts(profile_user, viewer_id, limit=POSTS_PER_PAGE, page=1):
     offset = (page - 1) * limit
-    posts_res = supabase.table('posts').select(POST_SELECT_QUERY).eq('user_id', profile_user['id']).is_('deleted_at', 'null').order('created_at', desc=True).range(offset, offset + limit - 1).execute()
+    posts_res = execute_published_posts(lambda: supabase.table('posts').select(POST_SELECT_QUERY).eq('user_id', profile_user['id']).is_('deleted_at', 'null').order('created_at', desc=True).range(offset, offset + limit - 1))
     direct_posts = posts_res.data if posts_res and posts_res.data else []
 
     reposts_res = supabase.table('reposts').select('post_id, created_at').eq('user_id', profile_user['id']).order('created_at', desc=True).range(offset, offset + limit - 1).execute()
@@ -1463,7 +1488,7 @@ def get_trending_posts(viewer_id, limit=5):
 
 def get_recent_posts(viewer_id, limit=3):
     try:
-        res = supabase.table('posts').select(POST_SELECT_QUERY).is_('deleted_at', 'null').order('created_at', desc=True).limit(limit).execute()
+        res = execute_published_posts(lambda: supabase.table('posts').select(POST_SELECT_QUERY).is_('deleted_at', 'null').order('created_at', desc=True).limit(limit))
         posts = res.data if res and res.data else []
         return enrich_posts(visible_post_filter(posts, viewer_id), viewer_id)
     except Exception:
@@ -2794,6 +2819,7 @@ def auth():
                 if res.data:
                     user = res.data[0]
                     if bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
+                        session.permanent = request.form.get('remember_me') == '1'
                         session['user_id'] = user['id']
                         clear_login_failures(username)
                         award_xp(user['id'], 'daily_login', 5)
@@ -2924,6 +2950,7 @@ def create_post():
         return redirect(url_for('auth'))
 
     content = request.form.get('content', '').strip()
+    intent = request.form.get('intent', 'publish')
     image_url = None
     if request.files.get('image'):
         try:
@@ -2935,7 +2962,7 @@ def create_post():
     if content or image_url:
         if len(content) > 280:
             flash("Post cannot exceed 280 characters.", "error")
-        elif content and not image_url and recent_duplicate_submission('posts', {'user_id': viewer['id']}, 'content', content):
+        elif intent != 'draft' and content and not image_url and recent_duplicate_submission('posts', {'user_id': viewer['id']}, 'content', content):
             flash("Already posted.", "info")
         else:
             try:
@@ -2943,18 +2970,121 @@ def create_post():
                     'user_id': viewer['id'],
                     'content': content
                 }
+                if intent == 'draft':
+                    payload['status'] = 'draft'
+                    payload['updated_at'] = datetime.now(timezone.utc).isoformat()
                 if image_url:
                     payload['image_url'] = image_url
                 res = supabase.table('posts').insert(payload).execute()
-                if res.data:
+                if res.data and intent != 'draft':
                     award_xp(viewer['id'], 'post_created', 10, res.data[0]['id'])
-                flash("Post shared.", "success")
+                flash("Draft saved." if intent == 'draft' else "Post shared.", "success")
             except Exception as e:
                 flash(handle_db_error(e), "error")
     else:
         flash("Post content cannot be empty.", "error")
 
     return redirect(url_for('index'))
+
+@app.route('/drafts')
+def drafts():
+    viewer = get_current_user()
+    if not viewer:
+        return redirect(url_for('auth'))
+    try:
+        result = supabase.table('posts').select('*').eq('user_id', viewer['id']).eq('status', 'draft').is_('deleted_at', 'null').order('updated_at', desc=True).execute()
+        items = result.data or []
+    except Exception as exc:
+        flash(handle_db_error(exc, "Drafts require migration 011."), "error")
+        items = []
+    return render_template('drafts.html', viewer=viewer, drafts=items)
+
+@app.route('/posts/<int:post_id>/edit', methods=['GET', 'POST'])
+def edit_post(post_id):
+    viewer = get_current_user()
+    if not viewer:
+        return redirect(url_for('auth'))
+    try:
+        result = supabase.table('posts').select('*').eq('id', post_id).eq('user_id', viewer['id']).is_('deleted_at', 'null').execute()
+    except Exception as exc:
+        flash(handle_db_error(exc, "Post editing requires migration 011."), "error")
+        return redirect(url_for('drafts'))
+    if not result.data:
+        return "Post not found.", 404
+    item = result.data[0]
+    if request.method == 'POST':
+        content = request.form.get('content', '').strip()
+        intent = request.form.get('intent', 'publish')
+        if not content and not item.get('image_url'):
+            flash("Post content cannot be empty.", "error")
+        elif len(content) > 280:
+            flash("Post cannot exceed 280 characters.", "error")
+        else:
+            was_draft = item.get('status') == 'draft'
+            status = 'draft' if was_draft and intent == 'draft' else 'published'
+            try:
+                supabase.table('posts').update({
+                    'content': content,
+                    'status': status,
+                    'updated_at': datetime.now(timezone.utc).isoformat()
+                }).eq('id', post_id).eq('user_id', viewer['id']).execute()
+                if was_draft and status == 'published':
+                    award_xp(viewer['id'], 'post_created', 10, post_id)
+                flash("Draft saved." if status == 'draft' else "Post published.", "success")
+                return redirect(url_for('drafts') if status == 'draft' else url_for('post', id=post_id))
+            except Exception as exc:
+                flash(handle_db_error(exc, "Post editing requires migration 011."), "error")
+    return render_template('edit_post.html', viewer=viewer, post=item)
+
+@app.route('/posts/<int:post_id>/draft/delete', methods=['POST'])
+def delete_draft(post_id):
+    viewer = get_current_user()
+    if not viewer:
+        return redirect(url_for('auth'))
+    try:
+        result = supabase.table('posts').update({'deleted_at': datetime.now(timezone.utc).isoformat()}).eq('id', post_id).eq('user_id', viewer['id']).eq('status', 'draft').execute()
+        if result.data:
+            flash("Draft deleted.", "success")
+        else:
+            flash("Draft not found.", "error")
+    except Exception as exc:
+        flash(handle_db_error(exc, "Draft deletion requires migration 011."), "error")
+    return redirect(url_for('drafts'))
+
+@app.route('/toggle_bookmark', methods=['POST'])
+def toggle_bookmark():
+    viewer = get_current_user()
+    if not viewer:
+        return redirect(url_for('auth'))
+    post_id = parse_int(request.form.get('post_id'))
+    bookmarked = False
+    if not post_id:
+        return jsonify({'success': False, 'error': 'Post not found.'}), 400
+    try:
+        post_res = supabase.table('posts').select('*').eq('id', post_id).is_('deleted_at', 'null').execute()
+        if not post_res.data or post_res.data[0].get('status', 'published') != 'published':
+            if request.form.get('ajax') == '1':
+                return jsonify({'success': False, 'error': 'Post not found.'}), 404
+            flash("Post not found.", "error")
+            return redirect(safe_redirect_url())
+        if interaction_blocked(viewer['id'], post_res.data[0].get('user_id')):
+            if request.form.get('ajax') == '1':
+                return jsonify({'success': False, 'error': 'You cannot interact with this user.'}), 403
+            flash("You cannot interact with this user.", "error")
+            return redirect(safe_redirect_url())
+        existing = supabase.table('bookmarks').select('post_id').eq('user_id', viewer['id']).eq('post_id', post_id).execute()
+        if existing.data:
+            supabase.table('bookmarks').delete().eq('user_id', viewer['id']).eq('post_id', post_id).execute()
+        else:
+            supabase.table('bookmarks').insert({'user_id': viewer['id'], 'post_id': post_id}).execute()
+            bookmarked = True
+    except Exception as exc:
+        if request.form.get('ajax') == '1':
+            return jsonify({'success': False, 'error': handle_db_error(exc, 'Bookmarks require migration 011.')}), 400
+        flash(handle_db_error(exc, 'Bookmarks require migration 011.'), 'error')
+    if request.form.get('ajax') == '1':
+        return jsonify({'success': True, 'bookmarked': bookmarked})
+    return redirect(safe_redirect_url())
 
 @app.route('/community/<slug>/post', methods=['POST'])
 def create_community_post(slug):
@@ -3096,39 +3226,88 @@ def share_post(post_id):
 @app.route('/add_comment', methods=['POST'])
 def add_comment():
     viewer = get_current_user()
+    is_ajax = request.form.get('ajax') == '1'
     if not viewer:
+        if is_ajax:
+            return jsonify({'success': False, 'error': 'Login required.'}), 401
         return redirect(url_for('auth'))
 
     post_id = parse_int(request.form.get('post_id'))
     comment = request.form.get('comment', '').strip()
+    parent_comment_id = parse_int(request.form.get('parent_comment_id'))
+    gif_url = request.form.get('gif_url', '').strip()
+    sticker = request.form.get('sticker', '').strip()
+    allowed_stickers = {'🔥', '👏', '💯', '❤️', '😂', '🎉', '👍', '✨'}
+    if len(gif_url) > 1000 or (gif_url and not re.match(r'^https?://', gif_url)):
+        if is_ajax:
+            return jsonify({'success': False, 'error': 'Enter a valid GIF URL.'}), 400
+        flash("Enter a valid GIF URL.", "error")
+        return redirect(url_for('post', id=post_id)) if post_id else redirect(url_for('index'))
+    sticker = sticker if sticker in allowed_stickers else ''
 
     if not post_id:
+        if is_ajax:
+            return jsonify({'success': False, 'error': 'Post not found.'}), 400
         flash("Post not found.", "error")
         return redirect(safe_redirect_url(fallback_endpoint='index'))
-    if not comment:
+    image_file = request.files.get('image')
+    has_image = bool(image_file and image_file.filename)
+    if not (comment or has_image or gif_url or sticker):
+        if is_ajax:
+            return jsonify({'success': False, 'error': 'Write a comment first.'}), 400
         flash("Write a comment first.", "error")
         return redirect(url_for('post', id=post_id))
     if len(comment) > 280:
+        if is_ajax:
+            return jsonify({'success': False, 'error': 'Comment cannot exceed 280 characters.'}), 400
         flash("Comment cannot exceed 280 characters.", "error")
         return redirect(url_for('post', id=post_id))
 
     try:
-        post_res = supabase.table('posts').select('id,user_id').eq('id', post_id).is_('deleted_at', 'null').execute()
-        if not post_res.data:
+        post_res = supabase.table('posts').select('*').eq('id', post_id).is_('deleted_at', 'null').execute()
+        if not post_res.data or post_res.data[0].get('status', 'published') != 'published':
+            if is_ajax:
+                return jsonify({'success': False, 'error': 'Post not found.'}), 404
             flash("Post not found.", "error")
             return redirect(url_for('index'))
         if interaction_blocked(viewer['id'], post_res.data[0]['user_id']):
+            if is_ajax:
+                return jsonify({'success': False, 'error': 'You cannot interact with this user.'}), 403
             flash("You cannot interact with this user.", "error")
             return redirect(url_for('index'))
-        if recent_duplicate_submission('comments', {'post_id': post_id, 'user_id': viewer['id']}, 'comment', comment):
+        if parent_comment_id:
+            parent_res = supabase.table('comments').select('id').eq('id', parent_comment_id).eq('post_id', post_id).execute()
+            if not parent_res.data:
+                if is_ajax:
+                    return jsonify({'success': False, 'error': 'The reply target was not found.'}), 400
+                flash("The reply target was not found.", "error")
+                return redirect(url_for('post', id=post_id))
+        if comment and not (has_image or gif_url or sticker) and recent_duplicate_submission('comments', {'post_id': post_id, 'user_id': viewer['id']}, 'comment', comment):
+            if is_ajax:
+                return jsonify({'success': False, 'error': 'Already commented.'}), 409
             flash("Already commented.", "info")
             return redirect(url_for('post', id=post_id))
 
-        res = supabase.table('comments').insert({
+        image_url = None
+        if has_image:
+            try:
+                image_url = upload_image_to_storage(image_file, f"comments/{viewer['id']}")
+            except (ValueError, RuntimeError) as exc:
+                if is_ajax:
+                    return jsonify({'success': False, 'error': str(exc)}), 400
+                flash(str(exc), 'error')
+                return redirect(url_for('post', id=post_id))
+
+        payload = {
             'post_id': post_id,
             'user_id': viewer['id'],
             'comment': comment
-        }).execute()
+        }
+        if image_url: payload['image_url'] = image_url
+        if gif_url: payload['gif_url'] = gif_url
+        if sticker: payload['sticker'] = sticker
+        if parent_comment_id: payload['parent_comment_id'] = parent_comment_id
+        res = supabase.table('comments').insert(payload).execute()
 
         if res.data:
             award_xp(viewer['id'], 'comment_created', 6, res.data[0]['id'])
@@ -3138,7 +3317,6 @@ def add_comment():
             create_notification(owner_id, viewer['id'], 'comment', post_id=post_id)
             award_xp(owner_id, 'comment_received', 4, res.data[0]['id'] if res.data else None)
 
-        import re
         mentions = set(re.findall(r'@([a-zA-Z0-9_]+)', comment))
         for username in mentions:
             if username.lower() == viewer['username'].lower():
@@ -3149,8 +3327,16 @@ def add_comment():
                 if target_id != owner_id: # avoid double notification if they own the post
                     create_notification(target_id, viewer['id'], 'comment_reply', post_id=post_id)
 
+        if is_ajax and res.data:
+            saved = dict(res.data[0])
+            saved.update({'user': viewer, 'like_count': 0, 'repost_count': 0, 'viewer_liked': False, 'viewer_reposted': False})
+            return jsonify({'success': True, 'comment': saved, 'html': render_template('_comment_card.html', comment=saved, viewer=viewer)})
+        if is_ajax:
+            return jsonify({'success': False, 'error': 'Comment could not be saved.'}), 500
         flash("Comment posted.", "success")
     except Exception as e:
+        if is_ajax:
+            return jsonify({'success': False, 'error': handle_db_error(e)}), 400
         flash(handle_db_error(e), "error")
 
     return redirect(url_for('post', id=post_id))
@@ -3167,8 +3353,8 @@ def toggle_like():
     if post_id:
         try:
             post_id_int = int(post_id)
-            post_res = supabase.table('posts').select('user_id').eq('id', post_id_int).is_('deleted_at', 'null').execute()
-            if not post_res.data:
+            post_res = supabase.table('posts').select('*').eq('id', post_id_int).is_('deleted_at', 'null').execute()
+            if not post_res.data or post_res.data[0].get('status', 'published') != 'published':
                 raise ValueError("Post not found")
             owner_id = post_res.data[0]['user_id']
             if interaction_blocked(viewer['id'], owner_id):
@@ -3211,8 +3397,8 @@ def toggle_repost():
     if post_id:
         try:
             post_id_int = int(post_id)
-            post_res = supabase.table('posts').select('user_id').eq('id', post_id_int).is_('deleted_at', 'null').execute()
-            if not post_res.data:
+            post_res = supabase.table('posts').select('*').eq('id', post_id_int).is_('deleted_at', 'null').execute()
+            if not post_res.data or post_res.data[0].get('status', 'published') != 'published':
                 raise ValueError("Post not found")
             owner_id = post_res.data[0]['user_id']
             if interaction_blocked(viewer['id'], owner_id):
@@ -3642,7 +3828,11 @@ def settings():
             uploaded_profile_url = None
             if request.files.get('profile_photo'):
                 try:
-                    uploaded_profile_url = upload_image_to_storage(request.files['profile_photo'], f"avatars/{viewer['id']}")
+                    uploaded_profile_url = upload_image_to_storage(
+                        request.files['profile_photo'],
+                        f"avatars/{viewer['id']}",
+                        max_bytes=MAX_PROFILE_IMAGE_BYTES
+                    )
                 except (ValueError, RuntimeError) as exc:
                     flash(str(exc), "error")
                     return redirect(url_for('settings'))
@@ -4362,7 +4552,11 @@ def profile(username):
             stats = {'following': 0, 'followers': 0, 'friends': 0, 'posts': 0, 'comments': 0}
             posts = []
         else:
-            posts_count = supabase.table('posts').select('id', count='exact').eq('user_id', profile_user['id']).is_('deleted_at', 'null').execute()
+            try:
+                posts_count = supabase.table('posts').select('id', count='exact').eq('user_id', profile_user['id']).eq('status', 'published').is_('deleted_at', 'null').execute()
+            except Exception:
+                # Keep existing profiles working until migration 011 adds the status column.
+                posts_count = supabase.table('posts').select('id', count='exact').eq('user_id', profile_user['id']).is_('deleted_at', 'null').execute()
             comments_count = supabase.table('comments').select('id', count='exact').eq('user_id', profile_user['id']).execute()
             followers_count = supabase.table('follows').select('id', count='exact').eq('following_id', profile_user['id']).execute()
             following_count = supabase.table('follows').select('id', count='exact').eq('follower_id', profile_user['id']).execute()
@@ -4382,7 +4576,7 @@ def profile(username):
                 liked_post_ids = [l['post_id'] for l in likes_res.data] if likes_res.data else []
                 if liked_post_ids:
                     offset = (page - 1) * POSTS_PER_PAGE
-                    posts_res = supabase.table('posts').select(select_query).in_('id', liked_post_ids).is_('deleted_at', 'null').order('created_at', desc=True).range(offset, offset + POSTS_PER_PAGE - 1).execute()
+                    posts_res = execute_published_posts(lambda: supabase.table('posts').select(select_query).in_('id', liked_post_ids).is_('deleted_at', 'null').order('created_at', desc=True).range(offset, offset + POSTS_PER_PAGE - 1))
                     posts = visible_post_filter(posts_res.data if posts_res and posts_res.data else [], viewer['id'])
                 else:
                     posts = []
@@ -5112,7 +5306,7 @@ def search():
             else:
                 order_desc = True
                 offset = (page - 1) * POSTS_PER_PAGE
-                res = supabase.table('posts').select(select_query).ilike('content', f"%{query}%").is_('deleted_at', 'null').order('created_at', desc=order_desc).range(offset, offset + POSTS_PER_PAGE - 1).execute()
+                res = execute_published_posts(lambda: supabase.table('posts').select(select_query).ilike('content', f"%{query}%").is_('deleted_at', 'null').order('created_at', desc=order_desc).range(offset, offset + POSTS_PER_PAGE - 1))
                 posts = res.data if res.data else []
                 posts = enrich_posts(visible_post_filter(posts, viewer['id']), viewer['id'])
         else:
@@ -5143,6 +5337,8 @@ def post(id):
     try:
         select_query = '*, user:users!posts_user_id_fkey(*), likes(count), comments(count), reposts(count)'
         post_res = supabase.table('posts').select(select_query).eq('id', id).is_('deleted_at', 'null').execute()
+        if post_res.data and post_res.data[0].get('status', 'published') != 'published':
+            post_res.data = []
         if not post_res.data:
             return render_template('post.html', viewer=viewer, post=None)
         if interaction_blocked(viewer['id'], post_res.data[0].get('user_id')):

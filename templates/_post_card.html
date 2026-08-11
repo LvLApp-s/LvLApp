@@ -1,7 +1,7 @@
 <article class="post">
   <div class="post-avatar">
     <a href="{{ url_for('profile', username=post.user.username) }}">
-      <img class="avatar" src="{{ post.user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" />
+      <img class="avatar" src="{{ post.user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" loading="lazy" decoding="async" />
     </a>
   </div>
   <div class="post-content">
@@ -37,6 +37,7 @@
           <button type="button" data-copy-url="{{ url_for('post', id=post.id, _external=True) }}" data-i18n="post_copy_link">Copy link</button>
           <button type="button" onclick="window.location.href='{{ url_for('share_post', post_id=post.id) }}'" data-i18n="post_share_dm">Share via DM</button>
           {% if post.user.id == viewer.id or post.user_id == viewer.id %}
+            <button type="button" onclick="window.location.href='{{ url_for('edit_post', post_id=post.id) }}'">Edit post</button>
             <form action="{{ url_for('delete_post') }}" method="post">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <input type="hidden" name="post_id" value="{{ post.id }}">
@@ -95,6 +96,18 @@
             <svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M2 21h4V9H2v12Zm20-11.5A2.5 2.5 0 0 0 19.5 7H14l.8-3.8.03-.26c0-.31-.13-.62-.35-.84L13.38 1 6.8 7.58C6.3 8.08 6 8.78 6 9.5V19a2 2 0 0 0 2 2h8.75c.82 0 1.55-.5 1.86-1.26l3.02-7.05c.24-.57.37-1.18.37-1.8V9.5Z"/></svg>
           </span>
           <strong>{{ post.like_count }}</strong>
+        </button>
+      </form>
+      <a href="{{ url_for('share_post', post_id=post.id) }}" class="post-action-link" aria-label="Share post" title="Share via DM">
+        <span class="post-action-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.03-.47-.09-.7l7.05-4.11A2.99 2.99 0 1 0 15 5c0 .24.04.47.09.7L8.04 9.81A3 3 0 1 0 8.04 14l7.12 4.16c-.04.2-.07.41-.07.62A2.91 2.91 0 1 0 18 16.08Z"/></svg>
+        </span>
+      </a>
+      <form action="{{ url_for('toggle_bookmark') }}" method="post" class="ajax-action-form" data-action="bookmark">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="post_id" value="{{ post.id }}">
+        <button type="submit" class="post-action-button {% if post.viewer_bookmarked %}active bookmark-active{% endif %}" aria-label="Bookmark post" title="Bookmark">
+          <span class="post-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1Zm1 2v12.55l5-2.86 5 2.86V5H7Z"/></svg></span>
         </button>
       </form>
     </div>

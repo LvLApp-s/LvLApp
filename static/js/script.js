@@ -16,6 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initReelsFeed();
     initReelUploadPreview();
     initPreferencesSettings();
+    initRichReplies();
+    initProgressiveMedia();
 
     const SoundEffects = {
         audioCtx: null,
@@ -856,6 +858,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         btn.classList.toggle('active', result.reposted);
                         btn.classList.toggle('repost-active', result.reposted);
                         if (countTarget) countTarget.textContent = result.count || '0';
+                    } else if (action === 'bookmark') {
+                        btn.classList.toggle('active', result.bookmarked);
+                        btn.classList.toggle('bookmark-active', result.bookmarked);
                     } else if (action === 'follow') {
                         btn.classList.toggle('active', result.following);
                         btn.textContent = result.following ? 'Unfollow' : 'Follow';
@@ -870,6 +875,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         btn.textContent = result.label || 'Add friend';
                     }
                 }
+                if (!result.success && result.error) showAppToast(result.error);
             } catch (error) {
                 console.error('Error performing AJAX action:', error);
                 showAppToast('Action did not finish. Try again.');
@@ -2128,6 +2134,140 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+function initRichReplies() {
+    const form = document.querySelector('[data-ajax-reply-form]');
+    if (!form) return;
+    const textarea = form.querySelector('textarea[name="comment"]');
+    const parentInput = form.querySelector('input[name="parent_comment_id"]');
+    const stickerInput = form.querySelector('input[name="sticker"]');
+    const imageInput = form.querySelector('[data-reply-image]');
+    const status = form.querySelector('[data-reply-media-status]');
+    const commentsFeed = document.querySelector('[data-comments-feed]');
+    const countLabel = document.querySelector('[data-reply-count]');
+
+    const toggle = (buttonSelector, panelSelector) => {
+        const button = form.querySelector(buttonSelector);
+        const panel = form.querySelector(panelSelector);
+        if (button && panel) button.addEventListener('click', () => { panel.hidden = !panel.hidden; });
+    };
+    toggle('[data-emoji-toggle]', '[data-emoji-picker]');
+    toggle('[data-sticker-toggle]', '[data-sticker-picker]');
+    toggle('[data-gif-toggle]', '[data-gif-field]');
+
+    form.querySelectorAll('[data-insert-emoji]').forEach((button) => button.addEventListener('click', () => {
+        const start = textarea.selectionStart || textarea.value.length;
+        textarea.setRangeText(button.dataset.insertEmoji, start, textarea.selectionEnd || start, 'end');
+        textarea.focus();
+    }));
+    form.querySelectorAll('[data-select-sticker]').forEach((button) => button.addEventListener('click', () => {
+        stickerInput.value = button.dataset.selectSticker;
+        status.textContent = `Sticker selected: ${button.dataset.selectSticker}`;
+    }));
+    if (imageInput) imageInput.addEventListener('change', () => {
+        status.textContent = imageInput.files[0] ? `Photo selected: ${imageInput.files[0].name}` : '';
+    });
+
+    document.addEventListener('click', (event) => {
+        const replyButton = event.target.closest('[data-reply-to]');
+        if (!replyButton) return;
+        const username = replyButton.dataset.replyTo;
+        textarea.value = `@${username} ${textarea.value.replace(/^@\w+\s*/, '')}`;
+        parentInput.value = replyButton.dataset.parentComment || '';
+        textarea.focus();
+        form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
+    const bindInsertedActions = (root) => {
+        root.querySelectorAll('.ajax-action-form').forEach((actionForm) => actionForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const button = actionForm.querySelector('button');
+            if (!button || button.dataset.pending === '1') return;
+            const data = new FormData(actionForm);
+            data.append('ajax', '1');
+            button.dataset.pending = '1';
+            button.disabled = true;
+            try {
+                const response = await fetch(actionForm.action, { method: 'POST', body: data, headers: { 'Accept': 'application/json' } });
+                const result = await response.json();
+                if (!result.success) { showAppToast(result.error || 'Action failed.'); return; }
+                const count = button.querySelector('strong');
+                if (actionForm.dataset.action === 'like') {
+                    button.classList.toggle('active', result.liked);
+                    button.classList.toggle('like-active', result.liked);
+                }
+                if (actionForm.dataset.action === 'repost') {
+                    button.classList.toggle('active', result.reposted);
+                    button.classList.toggle('repost-active', result.reposted);
+                }
+                if (count) count.textContent = result.count || '0';
+            } catch (error) {
+                console.error(error);
+                showAppToast('Action failed.');
+            } finally {
+                delete button.dataset.pending;
+                button.disabled = false;
+            }
+        }));
+    };
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const submit = form.querySelector('button[type="submit"]');
+        if (submit.dataset.pending === '1') return;
+        const data = new FormData(form);
+        data.append('ajax', '1');
+        submit.dataset.pending = '1';
+        submit.disabled = true;
+        try {
+            const response = await fetch(form.action, { method: 'POST', body: data });
+            const result = await response.json();
+            if (!result.success) { showAppToast(result.error || 'Reply could not be posted.'); return; }
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = result.html.trim();
+            const card = wrapper.firstElementChild;
+            commentsFeed.querySelector('.empty-state')?.remove();
+            commentsFeed.appendChild(card);
+            bindInsertedActions(card);
+            const total = commentsFeed.querySelectorAll('[data-comment-id]').length;
+            countLabel.textContent = `${total} ${total === 1 ? 'reply' : 'replies'}`;
+            form.reset();
+            parentInput.value = '';
+            status.textContent = '';
+            form.querySelectorAll('.reply-picker, [data-gif-field]').forEach((panel) => { panel.hidden = true; });
+            card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } catch (error) {
+            console.error(error);
+            showAppToast('Reply could not be posted.');
+        } finally {
+            delete submit.dataset.pending;
+            submit.disabled = false;
+        }
+    });
+}
+
+function initProgressiveMedia() {
+    document.querySelectorAll('.post-media img, .comment-media img').forEach((image) => {
+        const container = image.closest('.post-media, .comment-media');
+        if (!container) return;
+        container.classList.add('media-loading');
+        const done = () => container.classList.remove('media-loading');
+        if (image.complete) done();
+        else image.addEventListener('load', done, { once: true });
+        image.addEventListener('error', done, { once: true });
+    });
+
+    if (!('IntersectionObserver' in window)) return;
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            const video = entry.target;
+            if (video.preload === 'none') video.preload = 'metadata';
+            observer.unobserve(video);
+        });
+    }, { rootMargin: '320px 0px' });
+    document.querySelectorAll('video[preload="none"]').forEach((video) => observer.observe(video));
+}
 
 function initWebBackButton() {
     document.querySelectorAll('[data-web-back]').forEach((button) => {

@@ -29,6 +29,9 @@
 .profile-avatar-large {
   width: 140px;
   height: 140px;
+  aspect-ratio: 1;
+  object-fit: cover;
+  object-position: center;
   font-size: 48px;
   border: 4px solid var(--bg-color);
   background-color: var(--avatar, var(--lvl-border-strong));

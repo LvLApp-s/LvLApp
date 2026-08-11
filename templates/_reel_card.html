@@ -9,7 +9,7 @@
     <video class="reel-video"
            data-reel-video
            playsinline
-           preload="metadata"
+           preload="none"
            muted
            {% if not reel.autoplay_next %}loop{% endif %}
            {% if reel.cover_url %}poster="{{ reel.cover_url }}"{% endif %}>

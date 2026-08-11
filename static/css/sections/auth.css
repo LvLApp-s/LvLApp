@@ -1,4 +1,21 @@
 /* Login/register page */
+.auth-form .remember-me-row {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.auth-form .remember-me-row input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent-color);
+}
+
 /* Google brand colours – defined here so the HTML template stays hex-free */
 :root {
   --google-red: #EA4335;
