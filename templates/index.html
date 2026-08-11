@@ -19,8 +19,10 @@
   </div>
 </header>
 
-<form id="composer" class="composer premium-composer" action="{{ url_for('create_post') }}" method="post" enctype="multipart/form-data">
+<form id="composer" class="composer premium-composer" action="{{ url_for('create_post') }}" method="post" enctype="multipart/form-data" data-draft-list-url="{{ url_for('api_post_drafts') }}" data-draft-save-url="{{ url_for('api_save_post_draft') }}" data-draft-delete-url="{{ url_for('api_delete_post_draft') }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="draft_id" value="" data-draft-id>
+  <input type="hidden" name="draft_clear_image" value="0" data-draft-clear-image>
   <div class="composer-avatar-column">
     <img class="avatar" src="{{ viewer.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" />
   </div>
@@ -35,8 +37,15 @@
       <button type="button" data-clear-image data-i18n="remove_btn">Remove</button>
     </div>
     <div class="composer-footer">
-      <div class="composer-tools"></div>
+      <div class="composer-tools composer-draft-tools">
+        <button type="button" class="composer-draft-button" data-save-draft disabled>Save draft</button>
+        <select class="composer-draft-picker" data-draft-picker aria-label="Saved drafts" hidden>
+          <option value="">Drafts</option>
+        </select>
+        <button type="button" class="composer-draft-button secondary" data-discard-draft hidden>Discard</button>
+      </div>
       <div class="composer-actions">
+        <span class="draft-status" data-draft-status aria-live="polite"></span>
         <span class="char-count">280 left</span>
         <button type="submit" class="outline-button" name="intent" value="draft">Save draft</button>
         <button type="submit" class="post-submit-btn" data-i18n="composer_post_btn">Post</button>

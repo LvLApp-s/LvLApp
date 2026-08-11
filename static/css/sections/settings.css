@@ -118,6 +118,39 @@
   box-shadow: 0 0 0 1px var(--accent-color);
 }
 
+.form-control-select {
+  width: 100%;
+  min-height: var(--control-lg);
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--lvl-surface-3);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.form-file-input {
+  width: 100%;
+  padding: 8px;
+}
+
+.form-card-compact {
+  padding: 20px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--lvl-surface-2);
+}
+
+.form-card-spaced {
+  margin-bottom: 24px;
+}
+
+.status-pill-lg {
+  padding: 4px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+}
+
 .input-prefix-wrapper {
   display: flex;
   align-items: center;

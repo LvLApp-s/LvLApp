@@ -350,6 +350,10 @@
           </div>
         {% endif %}
 
+        {% if has_older_messages %}
+          <button type="button" class="load-older-messages" data-load-older-messages>Load older messages</button>
+        {% endif %}
+
         {% for msg in messages_list %}
           <div class="message-bubble-wrapper {% if msg.sender_id == viewer.id %}own{% endif %}" data-message-id="{{ msg.id }}">
             <div class="message-bubble {% if msg.deleted_for_everyone %}deleted-message{% endif %}" title="{{ msg.created_at }}">

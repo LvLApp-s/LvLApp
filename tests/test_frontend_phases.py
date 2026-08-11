@@ -21,7 +21,8 @@ class FrontendPhaseTests(unittest.TestCase):
         source = (ROOT / "app.py").read_text(encoding="utf-8")
         self.assertIn('name="remember_me"', auth)
         self.assertIn("session.permanent", source)
-        self.assertIn("SESSION_COOKIE_SECURE=is_production", source)
+        self.assertIn("session_cookie_config", source)
+        self.assertTrue(zapp.session_cookie_config({"VERCEL": "1"})["SESSION_COOKIE_SECURE"])
 
     def test_draft_and_bookmark_routes_are_registered(self):
         routes = {rule.rule for rule in zapp.app.url_map.iter_rules()}
@@ -69,6 +70,7 @@ class FrontendPhaseTests(unittest.TestCase):
         migration = (ROOT / "database" / "migrations" / "011_frontend_workflow.sql").read_text(encoding="utf-8")
         self.assertIn("add column if not exists status", migration.lower())
         self.assertIn("create table if not exists public.bookmarks", migration.lower())
+        self.assertIn("alter table public.bookmarks enable row level security", migration.lower())
         self.assertIn("add column if not exists image_url", migration.lower())
 
     def test_visible_post_filter_excludes_drafts(self):

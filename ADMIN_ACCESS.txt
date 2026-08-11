@@ -10,12 +10,10 @@ http://127.0.0.1:5000/admin-dashboard
 
 2. GİRİŞ ŞİFRESİ (TOKEN):
 Admin paneline girmek için bir "Admin Token" gereklidir.
-Yerel test ortamı ve varsayılan geliştirici şifresi şudur:
-
-    admin123
+Varsayılan geliştirici şifresi yoktur. `LVL_ADMIN_TOKEN` tanımlı değilse admin paneli giriş kabul etmez.
 
 3. ŞİFREYİ DEĞİŞTİRME:
-Eğer bu şifreyi canlı ortam (production) için değiştirmek isterseniz veya kendi özel şifrenizi belirlemek isterseniz, projenin ana dizinindeki `.env` dosyasını açın (yoksa oluşturun) ve içine şu satırı ekleyin:
+Kendi özel şifrenizi belirlemek için projenin ana dizinindeki `.env` dosyasını açın (yoksa oluşturun) ve içine şu satırı ekleyin:
 
 LVL_ADMIN_TOKEN=benim_gizli_sifrem
 

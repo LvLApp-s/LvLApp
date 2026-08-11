@@ -16,6 +16,125 @@ import bcrypt
 import app as zapp
 
 
+class FakeDraftsTable:
+    def __init__(self, rows=None):
+        self.rows = rows if rows is not None else []
+        self.action = None
+        self.selected = None
+        self.inserted = None
+        self.updated = None
+        self.filters = []
+        self.ordering = None
+        self.limit_value = None
+
+    def select(self, columns, **kwargs):
+        self.action = "select"
+        self.selected = columns
+        return self
+
+    def insert(self, payload):
+        self.action = "insert"
+        self.inserted = payload
+        return self
+
+    def update(self, payload):
+        self.action = "update"
+        self.updated = payload
+        return self
+
+    def delete(self):
+        self.action = "delete"
+        return self
+
+    def eq(self, key, value):
+        self.filters.append((key, value))
+        return self
+
+    def order(self, key, desc=False):
+        self.ordering = (key, desc)
+        return self
+
+    def limit(self, value):
+        self.limit_value = value
+        return self
+
+    def execute(self):
+        if self.action == "insert":
+            row = {"id": 91, **self.inserted}
+            return SimpleNamespace(data=[row])
+        return SimpleNamespace(data=self.rows)
+
+
+class FakeDraftsSupabase:
+    def __init__(self, table):
+        self.drafts_table = table
+        self.table_names = []
+
+    def table(self, name):
+        self.table_names.append(name)
+        return self.drafts_table
+
+
+class FakeDraftPublishTable:
+    def __init__(self, db, name):
+        self.db = db
+        self.name = name
+        self.action = None
+        self.filters = []
+        self.payload = None
+        self.limit_value = None
+
+    def select(self, *_args, **_kwargs):
+        self.action = "select"
+        return self
+
+    def insert(self, payload):
+        self.action = "insert"
+        self.payload = payload
+        return self
+
+    def delete(self):
+        self.action = "delete"
+        return self
+
+    def eq(self, key, value):
+        self.filters.append((key, value))
+        return self
+
+    def limit(self, value):
+        self.limit_value = value
+        return self
+
+    def execute(self):
+        if self.name == "post_drafts" and self.action == "select":
+            self.db.draft_select_filters = self.filters
+            self.db.draft_select_limit = self.limit_value
+            return SimpleNamespace(data=[self.db.draft] if self.db.draft else [])
+        if self.name == "post_drafts" and self.action == "delete":
+            self.db.draft_delete_filters = self.filters
+            return SimpleNamespace(data=[{"id": self.db.draft["id"]}] if self.db.draft and self.db.delete_succeeds else [])
+        if self.name == "posts" and self.action == "insert":
+            self.db.post_inserted = self.payload
+            return SimpleNamespace(data=[{"id": self.db.post_id, **self.payload}])
+        return SimpleNamespace(data=[])
+
+
+class FakeDraftPublishSupabase:
+    def __init__(self, draft=None, delete_succeeds=True):
+        self.draft = draft
+        self.delete_succeeds = delete_succeeds
+        self.post_id = 123
+        self.post_inserted = None
+        self.draft_select_filters = []
+        self.draft_select_limit = None
+        self.draft_delete_filters = []
+        self.table_names = []
+
+    def table(self, name):
+        self.table_names.append(name)
+        return FakeDraftPublishTable(self, name)
+
+
 class AppRouteTests(unittest.TestCase):
     def setUp(self):
         zapp.app.config.update(TESTING=True, WTF_CSRF_ENABLED=False)
@@ -79,6 +198,64 @@ class AppRouteTests(unittest.TestCase):
         self.assertEqual(source.count("def dedupe_timeline_posts("), 1)
         self.assertEqual(source.count("def create_notification("), 1)
 
+    def test_admin_token_requires_configured_secret(self):
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertFalse(zapp.admin_token_is_valid("admin123"))
+            self.assertFalse(zapp.admin_token_is_valid(""))
+
+        with patch.dict(os.environ, {"LVL_ADMIN_TOKEN": "secret"}, clear=True):
+            self.assertTrue(zapp.admin_token_is_valid("secret"))
+            self.assertFalse(zapp.admin_token_is_valid("admin123"))
+
+    def test_flask_secret_key_is_required_in_production(self):
+        with self.assertRaises(RuntimeError):
+            zapp.resolve_flask_secret_key({"VERCEL_ENV": "production"})
+
+        self.assertEqual(
+            zapp.resolve_flask_secret_key({"VERCEL_ENV": "production", "FLASK_SECRET_KEY": "configured"}),
+            "configured",
+        )
+        self.assertEqual(zapp.resolve_flask_secret_key({}), zapp.DEFAULT_DEV_SECRET_KEY)
+
+    def test_session_cookie_config_supports_local_and_vercel_runtime(self):
+        local_config = zapp.session_cookie_config({})
+        self.assertFalse(local_config["SESSION_COOKIE_SECURE"])
+        self.assertEqual(local_config["SESSION_COOKIE_SAMESITE"], "Lax")
+
+        production_config = zapp.session_cookie_config({"VERCEL_ENV": "production"})
+        self.assertTrue(production_config["SESSION_COOKIE_SECURE"])
+        self.assertEqual(production_config["SESSION_COOKIE_SAMESITE"], "None")
+
+        invalid_local_none = zapp.session_cookie_config({
+            "SESSION_COOKIE_SECURE": "0",
+            "SESSION_COOKIE_SAMESITE": "None",
+        })
+        self.assertEqual(invalid_local_none["SESSION_COOKIE_SAMESITE"], "Lax")
+
+    def test_remember_session_lifetime_uses_bounded_day_count(self):
+        self.assertEqual(zapp.remember_session_lifetime({}).days, 30)
+        self.assertEqual(zapp.remember_session_lifetime({"REMEMBER_SESSION_DAYS": "7"}).days, 7)
+        self.assertEqual(zapp.remember_session_lifetime({"REMEMBER_SESSION_DAYS": "0"}).days, 1)
+        self.assertEqual(zapp.remember_session_lifetime({"REMEMBER_SESSION_DAYS": "365"}).days, 90)
+        self.assertEqual(zapp.remember_session_lifetime({"REMEMBER_SESSION_DAYS": "bad"}).days, 30)
+
+    def test_email_validation_requires_basic_address_shape(self):
+        self.assertTrue(zapp.is_valid_email("sina@example.com"))
+        self.assertTrue(zapp.is_valid_email("  sina+lvl@example.co  "))
+        self.assertFalse(zapp.is_valid_email("invalid-email"))
+        self.assertFalse(zapp.is_valid_email("missing-domain@"))
+        self.assertFalse(zapp.is_valid_email("has space@example.com"))
+
+    def test_password_reset_memory_fallback_is_disabled_on_vercel_production(self):
+        with patch.dict(os.environ, {"VERCEL_ENV": "production"}, clear=True):
+            self.assertFalse(zapp.password_reset_memory_fallback_enabled())
+
+        with patch.dict(os.environ, {"APP_ENV": "development"}, clear=True):
+            self.assertTrue(zapp.password_reset_memory_fallback_enabled())
+
+    def test_default_video_upload_limit_matches_storage_bucket(self):
+        self.assertEqual(zapp.MAX_VIDEO_BYTES, 50 * 1024 * 1024)
+
     def test_recent_duplicate_submission_queries_same_actor_text_and_window(self):
         class Result:
             data = [{"id": 99}]
@@ -126,13 +303,38 @@ class AppRouteTests(unittest.TestCase):
 
     def test_submit_script_locks_content_forms_without_native_fallback_duplicates(self):
         script = Path("static/js/script.js").read_text(encoding="utf-8")
+        home_template = Path("templates/index.html").read_text(encoding="utf-8")
 
         self.assertIn("function lockSubmitForm(form, submitBtn)", script)
         self.assertIn("composer.addEventListener('submit'", script)
         self.assertIn("chatForm.dataset.submitting === '1'", script)
         self.assertIn("commentForm.dataset.submitting === '1'", script)
+        self.assertIn("data-draft-save-url", home_template)
+        self.assertIn("data-save-draft", home_template)
+        self.assertIn("draftDeleteUrl", script)
+        self.assertIn("saveCurrentDraft", script)
+        self.assertIn("restoreDraft", script)
+        self.assertIn("data-load-older-messages", Path("templates/messages.html").read_text(encoding="utf-8"))
+        self.assertIn("before_id", script)
+        self.assertIn("loadOlderBtn", script)
         self.assertNotIn("chatForm.submit();", script)
         self.assertNotIn("commentForm.submit();", script)
+
+    def test_notifications_page_and_live_script_use_event_ids(self):
+        script = Path("static/js/script.js").read_text(encoding="utf-8")
+        template = Path("templates/notifications.html").read_text(encoding="utf-8")
+        css = Path("static/css/sections/notifications.css").read_text(encoding="utf-8")
+
+        self.assertIn("data-notifications-feed", template)
+        self.assertIn("data-latest-notification-id", template)
+        self.assertIn("data-notification-id", template)
+        self.assertIn("data-notifications-empty", template)
+        self.assertIn("latest_notification_id", script)
+        self.assertIn("latest_message_id", script)
+        self.assertIn("refreshNotificationFeed", script)
+        self.assertIn("/api/notifications?", script)
+        self.assertIn("updateBadgeGroup('more'", script)
+        self.assertIn("new-notification", css)
 
     def test_login_requires_credentials(self):
         with patch.object(zapp, "supabase", object()):
@@ -144,6 +346,100 @@ class AppRouteTests(unittest.TestCase):
             })
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Username and password are required.", response.data)
+
+    def test_password_login_remember_me_sets_permanent_session(self):
+        class Result:
+            def __init__(self, data=None):
+                self.data = data or []
+
+        class FakeUsersTable:
+            def __init__(self):
+                self.filters = {}
+
+            def select(self, *_args, **_kwargs):
+                return self
+
+            def eq(self, key, value):
+                self.filters[key] = value
+                return self
+
+            def execute(self):
+                if self.filters.get("username") == "demo":
+                    return Result([{
+                        "id": 12,
+                        "username": "demo",
+                        "email": "demo@example.com",
+                        "password_hash": "hashed",
+                    }])
+                return Result([])
+
+        fake = SimpleNamespace(table=lambda _name: FakeUsersTable())
+        csrf_token = self.csrf()
+        with self.client.session_transaction() as sess:
+            sess["stale_session_value"] = "remove-me"
+
+        with patch.object(zapp, "supabase", fake), \
+             patch.object(zapp.bcrypt, "checkpw", return_value=True), \
+             patch.object(zapp, "award_xp"):
+            response = self.client.post("/auth", data={
+                "csrf_token": csrf_token,
+                "action": "login",
+                "username": "demo",
+                "password": "secret123",
+                "remember_me": "1",
+            })
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.location.endswith("/"))
+        self.assertIn("Expires=", response.headers.get("Set-Cookie", ""))
+        with self.client.session_transaction() as sess:
+            self.assertEqual(sess["user_id"], 12)
+            self.assertTrue(sess.permanent)
+            self.assertIn("csrf_token", sess)
+            self.assertNotIn("stale_session_value", sess)
+
+    def test_password_login_without_remember_me_uses_browser_session(self):
+        class Result:
+            def __init__(self, data=None):
+                self.data = data or []
+
+        class FakeUsersTable:
+            def __init__(self):
+                self.filters = {}
+
+            def select(self, *_args, **_kwargs):
+                return self
+
+            def eq(self, key, value):
+                self.filters[key] = value
+                return self
+
+            def execute(self):
+                if self.filters.get("username") == "demo":
+                    return Result([{
+                        "id": 12,
+                        "username": "demo",
+                        "email": "demo@example.com",
+                        "password_hash": "hashed",
+                    }])
+                return Result([])
+
+        fake = SimpleNamespace(table=lambda _name: FakeUsersTable())
+        with patch.object(zapp, "supabase", fake), \
+             patch.object(zapp.bcrypt, "checkpw", return_value=True), \
+             patch.object(zapp, "award_xp"):
+            response = self.client.post("/auth", data={
+                "csrf_token": self.csrf(),
+                "action": "login",
+                "username": "demo",
+                "password": "secret123",
+            })
+
+        self.assertEqual(response.status_code, 302)
+        self.assertNotIn("Expires=", response.headers.get("Set-Cookie", ""))
+        with self.client.session_transaction() as sess:
+            self.assertEqual(sess["user_id"], 12)
+            self.assertFalse(sess.permanent)
 
     def test_nickname_fields_allow_uppercase_input(self):
         auth_html = self.client.get("/auth").data.decode()
@@ -178,6 +474,8 @@ class AppRouteTests(unittest.TestCase):
 
         self.assertIn('data-i18n="auth_continue_google"', auth_html)
         self.assertIn('data-i18n="auth_or_email"', auth_html)
+        self.assertIn('name="remember_me" value="1"', auth_html)
+        self.assertIn('data-i18n="auth_remember_me"', auth_html)
         self.assertIn('href="/forgot-password"', auth_html)
         self.assertIn('class="brand-mark brand-logo-large"', auth_html)
         self.assertIn("assets/icon-512.png", auth_html)
@@ -238,10 +536,11 @@ class AppRouteTests(unittest.TestCase):
         credentials = fake.auth.calls[0]
         self.assertEqual(credentials["provider"], "google")
         self.assertTrue(credentials["options"]["redirect_to"].endswith("/auth/oauth/callback"))
+        self.assertNotIn("query_params", credentials["options"])
         with self.client.session_transaction() as sess:
             self.assertEqual(sess["oauth_provider"], "google")
             self.assertEqual(sess["oauth_code_verifier"], "test-verifier")
-            self.assertEqual(credentials["options"]["query_params"]["state"], sess["oauth_state"])
+            self.assertNotIn("oauth_state", sess)
 
     def test_oauth_start_uses_configured_redirect_base(self):
         class FakeStorage:
@@ -668,6 +967,102 @@ class AppRouteTests(unittest.TestCase):
         self.assertEqual(fake.updated_payload["oauth_provider"], "google")
         with self.client.session_transaction() as sess:
             self.assertEqual(sess["user_id"], 44)
+            self.assertNotIn("pending_oauth_profile", sess)
+
+    def test_oauth_callback_uses_isolated_auth_client_for_exchange(self):
+        class FakeStorage:
+            def __init__(self):
+                self.items = {}
+
+            def set_item(self, key, value):
+                self.items[key] = value
+
+            def get_item(self, key):
+                return self.items.get(key)
+
+        class IsolatedAuth:
+            def __init__(self):
+                self._storage_key = "supabase.auth.token"
+                self._storage = FakeStorage()
+                self.exchange_params = None
+
+            def exchange_code_for_session(self, params):
+                self.exchange_params = params
+                user = SimpleNamespace(
+                    id="66666666-6666-6666-6666-666666666666",
+                    email="bridge@example.com",
+                    user_metadata={"full_name": "Bridge User"},
+                    app_metadata={"provider": "google"},
+                )
+                return SimpleNamespace(user=user, session=SimpleNamespace(user=user))
+
+        class SharedAuth:
+            _storage_key = "supabase.auth.token"
+            _storage = FakeStorage()
+
+            def exchange_code_for_session(self, _params):
+                raise AssertionError("OAuth exchange must not mutate the shared backend client")
+
+        class FakeUsersTable:
+            def __init__(self, fake):
+                self.fake = fake
+                self.filters = {}
+                self.mode = "select"
+                self.payload = None
+
+            def select(self, *_args, **_kwargs):
+                self.mode = "select"
+                return self
+
+            def update(self, payload):
+                self.mode = "update"
+                self.payload = payload
+                return self
+
+            def eq(self, key, value):
+                self.filters[key] = value
+                return self
+
+            def execute(self):
+                if self.mode == "update":
+                    self.fake.updated_payload = self.payload
+                    return SimpleNamespace(data=[])
+                if self.filters.get("supabase_auth_user_id") == "66666666-6666-6666-6666-666666666666":
+                    return SimpleNamespace(data=[{
+                        "id": 66,
+                        "email": "bridge@example.com",
+                        "username": "bridgeuser",
+                    }])
+                return SimpleNamespace(data=[])
+
+        class SharedSupabase:
+            def __init__(self):
+                self.auth = SharedAuth()
+                self.updated_payload = None
+
+            def table(self, _name):
+                return FakeUsersTable(self)
+
+        shared = SharedSupabase()
+        isolated = SimpleNamespace(auth=IsolatedAuth())
+        with self.client.session_transaction() as sess:
+            sess["oauth_provider"] = "google"
+            sess["oauth_code_verifier"] = "stored-verifier"
+
+        with patch.object(zapp, "supabase", shared), \
+             patch.object(zapp, "url", "https://project.supabase.co"), \
+             patch.object(zapp, "key", "service-role-key"), \
+             patch.object(zapp, "create_client", return_value=isolated) as create_client_mock:
+            response = self.client.get("/auth/oauth/callback?code=abc123")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.location.endswith("/"))
+        create_client_mock.assert_called_once_with("https://project.supabase.co", "service-role-key")
+        self.assertEqual(isolated.auth.exchange_params["auth_code"], "abc123")
+        self.assertEqual(isolated.auth.exchange_params["code_verifier"], "stored-verifier")
+        self.assertEqual(shared.updated_payload["supabase_auth_user_id"], "66666666-6666-6666-6666-666666666666")
+        with self.client.session_transaction() as sess:
+            self.assertEqual(sess["user_id"], 66)
             self.assertNotIn("pending_oauth_profile", sess)
 
     def test_oauth_callback_sends_new_user_to_social_onboarding(self):
@@ -1152,6 +1547,206 @@ class AppRouteTests(unittest.TestCase):
             })
 
         self.assertEqual(denied.status_code, 403)
+
+    def test_admin_helpers_validate_ids_and_sanitize_search_terms(self):
+        self.assertEqual(zapp.parse_positive_id("42"), 42)
+        self.assertIsNone(zapp.parse_positive_id("0"))
+        self.assertIsNone(zapp.parse_positive_id("-5"))
+        self.assertIsNone(zapp.parse_positive_id("1,posts.delete"))
+        self.assertEqual(
+            zapp.parse_uuid_id("AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA"),
+            "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        )
+        self.assertIsNone(zapp.parse_uuid_id("position-1"))
+        self.assertIsNone(zapp.parse_uuid_id("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa,posts.delete"))
+
+        term = zapp.admin_search_term("sina%),email.ilike.%%; drop")
+        self.assertEqual(term, "sina email.ilike. drop")
+        self.assertNotIn("%", term)
+        self.assertNotIn(",", term)
+        self.assertNotIn(")", term)
+        self.assertLessEqual(len(zapp.admin_search_term("a" * 200)), 80)
+
+    def test_admin_dashboard_requires_valid_admin_session_for_actions(self):
+        class FakeSupabase:
+            def __init__(self):
+                self.calls = []
+
+            def table(self, name):
+                self.calls.append(("table", name))
+                return self
+
+        fake = FakeSupabase()
+        with self.client.session_transaction() as sess:
+            sess["csrf_token"] = "token"
+
+        with patch.object(zapp, "get_current_user", return_value={"id": 7, "username": "admin"}), \
+             patch.object(zapp, "supabase", fake):
+            response = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "delete_post_global",
+                "id": "42",
+            })
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.headers["Location"].endswith("/admin-dashboard"))
+        self.assertEqual(fake.calls, [])
+
+    def test_admin_dashboard_rejects_invalid_actions_without_mutation(self):
+        class FakeSupabase:
+            def __init__(self):
+                self.calls = []
+
+            def table(self, name):
+                self.calls.append(("table", name))
+                return self
+
+        fake = FakeSupabase()
+        with self.client.session_transaction() as sess:
+            sess["csrf_token"] = "token"
+            sess["admin_token"] = "secret"
+
+        viewer = {"id": 7, "username": "admin"}
+        with patch.dict(os.environ, {"LVL_ADMIN_TOKEN": "secret"}), \
+             patch.object(zapp, "get_current_user", return_value=viewer), \
+             patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "log_admin_action") as audit:
+            invalid_suggestion = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "update_suggestion_status",
+                "id": "12",
+                "status": "DeleteEverything",
+            })
+            invalid_verification = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "respond_verification",
+                "id": "3",
+                "status": "Pending",
+            })
+            invalid_position = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "delete_position",
+                "id": "position-1",
+            })
+            invalid_id = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "dismiss_report",
+                "id": "1,posts.delete",
+            })
+            self_delete = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "delete_user_global",
+                "id": "7",
+            })
+            self_warn = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "warn_user",
+                "id": "7",
+                "warning_text": "Stop testing yourself.",
+            })
+
+        for response in (invalid_suggestion, invalid_verification, invalid_position, invalid_id, self_delete, self_warn):
+            self.assertEqual(response.status_code, 302)
+            self.assertTrue(response.headers["Location"].endswith("/admin-dashboard"))
+        self.assertEqual(fake.calls, [])
+        audit.assert_not_called()
+
+    def test_admin_dashboard_validates_and_applies_admin_actions(self):
+        suggestion_id = "11111111-1111-1111-1111-111111111111"
+        verification_id = "22222222-2222-2222-2222-222222222222"
+        position_id = "33333333-3333-3333-3333-333333333333"
+
+        class Result:
+            def __init__(self, data=None):
+                self.data = data or []
+
+        class FakeTable:
+            def __init__(self, db, name):
+                self.db = db
+                self.name = name
+                self.action = None
+                self.values = None
+                self.filters = []
+
+            def select(self, *_args, **_kwargs):
+                self.action = "select"
+                return self
+
+            def update(self, values):
+                self.action = "update"
+                self.values = values
+                return self
+
+            def eq(self, key, value):
+                self.filters.append((key, value))
+                return self
+
+            def limit(self, *_args, **_kwargs):
+                return self
+
+            def execute(self):
+                self.db.calls.append((self.name, self.action, self.values, tuple(self.filters)))
+                if self.name == "verification_requests" and self.action == "select":
+                    return Result([{"id": verification_id, "user_id": 9, "status": "Pending"}])
+                if self.name == "job_positions" and self.action == "select":
+                    return Result([{"id": position_id, "is_active": True}])
+                return Result([self.values or {}])
+
+        class FakeSupabase:
+            def __init__(self):
+                self.calls = []
+
+            def table(self, name):
+                return FakeTable(self, name)
+
+        fake = FakeSupabase()
+        with self.client.session_transaction() as sess:
+            sess["csrf_token"] = "token"
+            sess["admin_token"] = "secret"
+
+        viewer = {"id": 7, "username": "admin"}
+        with patch.dict(os.environ, {"LVL_ADMIN_TOKEN": "secret"}), \
+             patch.object(zapp, "get_current_user", return_value=viewer), \
+             patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "log_admin_action") as audit:
+            suggestion = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "update_suggestion_status",
+                "id": suggestion_id,
+                "status": "Reviewed",
+            })
+            verification = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "respond_verification",
+                "id": verification_id,
+                "status": "Approved",
+                "admin_notes": "Looks good.",
+            })
+            position = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "toggle_position",
+                "id": position_id,
+            })
+
+        self.assertEqual(suggestion.status_code, 302)
+        self.assertEqual(verification.status_code, 302)
+        self.assertEqual(position.status_code, 302)
+        self.assertIn(("contact_messages", "update", {"status": "Reviewed"}, (("id", suggestion_id),)), fake.calls)
+        self.assertIn(("users", "update", {"is_profile_verified": True}, (("id", 9),)), fake.calls)
+        self.assertIn(("job_positions", "update", {"is_active": False}, (("id", position_id),)), fake.calls)
+
+        verification_update = next(
+            call for call in fake.calls
+            if call[0] == "verification_requests" and call[1] == "update"
+        )
+        self.assertEqual(verification_update[2]["status"], "Approved")
+        self.assertEqual(verification_update[2]["admin_notes"], "Looks good.")
+        self.assertIsNone(verification_update[2]["rejection_cooldown_until"])
+        self.assertIsNotNone(datetime.fromisoformat(verification_update[2]["updated_at"]).tzinfo)
+        self.assertEqual(verification_update[3], (("id", verification_id),))
+        audit.assert_any_call("admin", "update_suggestion_status", suggestion_id, "Reviewed")
+        audit.assert_any_call("admin", "respond_verification", verification_id, "status=Approved")
+        audit.assert_any_call("admin", "toggle_position", position_id, "new_status=False")
 
     def test_level_guide_page_explains_xp_and_rewards(self):
         fake_user = {
@@ -1840,6 +2435,217 @@ class AppRouteTests(unittest.TestCase):
         self.assertEqual(reel_9["stack_count"], 2)
         self.assertEqual(reel_9["actor_summary"], "Ada and Sam")
 
+    def test_notifications_template_marks_live_feed_rows(self):
+        viewer = {"id": 7, "username": "demo", "display_name": "Demo User", "profile_photo_url": ""}
+        notification = {
+            "id": 44,
+            "type": "message",
+            "actor_username": "friend",
+            "actor_name": "Friend User",
+            "actor_summary": "Friend User",
+            "is_read": False,
+            "stack_count": 1,
+            "created_at": "2026-08-09T12:00:00+00:00",
+            "message_url": "/messages?u=friend",
+            "friendship_status": "accepted",
+            "friendship_action_user_id": 8,
+        }
+        with zapp.app.test_request_context("/notifications"):
+            html = zapp.render_template(
+                "notifications.html",
+                viewer=viewer,
+                notifications=[notification],
+                highlights=[],
+            )
+
+        self.assertIn('data-notifications-feed data-latest-notification-id="44"', html)
+        self.assertIn('data-notification-id="44"', html)
+        self.assertIn("Friend User", html)
+        self.assertIn("/messages?u=friend", html)
+
+    def test_create_notification_validates_type_and_inserts_payload(self):
+        class Result:
+            data = []
+
+        class FakeTable:
+            def __init__(self):
+                self.inserted = []
+
+            def insert(self, payload):
+                self.inserted.append(payload)
+                return self
+
+            def execute(self):
+                return Result()
+
+        fake_table = FakeTable()
+        fake_supabase = SimpleNamespace(table=lambda _name: fake_table)
+
+        with patch.object(zapp, "supabase", fake_supabase), \
+             patch.object(zapp, "interaction_blocked", return_value=False):
+            self.assertFalse(zapp.create_notification(7, 7, "like", post_id=5))
+            self.assertFalse(zapp.create_notification(7, 8, "unsupported", post_id=5))
+            self.assertTrue(zapp.create_notification(7, 8, "like", post_id=5))
+
+        self.assertEqual(fake_table.inserted, [{
+            "user_id": 7,
+            "actor_id": 8,
+            "type": "like",
+            "post_id": 5,
+        }])
+
+    def test_live_status_includes_latest_event_ids(self):
+        with patch.object(zapp, "get_current_user", return_value={"id": 7, "username": "demo"}), \
+             patch.object(zapp, "unread_notification_count", return_value=2), \
+             patch.object(zapp, "unread_message_count", return_value=3), \
+             patch.object(zapp, "latest_notification_id", return_value=44), \
+             patch.object(zapp, "latest_message_id", return_value=91):
+            response = self.client.get("/api/live-status")
+
+        payload = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["unread_notifications"], 2)
+        self.assertEqual(payload["unread_messages"], 3)
+        self.assertEqual(payload["latest_notification_id"], 44)
+        self.assertEqual(payload["latest_message_id"], 91)
+        self.assertIsNotNone(datetime.fromisoformat(payload["server_time"]).tzinfo)
+
+    def test_api_notifications_returns_visible_recent_notifications(self):
+        class Result:
+            def __init__(self, data=None):
+                self.data = data or []
+
+        class FakeTable:
+            def __init__(self, db):
+                self.db = db
+                self.filters = []
+                self.limit_value = None
+
+            def select(self, *_args, **_kwargs):
+                return self
+
+            def eq(self, key, value):
+                self.filters.append((key, value))
+                return self
+
+            def gt(self, key, value):
+                self.filters.append((key, value))
+                return self
+
+            def order(self, key, desc=False):
+                self.db.ordering = (key, desc)
+                return self
+
+            def limit(self, value):
+                self.limit_value = value
+                return self
+
+            def execute(self):
+                self.db.filters = self.filters
+                self.db.limit_value = self.limit_value
+                return Result([
+                    {
+                        "id": 44,
+                        "user_id": 7,
+                        "actor_id": 8,
+                        "type": "message",
+                        "message_id": 91,
+                        "is_read": False,
+                        "created_at": "2026-08-09T12:00:00+00:00",
+                        "actor": {"id": 8, "username": "friend", "display_name": "Friend User"},
+                    },
+                    {
+                        "id": 43,
+                        "user_id": 7,
+                        "actor_id": 99,
+                        "type": "like",
+                        "post_id": 5,
+                        "is_read": False,
+                        "created_at": "2026-08-09T11:00:00+00:00",
+                        "actor": {"id": 99, "username": "blocked", "display_name": "Blocked User"},
+                    },
+                ])
+
+        class FakeSupabase:
+            def __init__(self):
+                self.filters = []
+                self.ordering = None
+                self.limit_value = None
+
+            def table(self, name):
+                self.table_name = name
+                return FakeTable(self)
+
+        fake = FakeSupabase()
+        with patch.object(zapp, "get_current_user", return_value={"id": 7, "username": "demo"}), \
+             patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "blocked_user_ids_for_viewer", return_value={99}), \
+             patch.object(zapp, "unread_notification_count", return_value=1), \
+             patch.object(zapp, "latest_notification_id", return_value=44):
+            response = self.client.get("/api/notifications?since_id=40&limit=5")
+
+        payload = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(payload["success"])
+        self.assertEqual(fake.table_name, "notifications")
+        self.assertEqual(fake.filters, [("user_id", 7), ("id", 40)])
+        self.assertEqual(fake.ordering, ("id", True))
+        self.assertEqual(fake.limit_value, 5)
+        self.assertEqual(len(payload["notifications"]), 1)
+        self.assertEqual(payload["notifications"][0]["id"], 44)
+        self.assertEqual(payload["notifications"][0]["message_url"], "/messages?u=friend")
+        self.assertEqual(payload["unread_notifications"], 1)
+
+    def test_mark_notifications_read_supports_json_response(self):
+        class Result:
+            data = []
+
+        class FakeTable:
+            def __init__(self, db):
+                self.db = db
+                self.values = None
+                self.filters = []
+
+            def update(self, values):
+                self.values = values
+                return self
+
+            def eq(self, key, value):
+                self.filters.append((key, value))
+                return self
+
+            def execute(self):
+                self.db.calls.append((self.values, tuple(self.filters)))
+                return Result()
+
+        class FakeSupabase:
+            def __init__(self):
+                self.calls = []
+
+            def table(self, name):
+                self.table_name = name
+                return FakeTable(self)
+
+        fake = FakeSupabase()
+        with self.client.session_transaction() as sess:
+            sess["csrf_token"] = "token"
+
+        with patch.object(zapp, "get_current_user", return_value={"id": 7, "username": "demo"}), \
+             patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "unread_notification_count", return_value=0):
+            response = self.client.post("/mark_notifications_read", data={
+                "csrf_token": "token",
+                "ajax": "1",
+            })
+
+        payload = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["unread_notifications"], 0)
+        self.assertEqual(fake.table_name, "notifications")
+        self.assertEqual(fake.calls, [({"is_read": True}, (("user_id", 7),))])
+
     def test_profile_stats_are_ordered_without_duplicate_metric_card(self):
         fake_user = {
             "id": 7,
@@ -2099,6 +2905,236 @@ class AppRouteTests(unittest.TestCase):
         self.assertEqual(posts_table.inserted["content"], "")
         self.assertEqual(posts_table.inserted["image_url"], "/static/uploads/posts/7/test.png")
 
+    def test_create_post_deletes_viewer_draft_after_publish(self):
+        fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
+        fake_supabase = FakeDraftPublishSupabase(draft={
+            "id": 44,
+            "user_id": 7,
+            "content": "from draft",
+            "image_url": "https://example.com/draft.png",
+        })
+
+        with patch.object(zapp, "get_current_user", return_value=fake_user), \
+             patch.object(zapp, "recent_duplicate_submission", return_value=False), \
+             patch.object(zapp, "award_xp"), \
+             patch.object(zapp, "supabase", fake_supabase):
+            response = self.client.post("/create_post", data={
+                "csrf_token": self.csrf(),
+                "content": "from draft",
+                "draft_id": "44",
+            })
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(fake_supabase.post_inserted, {
+            "user_id": 7,
+            "content": "from draft",
+            "image_url": "https://example.com/draft.png",
+        })
+        self.assertEqual(fake_supabase.draft_select_filters, [("id", 44), ("user_id", 7)])
+        self.assertEqual(fake_supabase.draft_delete_filters, [("id", 44), ("user_id", 7)])
+
+    def test_api_post_drafts_lists_viewer_drafts(self):
+        fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
+        drafts_table = FakeDraftsTable(rows=[{
+            "id": 3,
+            "content": "saved text",
+            "image_url": None,
+            "created_at": "2026-08-06T10:00:00+00:00",
+            "updated_at": "2026-08-06T10:05:00+00:00",
+        }])
+
+        with patch.object(zapp, "get_current_user", return_value=fake_user), \
+             patch.object(zapp, "supabase", FakeDraftsSupabase(drafts_table)):
+            response = self.client.get("/api/drafts")
+
+        payload = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["drafts"][0]["content"], "saved text")
+        self.assertEqual(drafts_table.filters, [("user_id", 7)])
+        self.assertEqual(drafts_table.ordering, ("updated_at", True))
+        self.assertEqual(drafts_table.limit_value, zapp.POST_DRAFT_LIMIT)
+
+    def test_api_save_post_draft_creates_viewer_draft(self):
+        token = self.csrf()
+        fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
+        drafts_table = FakeDraftsTable()
+
+        with patch.object(zapp, "get_current_user", return_value=fake_user), \
+             patch.object(zapp, "supabase", FakeDraftsSupabase(drafts_table)):
+            response = self.client.post(
+                "/api/drafts/save",
+                json={"content": "draft body"},
+                headers={"X-CSRF-Token": token},
+            )
+
+        payload = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["draft"]["id"], 91)
+        self.assertEqual(drafts_table.inserted["user_id"], 7)
+        self.assertEqual(drafts_table.inserted["content"], "draft body")
+        self.assertIsNone(drafts_table.inserted["image_url"])
+        self.assertIn("updated_at", drafts_table.inserted)
+
+    def test_api_save_post_draft_updates_only_viewer_draft(self):
+        token = self.csrf()
+        fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
+        drafts_table = FakeDraftsTable(rows=[{"id": 44, "content": "updated"}])
+
+        with patch.object(zapp, "get_current_user", return_value=fake_user), \
+             patch.object(zapp, "supabase", FakeDraftsSupabase(drafts_table)):
+            response = self.client.post(
+                "/api/drafts/save",
+                json={"draft_id": 44, "content": "updated"},
+                headers={"X-CSRF-Token": token},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(drafts_table.updated["content"], "updated")
+        self.assertNotIn("image_url", drafts_table.updated)
+        self.assertEqual(drafts_table.filters, [("id", 44), ("user_id", 7)])
+
+    def test_api_save_post_draft_uploads_image_file(self):
+        token = self.csrf()
+        fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
+        drafts_table = FakeDraftsTable()
+
+        with patch.object(zapp, "get_current_user", return_value=fake_user), \
+             patch.object(zapp, "upload_image_to_storage", return_value="/static/uploads/drafts/7/draft.png"), \
+             patch.object(zapp, "supabase", FakeDraftsSupabase(drafts_table)):
+            response = self.client.post(
+                "/api/drafts/save",
+                data={
+                    "content": "draft with image",
+                    "image": (io.BytesIO(b"image-bytes"), "draft.png"),
+                },
+                headers={"X-CSRF-Token": token},
+                content_type="multipart/form-data",
+            )
+
+        payload = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(payload["success"])
+        self.assertEqual(drafts_table.inserted["user_id"], 7)
+        self.assertEqual(drafts_table.inserted["content"], "draft with image")
+        self.assertEqual(drafts_table.inserted["image_url"], "/static/uploads/drafts/7/draft.png")
+
+    def test_api_save_post_draft_can_clear_existing_image(self):
+        token = self.csrf()
+        fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
+        drafts_table = FakeDraftsTable(rows=[{"id": 44, "content": "updated", "image_url": None}])
+
+        with patch.object(zapp, "get_current_user", return_value=fake_user), \
+             patch.object(zapp, "supabase", FakeDraftsSupabase(drafts_table)):
+            response = self.client.post(
+                "/api/drafts/save",
+                json={"draft_id": 44, "content": "updated", "clear_image": "1"},
+                headers={"X-CSRF-Token": token},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(drafts_table.updated["content"], "updated")
+        self.assertIsNone(drafts_table.updated["image_url"])
+        self.assertEqual(drafts_table.filters, [("id", 44), ("user_id", 7)])
+
+    def test_api_save_post_draft_validates_content_length(self):
+        token = self.csrf()
+        fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
+        drafts_table = FakeDraftsTable()
+
+        with patch.object(zapp, "get_current_user", return_value=fake_user), \
+             patch.object(zapp, "supabase", FakeDraftsSupabase(drafts_table)):
+            response = self.client.post(
+                "/api/drafts/save",
+                json={"content": "x" * 281},
+                headers={"X-CSRF-Token": token},
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIsNone(drafts_table.inserted)
+        self.assertIsNone(drafts_table.updated)
+
+    def test_api_delete_post_draft_deletes_only_viewer_draft(self):
+        token = self.csrf()
+        fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
+        drafts_table = FakeDraftsTable(rows=[{"id": 44}])
+
+        with patch.object(zapp, "get_current_user", return_value=fake_user), \
+             patch.object(zapp, "supabase", FakeDraftsSupabase(drafts_table)):
+            response = self.client.post(
+                "/api/drafts/delete",
+                json={"draft_id": 44},
+                headers={"X-CSRF-Token": token},
+            )
+
+        payload = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["deleted_id"], 44)
+        self.assertEqual(drafts_table.action, "delete")
+        self.assertEqual(drafts_table.filters, [("id", 44), ("user_id", 7)])
+
+    def test_api_publish_post_draft_creates_post_and_deletes_draft(self):
+        token = self.csrf()
+        fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
+        fake_supabase = FakeDraftPublishSupabase(draft={
+            "id": 44,
+            "user_id": 7,
+            "content": "draft body",
+            "image_url": "https://example.com/image.png",
+            "created_at": "2026-08-06T10:00:00+00:00",
+            "updated_at": "2026-08-06T10:05:00+00:00",
+        })
+
+        with patch.object(zapp, "get_current_user", return_value=fake_user), \
+             patch.object(zapp, "supabase", fake_supabase), \
+             patch.object(zapp, "recent_duplicate_submission", return_value=False), \
+             patch.object(zapp, "award_xp") as award_xp:
+            response = self.client.post(
+                "/api/drafts/publish",
+                json={"draft_id": 44},
+                headers={"X-CSRF-Token": token},
+            )
+
+        payload = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["post"]["id"], 123)
+        self.assertEqual(payload["deleted_id"], 44)
+        self.assertTrue(payload["draft_deleted"])
+        self.assertEqual(fake_supabase.draft_select_filters, [("id", 44), ("user_id", 7)])
+        self.assertEqual(fake_supabase.draft_select_limit, 1)
+        self.assertEqual(fake_supabase.post_inserted, {
+            "user_id": 7,
+            "content": "draft body",
+            "image_url": "https://example.com/image.png",
+        })
+        self.assertEqual(fake_supabase.draft_delete_filters, [("id", 44), ("user_id", 7)])
+        award_xp.assert_called_once_with(7, "post_created", 10, 123)
+
+    def test_api_publish_post_draft_returns_404_for_missing_viewer_draft(self):
+        token = self.csrf()
+        fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
+        fake_supabase = FakeDraftPublishSupabase(draft=None)
+
+        with patch.object(zapp, "get_current_user", return_value=fake_user), \
+             patch.object(zapp, "supabase", fake_supabase), \
+             patch.object(zapp, "award_xp") as award_xp:
+            response = self.client.post(
+                "/api/drafts/publish",
+                json={"draft_id": 44},
+                headers={"X-CSRF-Token": token},
+            )
+
+        payload = response.get_json()
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(payload["success"])
+        self.assertEqual(fake_supabase.draft_select_filters, [("id", 44), ("user_id", 7)])
+        self.assertIsNone(fake_supabase.post_inserted)
+        self.assertEqual(fake_supabase.draft_delete_filters, [])
+        award_xp.assert_not_called()
+
     def test_send_message_blocks_self_message(self):
         fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
         with patch.object(zapp, "get_current_user", return_value=fake_user):
@@ -2127,6 +3163,292 @@ class AppRouteTests(unittest.TestCase):
         self.assertEqual(response.status_code, 409)
         self.assertIn(b"Already sent.", response.data)
         fake_supabase.table.assert_not_called()
+
+    def test_attachment_upload_enforces_allowlist_and_owner_bound_temp_file(self):
+        fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
+        token = self.csrf()
+
+        with tempfile.TemporaryDirectory() as tmpdir, \
+             patch.object(zapp.app, "root_path", tmpdir), \
+             patch.object(zapp, "get_current_user", return_value=fake_user):
+            rejected = self.client.post(
+                "/api/upload_attachment",
+                data={"file": (io.BytesIO(b"<svg></svg>"), "icon.svg")},
+                headers={"X-CSRF-Token": token},
+                content_type="multipart/form-data",
+            )
+            self.assertEqual(rejected.status_code, 400)
+            self.assertFalse(rejected.get_json()["success"])
+
+            accepted = self.client.post(
+                "/api/upload_attachment",
+                data={"file": (io.BytesIO(b"%PDF-1.4"), "Report Final.pdf")},
+                headers={"X-CSRF-Token": token},
+                content_type="multipart/form-data",
+            )
+
+            payload = accepted.get_json()
+            self.assertEqual(accepted.status_code, 200)
+            self.assertTrue(payload["success"])
+            self.assertRegex(payload["temp_filename"], r"^u7_[0-9a-f]{32}\.pdf$")
+            self.assertEqual(payload["attachment_name"], "Report_Final.pdf")
+            self.assertEqual(payload["attachment_type"], "document")
+            self.assertTrue(os.path.exists(os.path.join(tmpdir, "uploads", "attachments", payload["temp_filename"])))
+
+    def test_attachment_upload_uses_private_supabase_bucket_outside_testing(self):
+        class FakeBucket:
+            def __init__(self):
+                self.uploads = []
+
+            def upload(self, path, payload, file_options=None):
+                self.uploads.append((path, payload, file_options))
+
+        class FakeStorage:
+            def __init__(self):
+                self.bucket = FakeBucket()
+                self.created = None
+
+            def get_bucket(self, name):
+                raise RuntimeError("missing bucket")
+
+            def create_bucket(self, name, options=None):
+                self.created = (name, options)
+
+            def from_(self, name):
+                self.selected = name
+                return self.bucket
+
+        fake_storage = FakeStorage()
+        fake_supabase = SimpleNamespace(storage=fake_storage)
+        token = self.csrf()
+
+        with patch.dict(zapp.app.config, {"TESTING": False}), \
+             patch.object(zapp, "supabase", fake_supabase), \
+             patch.object(zapp, "get_current_user", return_value={"id": 7, "username": "demo"}):
+            response = self.client.post(
+                "/api/upload_attachment",
+                data={"file": (io.BytesIO(b"%PDF-1.4"), "report.pdf")},
+                headers={"X-CSRF-Token": token},
+                content_type="multipart/form-data",
+            )
+
+        payload = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(payload["success"])
+        self.assertEqual(fake_storage.created[0], zapp.SUPABASE_ATTACHMENT_BUCKET)
+        self.assertFalse(fake_storage.created[1]["public"])
+        uploaded_path, uploaded_payload, options = fake_storage.bucket.uploads[0]
+        self.assertEqual(uploaded_path, zapp.attachment_storage_path(payload["temp_filename"]))
+        self.assertEqual(uploaded_payload, b"%PDF-1.4")
+        self.assertEqual(options["content-type"], "application/pdf")
+
+    def test_send_message_finalizes_private_attachment_file(self):
+        class Result:
+            def __init__(self, data=None):
+                self.data = data or []
+
+        class FakeTable:
+            def __init__(self, db, name):
+                self.db = db
+                self.name = name
+                self.action = None
+                self.values = None
+                self.filters = []
+
+            def select(self, *_args, **_kwargs):
+                self.action = "select"
+                return self
+
+            def insert(self, values):
+                self.action = "insert"
+                self.values = values
+                return self
+
+            def update(self, values):
+                self.action = "update"
+                self.values = values
+                return self
+
+            def eq(self, key, value):
+                self.filters.append((key, value))
+                return self
+
+            def execute(self):
+                self.db.calls.append((self.name, self.action, self.values, tuple(self.filters)))
+                if self.name == "users" and self.action == "select":
+                    return Result([{"id": 8}])
+                if self.name == "messages" and self.action == "insert":
+                    return Result([{"id": 91, **self.values}])
+                return Result([self.values or {}])
+
+        class FakeSupabase:
+            def __init__(self):
+                self.calls = []
+
+            def table(self, name):
+                return FakeTable(self, name)
+
+        fake = FakeSupabase()
+        fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
+        temp_filename = zapp.temporary_attachment_filename(7, "pdf")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            upload_dir = os.path.join(tmpdir, "uploads", "attachments")
+            os.makedirs(upload_dir, exist_ok=True)
+            temp_path = os.path.join(upload_dir, temp_filename)
+            with open(temp_path, "wb") as attachment_file:
+                attachment_file.write(b"%PDF-1.4")
+
+            with patch.object(zapp.app, "root_path", tmpdir), \
+                 patch.object(zapp, "get_current_user", return_value=fake_user), \
+                 patch.object(zapp, "supabase", fake), \
+                 patch.object(zapp, "interaction_blocked", return_value=False), \
+                 patch.object(zapp, "recent_duplicate_submission", return_value=False), \
+                 patch.object(zapp, "create_notification"), \
+                 patch.object(zapp, "update_streak", return_value=(0, 0)):
+                response = self.client.post("/send_message", data={
+                    "csrf_token": self.csrf(),
+                    "receiver_id": "8",
+                    "content": "",
+                    "temp_filename": temp_filename,
+                    "attachment_name": "Report Final.pdf",
+                    "ajax": "1",
+                })
+
+            payload = response.get_json()
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(payload["success"])
+            self.assertFalse(os.path.exists(temp_path))
+            self.assertTrue(os.path.exists(os.path.join(upload_dir, "91.pdf")))
+            self.assertIn(("messages", "insert", {
+                "sender_id": 7,
+                "receiver_id": 8,
+                "content": "",
+                "attachment_type": "document",
+                "attachment_name": "Report_Final.pdf",
+            }, ()), fake.calls)
+            self.assertIn(("messages", "update", {"attachment_url": "/attachment/91"}, (("id", 91),)), fake.calls)
+
+    def test_send_message_rejects_cross_user_temp_attachment(self):
+        fake_user = {"id": 7, "username": "demo", "profile_photo_url": ""}
+        temp_filename = zapp.temporary_attachment_filename(8, "pdf")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            upload_dir = os.path.join(tmpdir, "uploads", "attachments")
+            os.makedirs(upload_dir, exist_ok=True)
+            with open(os.path.join(upload_dir, temp_filename), "wb") as attachment_file:
+                attachment_file.write(b"%PDF-1.4")
+
+            with patch.object(zapp.app, "root_path", tmpdir), \
+                 patch.object(zapp, "get_current_user", return_value=fake_user), \
+                 patch.object(zapp, "supabase") as fake_supabase:
+                response = self.client.post("/send_message", data={
+                    "csrf_token": self.csrf(),
+                    "receiver_id": "8",
+                    "content": "",
+                    "temp_filename": temp_filename,
+                    "attachment_name": "Report.pdf",
+                    "ajax": "1",
+                })
+
+            self.assertEqual(response.status_code, 400)
+            self.assertIn("Invalid attachment upload", response.get_json()["error"])
+            fake_supabase.table.assert_not_called()
+
+    def test_send_message_moves_supabase_attachment_to_message_key(self):
+        class Result:
+            def __init__(self, data=None):
+                self.data = data or []
+
+        class FakeBucket:
+            def __init__(self, files):
+                self.files = files
+                self.moves = []
+
+            def exists(self, path):
+                return path in self.files
+
+            def move(self, source, target):
+                self.moves.append((source, target))
+                self.files[target] = self.files.pop(source)
+
+        class FakeStorage:
+            def __init__(self, bucket):
+                self.bucket = bucket
+
+            def from_(self, name):
+                self.selected = name
+                return self.bucket
+
+        class FakeTable:
+            def __init__(self, db, name):
+                self.db = db
+                self.name = name
+                self.action = None
+                self.values = None
+                self.filters = []
+
+            def select(self, *_args, **_kwargs):
+                self.action = "select"
+                return self
+
+            def insert(self, values):
+                self.action = "insert"
+                self.values = values
+                return self
+
+            def update(self, values):
+                self.action = "update"
+                self.values = values
+                return self
+
+            def eq(self, key, value):
+                self.filters.append((key, value))
+                return self
+
+            def execute(self):
+                self.db.calls.append((self.name, self.action, self.values, tuple(self.filters)))
+                if self.name == "users" and self.action == "select":
+                    return Result([{"id": 8}])
+                if self.name == "messages" and self.action == "insert":
+                    return Result([{"id": 91, **self.values}])
+                return Result([self.values or {}])
+
+        class FakeSupabase:
+            def __init__(self, storage):
+                self.storage = storage
+                self.calls = []
+
+            def table(self, name):
+                return FakeTable(self, name)
+
+        temp_filename = zapp.temporary_attachment_filename(7, "pdf")
+        temp_path = zapp.attachment_storage_path(temp_filename)
+        bucket = FakeBucket({temp_path: b"%PDF-1.4"})
+        fake = FakeSupabase(FakeStorage(bucket))
+
+        with patch.dict(zapp.app.config, {"TESTING": False}), \
+             patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "get_current_user", return_value={"id": 7, "username": "demo"}), \
+             patch.object(zapp, "interaction_blocked", return_value=False), \
+             patch.object(zapp, "recent_duplicate_submission", return_value=False), \
+             patch.object(zapp, "create_notification"), \
+             patch.object(zapp, "update_streak", return_value=(0, 0)):
+            response = self.client.post("/send_message", data={
+                "csrf_token": self.csrf(),
+                "receiver_id": "8",
+                "content": "",
+                "temp_filename": temp_filename,
+                "attachment_name": "Report.pdf",
+                "ajax": "1",
+            })
+
+        self.assertEqual(response.status_code, 200)
+        final_path = zapp.attachment_storage_path("91.pdf")
+        self.assertEqual(bucket.moves, [(temp_path, final_path)])
+        self.assertNotIn(temp_path, bucket.files)
+        self.assertEqual(bucket.files[final_path], b"%PDF-1.4")
+        self.assertIn(("messages", "update", {"attachment_url": "/attachment/91"}, (("id", 91),)), fake.calls)
 
     def test_mark_message_thread_read_clears_messages_and_notifications(self):
         class FakeTable:
@@ -2163,6 +3485,97 @@ class AppRouteTests(unittest.TestCase):
 
         self.assertIn(("messages", "update", {"is_read": True}, (("sender_id", 8), ("receiver_id", 7))), fake.calls)
         self.assertIn(("notifications", "update", {"is_read": True}, (("user_id", 7), ("actor_id", 8), ("type", "message"), ("is_read", False))), fake.calls)
+
+    def test_api_messages_supports_before_id_pagination(self):
+        class Result:
+            def __init__(self, data=None):
+                self.data = data or []
+
+        class FakeTable:
+            def __init__(self, db, name):
+                self.db = db
+                self.name = name
+                self.filters = []
+                self.or_filter = None
+                self.lt_filter = None
+                self.gt_filter = None
+                self.ordering = None
+                self.limit_value = None
+
+            def select(self, *_args, **_kwargs):
+                return self
+
+            def eq(self, key, value):
+                self.filters.append((key, value))
+                return self
+
+            def or_(self, value):
+                self.or_filter = value
+                return self
+
+            def lt(self, key, value):
+                self.lt_filter = (key, value)
+                return self
+
+            def gt(self, key, value):
+                self.gt_filter = (key, value)
+                return self
+
+            def order(self, key, desc=False):
+                self.ordering = (key, desc)
+                return self
+
+            def limit(self, value):
+                self.limit_value = value
+                return self
+
+            def execute(self):
+                if self.name == "users":
+                    return Result([{"id": 8, "username": "friend", "display_name": "Friend"}])
+                self.db.message_filters = self.filters
+                self.db.message_or_filter = self.or_filter
+                self.db.message_lt_filter = self.lt_filter
+                self.db.message_gt_filter = self.gt_filter
+                self.db.message_ordering = self.ordering
+                self.db.message_limit = self.limit_value
+                return Result([
+                    {"id": 99, "sender_id": 8, "receiver_id": 7, "content": "newer", "created_at": "2026-08-09T12:03:00+00:00"},
+                    {"id": 98, "sender_id": 7, "receiver_id": 8, "content": "older", "created_at": "2026-08-09T12:02:00+00:00"},
+                    {"id": 97, "sender_id": 8, "receiver_id": 7, "content": "has more", "created_at": "2026-08-09T12:01:00+00:00"},
+                ])
+
+        class FakeSupabase:
+            def __init__(self):
+                self.message_filters = []
+                self.message_or_filter = None
+                self.message_lt_filter = None
+                self.message_gt_filter = None
+                self.message_ordering = None
+                self.message_limit = None
+
+            def table(self, name):
+                return FakeTable(self, name)
+
+        fake = FakeSupabase()
+        with patch.object(zapp, "get_current_user", return_value={"id": 7, "username": "viewer"}), \
+             patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "attach_shared_posts", side_effect=lambda messages: messages), \
+             patch.object(zapp, "mark_message_thread_read") as mark_read:
+            response = self.client.get("/api/messages/friend?before_id=100&limit=2")
+
+        payload = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(payload["success"])
+        self.assertEqual([message["id"] for message in payload["messages"]], [98, 99])
+        self.assertTrue(payload["has_more"])
+        self.assertEqual(payload["oldest_message_id"], 98)
+        self.assertEqual(fake.message_lt_filter, ("id", 100))
+        self.assertIsNone(fake.message_gt_filter)
+        self.assertEqual(fake.message_ordering, ("created_at", True))
+        self.assertEqual(fake.message_limit, 3)
+        self.assertIn("sender_id.eq.7", fake.message_or_filter)
+        self.assertIn("receiver_id.eq.8", fake.message_or_filter)
+        mark_read.assert_called_once_with(7, 8)
 
     def test_share_post_blocks_safety_hidden_recipients(self):
         class Result:
@@ -2234,6 +3647,100 @@ class AppRouteTests(unittest.TestCase):
 
         filter_users.assert_called_once()
         self.assertEqual([user["id"] for user in rendered["users"]], [9])
+
+    def test_api_share_send_validates_and_sends_dm(self):
+        class Result:
+            def __init__(self, data=None):
+                self.data = data or []
+
+        class FakeTable:
+            def __init__(self, db, name):
+                self.db = db
+                self.name = name
+                self.payload = None
+
+            def insert(self, payload):
+                self.payload = payload
+                return self
+
+            def execute(self):
+                if self.name == "messages":
+                    self.db.message_payloads.append(self.payload)
+                    return Result([{"id": 77}])
+                return Result()
+
+        class FakeSupabase:
+            def __init__(self):
+                self.message_payloads = []
+
+            def table(self, name):
+                return FakeTable(self, name)
+
+        viewer = {"id": 7, "username": "viewer", "display_name": "Viewer", "profile_photo_url": ""}
+        token = self.csrf()
+
+        with patch.object(zapp, "get_current_user", return_value=viewer):
+            missing = self.client.post(
+                "/api/share/send",
+                json={"receiver_id": "8"},
+                headers={"X-CSRF-Token": token},
+            )
+            self.assertEqual(missing.status_code, 400)
+            self.assertFalse(missing.get_json()["success"])
+
+            self_send = self.client.post(
+                "/api/share/send",
+                json={"receiver_id": "7", "url": "https://lvlapp.vercel.app/reels#reel-3"},
+                headers={"X-CSRF-Token": token},
+            )
+            self.assertEqual(self_send.status_code, 400)
+            self.assertIn("someone else", self_send.get_json()["error"])
+
+        blocked_fake = FakeSupabase()
+        with patch.object(zapp, "get_current_user", return_value=viewer), \
+             patch.object(zapp, "supabase", blocked_fake), \
+             patch.object(zapp, "interaction_blocked", return_value=True):
+            blocked = self.client.post(
+                "/api/share/send",
+                json={"receiver_id": "8", "url": "https://lvlapp.vercel.app/reels#reel-3"},
+                headers={"X-CSRF-Token": token},
+            )
+            self.assertEqual(blocked.status_code, 403)
+            self.assertEqual(blocked_fake.message_payloads, [])
+
+        duplicate_fake = FakeSupabase()
+        with patch.object(zapp, "get_current_user", return_value=viewer), \
+             patch.object(zapp, "supabase", duplicate_fake), \
+             patch.object(zapp, "interaction_blocked", return_value=False), \
+             patch.object(zapp, "recent_duplicate_submission", return_value=True):
+            duplicate = self.client.post(
+                "/api/share/send",
+                json={"receiver_id": "8", "url": "https://lvlapp.vercel.app/reels#reel-3"},
+                headers={"X-CSRF-Token": token},
+            )
+            self.assertEqual(duplicate.status_code, 409)
+            self.assertEqual(duplicate_fake.message_payloads, [])
+
+        fake = FakeSupabase()
+        with patch.object(zapp, "get_current_user", return_value=viewer), \
+             patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "interaction_blocked", return_value=False), \
+             patch.object(zapp, "recent_duplicate_submission", return_value=False), \
+             patch.object(zapp, "create_notification") as notify:
+            response = self.client.post(
+                "/api/share/send",
+                json={"receiver_id": "8", "url": "https://lvlapp.vercel.app/reels#reel-3"},
+                headers={"X-CSRF-Token": token},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["success"])
+        self.assertEqual(fake.message_payloads, [{
+            "sender_id": 7,
+            "receiver_id": 8,
+            "content": "Check this out! https://lvlapp.vercel.app/reels#reel-3",
+        }])
+        notify.assert_called_once_with(8, 7, 'message', message_id=77)
 
     def test_onboarding_skips_blocked_follow_ids(self):
         class Result:
@@ -2391,6 +3898,7 @@ class AppRouteTests(unittest.TestCase):
                 target_user=target,
                 conversations=[],
                 all_users=[],
+                has_older_messages=True,
                 messages_list=[{
                     "id": 42,
                     "sender_id": 7,
@@ -2405,6 +3913,7 @@ class AppRouteTests(unittest.TestCase):
 
         self.assertIn('data-delete-message-url="/delete_message"', html)
         self.assertIn('data-message-id="42"', html)
+        self.assertIn('data-load-older-messages', html)
         self.assertIn('delete_for_me', html)
 
     def test_messages_empty_state_restores_discovery_content(self):
@@ -2559,6 +4068,82 @@ class AppRouteTests(unittest.TestCase):
             "attachment_name": None
         }, (("id", 42),)), fake.calls)
 
+    def test_delete_message_removes_private_attachment_file(self):
+        class Result:
+            def __init__(self, data=None):
+                self.data = data or []
+
+        class FakeTable:
+            def __init__(self, db, name):
+                self.db = db
+                self.name = name
+                self.action = None
+                self.values = None
+                self.filters = []
+
+            def select(self, *_args, **_kwargs):
+                self.action = "select"
+                return self
+
+            def update(self, values):
+                self.action = "update"
+                self.values = values
+                return self
+
+            def eq(self, key, value):
+                self.filters.append((key, value))
+                return self
+
+            def execute(self):
+                if self.name == "messages" and self.action == "select":
+                    return Result([{
+                        "id": 42,
+                        "sender_id": 7,
+                        "receiver_id": 8,
+                        "created_at": datetime.now(timezone.utc).isoformat(),
+                        "attachment_url": "/attachment/42",
+                        "attachment_name": "Report.pdf",
+                    }])
+                self.db.calls.append((self.name, self.action, self.values, tuple(self.filters)))
+                return Result()
+
+        class FakeSupabase:
+            def __init__(self):
+                self.calls = []
+
+            def table(self, name):
+                return FakeTable(self, name)
+
+        fake = FakeSupabase()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            upload_dir = os.path.join(tmpdir, "uploads", "attachments")
+            os.makedirs(upload_dir, exist_ok=True)
+            attachment_path = os.path.join(upload_dir, "42.pdf")
+            with open(attachment_path, "wb") as attachment_file:
+                attachment_file.write(b"%PDF-1.4")
+
+            with self.client.session_transaction() as sess:
+                sess["csrf_token"] = "token"
+            with patch.object(zapp.app, "root_path", tmpdir), \
+                 patch.object(zapp, "get_current_user", return_value={"id": 7, "username": "viewer"}), \
+                 patch.object(zapp, "supabase", fake):
+                response = self.client.post("/delete_message", data={
+                    "csrf_token": "token",
+                    "message_id": "42",
+                    "delete_type": "everyone",
+                    "redirect": "/messages?u=demo",
+                })
+
+            self.assertEqual(response.status_code, 302)
+            self.assertFalse(os.path.exists(attachment_path))
+            self.assertIn(("messages", "update", {
+                "content": "This message was deleted",
+                "deleted_for_everyone": True,
+                "attachment_url": None,
+                "attachment_type": None,
+                "attachment_name": None
+            }, (("id", 42),)), fake.calls)
+
     def test_delete_message_rejects_non_participant(self):
         class Result:
             def __init__(self, data=None):
@@ -2613,6 +4198,241 @@ class AppRouteTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertNotIn(("messages", "delete", (("id", 42),)), fake.calls)
+
+    def test_download_attachment_requires_participant_and_serves_private_file(self):
+        class Result:
+            def __init__(self, data=None):
+                self.data = data or []
+
+        class FakeTable:
+            def __init__(self, row):
+                self.row = row
+
+            def select(self, *_args, **_kwargs):
+                return self
+
+            def eq(self, *_args, **_kwargs):
+                return self
+
+            def execute(self):
+                return Result([self.row])
+
+        row = {
+            "id": 91,
+            "sender_id": 7,
+            "receiver_id": 8,
+            "attachment_url": "/attachment/91",
+            "attachment_name": "Report.pdf",
+            "deleted_for_everyone": False,
+            "deleted_by_sender": False,
+            "deleted_by_receiver": False,
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            upload_dir = os.path.join(tmpdir, "uploads", "attachments")
+            os.makedirs(upload_dir, exist_ok=True)
+            with open(os.path.join(upload_dir, "91.pdf"), "wb") as attachment_file:
+                attachment_file.write(b"%PDF-1.4")
+
+            with patch.object(zapp.app, "root_path", tmpdir), \
+                 patch.object(zapp, "supabase", SimpleNamespace(table=lambda _name: FakeTable(row))), \
+                 patch.object(zapp, "get_current_user", return_value={"id": 7, "username": "sender"}):
+                allowed = self.client.get("/attachment/91")
+                allowed_data = allowed.get_data()
+                allowed.close()
+
+            with patch.object(zapp.app, "root_path", tmpdir), \
+                 patch.object(zapp, "supabase", SimpleNamespace(table=lambda _name: FakeTable(row))), \
+                 patch.object(zapp, "get_current_user", return_value={"id": 9, "username": "stranger"}):
+                denied = self.client.get("/attachment/91")
+
+        self.assertEqual(allowed.status_code, 200)
+        self.assertEqual(allowed_data, b"%PDF-1.4")
+        self.assertEqual(denied.status_code, 403)
+
+    def test_download_attachment_streams_supabase_private_file(self):
+        class Result:
+            def __init__(self, data=None):
+                self.data = data or []
+
+        class FakeTable:
+            def select(self, *_args, **_kwargs):
+                return self
+
+            def eq(self, *_args, **_kwargs):
+                return self
+
+            def execute(self):
+                return Result([{
+                    "id": 91,
+                    "sender_id": 7,
+                    "receiver_id": 8,
+                    "attachment_url": "/attachment/91",
+                    "attachment_name": "Report.pdf",
+                    "deleted_for_everyone": False,
+                    "deleted_by_sender": False,
+                    "deleted_by_receiver": False,
+                }])
+
+        class FakeBucket:
+            def __init__(self):
+                self.downloads = []
+
+            def download(self, path):
+                self.downloads.append(path)
+                return b"%PDF-1.4"
+
+        class FakeStorage:
+            def __init__(self, bucket):
+                self.bucket = bucket
+
+            def from_(self, name):
+                self.selected = name
+                return self.bucket
+
+        bucket = FakeBucket()
+        fake_supabase = SimpleNamespace(
+            table=lambda _name: FakeTable(),
+            storage=FakeStorage(bucket),
+        )
+
+        with patch.dict(zapp.app.config, {"TESTING": False}), \
+             patch.object(zapp, "supabase", fake_supabase), \
+             patch.object(zapp, "get_current_user", return_value={"id": 7, "username": "sender"}):
+            response = self.client.get("/attachment/91")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, b"%PDF-1.4")
+        self.assertEqual(bucket.downloads, [zapp.attachment_storage_path("91.pdf")])
+
+    def test_delete_post_updates_only_owner_with_timezone_timestamp(self):
+        class Result:
+            def __init__(self, data=None):
+                self.data = data or []
+
+        class FakeTable:
+            def __init__(self, db, name):
+                self.db = db
+                self.name = name
+                self.action = None
+                self.values = None
+                self.filters = []
+
+            def select(self, *_args, **_kwargs):
+                self.action = "select"
+                return self
+
+            def update(self, values):
+                self.action = "update"
+                self.values = values
+                return self
+
+            def eq(self, key, value):
+                self.filters.append((key, value))
+                return self
+
+            def execute(self):
+                if self.name == "posts" and self.action == "select":
+                    return Result([self.db.post_row])
+                if self.name == "posts" and self.action == "update":
+                    self.db.updates.append((self.values, tuple(self.filters)))
+                return Result()
+
+        class FakeSupabase:
+            def __init__(self, post_row):
+                self.post_row = post_row
+                self.updates = []
+
+            def table(self, name):
+                return FakeTable(self, name)
+
+        viewer = {"id": 7, "username": "viewer"}
+        token = self.csrf()
+
+        non_owner = FakeSupabase({"id": 42, "user_id": 8})
+        with patch.object(zapp, "get_current_user", return_value=viewer), \
+             patch.object(zapp, "supabase", non_owner):
+            response = self.client.post("/delete_post", data={"csrf_token": token, "post_id": "42"})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(non_owner.updates, [])
+
+        owned = FakeSupabase({"id": 42, "user_id": 7})
+        with patch.object(zapp, "get_current_user", return_value=viewer), \
+             patch.object(zapp, "supabase", owned):
+            response = self.client.post("/delete_post", data={"csrf_token": token, "post_id": "42"})
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(len(owned.updates), 1)
+        deleted_at = owned.updates[0][0]["deleted_at"]
+        self.assertIsNotNone(datetime.fromisoformat(deleted_at).tzinfo)
+        self.assertEqual(owned.updates[0][1], (("id", 42),))
+
+    def test_delete_reel_updates_only_owner_with_timezone_timestamp(self):
+        class Result:
+            def __init__(self, data=None):
+                self.data = data or []
+
+        class FakeTable:
+            def __init__(self, db, name):
+                self.db = db
+                self.name = name
+                self.action = None
+                self.values = None
+                self.filters = []
+
+            def select(self, *_args, **_kwargs):
+                self.action = "select"
+                return self
+
+            def update(self, values):
+                self.action = "update"
+                self.values = values
+                return self
+
+            def eq(self, key, value):
+                self.filters.append((key, value))
+                return self
+
+            def is_(self, key, value):
+                self.filters.append((key, value))
+                return self
+
+            def execute(self):
+                if self.name == "reels" and self.action == "select":
+                    return Result([self.db.reel_row])
+                if self.name == "reels" and self.action == "update":
+                    self.db.updates.append((self.values, tuple(self.filters)))
+                return Result()
+
+        class FakeSupabase:
+            def __init__(self, reel_row):
+                self.reel_row = reel_row
+                self.updates = []
+
+            def table(self, name):
+                return FakeTable(self, name)
+
+        viewer = {"id": 7, "username": "viewer"}
+        token = self.csrf()
+
+        non_owner = FakeSupabase({"id": 42, "user_id": 8})
+        with patch.object(zapp, "get_current_user", return_value=viewer), \
+             patch.object(zapp, "supabase", non_owner):
+            response = self.client.post("/reels/42/delete", data={"csrf_token": token})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(non_owner.updates, [])
+
+        owned = FakeSupabase({"id": 42, "user_id": 7})
+        with patch.object(zapp, "get_current_user", return_value=viewer), \
+             patch.object(zapp, "supabase", owned):
+            response = self.client.post("/reels/42/delete", data={"csrf_token": token})
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(len(owned.updates), 1)
+        self.assertEqual(owned.updates[0][0]["status"], "deleted")
+        deleted_at = owned.updates[0][0]["deleted_at"]
+        self.assertIsNotNone(datetime.fromisoformat(deleted_at).tzinfo)
+        self.assertEqual(owned.updates[0][1], (("id", 42),))
 
     def test_delete_account_checks_password_and_clears_session(self):
         class Result:
@@ -2796,6 +4616,96 @@ class AppRouteTests(unittest.TestCase):
             self.assertTrue(res.headers['Location'].endswith("/level-guide#contact"))
             self.assertEqual(len(fake_table.inserted), 1)
             self.assertEqual(fake_table.inserted[0]["subject"], "Suggestion")
+
+    def test_careers_form_requires_login_and_saves_application(self):
+        res = self.client.post("/guide/careers", data={
+            "csrf_token": self.csrf(),
+            "name": "Sina",
+            "email": "sina@example.com",
+            "position": "Backend Engineer",
+            "message": "I can help with backend systems."
+        })
+        self.assertEqual(res.status_code, 302)
+        self.assertTrue(res.headers['Location'].endswith("/auth"))
+
+        user = {"id": 8, "username": "sina", "display_name": "Sina", "email": "sina@example.com"}
+
+        class FakeResponse:
+            def __init__(self, data=None):
+                self.data = data or []
+
+        class FakeTable:
+            def __init__(self, data=None):
+                self.data = data or []
+                self.inserted = []
+                self.filters = []
+            def select(self, *args, **kwargs):
+                return self
+            def eq(self, key, value):
+                self.filters.append((key, value))
+                return self
+            def limit(self, *args, **kwargs):
+                return self
+            def insert(self, payload):
+                self.inserted.append(payload)
+                return self
+            def execute(self):
+                return FakeResponse(self.data)
+
+        positions_table = FakeTable([{"id": "position-1"}])
+        applications_table = FakeTable()
+
+        class FakeSupabase:
+            def table(self, name):
+                if name == 'job_positions':
+                    return positions_table
+                if name == 'job_applications':
+                    return applications_table
+                return None
+
+        with self.client.session_transaction() as sess:
+            sess['user_id'] = user['id']
+
+        with patch.object(zapp, "get_current_user", return_value=user), \
+             patch.object(zapp, "supabase", FakeSupabase()):
+            res = self.client.post("/guide/careers", data={
+                "csrf_token": self.csrf(),
+                "name": "Sina",
+                "email": "invalid-email",
+                "position": "Backend Engineer",
+                "message": "I can help with backend systems."
+            })
+            self.assertEqual(res.status_code, 302)
+            self.assertTrue(res.headers['Location'].endswith("/level-guide#careers"))
+            self.assertEqual(applications_table.inserted, [])
+
+            res = self.client.post("/guide/careers", data={
+                "csrf_token": self.csrf(),
+                "name": "Sina",
+                "email": "sina@example.com",
+                "position": "Backend Engineer",
+                "message": "I can help with backend systems.",
+                "cv": (io.BytesIO(b"bad executable"), "resume.exe")
+            })
+            self.assertEqual(res.status_code, 302)
+            self.assertTrue(res.headers['Location'].endswith("/level-guide#careers"))
+            self.assertEqual(applications_table.inserted, [])
+
+            res = self.client.post("/guide/careers", data={
+                "csrf_token": self.csrf(),
+                "name": "Sina",
+                "email": "sina@example.com",
+                "position": "Backend Engineer",
+                "message": "I can help with backend systems."
+            })
+
+        self.assertEqual(res.status_code, 302)
+        self.assertTrue(res.headers['Location'].endswith("/level-guide#careers"))
+        self.assertEqual(positions_table.filters, [("title", "Backend Engineer")])
+        self.assertEqual(len(applications_table.inserted), 1)
+        self.assertEqual(applications_table.inserted[0]["position_id"], "position-1")
+        self.assertEqual(applications_table.inserted[0]["position_title"], "Backend Engineer")
+        self.assertIsNone(applications_table.inserted[0]["cv_url"])
 
     def test_verification_request_cooldown_and_submission(self):
         res = self.client.get("/request_verification")

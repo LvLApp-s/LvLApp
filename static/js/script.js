@@ -153,6 +153,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const clearImageBtn = composer.querySelector('[data-clear-image]');
         const maxLen = textarea ? parseInt(textarea.getAttribute('maxlength') || '280', 10) : 280;
         let previewUrl = null;
+        const draftListUrl = composer.dataset.draftListUrl;
+        const draftSaveUrl = composer.dataset.draftSaveUrl;
+        const draftDeleteUrl = composer.dataset.draftDeleteUrl;
+        const draftIdInput = composer.querySelector('[data-draft-id]');
+        const draftClearImageInput = composer.querySelector('[data-draft-clear-image]');
+        const saveDraftBtn = composer.querySelector('[data-save-draft]');
+        const discardDraftBtn = composer.querySelector('[data-discard-draft]');
+        const draftPicker = composer.querySelector('[data-draft-picker]');
+        const draftStatus = composer.querySelector('[data-draft-status]');
+        const csrfTokenInput = composer.querySelector('input[name="csrf_token"]');
+        let drafts = [];
+        let draftImageUrl = null;
+        let draftImageCleared = false;
+        let savingDraft = false;
+        let autosaveTimer = null;
+        let lastSavedText = '';
 
         if (textarea && charCount) {
             const updateComposerState = () => {
@@ -161,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const t = (window.LvLI18n && window.LvLI18n.TRANSLATIONS && window.LvLI18n.TRANSLATIONS[lang]) || {};
                 const suffix = t.composer_char_count_suffix || 'left';
                 charCount.textContent = `${remaining} ${suffix}`;
-                const hasImage = imageInput && imageInput.files && imageInput.files.length > 0;
+                const hasImage = (imageInput && imageInput.files && imageInput.files.length > 0) || Boolean(draftImageUrl);
 
                 if (remaining < 0) {
                     charCount.style.color = 'var(--error-color)';
@@ -176,6 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // auto resize textarea
                 textarea.style.height = 'auto';
                 textarea.style.height = (textarea.scrollHeight) + 'px';
+                updateDraftControls();
             };
 
             const clearImagePreview = () => {
@@ -192,6 +209,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if (imagePreviewImg) imagePreviewImg.removeAttribute('src');
                 if (imagePreview) imagePreview.hidden = true;
+                draftImageUrl = null;
+                draftImageCleared = true;
+                if (draftClearImageInput) draftClearImageInput.value = '1';
                 updateComposerState();
             };
 
@@ -207,6 +227,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     URL.revokeObjectURL(previewUrl);
                     previewUrl = null;
                 }
+                draftImageUrl = null;
+                draftImageCleared = false;
+                if (draftClearImageInput) draftClearImageInput.value = '0';
                 if (imagePreview && imagePreviewImg && file.type && file.type.startsWith('image/')) {
                     previewUrl = URL.createObjectURL(file);
                     imagePreviewImg.src = previewUrl;
@@ -216,15 +239,209 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
 
-            textarea.addEventListener('input', updateComposerState);
+            const setDraftStatus = (message, isError = false) => {
+                if (!draftStatus) return;
+                draftStatus.textContent = message || '';
+                draftStatus.style.color = isError ? 'var(--error-color)' : 'var(--text-muted)';
+            };
+
+            const currentDraftId = () => draftIdInput ? draftIdInput.value.trim() : '';
+
+            function updateDraftControls() {
+                const hasContent = textarea.value.trim().length > 0 || Boolean(draftImageUrl) || (imageInput && imageInput.files && imageInput.files.length > 0);
+                if (saveDraftBtn) saveDraftBtn.disabled = savingDraft || !hasContent || textarea.value.length > maxLen;
+                if (discardDraftBtn) discardDraftBtn.hidden = !currentDraftId() && !hasContent;
+            }
+
+            const showDraftImage = (imageUrl) => {
+                draftImageUrl = imageUrl || null;
+                draftImageCleared = false;
+                if (draftClearImageInput) draftClearImageInput.value = '0';
+                if (!imagePreview || !imagePreviewImg || !draftImageUrl) return;
+                if (previewUrl) {
+                    URL.revokeObjectURL(previewUrl);
+                    previewUrl = null;
+                }
+                if (imageInput) imageInput.value = '';
+                imagePreviewImg.src = draftImageUrl;
+                imagePreview.hidden = false;
+                if (imageLabel) imageLabel.textContent = 'Saved image attached';
+            };
+
+            const renderDraftPicker = () => {
+                if (!draftPicker) return;
+                const selectedId = currentDraftId();
+                draftPicker.innerHTML = '<option value="">Drafts</option>';
+                drafts.forEach((draft) => {
+                    const option = document.createElement('option');
+                    option.value = String(draft.id);
+                    const label = (draft.content || '').trim() || (draft.image_url ? 'Image draft' : 'Untitled draft');
+                    option.textContent = label.length > 40 ? `${label.slice(0, 40)}...` : label;
+                    draftPicker.appendChild(option);
+                });
+                draftPicker.value = selectedId;
+                draftPicker.hidden = drafts.length === 0;
+            };
+
+            const rememberDraft = (draft) => {
+                if (!draft || !draft.id) return;
+                const existingIndex = drafts.findIndex((item) => String(item.id) === String(draft.id));
+                if (existingIndex >= 0) {
+                    drafts.splice(existingIndex, 1);
+                }
+                drafts.unshift(draft);
+                drafts = drafts.slice(0, 20);
+                renderDraftPicker();
+            };
+
+            const saveCurrentDraft = async (silent = false) => {
+                if (!draftSaveUrl || savingDraft) return;
+                const content = textarea.value.trim();
+                const selectedFile = imageInput && imageInput.files && imageInput.files.length ? imageInput.files[0] : null;
+                if (!content && !selectedFile && !draftImageUrl && !draftImageCleared) return;
+
+                savingDraft = true;
+                updateDraftControls();
+                if (!silent) setDraftStatus('Saving...');
+
+                const formData = new FormData();
+                formData.append('content', content);
+                if (currentDraftId()) formData.append('draft_id', currentDraftId());
+                if (draftImageCleared) formData.append('clear_image', '1');
+                if (selectedFile) formData.append('image', selectedFile);
+
+                try {
+                    const headers = { 'Accept': 'application/json' };
+                    if (csrfTokenInput) headers['X-CSRF-Token'] = csrfTokenInput.value;
+                    const response = await fetch(draftSaveUrl, {
+                        method: 'POST',
+                        body: formData,
+                        headers
+                    });
+                    const result = await response.json();
+                    if (!response.ok || !result.success || !result.draft) {
+                        throw new Error(result.error || 'Could not save draft.');
+                    }
+                    if (draftIdInput) draftIdInput.value = String(result.draft.id || '');
+                    draftImageUrl = result.draft.image_url || null;
+                    draftImageCleared = false;
+                    if (draftClearImageInput) draftClearImageInput.value = '0';
+                    if (selectedFile && imageInput) imageInput.value = '';
+                    if (draftImageUrl) showDraftImage(draftImageUrl);
+                    rememberDraft(result.draft);
+                    lastSavedText = content;
+                    setDraftStatus('Draft saved');
+                } catch (error) {
+                    console.error('Draft save failed:', error);
+                    setDraftStatus(error.message || 'Draft save failed', true);
+                    if (!silent) showAppToast(error.message || 'Draft save failed', 'error');
+                } finally {
+                    savingDraft = false;
+                    updateDraftControls();
+                }
+            };
+
+            const loadDrafts = async () => {
+                if (!draftListUrl) return;
+                try {
+                    const response = await fetch(draftListUrl, { headers: { 'Accept': 'application/json' } });
+                    const result = await response.json();
+                    if (!response.ok || !result.success || !Array.isArray(result.drafts)) return;
+                    drafts = result.drafts;
+                    renderDraftPicker();
+                } catch (error) {
+                    console.error('Draft load failed:', error);
+                }
+            };
+
+            const restoreDraft = (draftId) => {
+                const draft = drafts.find((item) => String(item.id) === String(draftId));
+                if (!draft) return;
+                if (draftIdInput) draftIdInput.value = String(draft.id);
+                textarea.value = draft.content || '';
+                lastSavedText = textarea.value.trim();
+                if (draft.image_url) {
+                    showDraftImage(draft.image_url);
+                } else {
+                    draftImageUrl = null;
+                    draftImageCleared = false;
+                    if (draftClearImageInput) draftClearImageInput.value = '0';
+                    if (imagePreviewImg) imagePreviewImg.removeAttribute('src');
+                    if (imagePreview) imagePreview.hidden = true;
+                }
+                textarea.dispatchEvent(new Event('input'));
+                textarea.focus();
+                setDraftStatus('Draft restored');
+            };
+
+            const discardCurrentDraft = async () => {
+                const draftId = currentDraftId();
+                if (draftId && draftDeleteUrl) {
+                    const formData = new FormData();
+                    formData.append('draft_id', draftId);
+                    try {
+                        const headers = { 'Accept': 'application/json' };
+                        if (csrfTokenInput) headers['X-CSRF-Token'] = csrfTokenInput.value;
+                        const response = await fetch(draftDeleteUrl, {
+                            method: 'POST',
+                            body: formData,
+                            headers
+                        });
+                        const result = await response.json();
+                        if (!response.ok || !result.success) {
+                            throw new Error(result.error || 'Could not discard draft.');
+                        }
+                        drafts = drafts.filter((item) => String(item.id) !== String(draftId));
+                    } catch (error) {
+                        console.error('Draft discard failed:', error);
+                        showAppToast(error.message || 'Could not discard draft.', 'error');
+                        return;
+                    }
+                }
+                if (draftIdInput) draftIdInput.value = '';
+                textarea.value = '';
+                lastSavedText = '';
+                clearImagePreview();
+                draftImageCleared = false;
+                if (draftClearImageInput) draftClearImageInput.value = '0';
+                renderDraftPicker();
+                setDraftStatus('Draft discarded');
+                textarea.dispatchEvent(new Event('input'));
+            };
+
+            const scheduleDraftAutosave = () => {
+                if (!draftSaveUrl) return;
+                window.clearTimeout(autosaveTimer);
+                const content = textarea.value.trim();
+                if (!content || content === lastSavedText || textarea.value.length > maxLen) return;
+                autosaveTimer = window.setTimeout(() => saveCurrentDraft(true), 1500);
+            };
+
+            textarea.addEventListener('input', () => {
+                updateComposerState();
+                scheduleDraftAutosave();
+            });
             if (imageInput) {
                 imageInput.addEventListener('change', () => {
                     refreshImagePreview();
                     updateComposerState();
+                    scheduleDraftAutosave();
                 });
             }
             if (clearImageBtn) {
-                clearImageBtn.addEventListener('click', clearImagePreview);
+                clearImageBtn.addEventListener('click', () => {
+                    clearImagePreview();
+                    scheduleDraftAutosave();
+                });
+            }
+            if (saveDraftBtn) {
+                saveDraftBtn.addEventListener('click', () => saveCurrentDraft(false));
+            }
+            if (discardDraftBtn) {
+                discardDraftBtn.addEventListener('click', discardCurrentDraft);
+            }
+            if (draftPicker) {
+                draftPicker.addEventListener('change', () => restoreDraft(draftPicker.value));
             }
             composer.addEventListener('submit', (event) => {
                 if (submitBtn && submitBtn.disabled) {
@@ -237,6 +454,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             // trigger on load
             textarea.dispatchEvent(new Event('input'));
+            loadDrafts();
         }
     });
 
@@ -301,14 +519,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Validate file extension
                 const filename = file.name;
                 const ext = filename.substring(filename.lastIndexOf('.')).toLowerCase();
-                const blockedExtensions = [
-                    '.exe', '.bat', '.cmd', '.sh', '.php', '.py', '.js', '.vbs', '.msi', '.scr', '.jar', '.com', '.pif', '.wsf', '.hta', '.cpl'
+                const allowedExtensions = [
+                    '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp',
+                    '.mp4', '.webm', '.mov', '.m4v',
+                    '.mp3', '.wav', '.ogg', '.m4a',
+                    '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt'
                 ];
                 
                 const lang = window.LvLI18n ? window.LvLI18n.getCurrentLang() : 'en';
                 const t = (window.LvLI18n && window.LvLI18n.TRANSLATIONS && window.LvLI18n.TRANSLATIONS[lang]) || {};
 
-                if (blockedExtensions.includes(ext)) {
+                if (!allowedExtensions.includes(ext)) {
                     showAppToast(t.error_unsupported_file || 'This file type is not supported for security reasons.');
                     fileInput.value = '';
                     return;
@@ -479,8 +700,51 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Live Poll refreshing
         const pollUrl = messagesFeed.dataset.messageApi;
+        const loadOlderBtn = messagesFeed.querySelector('[data-load-older-messages]');
+        if (pollUrl && loadOlderBtn) {
+            loadOlderBtn.addEventListener('click', async () => {
+                const firstMessage = messagesFeed.querySelector('[data-message-id]');
+                if (!firstMessage || loadOlderBtn.disabled) return;
+
+                loadOlderBtn.disabled = true;
+                const previousScrollHeight = messagesFeed.scrollHeight;
+                const previousScrollTop = messagesFeed.scrollTop;
+
+                try {
+                    const beforeId = firstMessage.dataset.messageId;
+                    const response = await fetch(`${pollUrl}?before_id=${encodeURIComponent(beforeId)}`, {
+                        headers: { 'Accept': 'application/json' }
+                    });
+                    const result = await response.json();
+                    if (!response.ok || !result.success || !Array.isArray(result.messages)) {
+                        throw new Error(result.error || 'Could not load older messages.');
+                    }
+
+                    const existing = new Set(Array.from(messagesFeed.querySelectorAll('[data-message-id]')).map(el => el.dataset.messageId));
+                    const fragment = document.createDocumentFragment();
+                    result.messages.forEach((message) => {
+                        if (existing.has(String(message.id))) return;
+                        fragment.appendChild(renderMessage(message, message.sender_id === result.viewer_id));
+                    });
+                    if (fragment.childNodes.length) {
+                        messagesFeed.insertBefore(fragment, firstMessage);
+                        messagesFeed.scrollTop = messagesFeed.scrollHeight - previousScrollHeight + previousScrollTop;
+                    }
+                    if (!result.has_more) {
+                        loadOlderBtn.remove();
+                    } else {
+                        loadOlderBtn.disabled = false;
+                    }
+                } catch (error) {
+                    console.error('Older messages load failed:', error);
+                    showAppToast(error.message || 'Could not load older messages.', 'error');
+                    loadOlderBtn.disabled = false;
+                }
+            });
+        }
+
+        // Live Poll refreshing
         if (pollUrl) {
             window.setInterval(async () => {
                 const messageEls = Array.from(messagesFeed.querySelectorAll('[data-message-id]'));
@@ -1207,10 +1471,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function initLiveStatusBadges() {
         const badges = document.querySelectorAll('[data-live-badge]');
-        if (!badges.length) return;
+        const notificationFeed = document.querySelector('[data-notifications-feed]');
+        if (!badges.length && !notificationFeed) return;
 
         let lastNotifCount = null;
         let lastMessageCount = null;
+        let lastNotificationId = notificationFeed
+            ? parseEventId(notificationFeed.dataset.latestNotificationId, 0)
+            : null;
+        let lastMessageId = null;
+        let notificationFeedRefreshing = false;
+
+        const notificationCopy = {
+            like: ['❤️', 'liked your post', 'Open post'],
+            reel_like: ['❤️', 'liked your reel', 'Open clip'],
+            repost: ['🔁', 'reposted your post', 'Open post'],
+            comment: ['💬', 'commented on your post', 'Open post'],
+            comment_reply: ['💬', 'replied to your comment', 'Open post'],
+            comment_like: ['❤️', 'liked your comment', 'Open post'],
+            comment_repost: ['🔁', 'reposted your comment', 'Open post'],
+            reel_comment: ['💬', 'commented on your reel', 'Open clip'],
+            follow: ['👤', 'followed you', 'View profile'],
+            friend_request: ['🤝', 'sent you a friend request', 'View profile'],
+            friend_accept: ['✓', 'accepted your friend request', 'View profile'],
+            message: ['✉️', 'sent you a message', 'Open message'],
+            high_five: ['🖐', 'high-fived you', 'View profile'],
+        };
+
+        function parseEventId(value, fallback = null) {
+            const parsed = Number(value);
+            return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+        }
 
         const formatCount = (count) => {
             const safeCount = Number.isFinite(Number(count)) ? Math.max(0, Number(count)) : 0;
@@ -1220,23 +1511,87 @@ document.addEventListener('DOMContentLoaded', () => {
         const updateBadgeGroup = (name, count) => {
             const safeCount = Number.isFinite(Number(count)) ? Math.max(0, Number(count)) : 0;
 
-            if (name === 'notifications') {
-                if (lastNotifCount !== null && safeCount > lastNotifCount) {
-                    SoundEffects.play('notification');
-                }
-                lastNotifCount = safeCount;
-            } else if (name === 'messages') {
-                if (lastMessageCount !== null && safeCount > lastMessageCount) {
-                    SoundEffects.play('message');
-                }
-                lastMessageCount = safeCount;
-            }
-
             document.querySelectorAll(`[data-live-badge="${name}"]`).forEach((badge) => {
                 badge.hidden = safeCount <= 0;
                 badge.textContent = formatCount(safeCount);
                 badge.setAttribute('aria-label', `${safeCount} unread ${name}`);
             });
+        };
+
+        const notificationUrl = (notification) => {
+            if (notification.post_id) return `/post/${encodeURIComponent(String(notification.post_id))}`;
+            if (notification.reel_id) return notification.reel_url || `/reels#reel-${encodeURIComponent(String(notification.reel_id))}`;
+            if (notification.type === 'message') return notification.message_url || (notification.actor_username ? `/messages?u=${encodeURIComponent(notification.actor_username)}` : '/messages');
+            if (notification.actor_username) return `/profile/${encodeURIComponent(notification.actor_username)}`;
+            return '';
+        };
+
+        const notificationTime = (value) => {
+            const created = new Date(value);
+            if (Number.isNaN(created.getTime())) return 'just now';
+            const seconds = Math.max(0, Math.floor((Date.now() - created.getTime()) / 1000));
+            if (seconds < 60) return 'just now';
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes}m`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours}h`;
+            return created.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        };
+
+        const renderNotificationItem = (notification) => {
+            const info = notificationCopy[notification.type] || ['ℹ️', notification.type || 'sent an update', 'Open'];
+            const actorUsername = notification.actor_username || '';
+            const actorName = notification.actor_summary || notification.actor_name || 'Someone';
+            const actionUrl = notificationUrl(notification);
+            const article = document.createElement('article');
+            article.className = `notification-item ${notification.is_read ? '' : 'unread'} new-notification`.trim();
+            article.dataset.notificationId = String(notification.id || '');
+            article.innerHTML = `
+                <div class="notification-icon type-${escapeHTML(notification.type || 'update')}">${escapeHTML(info[0])}</div>
+                <div class="notification-body">
+                    <div class="notification-header">
+                        <a href="${actorUsername ? `/profile/${encodeURIComponent(actorUsername)}` : '#'}" class="actor-link">
+                            <strong>${escapeHTML(actorName)}</strong>
+                        </a>
+                        <span class="notification-text">${escapeHTML(info[1])}</span>
+                        <span class="time">· ${escapeHTML(notificationTime(notification.created_at))}</span>
+                    </div>
+                    ${actionUrl ? `<a href="${escapeHTML(actionUrl)}" class="notification-action">${escapeHTML(info[2])}</a>` : ''}
+                </div>
+            `;
+            return article;
+        };
+
+        const refreshNotificationFeed = async (sinceId) => {
+            if (!notificationFeed || notificationFeedRefreshing) return null;
+            notificationFeedRefreshing = true;
+            try {
+                const params = new URLSearchParams({ since_id: String(sinceId || 0), limit: '10' });
+                const response = await fetch(`/api/notifications?${params.toString()}`, { headers: { 'Accept': 'application/json' } });
+                if (!response.ok) return null;
+                const result = await response.json();
+                if (!result.success || !Array.isArray(result.notifications)) return result;
+
+                const existingIds = new Set(Array.from(notificationFeed.querySelectorAll('[data-notification-id]')).map((item) => item.dataset.notificationId));
+                const freshNotifications = result.notifications.filter((item) => item && item.id && !existingIds.has(String(item.id)));
+                if (freshNotifications.length) {
+                    const emptyState = notificationFeed.querySelector('[data-notifications-empty]');
+                    if (emptyState) emptyState.remove();
+                    freshNotifications.slice().reverse().forEach((item) => {
+                        notificationFeed.prepend(renderNotificationItem(item));
+                    });
+                }
+
+                const returnedLatestId = parseEventId(result.latest_notification_id, sinceId || 0);
+                const itemLatestId = freshNotifications.reduce((maxId, item) => Math.max(maxId, parseEventId(item.id, 0)), returnedLatestId || 0);
+                notificationFeed.dataset.latestNotificationId = String(itemLatestId || 0);
+                return result;
+            } catch (error) {
+                console.error('Notification feed refresh failed:', error);
+                return null;
+            } finally {
+                notificationFeedRefreshing = false;
+            }
         };
 
         const refresh = async () => {
@@ -1245,8 +1600,44 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!response.ok) return;
                 const result = await response.json();
                 if (!result.success) return;
-                updateBadgeGroup('notifications', result.unread_notifications);
-                updateBadgeGroup('messages', result.unread_messages);
+
+                const notifCount = Number.isFinite(Number(result.unread_notifications)) ? Math.max(0, Number(result.unread_notifications)) : 0;
+                const messageCount = Number.isFinite(Number(result.unread_messages)) ? Math.max(0, Number(result.unread_messages)) : 0;
+                const currentNotificationId = parseEventId(result.latest_notification_id);
+                const currentMessageId = parseEventId(result.latest_message_id);
+                const hasNewNotificationId = lastNotificationId !== null && currentNotificationId !== null && currentNotificationId > lastNotificationId;
+                const hasNewMessageId = lastMessageId !== null && currentMessageId !== null && currentMessageId > lastMessageId;
+
+                if ((hasNewNotificationId || (lastNotifCount !== null && notifCount > lastNotifCount))) {
+                    SoundEffects.play('notification');
+                }
+                if ((hasNewMessageId || (lastMessageCount !== null && messageCount > lastMessageCount))) {
+                    SoundEffects.play('message');
+                }
+
+                const previousNotificationId = lastNotificationId;
+                if (currentMessageId !== null) {
+                    lastMessageId = Math.max(lastMessageId || 0, currentMessageId);
+                }
+
+                if (hasNewNotificationId && notificationFeed) {
+                    const feedResult = await refreshNotificationFeed(previousNotificationId || 0);
+                    if (feedResult && feedResult.success && currentNotificationId !== null) {
+                        const feedLatestId = parseEventId(notificationFeed.dataset.latestNotificationId, currentNotificationId);
+                        lastNotificationId = Math.max(lastNotificationId || 0, feedLatestId || 0, currentNotificationId);
+                    }
+                } else if (currentNotificationId !== null) {
+                    lastNotificationId = Math.max(lastNotificationId || 0, currentNotificationId);
+                }
+                if (notificationFeed && lastNotificationId !== null) {
+                    notificationFeed.dataset.latestNotificationId = String(lastNotificationId);
+                }
+
+                lastNotifCount = notifCount;
+                lastMessageCount = messageCount;
+                updateBadgeGroup('notifications', notifCount);
+                updateBadgeGroup('messages', messageCount);
+                updateBadgeGroup('more', notifCount + messageCount);
             } catch (error) {
                 console.error('Live status refresh failed:', error);
             }

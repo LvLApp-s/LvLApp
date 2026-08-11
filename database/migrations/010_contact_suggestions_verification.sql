@@ -9,7 +9,7 @@ ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'New';
 -- 2. Create verification_requests table
 CREATE TABLE IF NOT EXISTS verification_requests (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id bigint NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     reason text NOT NULL,
     document_url text, -- proof document upload path
     links text, -- social/web links
@@ -26,8 +26,28 @@ ADD COLUMN IF NOT EXISTS is_profile_verified boolean NOT NULL DEFAULT false;
 -- Enable RLS and add basic select/insert policies for verification_requests
 ALTER TABLE verification_requests ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow users to select their own verification requests" ON verification_requests
-    FOR SELECT USING (true);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public'
+          AND tablename = 'verification_requests'
+          AND policyname = 'Allow users to select their own verification requests'
+    ) THEN
+        EXECUTE 'CREATE POLICY "Allow users to select their own verification requests" ON public.verification_requests
+            FOR SELECT USING (true)';
+    END IF;
+END $$;
 
-CREATE POLICY "Allow authenticated insert of verification requests" ON verification_requests
-    FOR INSERT WITH CHECK (true);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public'
+          AND tablename = 'verification_requests'
+          AND policyname = 'Allow authenticated insert of verification requests'
+    ) THEN
+        EXECUTE 'CREATE POLICY "Allow authenticated insert of verification requests" ON public.verification_requests
+            FOR INSERT WITH CHECK (true)';
+    END IF;
+END $$;

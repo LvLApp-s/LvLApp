@@ -39,15 +39,45 @@ ALTER TABLE job_applications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contact_messages ENABLE ROW LEVEL SECURITY;
 
 -- Allow anonymous or authenticated select for active positions
-CREATE POLICY "Allow public select of active positions" ON job_positions
-    FOR SELECT USING (is_active = true);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public'
+          AND tablename = 'job_positions'
+          AND policyname = 'Allow public select of active positions'
+    ) THEN
+        EXECUTE 'CREATE POLICY "Allow public select of active positions" ON public.job_positions
+            FOR SELECT USING (is_active = true)';
+    END IF;
+END $$;
 
 -- Allow anonymous or authenticated insert for applications and messages
-CREATE POLICY "Allow public insert of applications" ON job_applications
-    FOR INSERT WITH CHECK (true);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public'
+          AND tablename = 'job_applications'
+          AND policyname = 'Allow public insert of applications'
+    ) THEN
+        EXECUTE 'CREATE POLICY "Allow public insert of applications" ON public.job_applications
+            FOR INSERT WITH CHECK (true)';
+    END IF;
+END $$;
 
-CREATE POLICY "Allow public insert of contact messages" ON contact_messages
-    FOR INSERT WITH CHECK (true);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public'
+          AND tablename = 'contact_messages'
+          AND policyname = 'Allow public insert of contact messages'
+    ) THEN
+        EXECUTE 'CREATE POLICY "Allow public insert of contact messages" ON public.contact_messages
+            FOR INSERT WITH CHECK (true)';
+    END IF;
+END $$;
 
 -- Allow admins (using service_role or target policies) full access. 
 -- In development, if RLS is enabled without admin policies, use service_role client.

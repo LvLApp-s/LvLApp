@@ -5,7 +5,7 @@ import uuid
 import hashlib
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
-from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory, jsonify, get_flashed_messages
+from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory, jsonify, get_flashed_messages, abort, Response
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import HTTPException
 from dotenv import load_dotenv
@@ -23,36 +23,96 @@ load_dotenv()
 
 from werkzeug.middleware.proxy_fix import ProxyFix
 
+DEFAULT_DEV_SECRET_KEY = "dev-only-insecure-secret"
+
+def env_truthy(value, default=True):
+    if value is None or str(value).strip() == '':
+        return default
+    return str(value).strip().lower() not in {'0', 'false', 'no', 'off'}
+
+def runtime_environment(environ=None):
+    environ = environ or os.environ
+    return (environ.get("FLASK_ENV") or environ.get("APP_ENV") or environ.get("VERCEL_ENV") or '').strip().lower()
+
+def is_production_runtime(environ=None):
+    environ = environ or os.environ
+    if (environ.get("VERCEL") or '').strip() == "1":
+        return True
+    return runtime_environment(environ) in {'production', 'prod'}
+
+def env_value_present(name, environ=None):
+    environ = environ or os.environ
+    return bool((environ.get(name) or '').strip())
+
+def resolve_flask_secret_key(environ=None):
+    environ = environ or os.environ
+    secret_key = (environ.get("FLASK_SECRET_KEY") or '').strip()
+    if secret_key:
+        return secret_key
+    if is_production_runtime(environ):
+        raise RuntimeError("FLASK_SECRET_KEY must be configured in production.")
+    return DEFAULT_DEV_SECRET_KEY
+
+def session_cookie_config(environ=None):
+    environ = environ or os.environ
+    cookie_secure = env_truthy(environ.get("SESSION_COOKIE_SECURE"), default=is_production_runtime(environ))
+    cookie_samesite = (environ.get("SESSION_COOKIE_SAMESITE") or ('None' if cookie_secure else 'Lax')).strip().capitalize()
+    if cookie_samesite not in {'Lax', 'Strict', 'None'}:
+        cookie_samesite = 'None' if cookie_secure else 'Lax'
+    if cookie_samesite == 'None' and not cookie_secure:
+        cookie_samesite = 'Lax'
+    return {
+        'SESSION_COOKIE_HTTPONLY': True,
+        'SESSION_COOKIE_SAMESITE': cookie_samesite,
+        'SESSION_COOKIE_SECURE': cookie_secure,
+    }
+
+def remember_session_lifetime(environ=None):
+    environ = environ or os.environ
+    raw_days = (environ.get("REMEMBER_SESSION_DAYS") or "30").strip()
+    try:
+        days = int(raw_days)
+    except ValueError:
+        days = 30
+    days = min(max(days, 1), 90)
+    return timedelta(days=days)
+
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "super-secret-default-key")
-is_production = os.getenv("VERCEL") == "1" or os.getenv("FLASK_ENV", "").lower() == "production"
-app.config.update(
-    SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE='None' if is_production else 'Lax',
-    SESSION_COOKIE_SECURE=is_production,
-    PERMANENT_SESSION_LIFETIME=timedelta(days=30)
-)
+app.secret_key = resolve_flask_secret_key()
+app.config.update(**session_cookie_config())
+app.permanent_session_lifetime = remember_session_lifetime()
 logging.basicConfig(level=logging.INFO)
 
 url: str = os.getenv("SUPABASE_URL", "")
 key: str = os.getenv("SUPABASE_SECRET", os.getenv("SUPABASE_KEY", ""))
 supabase: Client = create_client(url, key) if url and key else None
+
+def create_oauth_supabase_client():
+    if url and key:
+        return create_client(url, key)
+    return supabase
+
 LOGIN_ATTEMPTS = {}
 LOGIN_WINDOW = timedelta(minutes=10)
 LOGIN_MAX_ATTEMPTS = 5
 PASSWORD_RESET_TOKENS = {}
 PASSWORD_RESET_TTL = timedelta(minutes=30)
 POSTS_PER_PAGE = 10
+POST_DRAFT_LIMIT = 20
+MESSAGES_PAGE_SIZE = 50
 POST_SELECT_QUERY = '*, user:users!posts_user_id_fkey(*), likes(count), comments(count), reposts(count)'
 MAX_IMAGE_BYTES = 50 * 1024 * 1024
 MAX_PROFILE_IMAGE_BYTES = 5 * 1024 * 1024
 ALLOWED_IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif', 'webp'}
 STORAGE_BUCKET = os.getenv("SUPABASE_STORAGE_BUCKET", "lvl-media")
-MAX_VIDEO_BYTES = int(os.getenv("MAX_VIDEO_BYTES", 100 * 1024 * 1024))
+MAX_VIDEO_BYTES = int(os.getenv("MAX_VIDEO_BYTES", 50 * 1024 * 1024))
 ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'webm', 'mov', 'm4v'}
 SUPABASE_VIDEO_BUCKET = os.getenv("SUPABASE_VIDEO_BUCKET", STORAGE_BUCKET)
 LOCAL_IMAGE_UPLOAD_FALLBACK = os.getenv("LOCAL_IMAGE_UPLOAD_FALLBACK", "true").lower() not in {"0", "false", "no"}
+MAX_ATTACHMENT_BYTES = int(os.getenv("MAX_ATTACHMENT_BYTES", 15 * 1024 * 1024))
+SUPABASE_ATTACHMENT_BUCKET = os.getenv("SUPABASE_ATTACHMENT_BUCKET", "lvl-attachments")
+LOCAL_ATTACHMENT_UPLOAD_FALLBACK = env_truthy(os.getenv("LOCAL_ATTACHMENT_UPLOAD_FALLBACK"), default=not is_production_runtime())
 IMAGE_CONTENT_TYPES = {
     'jpg': 'image/jpeg',
     'jpeg': 'image/jpeg',
@@ -65,6 +125,54 @@ VIDEO_CONTENT_TYPES = {
     'webm': 'video/webm',
     'mov': 'video/quicktime',
     'm4v': 'video/x-m4v',
+}
+ATTACHMENT_EXTENSION_TYPES = {
+    'jpg': 'image',
+    'jpeg': 'image',
+    'png': 'image',
+    'gif': 'image',
+    'webp': 'image',
+    'bmp': 'image',
+    'mp4': 'video',
+    'webm': 'video',
+    'mov': 'video',
+    'm4v': 'video',
+    'mp3': 'audio',
+    'wav': 'audio',
+    'ogg': 'audio',
+    'm4a': 'audio',
+    'pdf': 'document',
+    'doc': 'document',
+    'docx': 'document',
+    'xls': 'document',
+    'xlsx': 'document',
+    'ppt': 'document',
+    'pptx': 'document',
+    'txt': 'document',
+}
+ATTACHMENT_CONTENT_TYPES = {
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'png': 'image/png',
+    'gif': 'image/gif',
+    'webp': 'image/webp',
+    'bmp': 'image/bmp',
+    'mp4': 'video/mp4',
+    'webm': 'video/webm',
+    'mov': 'video/quicktime',
+    'm4v': 'video/x-m4v',
+    'mp3': 'audio/mpeg',
+    'wav': 'audio/wav',
+    'ogg': 'audio/ogg',
+    'm4a': 'audio/mp4',
+    'pdf': 'application/pdf',
+    'doc': 'application/msword',
+    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'xls': 'application/vnd.ms-excel',
+    'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'ppt': 'application/vnd.ms-powerpoint',
+    'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'txt': 'text/plain',
 }
 ASSET_VERSION = "103"
 HOME_REEL_PREVIEW_LIMIT = 12
@@ -174,6 +282,28 @@ def unread_message_count(user_id):
     except Exception:
         return 0
 
+def latest_notification_id(user_id):
+    if not user_id or not supabase:
+        return None
+    try:
+        res = supabase.table('notifications').select('id').eq('user_id', user_id).order('id', desc=True).limit(1).execute()
+        if res and res.data:
+            return res.data[0].get('id')
+    except Exception:
+        pass
+    return None
+
+def latest_message_id(user_id):
+    if not user_id or not supabase:
+        return None
+    try:
+        res = supabase.table('messages').select('id').or_(f"sender_id.eq.{user_id},receiver_id.eq.{user_id}").order('id', desc=True).limit(1).execute()
+        if res and res.data:
+            return res.data[0].get('id')
+    except Exception:
+        pass
+    return None
+
 import markupsafe
 
 @app.template_filter('linkify_mentions')
@@ -238,10 +368,10 @@ def parse_int(value):
     except (TypeError, ValueError):
         return None
 
-def env_truthy(value, default=True):
-    if value is None or str(value).strip() == '':
-        return default
-    return str(value).strip().lower() not in {'0', 'false', 'no', 'off'}
+EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+def is_valid_email(value):
+    return bool(EMAIL_PATTERN.match((value or '').strip()))
 
 def mail_settings():
     username = os.getenv("MAIL_USERNAME") or os.getenv("SMTP_USERNAME") or os.getenv("SMTP_FROM")
@@ -269,7 +399,7 @@ def login_attempt_key(username):
     return f"{request.remote_addr or 'local'}:{(username or '').strip().lower()}"
 
 def login_is_limited(username):
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     key = login_attempt_key(username)
     record = LOGIN_ATTEMPTS.get(key, {'count': 0, 'first_seen': now})
     if now - record['first_seen'] > LOGIN_WINDOW:
@@ -278,7 +408,7 @@ def login_is_limited(username):
     return record['count'] >= LOGIN_MAX_ATTEMPTS
 
 def record_login_failure(username):
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     key = login_attempt_key(username)
     record = LOGIN_ATTEMPTS.get(key, {'count': 0, 'first_seen': now})
     if now - record['first_seen'] > LOGIN_WINDOW:
@@ -344,6 +474,29 @@ def set_user_level(username, level):
 def admin_token_is_valid(token):
     expected = os.getenv("LVL_ADMIN_TOKEN", "")
     return bool(expected and token and secrets.compare_digest(str(token), expected))
+
+ADMIN_JOB_TYPES = {'Full-time', 'Internship', 'Part-time'}
+ADMIN_SUGGESTION_STATUSES = {'New', 'Reviewed', 'Planned', 'Closed'}
+ADMIN_VERIFICATION_DECISIONS = {'Approved', 'Rejected'}
+ADMIN_SEARCH_UNSAFE_CHARS = re.compile(r"[%*,(){}\[\];\"'\\]")
+ADMIN_UUID_PATTERN = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+
+def parse_positive_id(value):
+    parsed = parse_int(value)
+    if not parsed or parsed < 1:
+        return None
+    return parsed
+
+def parse_uuid_id(value):
+    value = str(value or '').strip()
+    if not ADMIN_UUID_PATTERN.fullmatch(value):
+        return None
+    return value.lower()
+
+def admin_search_term(value, max_length=80):
+    value = ADMIN_SEARCH_UNSAFE_CHARS.sub(' ', str(value or ''))
+    value = re.sub(r"[\x00-\x1f\x7f]", " ", value)
+    return re.sub(r"\s+", " ", value).strip()[:max_length]
 
 FORCED_LEVEL_ACCOUNT_ALIASES = {'sin', 'sin sin', 'sinsin', 'user sin', 'usersin'}
 FORCED_LEVEL_ACCOUNT_LEVEL = 50
@@ -708,6 +861,12 @@ def get_current_user():
             return None
     return None
 
+def start_user_session(user_id, remember=False):
+    session.clear()
+    session.permanent = bool(remember)
+    session['user_id'] = user_id
+    get_csrf_token()
+
 def handle_db_error(e, default_msg="An error occurred. Please try again."):
     error_msg = str(e)
     if hasattr(e, 'message'):
@@ -899,17 +1058,154 @@ def allowed_image_file(filename):
 def allowed_video_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_VIDEO_EXTENSIONS
 
-def ensure_media_bucket(bucket_name, file_size_limit, allowed_mime_types):
+def attachment_upload_dir():
+    return os.path.join(app.root_path, 'uploads', 'attachments')
+
+def use_supabase_attachment_storage():
+    return bool(supabase and not app.config.get('TESTING'))
+
+def attachment_storage_path(filename):
+    return f"message-attachments/{filename}"
+
+def attachment_content_type(extension):
+    return ATTACHMENT_CONTENT_TYPES.get(extension, 'application/octet-stream')
+
+def attachment_extension(filename):
+    safe_name = secure_filename(filename or '')
+    if not safe_name or '.' not in safe_name:
+        raise ValueError("This file type is not supported for security reasons.")
+    ext = safe_name.rsplit('.', 1)[1].lower()
+    if ext not in ATTACHMENT_EXTENSION_TYPES:
+        raise ValueError("This file type is not supported for security reasons.")
+    return ext
+
+def attachment_display_name(filename, extension):
+    safe_name = secure_filename(filename or f"attachment.{extension}")
+    if not safe_name:
+        safe_name = f"attachment.{extension}"
+    base, current_ext = os.path.splitext(safe_name)
+    if current_ext.lower().lstrip('.') != extension:
+        safe_name = f"{base or 'attachment'}.{extension}"
+    if len(safe_name) > 140:
+        base, current_ext = os.path.splitext(safe_name)
+        safe_name = f"{base[:max(1, 140 - len(current_ext))]}{current_ext}"
+    return safe_name
+
+def attachment_type_for_extension(extension):
+    return ATTACHMENT_EXTENSION_TYPES[extension]
+
+def temporary_attachment_filename(user_id, extension):
+    return f"u{int(user_id)}_{uuid.uuid4().hex}.{extension}"
+
+def parse_temporary_attachment_filename(filename, user_id=None):
+    safe_name = secure_filename(filename or '')
+    match = re.fullmatch(r"u(\d+)_([0-9a-f]{32})\.([a-z0-9]+)", safe_name)
+    if not match:
+        return None
+    owner_id = parse_int(match.group(1))
+    extension = match.group(3)
+    if extension not in ATTACHMENT_EXTENSION_TYPES:
+        return None
+    if user_id is not None and owner_id != parse_int(user_id):
+        return None
+    return {
+        'filename': safe_name,
+        'owner_id': owner_id,
+        'extension': extension,
+        'attachment_type': attachment_type_for_extension(extension),
+    }
+
+def prepare_message_attachment(user_id, temp_filename, attachment_name):
+    parsed = parse_temporary_attachment_filename(temp_filename, user_id=user_id)
+    if not parsed:
+        raise ValueError("Invalid attachment upload. Upload the file again.")
+    temp_storage_path = attachment_storage_path(parsed['filename'])
+    if use_supabase_attachment_storage():
+        try:
+            bucket = supabase.storage.from_(SUPABASE_ATTACHMENT_BUCKET)
+            if bucket.exists(temp_storage_path):
+                return {
+                    **parsed,
+                    'storage': 'supabase',
+                    'storage_path': temp_storage_path,
+                    'display_name': attachment_display_name(attachment_name, parsed['extension']),
+                }
+        except Exception as exc:
+            if not LOCAL_ATTACHMENT_UPLOAD_FALLBACK:
+                raise RuntimeError("Attachment storage is not ready. Try again later.") from exc
+
+    upload_dir = attachment_upload_dir()
+    temp_path = os.path.join(upload_dir, parsed['filename'])
+    if not os.path.exists(temp_path):
+        raise ValueError("Attachment expired or missing. Upload the file again.")
+    return {
+        **parsed,
+        'storage': 'local',
+        'path': temp_path,
+        'display_name': attachment_display_name(attachment_name, parsed['extension']),
+    }
+
+def finalize_message_attachment(pending_attachment, message_id):
+    final_filename = f"{int(message_id)}.{pending_attachment['extension']}"
+    if pending_attachment.get('storage') == 'supabase':
+        final_storage_path = attachment_storage_path(final_filename)
+        supabase.storage.from_(SUPABASE_ATTACHMENT_BUCKET).move(pending_attachment['storage_path'], final_storage_path)
+    else:
+        final_path = os.path.join(attachment_upload_dir(), final_filename)
+        os.replace(pending_attachment['path'], final_path)
+    return url_for('download_attachment', message_id=message_id)
+
+def stored_attachment_filename_for_message(message):
+    message_id = parse_positive_id((message or {}).get('id'))
+    try:
+        extension = attachment_extension((message or {}).get('attachment_name'))
+    except ValueError:
+        extension = None
+    if message_id and extension:
+        return f"{message_id}.{extension}"
+
+    legacy_name = secure_filename(os.path.basename((message or {}).get('attachment_url') or ''))
+    if legacy_name.startswith('temp_'):
+        legacy_name = legacy_name[5:]
+    legacy_temp = parse_temporary_attachment_filename(legacy_name)
+    if legacy_temp:
+        return legacy_temp['filename']
+    return None
+
+def remove_stored_attachment_file(message):
+    filename = stored_attachment_filename_for_message(message)
+    if not filename:
+        return
+    if use_supabase_attachment_storage():
+        try:
+            supabase.storage.from_(SUPABASE_ATTACHMENT_BUCKET).remove([attachment_storage_path(filename)])
+            return
+        except Exception:
+            if not LOCAL_ATTACHMENT_UPLOAD_FALLBACK:
+                raise
+    file_path = os.path.join(attachment_upload_dir(), filename)
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+def ensure_media_bucket(bucket_name, file_size_limit, allowed_mime_types, public=True):
     if not supabase:
         raise RuntimeError("Supabase is not configured.")
     try:
         supabase.storage.get_bucket(bucket_name)
     except Exception:
         supabase.storage.create_bucket(bucket_name, options={
-            "public": True,
+            "public": public,
             "file_size_limit": file_size_limit,
             "allowed_mime_types": allowed_mime_types
         })
+
+def ensure_attachment_bucket():
+    ensure_media_bucket(
+        SUPABASE_ATTACHMENT_BUCKET,
+        MAX_ATTACHMENT_BYTES,
+        sorted(set(ATTACHMENT_CONTENT_TYPES.values())),
+        public=False,
+    )
 
 def ensure_storage_bucket(bucket_name):
     ensure_media_bucket(bucket_name, MAX_IMAGE_BYTES, [
@@ -1248,11 +1544,30 @@ def dedupe_timeline_posts(posts):
         deduped.append(post)
     return deduped
 
+NOTIFICATION_TYPES = {
+    'like',
+    'repost',
+    'comment',
+    'comment_reply',
+    'comment_like',
+    'comment_repost',
+    'reel_like',
+    'reel_comment',
+    'follow',
+    'friend_request',
+    'friend_accept',
+    'message',
+    'high_five',
+}
+
 def create_notification(user_id, actor_id, notif_type, post_id=None, reel_id=None, message_id=None):
     if not user_id or not actor_id or user_id == actor_id:
-        return
+        return False
+    if notif_type not in NOTIFICATION_TYPES:
+        app.logger.warning("Skipped unsupported notification type: %s", notif_type)
+        return False
     if interaction_blocked(actor_id, user_id):
-        return
+        return False
     payload = {
         'user_id': user_id,
         'actor_id': actor_id,
@@ -1266,11 +1581,31 @@ def create_notification(user_id, actor_id, notif_type, post_id=None, reel_id=Non
         payload['message_id'] = message_id
     try:
         supabase.table('notifications').insert(payload).execute()
+        return True
     except Exception:
         if not reel_id:
             raise
         payload.pop('reel_id', None)
         supabase.table('notifications').insert(payload).execute()
+        return True
+
+def format_notification_row(notification, viewer_id):
+    item = dict(notification or {})
+    actor = item.get('actor') or {}
+    item['actor_username'] = actor.get('username', '')
+    item['actor_name'] = actor.get('display_name') or actor.get('username') or 'Someone'
+    item['friendship_status'] = item.get('friendship_status') or 'pending'
+    item['friendship_action_user_id'] = item.get('friendship_action_user_id') or actor.get('id')
+    if item.get('type') == 'message':
+        item['message_url'] = url_for('messages', u=item['actor_username']) if item['actor_username'] else url_for('messages')
+    if item.get('reel_id'):
+        item['reel_url'] = f"{url_for('reels')}#reel-{item['reel_id']}"
+    return item
+
+def visible_notification_rows(rows, viewer_id):
+    rows = list(rows or [])
+    hidden_actor_ids = blocked_user_ids_for_viewer(viewer_id, [item.get('actor_id') for item in rows], include_mutes=False)
+    return [item for item in rows if item.get('actor_id') not in hidden_actor_ids]
 
 def get_feed_posts(viewer_id, limit=POSTS_PER_PAGE, page=1):
     offset = (page - 1) * limit
@@ -1571,6 +1906,55 @@ def get_joined_community_ids(viewer_id):
 def reels_table_not_ready(error):
     text = str(error).lower()
     return 'reels' in text and any(marker in text for marker in ['does not exist', 'schema cache', 'relation', 'not found'])
+
+def post_drafts_table_not_ready(error):
+    text = str(error).lower()
+    return 'post_drafts' in text and any(marker in text for marker in ['does not exist', 'schema cache', 'relation', 'not found'])
+
+def request_data():
+    if request.is_json:
+        data = request.get_json(silent=True)
+        return data if isinstance(data, dict) else {}
+    return request.form
+
+def draft_error_message(error, default="Could not update post drafts."):
+    if post_drafts_table_not_ready(error):
+        return "Post drafts table is not ready. Run database/migrations/013_post_drafts.sql in Supabase."
+    return handle_db_error(error, default)
+
+def get_post_draft_for_user(user_id, draft_id):
+    if not user_id or not draft_id:
+        return None
+    res = supabase.table('post_drafts') \
+        .select('id,user_id,content,image_url,created_at,updated_at') \
+        .eq('id', draft_id) \
+        .eq('user_id', user_id) \
+        .limit(1) \
+        .execute()
+    return res.data[0] if res and res.data else None
+
+def delete_post_draft_for_user(user_id, draft_id):
+    if not user_id or not draft_id:
+        return False
+    res = supabase.table('post_drafts') \
+        .delete() \
+        .eq('id', draft_id) \
+        .eq('user_id', user_id) \
+        .execute()
+    return bool(res and res.data)
+
+def insert_user_post(user_id, content, image_url=None):
+    payload = {
+        'user_id': user_id,
+        'content': content or ''
+    }
+    if image_url:
+        payload['image_url'] = image_url
+    res = supabase.table('posts').insert(payload).execute()
+    post = res.data[0] if res and res.data else {}
+    if post.get('id'):
+        award_xp(user_id, 'post_created', 10, post['id'])
+    return post
 
 def get_demo_reels(count=5):
     demo_author = {
@@ -2044,21 +2428,43 @@ def setup_health_check(label, ready, detail):
 def get_setup_health():
     checks = []
     checks.append(setup_health_check(
+        "Flask secret key",
+        env_value_present("FLASK_SECRET_KEY"),
+        "FLASK_SECRET_KEY is configured." if env_value_present("FLASK_SECRET_KEY") else "Set FLASK_SECRET_KEY in Vercel and local .env before shared testing."
+    ))
+    checks.append(setup_health_check(
+        "Admin token",
+        env_value_present("LVL_ADMIN_TOKEN"),
+        "LVL_ADMIN_TOKEN is configured." if env_value_present("LVL_ADMIN_TOKEN") else "Set LVL_ADMIN_TOKEN before using admin-only backend tools."
+    ))
+    checks.append(setup_health_check(
+        "App base URL",
+        env_value_present("APP_BASE_URL"),
+        "APP_BASE_URL is configured." if env_value_present("APP_BASE_URL") else "Set APP_BASE_URL to the local, preview, or production app URL."
+    ))
+    checks.append(setup_health_check(
+        "OAuth redirect base URL",
+        env_value_present("OAUTH_REDIRECT_BASE_URL") or env_value_present("APP_BASE_URL"),
+        "OAuth redirects have a configured base URL." if (env_value_present("OAUTH_REDIRECT_BASE_URL") or env_value_present("APP_BASE_URL")) else "Set OAUTH_REDIRECT_BASE_URL or APP_BASE_URL for Google OAuth callbacks."
+    ))
+    checks.append(setup_health_check(
         "Supabase connection",
         bool(supabase),
         "Client configured." if supabase else "Add SUPABASE_URL and SUPABASE_SECRET to .env."
     ))
 
-    for table, label in [
-        ('users', 'Users table'),
-        ('posts', 'Posts table'),
-        ('reels', 'Reels table'),
-        ('communities', 'Communities table'),
-        ('user_safety_actions', 'Safety actions table'),
-        ('job_positions', 'Job positions table'),
-        ('job_applications', 'Job applications table'),
-        ('contact_messages', 'Contact messages table'),
-    ]:
+    table_checks = [
+        ('users', 'Users table', 'Run database/000_base_schema.sql in Supabase.'),
+        ('posts', 'Posts table', 'Run database/000_base_schema.sql in Supabase.'),
+        ('reels', 'Reels table', 'Run database/migrations/002_reels.sql in Supabase.'),
+        ('communities', 'Communities table', 'Run database/community_schema.sql in Supabase.'),
+        ('user_safety_actions', 'Safety actions table', 'Run database/migrations/001_product_hardening.sql in Supabase.'),
+        ('job_positions', 'Job positions table', 'Run database/migrations/008_careers_schema.sql in Supabase.'),
+        ('job_applications', 'Job applications table', 'Run database/migrations/008_careers_schema.sql in Supabase.'),
+        ('contact_messages', 'Contact messages table', 'Run database/migrations/010_contact_suggestions_verification.sql in Supabase.'),
+        ('verification_requests', 'Verification requests table', 'Run database/migrations/010_contact_suggestions_verification.sql in Supabase.'),
+    ]
+    for table, label, missing_detail in table_checks:
         if not supabase:
             checks.append(setup_health_check(label, False, "Supabase is not configured."))
             continue
@@ -2066,12 +2472,7 @@ def get_setup_health():
             supabase.table(table).select('id').limit(1).execute()
             checks.append(setup_health_check(label, True, f"The {table} table is queryable."))
         except Exception as exc:
-            if table == 'reels' and reels_table_not_ready(exc):
-                detail = "Run database/migrations/002_reels.sql in Supabase."
-            elif table in ('job_positions', 'job_applications', 'contact_messages'):
-                detail = "Run database/migrations/008_careers_schema.sql in Supabase."
-            else:
-                detail = handle_db_error(exc, f"The {table} table could not be checked.")
+            detail = missing_detail if (table == 'reels' and reels_table_not_ready(exc)) else handle_db_error(exc, missing_detail)
             checks.append(setup_health_check(label, False, detail))
 
     if supabase:
@@ -2100,6 +2501,15 @@ def get_setup_health():
             checks.append(setup_health_check("Media storage bucket", False, f"Create or allow the {STORAGE_BUCKET} Supabase storage bucket."))
     else:
         checks.append(setup_health_check("Media storage bucket", False, "Supabase is not configured."))
+
+    if supabase:
+        try:
+            supabase.storage.get_bucket(SUPABASE_ATTACHMENT_BUCKET)
+            checks.append(setup_health_check("Private attachment bucket", True, f"{SUPABASE_ATTACHMENT_BUCKET} is available."))
+        except Exception:
+            checks.append(setup_health_check("Private attachment bucket", False, f"Create or allow the private {SUPABASE_ATTACHMENT_BUCKET} Supabase storage bucket."))
+    else:
+        checks.append(setup_health_check("Private attachment bucket", False, "Supabase is not configured."))
 
     for relative_path, label in [
         ('static/manifest.json', 'PWA manifest'),
@@ -2416,7 +2826,7 @@ def delete_reel(reel_id):
         else:
             supabase.table('reels').update({
                 'status': 'deleted',
-                'deleted_at': datetime.utcnow().isoformat(),
+                'deleted_at': datetime.now(timezone.utc).isoformat(),
             }).eq('id', reel_id).execute()
             flash("Reel deleted.", "success")
     except Exception as exc:
@@ -2531,8 +2941,7 @@ def find_password_reset_user(account):
     return None
 
 def password_reset_memory_fallback_enabled():
-    app_env = (os.getenv("FLASK_ENV") or os.getenv("APP_ENV") or '').strip().lower()
-    return app_env not in {'production', 'prod'}
+    return not is_production_runtime()
 
 def store_password_reset_token(user_id, raw_token):
     token_hash = password_reset_token_hash(raw_token)
@@ -2617,23 +3026,21 @@ def oauth_start(provider):
     if not provider:
         flash("That social login provider is not supported by LvL.", "error")
         return redirect(url_for('auth'))
-    if not supabase:
+    oauth_client = create_oauth_supabase_client()
+    if not oauth_client:
         flash("Supabase connection is required for social login.", "error")
         return redirect(url_for('auth'))
 
     session['oauth_provider'] = provider
-    state = secrets.token_urlsafe(32)
-    session['oauth_state'] = state
 
     try:
-        response = supabase.auth.sign_in_with_oauth({
+        response = oauth_client.auth.sign_in_with_oauth({
             'provider': provider,
             'options': {
                 'redirect_to': oauth_redirect_url(),
-                'query_params': {'state': state},
             },
         })
-        store_oauth_code_verifier(supabase.auth)
+        store_oauth_code_verifier(oauth_client.auth)
         return redirect(response.url)
     except Exception as exc:
         clear_oauth_flow_session()
@@ -2642,30 +3049,20 @@ def oauth_start(provider):
 
 @app.route('/auth/oauth/callback')
 def oauth_callback():
-    if not supabase:
+    oauth_client = create_oauth_supabase_client()
+    if not supabase or not oauth_client:
         flash("Supabase connection is required for social login.", "error")
         return redirect(url_for('auth'))
 
-    # Handle errors from Supabase/Google - but ignore bad_oauth_state if we have a code
-    # In serverless environments (Vercel), session cookies may not persist between
-    # the oauth_start and oauth_callback requests, causing false bad_oauth_state errors.
+    # Supabase owns the provider OAuth state; LvL only exchanges the returned
+    # PKCE code and bridges the Supabase Auth user into public.users.
     code = request.args.get('code')
-    oauth_error_code = request.args.get('error_code') or ''
     oauth_error = request.args.get('error_description') or request.args.get('error')
 
-    if oauth_error and not (code and oauth_error_code == 'bad_oauth_state'):
-        # Only block on real errors; if we have a code and it's just a state mismatch
-        # (common in serverless), try to proceed with the code exchange anyway.
+    if oauth_error:
         clear_oauth_flow_session()
         flash(f"Social login was cancelled or failed: {oauth_error}", "error")
         return redirect(url_for('auth'))
-
-    expected_state = session.get('oauth_state')
-    returned_state = request.args.get('state')
-    # Skip strict state check in serverless where sessions may not persist
-    if expected_state and returned_state and not secrets.compare_digest(expected_state, returned_state):
-        # Log the mismatch but continue if we have a code — serverless session loss
-        app.logger.warning("OAuth state mismatch (possible serverless session loss), proceeding with code exchange")
 
     if not code:
         clear_oauth_flow_session()
@@ -2674,7 +3071,7 @@ def oauth_callback():
 
     provider = normalize_oauth_provider(session.get('oauth_provider') or 'google')
     try:
-        restore_oauth_code_verifier(supabase.auth)
+        restore_oauth_code_verifier(oauth_client.auth)
         exchange_params = {
             'auth_code': code,
             'redirect_to': oauth_redirect_url(),
@@ -2682,7 +3079,7 @@ def oauth_callback():
         if session.get('oauth_code_verifier'):
             exchange_params['code_verifier'] = session['oauth_code_verifier']
 
-        response = supabase.auth.exchange_code_for_session(exchange_params)
+        response = oauth_client.auth.exchange_code_for_session(exchange_params)
         auth_user = response.user or (response.session.user if response.session else None)
         if not auth_user:
             raise RuntimeError("Supabase did not return a social login user.")
@@ -2698,7 +3095,7 @@ def oauth_callback():
         app_user = first_oauth_user_match(profile)
         if app_user:
             sync_oauth_user_fields(app_user, profile)
-            session['user_id'] = app_user['id']
+            start_user_session(app_user['id'])
             clear_oauth_flow_session(include_pending=True)
             award_xp(app_user['id'], 'daily_login', 5)
             flash(f"Signed in with {oauth_provider_label(profile['provider'])}.", "success")
@@ -2747,8 +3144,7 @@ def oauth_onboarding():
         existing_user = first_oauth_user_match({**profile, 'email': email})
         if existing_user:
             sync_oauth_user_fields(existing_user, profile)
-            session['user_id'] = existing_user['id']
-            session.pop('pending_oauth_profile', None)
+            start_user_session(existing_user['id'])
             award_xp(existing_user['id'], 'daily_login', 5)
             flash("Your social login is now connected to your existing LvL account.", "success")
             return redirect(url_for('index'))
@@ -2779,8 +3175,7 @@ def oauth_onboarding():
         try:
             new_user = supabase.table('users').insert(payload).execute()
             if new_user.data:
-                session['user_id'] = new_user.data[0]['id']
-                session.pop('pending_oauth_profile', None)
+                start_user_session(new_user.data[0]['id'])
                 award_xp(new_user.data[0]['id'], 'account_created', 20)
                 flash(f"Welcome to LvL, {first_name}! Your social login is connected.", "success")
                 return redirect(url_for('index'))
@@ -2804,6 +3199,7 @@ def auth():
         if action == 'login':
             username = request.form.get('username', '')
             password = request.form.get('password', '')
+            remember = request.form.get('remember_me') == '1'
             if not username or not password:
                 flash("Username and password are required.", "error")
                 return render_template('auth.html')
@@ -2819,8 +3215,7 @@ def auth():
                 if res.data:
                     user = res.data[0]
                     if bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
-                        session.permanent = request.form.get('remember_me') == '1'
-                        session['user_id'] = user['id']
+                        start_user_session(user['id'], remember=remember)
                         clear_login_failures(username)
                         award_xp(user['id'], 'daily_login', 5)
                         return redirect(url_for('index'))
@@ -2876,7 +3271,7 @@ def auth():
                 }).execute()
 
                 if new_user.data:
-                    session['user_id'] = new_user.data[0]['id']
+                    start_user_session(new_user.data[0]['id'])
                     award_xp(new_user.data[0]['id'], 'account_created', 20)
                     flash(f"Welcome to LvL, {first_name}! You've earned 20 XP for joining.", "success")
                     return redirect(url_for('index'))
@@ -2949,6 +3344,8 @@ def create_post():
     if not viewer:
         return redirect(url_for('auth'))
 
+    draft_id = parse_int(request.form.get('draft_id'))
+    draft_image_cleared = request.form.get('draft_clear_image') == '1'
     content = request.form.get('content', '').strip()
     intent = request.form.get('intent', 'publish')
     image_url = None
@@ -2958,6 +3355,12 @@ def create_post():
         except (ValueError, RuntimeError) as exc:
             flash(str(exc), "error")
             return redirect(url_for('index'))
+    elif draft_id and not draft_image_cleared:
+        try:
+            draft = get_post_draft_for_user(viewer['id'], draft_id)
+            image_url = (draft.get('image_url') or '').strip() if draft else None
+        except Exception:
+            image_url = None
 
     if content or image_url:
         if len(content) > 280:
@@ -2966,25 +3369,160 @@ def create_post():
             flash("Already posted.", "info")
         else:
             try:
-                payload = {
-                    'user_id': viewer['id'],
-                    'content': content
-                }
                 if intent == 'draft':
-                    payload['status'] = 'draft'
-                    payload['updated_at'] = datetime.now(timezone.utc).isoformat()
-                if image_url:
-                    payload['image_url'] = image_url
-                res = supabase.table('posts').insert(payload).execute()
-                if res.data and intent != 'draft':
-                    award_xp(viewer['id'], 'post_created', 10, res.data[0]['id'])
-                flash("Draft saved." if intent == 'draft' else "Post shared.", "success")
+                    payload = {
+                        'user_id': viewer['id'],
+                        'content': content,
+                        'status': 'draft',
+                        'updated_at': datetime.now(timezone.utc).isoformat()
+                    }
+                    if image_url:
+                        payload['image_url'] = image_url
+                    supabase.table('posts').insert(payload).execute()
+                    flash("Draft saved.", "success")
+                else:
+                    insert_user_post(viewer['id'], content, image_url)
+                    if draft_id:
+                        try:
+                            delete_post_draft_for_user(viewer['id'], draft_id)
+                        except Exception:
+                            app.logger.warning("Published post but could not remove draft %s for user %s", draft_id, viewer['id'])
+                    flash("Post shared.", "success")
             except Exception as e:
                 flash(handle_db_error(e), "error")
     else:
         flash("Post content cannot be empty.", "error")
 
     return redirect(url_for('index'))
+
+@app.route('/api/drafts')
+def api_post_drafts():
+    viewer = get_current_user()
+    if not viewer:
+        return jsonify({'success': False, 'error': 'Authentication required.'}), 401
+
+    try:
+        res = supabase.table('post_drafts') \
+            .select('id,content,image_url,created_at,updated_at') \
+            .eq('user_id', viewer['id']) \
+            .order('updated_at', desc=True) \
+            .limit(POST_DRAFT_LIMIT) \
+            .execute()
+        return jsonify({'success': True, 'drafts': res.data if res and res.data else []})
+    except Exception as exc:
+        return jsonify({'success': False, 'error': draft_error_message(exc, "Could not load post drafts.")}), 400
+
+@app.route('/api/drafts/save', methods=['POST'])
+def api_save_post_draft():
+    viewer = get_current_user()
+    if not viewer:
+        return jsonify({'success': False, 'error': 'Authentication required.'}), 401
+
+    data = request_data()
+    draft_id = parse_int(data.get('draft_id') or data.get('id'))
+    content = (data.get('content') or '').strip()
+    image_url = (data.get('image_url') or '').strip() or None
+    clear_image = str(data.get('clear_image') or '').strip() == '1'
+
+    if request.files.get('image'):
+        try:
+            image_url = upload_image_to_storage(request.files['image'], f"drafts/{viewer['id']}")
+            clear_image = False
+        except (ValueError, RuntimeError) as exc:
+            return jsonify({'success': False, 'error': str(exc)}), 400
+
+    if len(content) > 280:
+        return jsonify({'success': False, 'error': 'Draft cannot exceed 280 characters.'}), 400
+    if image_url and len(image_url) > 2048:
+        return jsonify({'success': False, 'error': 'Draft image URL is too long.'}), 400
+    if not content and not image_url and not clear_image:
+        return jsonify({'success': False, 'error': 'Draft content or image is required.'}), 400
+
+    try:
+        now = datetime.now(timezone.utc).isoformat()
+        if draft_id:
+            payload = {
+                'content': content,
+                'updated_at': now,
+            }
+            if image_url or clear_image:
+                payload['image_url'] = image_url
+            res = supabase.table('post_drafts') \
+                .update(payload) \
+                .eq('id', draft_id) \
+                .eq('user_id', viewer['id']) \
+                .execute()
+            if not res.data:
+                return jsonify({'success': False, 'error': 'Draft not found.'}), 404
+        else:
+            payload = {
+                'user_id': viewer['id'],
+                'content': content,
+                'image_url': image_url,
+                'updated_at': now,
+            }
+            res = supabase.table('post_drafts').insert(payload).execute()
+
+        draft = res.data[0] if res and res.data else {}
+        return jsonify({'success': True, 'draft': draft})
+    except Exception as exc:
+        return jsonify({'success': False, 'error': draft_error_message(exc)}), 400
+
+@app.route('/api/drafts/delete', methods=['POST'])
+def api_delete_post_draft():
+    viewer = get_current_user()
+    if not viewer:
+        return jsonify({'success': False, 'error': 'Authentication required.'}), 401
+
+    data = request_data()
+    draft_id = parse_int(data.get('draft_id') or data.get('id'))
+    if not draft_id:
+        return jsonify({'success': False, 'error': 'Draft id is required.'}), 400
+
+    try:
+        if not delete_post_draft_for_user(viewer['id'], draft_id):
+            return jsonify({'success': False, 'error': 'Draft not found.'}), 404
+        return jsonify({'success': True, 'deleted_id': draft_id})
+    except Exception as exc:
+        return jsonify({'success': False, 'error': draft_error_message(exc, "Could not delete post draft.")}), 400
+
+@app.route('/api/drafts/publish', methods=['POST'])
+def api_publish_post_draft():
+    viewer = get_current_user()
+    if not viewer:
+        return jsonify({'success': False, 'error': 'Authentication required.'}), 401
+
+    data = request_data()
+    draft_id = parse_int(data.get('draft_id') or data.get('id'))
+    if not draft_id:
+        return jsonify({'success': False, 'error': 'Draft id is required.'}), 400
+
+    try:
+        draft = get_post_draft_for_user(viewer['id'], draft_id)
+        if not draft:
+            return jsonify({'success': False, 'error': 'Draft not found.'}), 404
+
+        content = (draft.get('content') or '').strip()
+        image_url = (draft.get('image_url') or '').strip() or None
+        if len(content) > 280:
+            return jsonify({'success': False, 'error': 'Draft cannot exceed 280 characters.'}), 400
+        if image_url and len(image_url) > 2048:
+            return jsonify({'success': False, 'error': 'Draft image URL is too long.'}), 400
+        if not content and not image_url:
+            return jsonify({'success': False, 'error': 'Draft content or image is required.'}), 400
+        if content and not image_url and recent_duplicate_submission('posts', {'user_id': viewer['id']}, 'content', content):
+            return jsonify({'success': False, 'error': 'Already posted.'}), 409
+
+        post = insert_user_post(viewer['id'], content, image_url)
+        draft_deleted = delete_post_draft_for_user(viewer['id'], draft_id)
+        return jsonify({
+            'success': True,
+            'post': post,
+            'deleted_id': draft_id if draft_deleted else None,
+            'draft_deleted': draft_deleted,
+        })
+    except Exception as exc:
+        return jsonify({'success': False, 'error': draft_error_message(exc, "Could not publish post draft.")}), 400
 
 @app.route('/drafts')
 def drafts():
@@ -3181,7 +3719,7 @@ def delete_post():
         elif post_res.data[0].get('user_id') != viewer['id']:
             flash("You can only delete your own posts.", "error")
         else:
-            supabase.table('posts').update({'deleted_at': datetime.utcnow().isoformat()}).eq('id', post_id).execute()
+            supabase.table('posts').update({'deleted_at': datetime.now(timezone.utc).isoformat()}).eq('id', post_id).execute()
             flash("Post deleted.", "success")
     except Exception as e:
         flash(handle_db_error(e, "Could not delete that post."), "error")
@@ -3613,10 +4151,16 @@ def send_message():
     redirect_url = safe_redirect_url(request.form.get('redirect'), 'messages')
 
     temp_filename = request.form.get('temp_filename', '').strip()
-    if temp_filename:
-        temp_filename = secure_filename(temp_filename)
     attachment_name = request.form.get('attachment_name', '').strip()
-    attachment_type = request.form.get('attachment_type', '').strip()
+    pending_attachment = None
+    if temp_filename:
+        try:
+            pending_attachment = prepare_message_attachment(viewer['id'], temp_filename, attachment_name)
+        except ValueError as exc:
+            if request.form.get('ajax') == '1':
+                return jsonify({'success': False, 'error': str(exc)}), 400
+            flash(str(exc), "error")
+            return redirect(redirect_url)
 
     if receiver_id and receiver_id != viewer['id'] and (content or temp_filename):
         if len(content) > 1000:
@@ -3645,22 +4189,19 @@ def send_message():
                     'content': content
                 }
 
-                if temp_filename:
-                    # Check file existence
-                    upload_dir = os.path.join(app.root_path, 'uploads', 'attachments')
-                    file_path = os.path.join(upload_dir, temp_filename)
-                    if os.path.exists(file_path):
-                        insert_data['attachment_type'] = attachment_type
-                        insert_data['attachment_name'] = attachment_name
-                        insert_data['attachment_url'] = f"/attachment/temp_{temp_filename}" # Temporary URL
+                if pending_attachment:
+                    insert_data['attachment_type'] = pending_attachment['attachment_type']
+                    insert_data['attachment_name'] = pending_attachment['display_name']
 
                 res = supabase.table('messages').insert(insert_data).execute()
                 if res.data:
                     msg_id = res.data[0]['id']
-                    if temp_filename:
-                        real_url = f"/attachment/{msg_id}"
+                    if pending_attachment:
+                        real_url = finalize_message_attachment(pending_attachment, msg_id)
                         supabase.table('messages').update({'attachment_url': real_url}).eq('id', msg_id).execute()
                         res.data[0]['attachment_url'] = real_url
+                        res.data[0]['attachment_type'] = pending_attachment['attachment_type']
+                        res.data[0]['attachment_name'] = pending_attachment['display_name']
 
                     create_notification(receiver_id, viewer['id'], 'message', message_id=msg_id)
                     streak_count, streak_xp = update_streak(viewer['id'], receiver_id)
@@ -3723,15 +4264,11 @@ def delete_message():
                 except Exception:
                     pass
 
-                attachment_url = message.get('attachment_url')
-                if attachment_url:
-                    filename = os.path.basename(attachment_url)
-                    file_path = os.path.join(app.root_path, 'uploads', 'attachments', filename)
-                    if os.path.exists(file_path):
-                        try:
-                            os.remove(file_path)
-                        except Exception:
-                            pass
+                if message.get('attachment_url'):
+                    try:
+                        remove_stored_attachment_file(message)
+                    except Exception:
+                        pass
 
                 supabase.table('messages').update({
                     'content': 'This message was deleted',
@@ -3758,11 +4295,22 @@ def delete_message():
 @app.route('/mark_notifications_read', methods=['POST'])
 def mark_notifications_read():
     viewer = get_current_user()
+    wants_json = request.form.get('ajax') == '1' or 'application/json' in (request.headers.get('Accept') or '')
+    if not viewer:
+        if wants_json:
+            return jsonify({'success': False, 'error': 'Authentication required.'}), 401
+        return redirect(url_for('auth'))
     if viewer:
         try:
             supabase.table('notifications').update({'is_read': True}).eq('user_id', viewer['id']).execute()
         except Exception:
-            pass
+            if wants_json:
+                return jsonify({'success': False, 'error': 'Could not mark notifications read.'}), 400
+    if wants_json:
+        return jsonify({
+            'success': True,
+            'unread_notifications': unread_notification_count(viewer['id']),
+        })
     return redirect(url_for('notifications'))
 
 @app.route('/admin/users/level', methods=['POST'])
@@ -4035,7 +4583,7 @@ def guide_contact():
     
     if not name or not email or not message:
         flash("All fields are required.", "error")
-    elif not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+    elif not is_valid_email(email):
         flash("Please enter a valid email address.", "error")
     else:
         last_submit = session.get('last_contact_submit')
@@ -4162,20 +4710,24 @@ def guide_careers():
     cv_file = request.files.get('cv')
     
     cv_filename = None
-    if cv_file and cv_file.filename:
-        import os
-        allowed_ext = {'.pdf', '.doc', '.docx'}
-        ext = os.path.splitext(cv_file.filename.lower())[1]
-        if ext in allowed_ext:
-            import uuid
+    if not name or not email or not position_title or not message:
+        flash("All fields are required.", "error")
+    elif not is_valid_email(email):
+        flash("Please enter a valid email address.", "error")
+    else:
+        if cv_file and cv_file.filename:
+            allowed_ext = {'.pdf', '.doc', '.docx'}
+            ext = os.path.splitext(cv_file.filename.lower())[1]
+            if ext not in allowed_ext:
+                flash("CV must be a PDF, DOC, or DOCX file.", "error")
+                return redirect(url_for('level_guide') + '#careers')
             safe_name = f"cv_{uuid.uuid4().hex}{ext}"
             upload_dir = os.path.join(app.root_path, 'static', 'uploads', 'cvs')
             os.makedirs(upload_dir, exist_ok=True)
             cv_path = os.path.join(upload_dir, safe_name)
             cv_file.save(cv_path)
             cv_filename = safe_name
-            
-    if name and email and position_title and message:
+
         # Resolve position_id if matches an active posting
         position_id = None
         if supabase:
@@ -4225,11 +4777,7 @@ def admin_dashboard():
         
     # Helper to check token with development fallback
     def is_token_valid(token):
-        expected = os.getenv("LVL_ADMIN_TOKEN", "")
-        if not expected:
-            expected = "admin123" # Secure fallback for local testing
-        import secrets
-        return bool(token and secrets.compare_digest(str(token), expected))
+        return admin_token_is_valid(token)
 
     # Authenticate check from session
     session_token = session.get('admin_token')
@@ -4254,6 +4802,8 @@ def admin_dashboard():
                 title = request.form.get('title', '').strip()
                 department = request.form.get('department', '').strip()
                 type_val = request.form.get('type', 'Full-time')
+                if type_val not in ADMIN_JOB_TYPES:
+                    type_val = 'Full-time'
                 is_active = request.form.get('is_active') == 'true'
                 description = request.form.get('description', '').strip()
                 
@@ -4273,7 +4823,7 @@ def admin_dashboard():
                     return redirect(url_for('admin_dashboard'))
                     
             elif action == 'toggle_position':
-                pos_id = request.form.get('id')
+                pos_id = parse_uuid_id(request.form.get('id'))
                 if pos_id and supabase:
                     try:
                         res = supabase.table('job_positions').select('is_active').eq('id', pos_id).limit(1).execute()
@@ -4286,7 +4836,7 @@ def admin_dashboard():
                 return redirect(url_for('admin_dashboard'))
                 
             elif action == 'delete_position':
-                pos_id = request.form.get('id')
+                pos_id = parse_uuid_id(request.form.get('id'))
                 if pos_id and supabase:
                     try:
                         supabase.table('job_positions').delete().eq('id', pos_id).execute()
@@ -4296,8 +4846,11 @@ def admin_dashboard():
                 return redirect(url_for('admin_dashboard'))
 
             elif action == 'update_suggestion_status':
-                msg_id = request.form.get('id')
+                msg_id = parse_uuid_id(request.form.get('id'))
                 status = request.form.get('status')
+                if status not in ADMIN_SUGGESTION_STATUSES:
+                    flash("Invalid suggestion status.", "error")
+                    return redirect(url_for('admin_dashboard'))
                 if msg_id and status and supabase:
                     try:
                         supabase.table('contact_messages').update({'status': status}).eq('id', msg_id).execute()
@@ -4308,8 +4861,11 @@ def admin_dashboard():
                 return redirect(url_for('admin_dashboard'))
 
             elif action == 'respond_verification':
-                req_id = request.form.get('id')
+                req_id = parse_uuid_id(request.form.get('id'))
                 status = request.form.get('status')
+                if status not in ADMIN_VERIFICATION_DECISIONS:
+                    flash("Invalid verification decision.", "error")
+                    return redirect(url_for('admin_dashboard'))
                 admin_notes = request.form.get('admin_notes', '').strip()
                 if req_id and status and supabase:
                     try:
@@ -4333,7 +4889,7 @@ def admin_dashboard():
                 return redirect(url_for('admin_dashboard'))
 
             elif action == 'dismiss_report':
-                report_id = request.form.get('id')
+                report_id = parse_positive_id(request.form.get('id'))
                 if report_id and supabase:
                     try:
                         log_admin_action(viewer['username'], 'dismiss_report', report_id)
@@ -4344,7 +4900,7 @@ def admin_dashboard():
                 return redirect(url_for('admin_dashboard'))
 
             elif action == 'delete_post_global':
-                post_id = request.form.get('id')
+                post_id = parse_positive_id(request.form.get('id'))
                 if post_id and supabase:
                     try:
                         log_admin_action(viewer['username'], 'delete_post_global', post_id)
@@ -4356,8 +4912,11 @@ def admin_dashboard():
                 return redirect(url_for('admin_dashboard'))
 
             elif action == 'warn_user':
-                user_id = request.form.get('id')
+                user_id = parse_positive_id(request.form.get('id'))
                 warning_text = request.form.get('warning_text', '').strip()
+                if user_id == viewer['id']:
+                    flash("Admins cannot warn their own account.", "error")
+                    return redirect(url_for('admin_dashboard'))
                 if user_id and warning_text and supabase:
                     try:
                         log_admin_action(viewer['username'], 'warn_user', user_id, warning_text)
@@ -4374,7 +4933,7 @@ def admin_dashboard():
                 return redirect(url_for('admin_dashboard'))
 
             elif action == 'toggle_user_verification':
-                user_id = request.form.get('id')
+                user_id = parse_positive_id(request.form.get('id'))
                 if user_id and supabase:
                     try:
                         res = supabase.table('users').select('is_profile_verified').eq('id', user_id).limit(1).execute()
@@ -4388,7 +4947,10 @@ def admin_dashboard():
                 return redirect(url_for('admin_dashboard'))
 
             elif action == 'delete_user_global':
-                user_id = request.form.get('id')
+                user_id = parse_positive_id(request.form.get('id'))
+                if user_id == viewer['id']:
+                    flash("Admins cannot delete their own account from the dashboard.", "error")
+                    return redirect(url_for('admin_dashboard'))
                 if user_id and supabase:
                     try:
                         log_admin_action(viewer['username'], 'delete_user_global', user_id)
@@ -4401,6 +4963,9 @@ def admin_dashboard():
                     except Exception as exc:
                         flash(f"Error deleting user: {exc}", "error")
                 return redirect(url_for('admin_dashboard'))
+        else:
+            flash("Admin authentication required.", "error")
+            return redirect(url_for('admin_dashboard'))
 
     # Load data for dashboard if authenticated
     positions = []
@@ -4414,8 +4979,8 @@ def admin_dashboard():
     system_posts = []
     admin_logs = []
     
-    q_user = request.args.get('q_user', '').strip()
-    q_post = request.args.get('q_post', '').strip()
+    q_user = admin_search_term(request.args.get('q_user', ''))
+    q_post = admin_search_term(request.args.get('q_post', ''))
 
     if is_authenticated and supabase:
         try:
@@ -4791,6 +5356,13 @@ def attach_shared_posts(messages_list):
 
     return messages_list
 
+def visible_messages_for_viewer(messages_list, viewer_id):
+    return [
+        message for message in (messages_list or [])
+        if not (message.get('sender_id') == viewer_id and message.get('deleted_by_sender'))
+        and not (message.get('receiver_id') == viewer_id and message.get('deleted_by_receiver'))
+    ]
+
 def mark_message_thread_read(viewer_id, other_user_id):
     if not viewer_id or not other_user_id:
         return
@@ -4810,6 +5382,7 @@ def messages():
     target_user = None
     chat_safety_state = {'blocked': False, 'blocked_by': False, 'interaction_blocked': False}
     messages_list = []
+    has_older_messages = False
 
     try:
         if target_username:
@@ -4821,13 +5394,11 @@ def messages():
                     target_user = None
                 else:
                     chat_safety_state = get_user_safety_state(viewer['id'], target_user['id'])
-                    msg_res = supabase.table('messages').select('*').or_(f"and(sender_id.eq.{viewer['id']},receiver_id.eq.{target_user['id']}),and(sender_id.eq.{target_user['id']},receiver_id.eq.{viewer['id']})").order('created_at', desc=False).execute()
-                    raw_messages = msg_res.data if msg_res.data else []
-                    messages_list = [
-                        m for m in raw_messages
-                        if not (m.get('sender_id') == viewer['id'] and m.get('deleted_by_sender'))
-                        and not (m.get('receiver_id') == viewer['id'] and m.get('deleted_by_receiver'))
-                    ]
+                    msg_res = supabase.table('messages').select('*').or_(f"and(sender_id.eq.{viewer['id']},receiver_id.eq.{target_user['id']}),and(sender_id.eq.{target_user['id']},receiver_id.eq.{viewer['id']})").order('created_at', desc=True).limit(MESSAGES_PAGE_SIZE + 1).execute()
+                    raw_desc = msg_res.data if msg_res and msg_res.data else []
+                    has_older_messages = len(raw_desc) > MESSAGES_PAGE_SIZE
+                    raw_messages = list(reversed(raw_desc[:MESSAGES_PAGE_SIZE]))
+                    messages_list = visible_messages_for_viewer(raw_messages, viewer['id'])
                     messages_list = attach_shared_posts(messages_list)
                     mark_message_thread_read(viewer['id'], target_user['id'])
 
@@ -4879,6 +5450,7 @@ def messages():
         flash(handle_db_error(e), "error")
         conversations = []
         all_users = []
+        has_older_messages = False
 
     explore = get_explore_context(viewer)
 
@@ -4890,6 +5462,7 @@ def messages():
                            conversations=conversations,
                            all_users=all_users,
                            messages_list=messages_list,
+                           has_older_messages=has_older_messages,
                            suggested_communities=explore['communities'][:3],
                            message_trending_posts=explore['trending_posts'][:3],
                            message_people=explore['popular_users'][:4],
@@ -4903,6 +5476,8 @@ def api_messages(username):
         return jsonify({'success': False, 'error': 'Authentication required.'}), 401
 
     since_id = parse_int(request.args.get('since_id')) or 0
+    before_id = parse_int(request.args.get('before_id')) or 0
+    limit = parse_positive_int(request.args.get('limit'), default=MESSAGES_PAGE_SIZE, maximum=100)
     try:
         target_res = supabase.table('users').select('*').eq('username', username).execute()
         if not target_res.data:
@@ -4912,19 +5487,33 @@ def api_messages(username):
             return jsonify({'success': False, 'error': 'Choose someone else to message.'}), 400
 
         query = supabase.table('messages').select('*').or_(f"and(sender_id.eq.{viewer['id']},receiver_id.eq.{target_user['id']}),and(sender_id.eq.{target_user['id']},receiver_id.eq.{viewer['id']})")
-        if since_id:
+        has_more = False
+        if before_id:
+            query = query.lt('id', before_id)
+            msg_res = query.order('created_at', desc=True).limit(limit + 1).execute()
+            raw_messages = msg_res.data if msg_res and msg_res.data else []
+            has_more = len(raw_messages) > limit
+            raw_messages = list(reversed(raw_messages[:limit]))
+        elif since_id:
             query = query.gt('id', since_id)
-        msg_res = query.order('created_at', desc=False).limit(50).execute()
-        raw_messages = msg_res.data if msg_res and msg_res.data else []
-        messages_list = [
-            m for m in raw_messages
-            if not (m.get('sender_id') == viewer['id'] and m.get('deleted_by_sender'))
-            and not (m.get('receiver_id') == viewer['id'] and m.get('deleted_by_receiver'))
-        ]
+            msg_res = query.order('created_at', desc=False).limit(limit).execute()
+            raw_messages = msg_res.data if msg_res and msg_res.data else []
+        else:
+            msg_res = query.order('created_at', desc=True).limit(limit + 1).execute()
+            raw_messages = msg_res.data if msg_res and msg_res.data else []
+            has_more = len(raw_messages) > limit
+            raw_messages = list(reversed(raw_messages[:limit]))
+        messages_list = visible_messages_for_viewer(raw_messages, viewer['id'])
         messages_list = attach_shared_posts(messages_list)
         if messages_list:
             mark_message_thread_read(viewer['id'], target_user['id'])
-        return jsonify({'success': True, 'messages': messages_list, 'viewer_id': viewer['id']})
+        return jsonify({
+            'success': True,
+            'messages': messages_list,
+            'viewer_id': viewer['id'],
+            'has_more': has_more,
+            'oldest_message_id': messages_list[0]['id'] if messages_list else None,
+        })
     except Exception as e:
         return jsonify({'success': False, 'error': handle_db_error(e)}), 400
 
@@ -4941,56 +5530,56 @@ def api_upload_attachment():
     if not file or file.filename == '':
         return jsonify({'success': False, 'error': 'No file selected.'}), 400
 
-    filename = file.filename
-    ext = os.path.splitext(filename)[1].lower()
-
-    # Block malicious executable file extensions
-    blocked_extensions = {
-        '.exe', '.bat', '.cmd', '.sh', '.php', '.py', '.js', '.vbs', '.msi', '.scr', '.jar', '.com', '.pif', '.wsf', '.hta', '.cpl'
-    }
-    if ext in blocked_extensions:
-        return jsonify({'success': False, 'error': 'This file type is not supported for security reasons.'}), 400
-
-    # Limit file size to 15 MB
-    file.seek(0, os.SEEK_END)
-    size = file.tell()
-    file.seek(0)
-
-    MAX_SIZE = 15 * 1024 * 1024
-    if size > MAX_SIZE:
-        return jsonify({'success': False, 'error': 'File size exceeds the limit of 15 MB.'}), 400
-
-    # Create private upload directory if not exists
-    upload_dir = os.path.join(app.root_path, 'uploads', 'attachments')
-    os.makedirs(upload_dir, exist_ok=True)
-
-    import uuid
-    unique_filename = f"{uuid.uuid4()}{ext}"
-    save_path = os.path.join(upload_dir, unique_filename)
+    try:
+        extension = attachment_extension(file.filename)
+    except ValueError as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 400
 
     try:
-        file.save(save_path)
+        file.stream.seek(0)
+    except (AttributeError, OSError):
+        pass
+    payload = file.read()
+    if not payload:
+        return jsonify({'success': False, 'error': 'Selected file is empty.'}), 400
+    if len(payload) > MAX_ATTACHMENT_BYTES:
+        return jsonify({'success': False, 'error': 'File size exceeds the limit of 15 MB.'}), 400
 
-        attachment_type = 'file'
-        img_exts = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp'}
-        vid_exts = {'.mp4', '.webm', '.ogg', '.mov', '.avi'}
-        aud_exts = {'.mp3', '.wav', '.ogg', '.m4a'}
-        doc_exts = {'.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt'}
+    unique_filename = temporary_attachment_filename(viewer['id'], extension)
+    saved_locally = False
 
-        if ext in img_exts:
-            attachment_type = 'image'
-        elif ext in vid_exts:
-            attachment_type = 'video'
-        elif ext in aud_exts:
-            attachment_type = 'audio'
-        elif ext in doc_exts:
-            attachment_type = 'document'
+    try:
+        if use_supabase_attachment_storage():
+            try:
+                ensure_attachment_bucket()
+                supabase.storage.from_(SUPABASE_ATTACHMENT_BUCKET).upload(
+                    attachment_storage_path(unique_filename),
+                    payload,
+                    file_options={
+                        "content-type": attachment_content_type(extension),
+                        "upsert": "false",
+                    },
+                )
+            except Exception as exc:
+                if not LOCAL_ATTACHMENT_UPLOAD_FALLBACK:
+                    raise RuntimeError("Attachment upload failed. Check the private Supabase attachment bucket.") from exc
+                app.logger.warning("Supabase attachment upload failed; using local fallback: %s", exc)
+                saved_locally = True
+        else:
+            saved_locally = True
+
+        if saved_locally:
+            upload_dir = attachment_upload_dir()
+            os.makedirs(upload_dir, exist_ok=True)
+            save_path = os.path.join(upload_dir, unique_filename)
+            with open(save_path, 'wb') as attachment_file:
+                attachment_file.write(payload)
 
         return jsonify({
             'success': True,
             'temp_filename': unique_filename,
-            'attachment_name': filename,
-            'attachment_type': attachment_type
+            'attachment_name': attachment_display_name(file.filename, extension),
+            'attachment_type': attachment_type_for_extension(extension)
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -5022,9 +5611,25 @@ def download_attachment(message_id):
         if not attachment_url:
             return abort(404)
 
-        filename = os.path.basename(attachment_url)
-        upload_dir = os.path.join(app.root_path, 'uploads', 'attachments')
+        filename = stored_attachment_filename_for_message(msg)
+        if not filename:
+            return abort(404)
+        extension = attachment_extension(filename)
+        if use_supabase_attachment_storage():
+            try:
+                payload = supabase.storage.from_(SUPABASE_ATTACHMENT_BUCKET).download(attachment_storage_path(filename))
+                if hasattr(payload, 'content'):
+                    payload = payload.content
+                if not isinstance(payload, (bytes, bytearray)):
+                    payload = bytes(payload)
+                return Response(payload, mimetype=attachment_content_type(extension))
+            except Exception:
+                if not LOCAL_ATTACHMENT_UPLOAD_FALLBACK:
+                    return abort(404)
+        upload_dir = attachment_upload_dir()
         return send_from_directory(upload_dir, filename, download_name=msg.get('attachment_name'))
+    except HTTPException:
+        raise
     except Exception:
         return abort(500)
 
@@ -5037,7 +5642,37 @@ def api_live_status():
         'success': True,
         'unread_notifications': unread_notification_count(viewer['id']),
         'unread_messages': unread_message_count(viewer['id']),
+        'latest_notification_id': latest_notification_id(viewer['id']),
+        'latest_message_id': latest_message_id(viewer['id']),
+        'server_time': datetime.now(timezone.utc).isoformat(),
     })
+
+@app.route('/api/notifications')
+def api_notifications():
+    viewer = get_current_user()
+    if not viewer:
+        return jsonify({'success': False, 'error': 'Authentication required.'}), 401
+
+    since_id = parse_positive_int(request.args.get('since_id'), default=0, maximum=10**12)
+    limit = parse_positive_int(request.args.get('limit'), default=20, maximum=50)
+
+    try:
+        query = supabase.table('notifications').select('*, actor:users!actor_id(*)').eq('user_id', viewer['id'])
+        if since_id:
+            query = query.gt('id', since_id)
+        notif_res = query.order('id', desc=True).limit(limit).execute()
+        rows = apply_forced_user_levels(notif_res.data if notif_res and notif_res.data else [])
+        rows = visible_notification_rows(rows, viewer['id'])
+        formatted = [format_notification_row(row, viewer['id']) for row in rows]
+        return jsonify({
+            'success': True,
+            'notifications': formatted,
+            'unread_notifications': unread_notification_count(viewer['id']),
+            'latest_notification_id': max([item.get('id') or 0 for item in formatted], default=latest_notification_id(viewer['id'])),
+            'server_time': datetime.now(timezone.utc).isoformat(),
+        })
+    except Exception as exc:
+        return jsonify({'success': False, 'error': handle_db_error(exc)}), 400
 
 @app.route('/notifications')
 def notifications():
@@ -5048,19 +5683,11 @@ def notifications():
     try:
         notif_res = supabase.table('notifications').select('*, actor:users!actor_id(*)').eq('user_id', viewer['id']).order('created_at', desc=True).limit(50).execute()
         raw_notifications = apply_forced_user_levels(notif_res.data if notif_res and notif_res.data else [])
-        hidden_actor_ids = blocked_user_ids_for_viewer(viewer['id'], [item.get('actor_id') for item in raw_notifications], include_mutes=False)
-        raw_notifications = [item for item in raw_notifications if item.get('actor_id') not in hidden_actor_ids]
+        raw_notifications = visible_notification_rows(raw_notifications, viewer['id'])
 
         formatted = []
         for n in raw_notifications:
-            actor = n.get('actor', {})
-            n['actor_username'] = actor.get('username', '')
-            n['actor_name'] = actor.get('display_name', '')
-            n['friendship_status'] = 'pending'
-            n['friendship_action_user_id'] = actor.get('id')
-            if n.get('type') == 'message':
-                n['message_url'] = url_for('messages', u=n['actor_username']) if n['actor_username'] else url_for('messages')
-            formatted.append(n)
+            formatted.append(format_notification_row(n, viewer['id']))
         formatted = stack_notifications(formatted)
         post_ids = [item['post_id'] for item in formatted if item.get('post_id')]
         if post_ids:
@@ -5390,28 +6017,42 @@ def api_share_friends():
 @app.route('/api/share/send', methods=['POST'])
 def api_share_send():
     viewer = get_current_user()
-    if not viewer: return jsonify({'success': False, 'error': 'Not logged in'})
+    if not viewer:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
     
-    data = request.json or {}
-    user_id = data.get('receiver_id') or data.get('user_id')
-    clip_id = data.get('clip_id')
-    url = data.get('url')
+    data = request.get_json(silent=True) or {}
+    receiver_id = parse_int(data.get('receiver_id') or data.get('user_id'))
+    clip_id = parse_int(data.get('clip_id'))
+    url = (data.get('url') or '').strip()
     
-    if not user_id:
-        return jsonify({'success': False, 'error': 'Missing parameters'})
+    if not receiver_id or not (url or clip_id):
+        return jsonify({'success': False, 'error': 'Missing parameters'}), 400
+    if receiver_id == viewer['id']:
+        return jsonify({'success': False, 'error': 'Choose someone else to share with.'}), 400
+    if interaction_blocked(viewer['id'], receiver_id):
+        return jsonify({'success': False, 'error': 'You cannot share posts with this user.'}), 403
         
     content = f"Check this out! {url}" if url else f"Check this out! /post/{clip_id}"
+    if len(content) > 1000:
+        return jsonify({'success': False, 'error': 'Message cannot exceed 1000 characters.'}), 400
+    if recent_duplicate_submission('messages', {'sender_id': viewer['id'], 'receiver_id': receiver_id}, 'content', content):
+        return jsonify({'success': False, 'error': 'Already sent.'}), 409
     
     try:
         # Create a direct message with the shared post link
-        supabase.table('messages').insert({
+        res = supabase.table('messages').insert({
             'sender_id': viewer['id'],
-            'receiver_id': user_id,
+            'receiver_id': receiver_id,
             'content': content
         }).execute()
+        message_id = None
+        if res and getattr(res, 'data', None):
+            message_id = res.data[0].get('id')
+        if message_id:
+            create_notification(receiver_id, viewer['id'], 'message', message_id=message_id)
         return jsonify({'success': True})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        return jsonify({'success': False, 'error': handle_db_error(e)}), 400
 
 @app.route('/api/share/search')
 def api_share_search():
@@ -5440,9 +6081,7 @@ def serve_verification_doc(filename):
     session_token = session.get('admin_token')
     is_admin = False
     if session_token:
-        expected = os.getenv("LVL_ADMIN_TOKEN", "admin123")
-        import secrets
-        is_admin = secrets.compare_digest(str(session_token), expected)
+        is_admin = admin_token_is_valid(session_token)
 
     if not is_admin:
         try:

@@ -15,6 +15,8 @@ create table if not exists public.bookmarks (
   primary key (user_id, post_id)
 );
 
+alter table public.bookmarks enable row level security;
+
 alter table public.comments
   add column if not exists image_url text,
   add column if not exists gif_url text,

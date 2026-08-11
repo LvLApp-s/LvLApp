@@ -15,16 +15,16 @@
   </form>
 </header>
 
-<section class="feed">
+<section class="feed" data-notifications-feed data-latest-notification-id="{{ notifications|map(attribute='id')|max if notifications else 0 }}">
   {% if not notifications %}
-    <div class="empty-state">
+    <div class="empty-state" data-notifications-empty>
       <h2 data-i18n="notif_empty">No notifications yet</h2>
       <p data-i18n="notif_empty_sub">When people interact with you or your posts, you'll see it here.</p>
     </div>
   {% endif %}
   
   {% for notification in notifications %}
-    <article class="notification-item {% if not notification.is_read %}unread{% endif %}">
+    <article class="notification-item {% if not notification.is_read %}unread{% endif %}" data-notification-id="{{ notification.id }}">
       <div class="notification-icon type-{{ notification.type }}">
         {% if notification.type == 'like' %}❤️{% endif %}
         {% if notification.type == 'reel_like' %}❤️{% endif %}
