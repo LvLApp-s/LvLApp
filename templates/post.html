@@ -37,6 +37,7 @@
               <button type="button" data-copy-url="{{ url_for('post', id=post.id, _external=True) }}">Copy link</button>
               <button type="button" onclick="window.location.href='{{ url_for('share_post', post_id=post.id) }}'">Share via DM</button>
               {% if post.user_id == viewer.id %}
+                <button type="button" onclick="window.location.href='{{ url_for('edit_post', post_id=post.id) }}'">Edit post</button>
                 <form action="{{ url_for('delete_post') }}" method="post">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <input type="hidden" name="post_id" value="{{ post.id }}">
@@ -70,18 +71,61 @@
           {{ post.content | linkify_mentions }}
         </div>
         {% include "_post_media.html" %}
+        <div class="post-actions">
+          <a href="#composer" class="post-action-link" aria-label="Reply to post" title="Reply">
+            <span class="post-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M4 4h16v12H7.8L4 19.35V4Zm2 2v8.93L7.04 14H18V6H6Z"/></svg></span>
+            <strong>{{ post.reply_count }}</strong>
+          </a>
+          <form action="{{ url_for('toggle_repost') }}" method="post" class="ajax-action-form" data-action="repost">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="post_id" value="{{ post.id }}">
+            <button type="submit" class="post-action-button {% if post.viewer_reposted %}active repost-active{% endif %}" aria-label="Repost" title="Repost">
+              <span class="post-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M7 7h8.59l-2.3-2.29L14.7 3.3 19.41 8l-4.7 4.7-1.42-1.41L15.59 9H7a3 3 0 0 0-3 3v1H2v-1a5 5 0 0 1 5-5Zm10 10H8.41l2.3 2.29L9.3 20.7 4.59 16l4.7-4.7 1.42 1.41L8.41 15H17a3 3 0 0 0 3-3v-1h2v1a5 5 0 0 1-5 5Z"/></svg></span>
+              <strong>{{ post.repost_count }}</strong>
+            </button>
+          </form>
+          <form action="{{ url_for('toggle_like') }}" method="post" class="ajax-action-form" data-action="like">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="post_id" value="{{ post.id }}">
+            <button type="submit" class="post-action-button {% if post.viewer_liked %}active like-active{% endif %}" aria-label="Like post" title="Like">
+              <span class="post-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M2 21h4V9H2v12Zm20-11.5A2.5 2.5 0 0 0 19.5 7H14l.8-3.8.03-.26c0-.31-.13-.62-.35-.84L13.38 1 6.8 7.58C6.3 8.08 6 8.78 6 9.5V19a2 2 0 0 0 2 2h8.75c.82 0 1.55-.5 1.86-1.26l3.02-7.05c.24-.57.37-1.18.37-1.8V9.5Z"/></svg></span>
+              <strong>{{ post.like_count }}</strong>
+            </button>
+          </form>
+          <a href="{{ url_for('share_post', post_id=post.id) }}" class="post-action-link" aria-label="Share post" title="Share via DM">
+            <span class="post-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.03-.47-.09-.7l7.05-4.11A2.99 2.99 0 1 0 15 5c0 .24.04.47.09.7L8.04 9.81A3 3 0 1 0 8.04 14l7.12 4.16c-.04.2-.07.41-.07.62A2.91 2.91 0 1 0 18 16.08Z"/></svg></span>
+          </a>
+          <form action="{{ url_for('toggle_bookmark') }}" method="post" class="ajax-action-form" data-action="bookmark">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="post_id" value="{{ post.id }}">
+            <button type="submit" class="post-action-button {% if post.viewer_bookmarked %}active bookmark-active{% endif %}" aria-label="Bookmark post" title="Bookmark">
+              <span class="post-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1Zm1 2v12.55l5-2.86 5 2.86V5H7Z"/></svg></span>
+            </button>
+          </form>
+        </div>
       </div>
     </article>
   </section>
   
-  <form id="composer" class="composer comment-composer" action="{{ url_for('add_comment') }}" method="post">
+  <form id="composer" class="composer comment-composer" action="{{ url_for('add_comment') }}" method="post" enctype="multipart/form-data" data-ajax-reply-form>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="post_id" value="{{ post.id }}">
+    <input type="hidden" name="parent_comment_id" value="">
     <div class="composer-avatar-column">
       <img class="avatar" src="{{ viewer.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" />
     </div>
     <div class="composer-fields">
-      <textarea name="comment" maxlength="280" rows="4" placeholder="Write a comment" required></textarea>
+      <textarea name="comment" maxlength="280" rows="4" placeholder="Write a comment"></textarea>
+      <div class="reply-tools" aria-label="Reply media tools">
+        <button type="button" class="reply-tool" data-emoji-toggle>☺ Emoji</button>
+        <label class="reply-tool"><input type="file" name="image" accept="image/png,image/jpeg,image/gif,image/webp" data-reply-image>Photo</label>
+        <button type="button" class="reply-tool" data-gif-toggle>GIF</button>
+        <button type="button" class="reply-tool" data-sticker-toggle>Sticker</button>
+      </div>
+      <div class="reply-picker" data-emoji-picker hidden>{% for emoji in ['😀','😂','😍','🤔','👏','🔥','❤️','🎉','👍','✨'] %}<button type="button" data-insert-emoji="{{ emoji }}">{{ emoji }}</button>{% endfor %}</div>
+      <div class="reply-picker" data-sticker-picker hidden>{% for sticker in ['🔥','👏','💯','❤️','😂','🎉','👍','✨'] %}<button type="button" data-select-sticker="{{ sticker }}">{{ sticker }}</button>{% endfor %}<input type="hidden" name="sticker" value=""></div>
+      <label class="reply-gif-field" data-gif-field hidden><span>GIF image URL</span><input type="url" name="gif_url" placeholder="https://…"></label>
+      <div class="reply-media-status" data-reply-media-status aria-live="polite"></div>
       <div class="composer-actions">
         <span class="char-count">280 left</span>
         <button type="submit" class="post-submit-btn">Comment</button>
@@ -89,10 +133,10 @@
     </div>
   </form>
   
-  <section class="feed thread-comments">
+  <section class="feed thread-comments" data-comments-feed>
     <div class="thread-section-label">
       <strong>Replies</strong>
-      <span>{{ comments|length }} {{ 'reply' if comments|length == 1 else 'replies' }}</span>
+      <span data-reply-count>{{ comments|length }} {{ 'reply' if comments|length == 1 else 'replies' }}</span>
     </div>
     {% if not comments %}
       <div class="empty-state">
@@ -101,7 +145,7 @@
       </div>
     {% endif %}
     {% for comment in comments %}
-      <article class="post comment">
+      <article class="post comment" data-comment-id="{{ comment.id }}">
         <div class="post-avatar">
           <a href="{{ url_for('profile', username=comment.user.username) }}">
             <img class="avatar small-avatar" src="{{ comment.user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" />
@@ -118,8 +162,11 @@
           <div class="post-body">
             {{ comment.comment | linkify_mentions }}
           </div>
+          {% if comment.image_url %}<a class="comment-media" href="{{ comment.image_url }}" target="_blank" rel="noopener"><img src="{{ comment.image_url }}" alt="Reply image" loading="lazy"></a>{% endif %}
+          {% if comment.gif_url %}<a class="comment-media" href="{{ comment.gif_url }}" target="_blank" rel="noopener"><img src="{{ comment.gif_url }}" alt="Reply GIF" loading="lazy"></a>{% endif %}
+          {% if comment.sticker %}<div class="comment-sticker">{{ comment.sticker }}</div>{% endif %}
           <div class="post-actions" style="margin-top: 8px;">
-            <button type="button" class="reply-btn post-action-button" onclick="const ta = document.querySelector('.comment-composer textarea'); ta.value = '@{{ comment.user.username }} ' + ta.value.replace(/^@{{ comment.user.username }}\s/, ''); ta.focus();" aria-label="Reply to comment" title="Reply">
+            <button type="button" class="reply-btn post-action-button" data-reply-to="{{ comment.user.username }}" data-parent-comment="{{ comment.id }}" aria-label="Reply to comment" title="Reply">
               <span class="post-action-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M4 4h16v12H7.8L4 19.35V4Zm2 2v8.93L7.04 14H18V6H6Z"/></svg>
               </span>

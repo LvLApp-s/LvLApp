@@ -1891,7 +1891,7 @@ class AppRouteTests(unittest.TestCase):
 
     def test_mobile_settings_actions_stay_in_document_flow(self):
         settings_css = Path("static/css/sections/settings.css").read_text(encoding="utf-8")
-        mobile_settings_css = settings_css.split("@media (max-width: 767px)", 1)[1]
+        mobile_settings_css = settings_css.split("@media (max-width: 991px)", 1)[1]
         actions_rule = mobile_settings_css.split(".form-actions", 1)[1].split("}", 1)[0]
 
         self.assertIn("position: static", actions_rule)
@@ -1910,7 +1910,7 @@ class AppRouteTests(unittest.TestCase):
 
     def test_mobile_settings_profile_preview_avatar_clears_text(self):
         settings_css = Path("static/css/sections/settings.css").read_text(encoding="utf-8")
-        mobile_settings_css = settings_css.split("@media (max-width: 767px)", 1)[1]
+        mobile_settings_css = settings_css.split("@media (max-width: 991px)", 1)[1]
         preview_rule = mobile_settings_css.split(".settings-container .profile-preview-card", 1)[1].split("}", 1)[0]
         name_rule = mobile_settings_css.split(".settings-container .profile-preview-card strong", 1)[1].split("}", 1)[0]
 

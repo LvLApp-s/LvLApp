@@ -16,10 +16,11 @@ For a fresh Supabase project, run the SQL files in this order:
 10. `migrations/008_careers_schema.sql`
 11. `migrations/009_messages_attachments_deletion.sql`
 12. `migrations/010_contact_suggestions_verification.sql`
-13. `migrations/011_storage_bucket.sql`
-14. `migrations/012_enable_rls_remaining_tables.sql`
-15. `migrations/013_post_drafts.sql`
-16. `migrations/014_performance_indexes.sql`
+13. `migrations/011_frontend_workflow.sql`
+14. `migrations/011_storage_bucket.sql`
+15. `migrations/012_enable_rls_remaining_tables.sql`
+16. `migrations/013_post_drafts.sql`
+17. `migrations/014_performance_indexes.sql`
 
 `migrations/003_safety_and_demo.sql` is optional demo seed data. Do not run it in production unless you intentionally want demo users/posts.
 
@@ -31,6 +32,7 @@ For a fresh Supabase project, run the SQL files in this order:
 - `migrations/004_streaks.sql` adds high-five streak tracking.
 - `migrations/005_oauth_identity.sql` adds Supabase Auth identity columns for social login.
 - `migrations/006_password_reset_tokens.sql` adds hashed password reset tokens for normal email login.
+- `migrations/011_frontend_workflow.sql` adds published/draft post status, bookmarks, and rich-reply fields.
 - `migrations/011_storage_bucket.sql` creates the public `lvl-media` Supabase Storage bucket used by uploads.
 - `migrations/012_enable_rls_remaining_tables.sql` enables RLS on remaining app tables accessed by the service-role backend.
 - `migrations/013_post_drafts.sql` adds backend-owned saved post drafts for future compose autosave UI.

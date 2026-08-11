@@ -7,6 +7,7 @@
 <header class="page-header home-header">
   <div class="header-top">
     <h1 data-i18n="nav_home">Home</h1>
+    <a class="outline-button small" href="{{ url_for('drafts') }}">Drafts</a>
   </div>
   <div class="segmented feed-tabs">
     <a class="{% if mode == 'all' %}active{% endif %}" href="{{ url_for('index', feed='all') }}">
@@ -46,6 +47,7 @@
       <div class="composer-actions">
         <span class="draft-status" data-draft-status aria-live="polite"></span>
         <span class="char-count">280 left</span>
+        <button type="submit" class="outline-button" name="intent" value="draft">Save draft</button>
         <button type="submit" class="post-submit-btn" data-i18n="composer_post_btn">Post</button>
       </div>
     </div>
