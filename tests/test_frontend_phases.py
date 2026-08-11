@@ -70,6 +70,7 @@ class FrontendPhaseTests(unittest.TestCase):
         migration = (ROOT / "database" / "migrations" / "011_frontend_workflow.sql").read_text(encoding="utf-8")
         self.assertIn("add column if not exists status", migration.lower())
         self.assertIn("create table if not exists public.bookmarks", migration.lower())
+        self.assertIn("alter table public.bookmarks enable row level security", migration.lower())
         self.assertIn("add column if not exists image_url", migration.lower())
 
     def test_visible_post_filter_excludes_drafts(self):
