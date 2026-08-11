@@ -21,6 +21,7 @@ For a fresh Supabase project, run the SQL files in this order:
 15. `migrations/012_enable_rls_remaining_tables.sql`
 16. `migrations/013_post_drafts.sql`
 17. `migrations/014_performance_indexes.sql`
+18. `migrations/015_attachment_storage_bucket.sql`
 
 `migrations/003_safety_and_demo.sql` is optional demo seed data. Do not run it in production unless you intentionally want demo users/posts.
 
@@ -37,6 +38,7 @@ For a fresh Supabase project, run the SQL files in this order:
 - `migrations/012_enable_rls_remaining_tables.sql` enables RLS on remaining app tables accessed by the service-role backend.
 - `migrations/013_post_drafts.sql` adds backend-owned saved post drafts for future compose autosave UI.
 - `migrations/014_performance_indexes.sql` adds targeted indexes for message pagination, notification polling, search, reels, safety/admin queues, and form-review tables.
+- `migrations/015_attachment_storage_bucket.sql` creates the private `lvl-attachments` Supabase Storage bucket used by secure message/file attachments.
 - `legacy/mysql_schema.sql` is an archived MySQL/XAMPP schema from the old PHP version. Do not use it for the Flask/Supabase app.
 
 Future database changes should be written as Supabase/PostgreSQL migrations, not MySQL scripts.
