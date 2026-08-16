@@ -5071,6 +5071,57 @@ def admin_dashboard():
                         flash(f"Error removing post: {exc}", "error")
                 return redirect(url_for('admin_dashboard'))
 
+            elif action == 'delete_comment_global':
+                comment_id = parse_positive_id(request.form.get('id'))
+                if comment_id and supabase:
+                    try:
+                        log_admin_action(viewer['username'], 'delete_comment_global', comment_id)
+                        supabase.table('comment_likes').delete().eq('comment_id', comment_id).execute()
+                        supabase.table('comment_reposts').delete().eq('comment_id', comment_id).execute()
+                        supabase.table('comments').delete().eq('id', comment_id).execute()
+                        flash("Comment removed successfully.", "success")
+                    except Exception as exc:
+                        flash(f"Error removing comment: {exc}", "error")
+                return redirect(url_for('admin_dashboard'))
+
+            elif action == 'delete_reel_comment_global':
+                comment_id = parse_positive_id(request.form.get('id'))
+                if comment_id and supabase:
+                    try:
+                        log_admin_action(viewer['username'], 'delete_reel_comment_global', comment_id)
+                        supabase.table('reel_comments').update({'deleted_at': datetime.now(timezone.utc).isoformat()}).eq('id', comment_id).execute()
+                        flash("Reel reply removed successfully.", "success")
+                    except Exception as exc:
+                        flash(f"Error removing reel reply: {exc}", "error")
+                return redirect(url_for('admin_dashboard'))
+
+            elif action == 'delete_reel_global':
+                reel_id = parse_positive_id(request.form.get('id'))
+                if reel_id and supabase:
+                    try:
+                        timestamp = datetime.now(timezone.utc).isoformat()
+                        log_admin_action(viewer['username'], 'delete_reel_global', reel_id)
+                        supabase.table('reels').update({
+                            'status': 'deleted',
+                            'deleted_at': timestamp,
+                            'updated_at': timestamp,
+                        }).eq('id', reel_id).execute()
+                        flash("Reel removed successfully.", "success")
+                    except Exception as exc:
+                        flash(f"Error removing reel: {exc}", "error")
+                return redirect(url_for('admin_dashboard'))
+
+            elif action == 'delete_community_global':
+                community_id = parse_positive_id(request.form.get('id'))
+                if community_id and supabase:
+                    try:
+                        log_admin_action(viewer['username'], 'delete_community_global', community_id)
+                        supabase.table('communities').delete().eq('id', community_id).execute()
+                        flash("Community removed successfully.", "success")
+                    except Exception as exc:
+                        flash(f"Error removing community: {exc}", "error")
+                return redirect(url_for('admin_dashboard'))
+
             elif action == 'warn_user':
                 user_id = parse_positive_id(request.form.get('id'))
                 warning_text = request.form.get('warning_text', '').strip()
@@ -5137,10 +5188,17 @@ def admin_dashboard():
     safety_reports = []
     system_users = []
     system_posts = []
+    system_comments = []
+    system_reels = []
+    system_reel_comments = []
+    system_communities = []
     admin_logs = []
     
     q_user = admin_search_term(request.args.get('q_user', ''))
     q_post = admin_search_term(request.args.get('q_post', ''))
+    q_comment = admin_search_term(request.args.get('q_comment', ''))
+    q_reel = admin_search_term(request.args.get('q_reel', ''))
+    q_community = admin_search_term(request.args.get('q_community', ''))
 
     if is_authenticated and supabase:
         try:
@@ -5204,6 +5262,47 @@ def admin_dashboard():
         except Exception as exc:
             app.logger.warning(f"Failed to fetch posts search: {exc}")
 
+        try:
+            comment_select = '*, user:users!comments_user_id_fkey(*), post:posts!comments_post_id_fkey(id,content,user_id)'
+            if q_comment:
+                res_c_search = supabase.table('comments').select(comment_select).ilike('comment', f'%{q_comment}%').limit(50).execute()
+            else:
+                res_c_search = supabase.table('comments').select(comment_select).order('created_at', desc=True).limit(50).execute()
+            if res_c_search and res_c_search.data:
+                system_comments = res_c_search.data
+        except Exception as exc:
+            app.logger.warning(f"Failed to fetch comments search: {exc}")
+
+        try:
+            reel_select = '*, user:users!reels_user_id_fkey(*), community:communities!reels_community_id_fkey(id,name,slug)'
+            if q_reel:
+                res_reels = supabase.table('reels').select(reel_select).ilike('caption', f'%{q_reel}%').is_('deleted_at', 'null').limit(50).execute()
+            else:
+                res_reels = supabase.table('reels').select(reel_select).is_('deleted_at', 'null').order('created_at', desc=True).limit(50).execute()
+            if res_reels and res_reels.data:
+                system_reels = res_reels.data
+        except Exception as exc:
+            app.logger.warning(f"Failed to fetch reels for admin: {exc}")
+
+        try:
+            reel_comment_select = '*, user:users!reel_comments_user_id_fkey(*), reel:reels!reel_comments_reel_id_fkey(id,caption,user_id)'
+            res_reel_comments = supabase.table('reel_comments').select(reel_comment_select).is_('deleted_at', 'null').order('created_at', desc=True).limit(50).execute()
+            if res_reel_comments and res_reel_comments.data:
+                system_reel_comments = res_reel_comments.data
+        except Exception as exc:
+            app.logger.warning(f"Failed to fetch reel replies for admin: {exc}")
+
+        try:
+            community_select = '*, owner:users!communities_owner_id_fkey(*)'
+            if q_community:
+                res_communities = supabase.table('communities').select(community_select).or_(f"name.ilike.%{q_community}%,slug.ilike.%{q_community}%,description.ilike.%{q_community}%").limit(50).execute()
+            else:
+                res_communities = supabase.table('communities').select(community_select).order('created_at', desc=True).limit(50).execute()
+            if res_communities and res_communities.data:
+                system_communities = res_communities.data
+        except Exception as exc:
+            app.logger.warning(f"Failed to fetch communities for admin: {exc}")
+
         # Read audit activity log file
         log_file = os.path.join(app.root_path, 'database', 'admin_activity.log')
         if os.path.exists(log_file):
@@ -5228,9 +5327,16 @@ def admin_dashboard():
                            safety_reports=safety_reports,
                            system_users=system_users,
                            system_posts=system_posts,
+                           system_comments=system_comments,
+                           system_reels=system_reels,
+                           system_reel_comments=system_reel_comments,
+                           system_communities=system_communities,
                            admin_logs=admin_logs,
                            q_user=q_user,
-                           q_post=q_post)
+                           q_post=q_post,
+                           q_comment=q_comment,
+                           q_reel=q_reel,
+                           q_community=q_community)
 
 
 @app.route('/activity')

@@ -8,7 +8,7 @@ from email import message_from_string
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 from werkzeug.datastructures import FileStorage
 
 import bcrypt
@@ -1793,6 +1793,158 @@ class AppRouteTests(unittest.TestCase):
         audit.assert_any_call("admin", "update_suggestion_status", suggestion_id, "Reviewed")
         audit.assert_any_call("admin", "respond_verification", verification_id, "status=Approved")
         audit.assert_any_call("admin", "toggle_position", position_id, "new_status=False")
+
+    def test_admin_dashboard_moderates_comments_reels_and_communities(self):
+        class Result:
+            def __init__(self, data=None):
+                self.data = data or []
+
+        class FakeTable:
+            def __init__(self, db, name):
+                self.db = db
+                self.name = name
+                self.action = None
+                self.values = None
+                self.filters = []
+
+            def delete(self):
+                self.action = "delete"
+                return self
+
+            def update(self, values):
+                self.action = "update"
+                self.values = values
+                return self
+
+            def eq(self, key, value):
+                self.filters.append((key, value))
+                return self
+
+            def execute(self):
+                self.db.calls.append((self.name, self.action, self.values, tuple(self.filters)))
+                return Result([self.values or {}])
+
+        class FakeSupabase:
+            def __init__(self):
+                self.calls = []
+
+            def table(self, name):
+                return FakeTable(self, name)
+
+        fake = FakeSupabase()
+        with self.client.session_transaction() as sess:
+            sess["csrf_token"] = "token"
+            sess["admin_token"] = "secret"
+
+        viewer = {"id": 7, "username": "admin"}
+        with patch.dict(os.environ, {"LVL_ADMIN_TOKEN": "secret"}), \
+             patch.object(zapp, "get_current_user", return_value=viewer), \
+             patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "log_admin_action") as audit:
+            comment = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "delete_comment_global",
+                "id": "41",
+            })
+            reel_comment = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "delete_reel_comment_global",
+                "id": "42",
+            })
+            reel = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "delete_reel_global",
+                "id": "43",
+            })
+            community = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "delete_community_global",
+                "id": "44",
+            })
+
+        for response in (comment, reel_comment, reel, community):
+            self.assertEqual(response.status_code, 302)
+            self.assertTrue(response.headers["Location"].endswith("/admin-dashboard"))
+        self.assertIn(("comment_likes", "delete", None, (("comment_id", 41),)), fake.calls)
+        self.assertIn(("comment_reposts", "delete", None, (("comment_id", 41),)), fake.calls)
+        self.assertIn(("comments", "delete", None, (("id", 41),)), fake.calls)
+        self.assertIn(("reel_comments", "update", ANY, (("id", 42),)), fake.calls)
+        self.assertIn(("communities", "delete", None, (("id", 44),)), fake.calls)
+
+        reel_update = next(call for call in fake.calls if call[0] == "reels" and call[1] == "update")
+        self.assertEqual(reel_update[2]["status"], "deleted")
+        self.assertIsNotNone(datetime.fromisoformat(reel_update[2]["deleted_at"]).tzinfo)
+        self.assertIsNotNone(datetime.fromisoformat(reel_update[2]["updated_at"]).tzinfo)
+        self.assertEqual(reel_update[3], (("id", 43),))
+        audit.assert_any_call("admin", "delete_comment_global", 41)
+        audit.assert_any_call("admin", "delete_reel_comment_global", 42)
+        audit.assert_any_call("admin", "delete_reel_global", 43)
+        audit.assert_any_call("admin", "delete_community_global", 44)
+
+    def test_admin_dashboard_renders_content_moderation_sections(self):
+        context = {
+            "viewer": {"id": 7, "username": "admin"},
+            "highlights": [],
+            "is_authenticated": True,
+            "login_error": None,
+            "positions": [],
+            "applications": [],
+            "messages": [],
+            "suggestions": [],
+            "contact_messages": [],
+            "verification_requests": [],
+            "safety_reports": [],
+            "system_users": [],
+            "system_posts": [],
+            "system_comments": [{
+                "id": 41,
+                "comment": "bad comment",
+                "created_at": "2026-08-16T10:00:00",
+                "user": {"username": "member"},
+                "post": {"content": "related post"},
+            }],
+            "system_reels": [{
+                "id": 43,
+                "caption": "bad reel",
+                "status": "active",
+                "visibility": "public",
+                "created_at": "2026-08-16T10:00:00",
+                "user": {"username": "creator"},
+                "community": None,
+            }],
+            "system_reel_comments": [{
+                "id": 42,
+                "comment": "bad reply",
+                "created_at": "2026-08-16T10:00:00",
+                "user": {"username": "replyuser"},
+                "reel": {"id": 43, "caption": "bad reel"},
+            }],
+            "system_communities": [{
+                "id": 44,
+                "name": "Bad Community",
+                "slug": "bad-community",
+                "description": "Needs review",
+                "created_at": "2026-08-16T10:00:00",
+                "owner": {"username": "owner"},
+            }],
+            "admin_logs": [],
+            "q_user": "",
+            "q_post": "",
+            "q_comment": "",
+            "q_reel": "",
+            "q_community": "",
+        }
+        with zapp.app.test_request_context("/admin-dashboard"):
+            html = zapp.render_template("admin_dashboard.html", **context)
+
+        self.assertIn("Comments (1)", html)
+        self.assertIn("Reels (1)", html)
+        self.assertIn("Reel Replies (1)", html)
+        self.assertIn("Communities (1)", html)
+        self.assertIn('value="delete_comment_global"', html)
+        self.assertIn('value="delete_reel_global"', html)
+        self.assertIn('value="delete_reel_comment_global"', html)
+        self.assertIn('value="delete_community_global"', html)
 
     def test_level_guide_page_explains_xp_and_rewards(self):
         fake_user = {
