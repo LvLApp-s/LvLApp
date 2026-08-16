@@ -11,6 +11,7 @@ class DatabaseMigrationTests(unittest.TestCase):
 
         self.assertIn("migrations/014_performance_indexes.sql", readme)
         self.assertIn("migrations/015_attachment_storage_bucket.sql", readme)
+        self.assertIn("migrations/016_user_account_status.sql", readme)
         self.assertLess(
             readme.index("migrations/013_post_drafts.sql"),
             readme.index("migrations/014_performance_indexes.sql"),
@@ -18,6 +19,10 @@ class DatabaseMigrationTests(unittest.TestCase):
         self.assertLess(
             readme.index("migrations/014_performance_indexes.sql"),
             readme.index("migrations/015_attachment_storage_bucket.sql"),
+        )
+        self.assertLess(
+            readme.index("migrations/015_attachment_storage_bucket.sql"),
+            readme.index("migrations/016_user_account_status.sql"),
         )
 
     def test_performance_migration_covers_hot_paths(self):
@@ -54,6 +59,22 @@ class DatabaseMigrationTests(unittest.TestCase):
             "'video/mp4'",
             "on conflict (id) do update",
             "allowed_mime_types = excluded.allowed_mime_types",
+        ]
+        for snippet in expected_snippets:
+            with self.subTest(snippet=snippet):
+                self.assertIn(snippet, sql)
+
+    def test_user_account_status_migration_prepares_reversible_restrictions(self):
+        sql = (ROOT / "database" / "migrations" / "016_user_account_status.sql").read_text().lower()
+
+        expected_snippets = [
+            "add column if not exists account_status",
+            "check (account_status in ('active', 'suspended', 'banned'))",
+            "add column if not exists account_status_reason",
+            "add column if not exists suspended_until",
+            "add column if not exists account_status_updated_by",
+            "idx_users_account_status",
+            "idx_users_suspended_until",
         ]
         for snippet in expected_snippets:
             with self.subTest(snippet=snippet):

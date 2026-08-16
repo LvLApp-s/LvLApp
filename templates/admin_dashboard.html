@@ -401,9 +401,21 @@
               <div class="guide-form-card admin-panel-card">
                 <div class="admin-user-summary">
                   <div>
+                    {% set account_status = u.account_status|default('active', true) %}
                     <strong>{{ u.display_name }}</strong> (@{{ u.username }})
                     <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
                       Email: {{ u.email }} | Level: {{ u.level or 1 }} | XP: {{ u.total_xp or 0 }}
+                    </div>
+                    <div class="admin-user-status-line">
+                      <span class="admin-status-pill {% if account_status == 'active' %}active{% elif account_status == 'banned' %}danger{% endif %}">
+                        {{ account_status|title }}
+                      </span>
+                      {% if u.suspended_until and account_status == 'suspended' %}
+                        <span class="admin-text-muted">Until {{ u.suspended_until[:16] }}</span>
+                      {% endif %}
+                      {% if u.account_status_reason %}
+                        <span class="admin-text-muted">Reason: {{ u.account_status_reason }}</span>
+                      {% endif %}
                     </div>
                   </div>
                   <div class="admin-button-row">
@@ -426,6 +438,20 @@
                   <button type="button" class="outline-button small" onclick="openWarningModal('{{ u.id }}', '{{ u.display_name }}')">
                     Warn User
                   </button>
+
+                  <form action="{{ url_for('admin_dashboard') }}" method="post" class="admin-user-restriction-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="update_user_status">
+                    <input type="hidden" name="id" value="{{ u.id }}">
+                    <select name="account_status" class="admin-select-input admin-select-compact" aria-label="Account status">
+                      {% for option in account_status_options %}
+                        <option value="{{ option.value }}" {% if account_status == option.value %}selected{% endif %}>{{ option.label }}</option>
+                      {% endfor %}
+                    </select>
+                    <input type="number" name="suspension_days" min="1" max="365" value="7" class="admin-days-input" aria-label="Suspension days">
+                    <input type="text" name="account_status_reason" maxlength="280" value="{{ u.account_status_reason or '' }}" placeholder="Reason" class="admin-reason-input">
+                    <button type="submit" class="outline-button small">Update Status</button>
+                  </form>
 
                   <form action="{{ url_for('admin_dashboard') }}" method="post" style="margin: 0;" onsubmit="return confirm('Permanently delete user account? This cannot be undone.');">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -729,6 +755,7 @@
 .admin-button-row,
 .admin-status-form,
 .admin-search-form,
+.admin-user-restriction-form,
 .admin-warning-actions {
   display: flex;
   gap: 8px;
@@ -822,6 +849,8 @@
 }
 .admin-text-input,
 .admin-search-input,
+.admin-days-input,
+.admin-reason-input,
 .admin-warning-textarea {
   width: 100%;
   padding: 8px;
@@ -873,6 +902,26 @@
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+.admin-user-status-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 8px;
+  font-size: 12px;
+}
+.admin-user-restriction-form {
+  align-items: center;
+  flex-wrap: wrap;
+  flex: 1 1 100%;
+}
+.admin-days-input {
+  width: 84px;
+}
+.admin-reason-input {
+  min-width: 180px;
+  flex: 1 1 220px;
 }
 .admin-post-card {
   padding: 16px;

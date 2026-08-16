@@ -492,6 +492,51 @@ class AppRouteTests(unittest.TestCase):
             self.assertEqual(sess["user_id"], 12)
             self.assertFalse(sess.permanent)
 
+    def test_password_login_blocks_restricted_accounts(self):
+        class Result:
+            def __init__(self, data=None):
+                self.data = data or []
+
+        class FakeUsersTable:
+            def __init__(self):
+                self.filters = {}
+
+            def select(self, *_args, **_kwargs):
+                return self
+
+            def eq(self, key, value):
+                self.filters[key] = value
+                return self
+
+            def execute(self):
+                if self.filters.get("username") == "demo":
+                    return Result([{
+                        "id": 12,
+                        "username": "demo",
+                        "email": "demo@example.com",
+                        "password_hash": "hashed",
+                        "account_status": "banned",
+                    }])
+                return Result([])
+
+        fake = SimpleNamespace(table=lambda _name: FakeUsersTable())
+        with patch.object(zapp, "supabase", fake), \
+             patch.object(zapp.bcrypt, "checkpw", return_value=True), \
+             patch.object(zapp, "award_xp") as award:
+            response = self.client.post("/auth", data={
+                "csrf_token": self.csrf(),
+                "action": "login",
+                "username": "demo",
+                "password": "secret123",
+                "remember_me": "1",
+            })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"This account has been disabled.", response.data)
+        award.assert_not_called()
+        with self.client.session_transaction() as sess:
+            self.assertNotIn("user_id", sess)
+
     def test_nickname_fields_allow_uppercase_input(self):
         auth_html = self.client.get("/auth").data.decode()
         self.assertIn('name="nickname" pattern="[A-Za-z0-9_]{3,24}"', auth_html)
@@ -1632,6 +1677,26 @@ class AppRouteTests(unittest.TestCase):
         self.assertNotIn(")", term)
         self.assertLessEqual(len(zapp.admin_search_term("a" * 200)), 80)
 
+    def test_account_restriction_messages_cover_ban_and_suspension(self):
+        now = datetime(2026, 8, 16, 12, 0, tzinfo=timezone.utc)
+
+        self.assertIsNone(zapp.account_restriction_message({}, now=now))
+        self.assertIn(
+            "disabled",
+            zapp.account_restriction_message({"account_status": "banned"}, now=now),
+        )
+        self.assertIn(
+            "2026-08-17 12:00 UTC",
+            zapp.account_restriction_message({
+                "account_status": "suspended",
+                "suspended_until": "2026-08-17T12:00:00+00:00",
+            }, now=now),
+        )
+        self.assertIsNone(zapp.account_restriction_message({
+            "account_status": "suspended",
+            "suspended_until": "2026-08-15T12:00:00+00:00",
+        }, now=now))
+
     def test_admin_dashboard_requires_valid_admin_session_for_actions(self):
         class FakeSupabase:
             def __init__(self):
@@ -1709,8 +1774,20 @@ class AppRouteTests(unittest.TestCase):
                 "id": "7",
                 "warning_text": "Stop testing yourself.",
             })
+            self_restrict = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "update_user_status",
+                "id": "7",
+                "account_status": "banned",
+            })
+            invalid_status = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "update_user_status",
+                "id": "8",
+                "account_status": "owner",
+            })
 
-        for response in (invalid_suggestion, invalid_verification, invalid_position, invalid_id, self_delete, self_warn):
+        for response in (invalid_suggestion, invalid_verification, invalid_position, invalid_id, self_delete, self_warn, self_restrict, invalid_status):
             self.assertEqual(response.status_code, 302)
             self.assertTrue(response.headers["Location"].endswith("/admin-dashboard"))
         self.assertEqual(fake.calls, [])
@@ -1813,6 +1890,70 @@ class AppRouteTests(unittest.TestCase):
         audit.assert_any_call("admin", "respond_verification", verification_id, "status=Approved")
         audit.assert_any_call("admin", "toggle_position", position_id, "new_status=False")
 
+    def test_admin_dashboard_updates_user_account_status(self):
+        class Result:
+            def __init__(self, data=None):
+                self.data = data or []
+
+        class FakeTable:
+            def __init__(self, db, name):
+                self.db = db
+                self.name = name
+                self.action = None
+                self.values = None
+                self.filters = []
+
+            def update(self, values):
+                self.action = "update"
+                self.values = values
+                return self
+
+            def eq(self, key, value):
+                self.filters.append((key, value))
+                return self
+
+            def execute(self):
+                self.db.calls.append((self.name, self.action, self.values, tuple(self.filters)))
+                return Result([self.values or {}])
+
+        class FakeSupabase:
+            def __init__(self):
+                self.calls = []
+
+            def table(self, name):
+                return FakeTable(self, name)
+
+        fake = FakeSupabase()
+        with self.client.session_transaction() as sess:
+            sess["csrf_token"] = "token"
+            sess["admin_token"] = "secret"
+
+        viewer = {"id": 7, "username": "admin"}
+        with patch.dict(os.environ, {"LVL_ADMIN_TOKEN": "secret"}), \
+             patch.object(zapp, "get_current_user", return_value=viewer), \
+             patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "log_admin_action") as audit:
+            response = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "update_user_status",
+                "id": "12",
+                "account_status": "suspended",
+                "suspension_days": "3",
+                "account_status_reason": "Repeated spam reports",
+            })
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.headers["Location"].endswith("/admin-dashboard"))
+        update = next(call for call in fake.calls if call[0] == "users")
+        self.assertEqual(update[1], "update")
+        self.assertEqual(update[2]["account_status"], "suspended")
+        self.assertEqual(update[2]["account_status_reason"], "Repeated spam reports")
+        self.assertEqual(update[2]["account_status_updated_by"], 7)
+        self.assertIsNotNone(datetime.fromisoformat(update[2]["account_status_updated_at"]).tzinfo)
+        self.assertIsNotNone(datetime.fromisoformat(update[2]["suspended_until"]).tzinfo)
+        self.assertEqual(update[3], (("id", 12),))
+        audit.assert_any_call("admin", "update_user_status", 12, "status=suspended")
+
     def test_admin_dashboard_moderates_comments_reels_and_communities(self):
         class Result:
             def __init__(self, data=None):
@@ -1913,7 +2054,18 @@ class AppRouteTests(unittest.TestCase):
             "contact_messages": [],
             "verification_requests": [],
             "safety_reports": [],
-            "system_users": [],
+            "system_users": [{
+                "id": 12,
+                "display_name": "Demo User",
+                "username": "demo",
+                "email": "demo@example.com",
+                "level": 1,
+                "total_xp": 0,
+                "is_profile_verified": False,
+                "account_status": "suspended",
+                "suspended_until": "2026-08-17T12:00:00+00:00",
+                "account_status_reason": "Review pending",
+            }],
             "system_posts": [],
             "system_comments": [{
                 "id": 41,
@@ -1947,6 +2099,7 @@ class AppRouteTests(unittest.TestCase):
                 "owner": {"username": "owner"},
             }],
             "admin_logs": [],
+            "account_status_options": zapp.ADMIN_ACCOUNT_STATUS_OPTIONS,
             "q_user": "",
             "q_post": "",
             "q_comment": "",
@@ -1960,10 +2113,14 @@ class AppRouteTests(unittest.TestCase):
         self.assertIn("Reels (1)", html)
         self.assertIn("Reel Replies (1)", html)
         self.assertIn("Communities (1)", html)
+        self.assertIn("Users (1)", html)
         self.assertIn('value="delete_comment_global"', html)
         self.assertIn('value="delete_reel_global"', html)
         self.assertIn('value="delete_reel_comment_global"', html)
         self.assertIn('value="delete_community_global"', html)
+        self.assertIn('value="update_user_status"', html)
+        self.assertIn('name="account_status"', html)
+        self.assertIn("Review pending", html)
 
     def test_level_guide_page_explains_xp_and_rewards(self):
         fake_user = {

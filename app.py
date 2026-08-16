@@ -518,6 +518,12 @@ def admin_session_is_valid():
 ADMIN_JOB_TYPES = {'Full-time', 'Internship', 'Part-time'}
 ADMIN_SUGGESTION_STATUSES = {'New', 'Reviewed', 'Planned', 'Closed'}
 ADMIN_VERIFICATION_DECISIONS = {'Approved', 'Rejected'}
+ADMIN_ACCOUNT_STATUSES = {'active', 'suspended', 'banned'}
+ADMIN_ACCOUNT_STATUS_OPTIONS = [
+    {'value': 'active', 'label': 'Active'},
+    {'value': 'suspended', 'label': 'Suspended'},
+    {'value': 'banned', 'label': 'Banned'},
+]
 ADMIN_SEARCH_UNSAFE_CHARS = re.compile(r"[%*,(){}\[\];\"'\\]")
 ADMIN_UUID_PATTERN = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 
@@ -537,6 +543,42 @@ def admin_search_term(value, max_length=80):
     value = ADMIN_SEARCH_UNSAFE_CHARS.sub(' ', str(value or ''))
     value = re.sub(r"[\x00-\x1f\x7f]", " ", value)
     return re.sub(r"\s+", " ", value).strip()[:max_length]
+
+def admin_notes_text(value, max_length=280):
+    value = re.sub(r"[\x00-\x1f\x7f]", " ", str(value or ""))
+    return re.sub(r"\s+", " ", value).strip()[:max_length]
+
+def normalize_account_status(value):
+    value = str(value or "active").strip().lower()
+    return value if value in ADMIN_ACCOUNT_STATUSES else "active"
+
+def parse_datetime_utc(value):
+    if isinstance(value, datetime):
+        parsed = value
+    elif not value:
+        return None
+    else:
+        try:
+            parsed = datetime.fromisoformat(str(value).replace('Z', '+00:00'))
+        except (TypeError, ValueError):
+            return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+def account_restriction_message(user, now=None):
+    status = normalize_account_status((user or {}).get('account_status'))
+    if status == 'banned':
+        return "This account has been disabled. Contact support if you believe this is a mistake."
+    if status == 'suspended':
+        current = now or datetime.now(timezone.utc)
+        suspended_until = parse_datetime_utc((user or {}).get('suspended_until'))
+        if suspended_until and suspended_until <= current:
+            return None
+        if suspended_until:
+            return f"This account is suspended until {suspended_until.strftime('%Y-%m-%d %H:%M UTC')}."
+        return "This account is suspended. Contact support if you believe this is a mistake."
+    return None
 
 FORCED_LEVEL_ACCOUNT_ALIASES = {'sin', 'sin sin', 'sinsin', 'user sin', 'usersin'}
 FORCED_LEVEL_ACCOUNT_LEVEL = 50
@@ -896,7 +938,11 @@ def get_current_user():
         try:
             res = supabase.table('users').select('*').eq('id', session['user_id']).execute()
             if res.data:
-                return apply_forced_user_levels(res.data[0])
+                user = apply_forced_user_levels(res.data[0])
+                if account_restriction_message(user):
+                    session.clear()
+                    return None
+                return user
         except Exception:
             return None
     return None
@@ -3270,6 +3316,11 @@ def oauth_callback():
 
         app_user = first_oauth_user_match(profile)
         if app_user:
+            restriction = account_restriction_message(app_user)
+            if restriction:
+                clear_oauth_flow_session(include_pending=True)
+                flash(restriction, "error")
+                return redirect(url_for('auth'))
             sync_oauth_user_fields(app_user, profile)
             start_user_session(app_user['id'], remember=oauth_session_remember())
             clear_oauth_flow_session(include_pending=True)
@@ -3319,6 +3370,11 @@ def oauth_onboarding():
 
         existing_user = first_oauth_user_match({**profile, 'email': email})
         if existing_user:
+            restriction = account_restriction_message(existing_user)
+            if restriction:
+                clear_oauth_flow_session(include_pending=True)
+                flash(restriction, "error")
+                return redirect(url_for('auth'))
             sync_oauth_user_fields(existing_user, profile)
             start_user_session(existing_user['id'], remember=oauth_session_remember())
             award_xp(existing_user['id'], 'daily_login', 5)
@@ -3391,6 +3447,12 @@ def auth():
                 if res.data:
                     user = res.data[0]
                     if bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
+                        restriction = account_restriction_message(user)
+                        if restriction:
+                            clear_login_failures(username)
+                            session.clear()
+                            flash(restriction, "error")
+                            return render_template('auth.html')
                         start_user_session(user['id'], remember=remember)
                         clear_login_failures(username)
                         award_xp(user['id'], 'daily_login', 5)
@@ -3500,6 +3562,12 @@ def reset_password(token):
                 return render_template('password_reset.html', mode='reset', token=token)
             hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
             try:
+                user_res = supabase.table('users').select('*').eq('id', record['user_id']).execute()
+                reset_user = user_res.data[0] if user_res and user_res.data else {}
+                restriction = account_restriction_message(reset_user)
+                if restriction:
+                    flash(restriction, "error")
+                    return redirect(url_for('auth'))
                 supabase.table('users').update({'password_hash': hashed_pw}).eq('id', record['user_id']).execute()
                 mark_password_reset_used(record)
                 start_user_session(record['user_id'])
@@ -5171,6 +5239,39 @@ def admin_dashboard():
                         flash(f"Error updating user verification: {exc}", "error")
                 return redirect(url_for('admin_dashboard'))
 
+            elif action == 'update_user_status':
+                user_id = parse_positive_id(request.form.get('id'))
+                requested_status = str(request.form.get('account_status') or '').strip().lower()
+                status = normalize_account_status(requested_status)
+                reason = admin_notes_text(request.form.get('account_status_reason'))
+                if user_id == viewer['id']:
+                    flash("Admins cannot restrict their own account.", "error")
+                    return redirect(url_for('admin_dashboard'))
+                if requested_status not in ADMIN_ACCOUNT_STATUSES:
+                    flash("Invalid account status.", "error")
+                    return redirect(url_for('admin_dashboard'))
+                if user_id and supabase:
+                    try:
+                        timestamp = datetime.now(timezone.utc)
+                        payload = {
+                            'account_status': status,
+                            'account_status_reason': reason,
+                            'account_status_updated_at': timestamp.isoformat(),
+                            'account_status_updated_by': viewer['id'],
+                            'suspended_until': None,
+                        }
+                        if status == 'suspended':
+                            days = parse_positive_int(request.form.get('suspension_days'), default=7, maximum=365)
+                            payload['suspended_until'] = (timestamp + timedelta(days=days)).isoformat()
+                        elif status == 'active':
+                            payload['account_status_reason'] = ''
+                        supabase.table('users').update(payload).eq('id', user_id).execute()
+                        log_admin_action(viewer['username'], 'update_user_status', user_id, f"status={status}")
+                        flash("User account status updated.", "success")
+                    except Exception as exc:
+                        flash(f"Error updating user account status: {exc}", "error")
+                return redirect(url_for('admin_dashboard'))
+
             elif action == 'delete_user_global':
                 user_id = parse_positive_id(request.form.get('id'))
                 if user_id == viewer['id']:
@@ -5346,6 +5447,7 @@ def admin_dashboard():
                            system_reel_comments=system_reel_comments,
                            system_communities=system_communities,
                            admin_logs=admin_logs,
+                           account_status_options=ADMIN_ACCOUNT_STATUS_OPTIONS,
                            q_user=q_user,
                            q_post=q_post,
                            q_comment=q_comment,
