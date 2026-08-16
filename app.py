@@ -31,21 +31,25 @@ def env_truthy(value, default=True):
     return str(value).strip().lower() not in {'0', 'false', 'no', 'off'}
 
 def runtime_environment(environ=None):
-    environ = environ or os.environ
+    if environ is None:
+        environ = os.environ
     return (environ.get("FLASK_ENV") or environ.get("APP_ENV") or environ.get("VERCEL_ENV") or '').strip().lower()
 
 def is_production_runtime(environ=None):
-    environ = environ or os.environ
+    if environ is None:
+        environ = os.environ
     if (environ.get("VERCEL") or '').strip() == "1":
         return True
     return runtime_environment(environ) in {'production', 'prod'}
 
 def env_value_present(name, environ=None):
-    environ = environ or os.environ
+    if environ is None:
+        environ = os.environ
     return bool((environ.get(name) or '').strip())
 
 def resolve_flask_secret_key(environ=None):
-    environ = environ or os.environ
+    if environ is None:
+        environ = os.environ
     secret_key = (environ.get("FLASK_SECRET_KEY") or '').strip()
     if secret_key:
         return secret_key
@@ -54,7 +58,8 @@ def resolve_flask_secret_key(environ=None):
     return DEFAULT_DEV_SECRET_KEY
 
 def session_cookie_config(environ=None):
-    environ = environ or os.environ
+    if environ is None:
+        environ = os.environ
     cookie_secure = env_truthy(environ.get("SESSION_COOKIE_SECURE"), default=is_production_runtime(environ))
     cookie_samesite = (environ.get("SESSION_COOKIE_SAMESITE") or ('None' if cookie_secure else 'Lax')).strip().capitalize()
     if cookie_samesite not in {'Lax', 'Strict', 'None'}:
@@ -68,7 +73,8 @@ def session_cookie_config(environ=None):
     }
 
 def remember_session_lifetime(environ=None):
-    environ = environ or os.environ
+    if environ is None:
+        environ = os.environ
     raw_days = (environ.get("REMEMBER_SESSION_DAYS") or "30").strip()
     try:
         days = int(raw_days)
@@ -388,6 +394,16 @@ def mail_settings():
         'port': port,
         'use_tls': use_tls,
     }
+
+def mail_delivery_is_configured(settings=None):
+    if settings is None:
+        settings = mail_settings()
+    return bool(settings.get('username') and settings.get('password') and settings.get('from_email'))
+
+def oauth_session_remember(environ=None):
+    if environ is None:
+        environ = os.environ
+    return env_truthy(environ.get("OAUTH_SESSION_REMEMBER"), default=True)
 
 def parse_positive_int(value, default=1, maximum=100):
     parsed = parse_int(value)
@@ -2448,6 +2464,11 @@ def get_setup_health():
         "OAuth redirects have a configured base URL." if (env_value_present("OAUTH_REDIRECT_BASE_URL") or env_value_present("APP_BASE_URL")) else "Set OAUTH_REDIRECT_BASE_URL or APP_BASE_URL for Google OAuth callbacks."
     ))
     checks.append(setup_health_check(
+        "Password reset email",
+        mail_delivery_is_configured(),
+        "SMTP delivery is configured for reset emails." if mail_delivery_is_configured() else "Set SMTP_FROM, SMTP_USERNAME, and SMTP_PASSWORD before testing password reset emails."
+    ))
+    checks.append(setup_health_check(
         "Supabase connection",
         bool(supabase),
         "Client configured." if supabase else "Add SUPABASE_URL and SUPABASE_SECRET to .env."
@@ -2851,7 +2872,7 @@ def api_reel_comments(reel_id):
 def send_verification_email(to_email, first_name, token):
     settings = mail_settings()
 
-    if not settings['username'] or not settings['password'] or not settings['from_email']:
+    if not mail_delivery_is_configured(settings):
         app.logger.warning("Email credentials missing. Cannot send verification email.")
         return False
 
@@ -2897,7 +2918,7 @@ def send_password_reset_email(user, token):
     settings = mail_settings()
     reset_url = external_url_for('reset_password', token=token)
 
-    if not settings['username'] or not settings['password'] or not settings['from_email']:
+    if not mail_delivery_is_configured(settings):
         app.logger.warning("Email credentials missing. Password reset link for %s: %s", to_email, reset_url)
         return False
 
@@ -3095,7 +3116,7 @@ def oauth_callback():
         app_user = first_oauth_user_match(profile)
         if app_user:
             sync_oauth_user_fields(app_user, profile)
-            start_user_session(app_user['id'])
+            start_user_session(app_user['id'], remember=oauth_session_remember())
             clear_oauth_flow_session(include_pending=True)
             award_xp(app_user['id'], 'daily_login', 5)
             flash(f"Signed in with {oauth_provider_label(profile['provider'])}.", "success")
@@ -3144,7 +3165,7 @@ def oauth_onboarding():
         existing_user = first_oauth_user_match({**profile, 'email': email})
         if existing_user:
             sync_oauth_user_fields(existing_user, profile)
-            start_user_session(existing_user['id'])
+            start_user_session(existing_user['id'], remember=oauth_session_remember())
             award_xp(existing_user['id'], 'daily_login', 5)
             flash("Your social login is now connected to your existing LvL account.", "success")
             return redirect(url_for('index'))
@@ -3175,7 +3196,7 @@ def oauth_onboarding():
         try:
             new_user = supabase.table('users').insert(payload).execute()
             if new_user.data:
-                start_user_session(new_user.data[0]['id'])
+                start_user_session(new_user.data[0]['id'], remember=oauth_session_remember())
                 award_xp(new_user.data[0]['id'], 'account_created', 20)
                 flash(f"Welcome to LvL, {first_name}! Your social login is connected.", "success")
                 return redirect(url_for('index'))
@@ -3326,8 +3347,9 @@ def reset_password(token):
             try:
                 supabase.table('users').update({'password_hash': hashed_pw}).eq('id', record['user_id']).execute()
                 mark_password_reset_used(record)
-                flash("Password updated. Log in with your new password.", "success")
-                return redirect(url_for('auth'))
+                start_user_session(record['user_id'])
+                flash("Password updated. You are signed in.", "success")
+                return redirect(url_for('index'))
             except Exception as exc:
                 flash(handle_db_error(exc, "Password could not be updated."), "error")
 

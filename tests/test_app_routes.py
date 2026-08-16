@@ -253,6 +253,38 @@ class AppRouteTests(unittest.TestCase):
         with patch.dict(os.environ, {"APP_ENV": "development"}, clear=True):
             self.assertTrue(zapp.password_reset_memory_fallback_enabled())
 
+    def test_mail_delivery_configuration_requires_sender_credentials(self):
+        self.assertFalse(zapp.mail_delivery_is_configured({
+            "username": "mailer@lvl.test",
+            "password": "",
+            "from_email": "noreply@lvl.test",
+        }))
+        self.assertTrue(zapp.mail_delivery_is_configured({
+            "username": "mailer@lvl.test",
+            "password": "smtp-secret",
+            "from_email": "noreply@lvl.test",
+        }))
+
+    def test_oauth_sessions_are_persistent_by_default(self):
+        self.assertTrue(zapp.oauth_session_remember({}))
+        self.assertFalse(zapp.oauth_session_remember({"OAUTH_SESSION_REMEMBER": "0"}))
+
+    def test_setup_health_reports_password_reset_email_readiness(self):
+        with patch.object(zapp, "supabase", None), patch.dict(os.environ, {}, clear=True):
+            missing = {check["label"]: check for check in zapp.get_setup_health()}
+
+        self.assertEqual(missing["Password reset email"]["status"], "needs_attention")
+
+        env = {
+            "SMTP_FROM": "noreply@lvl.test",
+            "SMTP_USERNAME": "mailer@lvl.test",
+            "SMTP_PASSWORD": "smtp-secret",
+        }
+        with patch.object(zapp, "supabase", None), patch.dict(os.environ, env, clear=True):
+            ready = {check["label"]: check for check in zapp.get_setup_health()}
+
+        self.assertEqual(ready["Password reset email"]["status"], "ready")
+
     def test_default_video_upload_limit_matches_storage_bucket(self):
         self.assertEqual(zapp.MAX_VIDEO_BYTES, 50 * 1024 * 1024)
 
@@ -528,7 +560,8 @@ class AppRouteTests(unittest.TestCase):
 
         fake = SimpleNamespace(auth=FakeAuth())
 
-        with patch.object(zapp, "supabase", fake):
+        with patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "create_oauth_supabase_client", return_value=fake):
             response = self.client.get("/auth/oauth/google")
 
         self.assertEqual(response.status_code, 302)
@@ -563,6 +596,7 @@ class AppRouteTests(unittest.TestCase):
         fake = SimpleNamespace(auth=FakeAuth())
 
         with patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "create_oauth_supabase_client", return_value=fake), \
              patch.dict(os.environ, {"APP_BASE_URL": "http://127.0.0.1:5055", "OAUTH_REDIRECT_BASE_URL": "http://127.0.0.1:5050"}):
             response = self.client.get("/auth/oauth/google", base_url="http://127.0.0.1:5055")
 
@@ -591,6 +625,7 @@ class AppRouteTests(unittest.TestCase):
         fake = SimpleNamespace(auth=FakeAuth())
 
         with patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "create_oauth_supabase_client", return_value=fake), \
              patch.dict(os.environ, {"APP_BASE_URL": "http://127.0.0.1:5055", "OAUTH_REDIRECT_BASE_URL": "http://127.0.0.1:5050"}):
             response = self.client.get("/auth/oauth/google", base_url="https://lvl.example.test")
 
@@ -856,12 +891,16 @@ class AppRouteTests(unittest.TestCase):
                 "csrf_token": self.csrf(),
                 "password": "newpass123",
                 "confirm_password": "newpass123",
-            }, follow_redirects=True)
+            })
 
-        self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Password updated. Log in with your new password.", response.data)
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.location.endswith("/"))
         self.assertTrue(bcrypt.checkpw(b"newpass123", fake.user_update["password_hash"].encode("utf-8")))
         self.assertIsNotNone(fake.reset_update["used_at"])
+        with self.client.session_transaction() as sess:
+            self.assertEqual(sess["user_id"], 12)
+            self.assertFalse(sess.permanent)
+            self.assertIn(("success", "Password updated. You are signed in."), sess.get("_flashes", []))
 
     def test_reset_password_rejects_expired_token(self):
         raw_token = "expired-token"
@@ -956,7 +995,8 @@ class AppRouteTests(unittest.TestCase):
             sess["oauth_provider"] = "google"
             sess["oauth_code_verifier"] = "stored-verifier"
 
-        with patch.object(zapp, "supabase", fake):
+        with patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "create_oauth_supabase_client", return_value=fake):
             response = self.client.get("/auth/oauth/callback?code=abc123&state=expected-state")
 
         self.assertEqual(response.status_code, 302)
@@ -967,6 +1007,7 @@ class AppRouteTests(unittest.TestCase):
         self.assertEqual(fake.updated_payload["oauth_provider"], "google")
         with self.client.session_transaction() as sess:
             self.assertEqual(sess["user_id"], 44)
+            self.assertTrue(sess.permanent)
             self.assertNotIn("pending_oauth_profile", sess)
 
     def test_oauth_callback_uses_isolated_auth_client_for_exchange(self):
@@ -1063,6 +1104,7 @@ class AppRouteTests(unittest.TestCase):
         self.assertEqual(shared.updated_payload["supabase_auth_user_id"], "66666666-6666-6666-6666-666666666666")
         with self.client.session_transaction() as sess:
             self.assertEqual(sess["user_id"], 66)
+            self.assertTrue(sess.permanent)
             self.assertNotIn("pending_oauth_profile", sess)
 
     def test_oauth_callback_sends_new_user_to_social_onboarding(self):
@@ -1100,7 +1142,8 @@ class AppRouteTests(unittest.TestCase):
             sess["oauth_provider"] = "google"
             sess["oauth_code_verifier"] = "stored-verifier"
 
-        with patch.object(zapp, "supabase", fake):
+        with patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "create_oauth_supabase_client", return_value=fake):
             response = self.client.get("/auth/oauth/callback?code=abc123&state=expected-state")
 
         self.assertEqual(response.status_code, 302)
@@ -1153,7 +1196,8 @@ class AppRouteTests(unittest.TestCase):
             sess["oauth_provider"] = "google"
             sess["oauth_code_verifier"] = "stored-verifier"
 
-        with patch.object(zapp, "supabase", fake):
+        with patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "create_oauth_supabase_client", return_value=fake):
             response = self.client.get("/auth/oauth/callback?code=abc123")
 
         self.assertEqual(response.status_code, 302)
@@ -1186,7 +1230,8 @@ class AppRouteTests(unittest.TestCase):
 
         fake = SimpleNamespace(auth=FakeAuth(), table=lambda _name: FakeUsersTable())
 
-        with patch.object(zapp, "supabase", fake):
+        with patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "create_oauth_supabase_client", return_value=fake):
             response = self.client.get("/auth/oauth/callback?code=abc123&state=returned-state")
 
         self.assertEqual(response.status_code, 302)
@@ -1249,6 +1294,7 @@ class AppRouteTests(unittest.TestCase):
         self.assertEqual(fake.inserted_payload["username"], "joinmember")
         with self.client.session_transaction() as sess:
             self.assertEqual(sess["user_id"], 55)
+            self.assertTrue(sess.permanent)
             self.assertNotIn("pending_oauth_profile", sess)
 
     def test_shared_post_card_has_menu_actions(self):
