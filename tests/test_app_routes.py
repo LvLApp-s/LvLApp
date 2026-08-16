@@ -207,6 +207,25 @@ class AppRouteTests(unittest.TestCase):
             self.assertTrue(zapp.admin_token_is_valid("secret"))
             self.assertFalse(zapp.admin_token_is_valid("admin123"))
 
+    def test_admin_login_stores_session_proof_not_raw_token(self):
+        viewer = {"id": 7, "username": "admin"}
+        with self.client.session_transaction() as sess:
+            sess["csrf_token"] = "token"
+
+        with patch.dict(os.environ, {"LVL_ADMIN_TOKEN": "secret"}), \
+             patch.object(zapp, "get_current_user", return_value=viewer):
+            response = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "login",
+                "admin_token": "secret",
+            })
+
+        self.assertEqual(response.status_code, 302)
+        with self.client.session_transaction() as sess:
+            self.assertNotIn("admin_token", sess)
+            self.assertIn("admin_token_proof", sess)
+            self.assertNotEqual(sess["admin_token_proof"], "secret")
+
     def test_flask_secret_key_is_required_in_production(self):
         with self.assertRaises(RuntimeError):
             zapp.resolve_flask_secret_key({"VERCEL_ENV": "production"})

@@ -3,6 +3,7 @@ import re
 import secrets
 import uuid
 import hashlib
+import hmac
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory, jsonify, get_flashed_messages, abort, Response
@@ -497,6 +498,22 @@ def set_user_level(username, level):
 def admin_token_is_valid(token):
     expected = os.getenv("LVL_ADMIN_TOKEN", "")
     return bool(expected and token and secrets.compare_digest(str(token), expected))
+
+def admin_token_session_proof(token):
+    secret = str(app.secret_key or DEFAULT_DEV_SECRET_KEY).encode('utf-8')
+    return hmac.new(secret, str(token or '').encode('utf-8'), hashlib.sha256).hexdigest()
+
+def admin_session_is_valid():
+    expected = os.getenv("LVL_ADMIN_TOKEN", "")
+    proof = session.get('admin_token_proof')
+    if expected and proof and secrets.compare_digest(str(proof), admin_token_session_proof(expected)):
+        return True
+
+    legacy_token = session.pop('admin_token', None)
+    if admin_token_is_valid(legacy_token):
+        session['admin_token_proof'] = admin_token_session_proof(legacy_token)
+        return True
+    return False
 
 ADMIN_JOB_TYPES = {'Full-time', 'Internship', 'Part-time'}
 ADMIN_SUGGESTION_STATUSES = {'New', 'Reviewed', 'Planned', 'Closed'}
@@ -4935,13 +4952,7 @@ def admin_dashboard():
     if not viewer:
         return redirect(url_for('auth'))
         
-    # Helper to check token with development fallback
-    def is_token_valid(token):
-        return admin_token_is_valid(token)
-
-    # Authenticate check from session
-    session_token = session.get('admin_token')
-    is_authenticated = is_token_valid(session_token)
+    is_authenticated = admin_session_is_valid()
 
     login_error = None
 
@@ -4950,10 +4961,13 @@ def admin_dashboard():
         
         if action == 'login':
             token_input = request.form.get('admin_token', '')
-            if is_token_valid(token_input):
-                session['admin_token'] = token_input
+            if admin_token_is_valid(token_input):
+                session.pop('admin_token', None)
+                session['admin_token_proof'] = admin_token_session_proof(token_input)
                 return redirect(url_for('admin_dashboard'))
             else:
+                session.pop('admin_token', None)
+                session.pop('admin_token_proof', None)
                 login_error = "Invalid admin token. Please try again."
                 is_authenticated = False
                 
