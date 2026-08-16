@@ -2256,9 +2256,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const captionCount = form.querySelector('[data-reel-caption-count]');
         const visibility = form.querySelector('[data-reel-visibility]');
         const communityField = form.querySelector('[data-reel-community-field]');
+        const communitySelect = form.querySelector('select[name="community_id"]');
+        const csrfTokenInput = form.querySelector('input[name="csrf_token"]');
+        const allowComments = form.querySelector('input[name="allow_comments"]');
+        const allowDownloads = form.querySelector('input[name="allow_downloads"]');
+        const autoplayNext = form.querySelector('input[name="autoplay_next"]');
         const maxBytes = parseInt(form.dataset.maxVideoBytes || '0', 10);
+        const uploadEndpoint = form.dataset.uploadUrl;
+        const completeEndpoint = form.dataset.completeUrl;
         const allowedTypes = new Set(['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v']);
         let previewUrl = null;
+        const defaultSubmitText = submit ? submit.textContent : '';
 
         const setMessage = (text, isError = false) => {
             if (!message) return;
@@ -2316,9 +2324,83 @@ document.addEventListener('DOMContentLoaded', () => {
             visibility.addEventListener('change', toggleCommunity);
             toggleCommunity();
         }
-        form.addEventListener('submit', (event) => {
+
+        const postUploadJson = async (url, payload) => {
+            const headers = {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            };
+            if (csrfTokenInput && csrfTokenInput.value) {
+                headers['X-CSRF-Token'] = csrfTokenInput.value;
+            }
+            const response = await fetch(url, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            let data = {};
+            try {
+                data = await response.json();
+            } catch (_error) {
+                data = {};
+            }
+            if (!response.ok || data.success === false) {
+                throw new Error(data.error || 'Could not upload that video.');
+            }
+            return data;
+        };
+
+        const uploadDirectly = async (file) => {
+            if (submit) submit.textContent = 'Preparing...';
+            setMessage('Preparing secure upload...');
+            const prepared = await postUploadJson(uploadEndpoint, {
+                filename: file.name,
+                content_type: file.type || 'application/octet-stream',
+                size: file.size
+            });
+
+            if (submit) submit.textContent = 'Uploading...';
+            setMessage('Uploading video...');
+            const uploadBody = new FormData();
+            uploadBody.append('file', file, file.name);
+            const uploadResponse = await fetch(prepared.upload_url, {
+                method: 'PUT',
+                body: uploadBody
+            });
+            if (!uploadResponse.ok) {
+                throw new Error('Video upload failed before it reached LvL.');
+            }
+
+            if (submit) submit.textContent = 'Saving...';
+            setMessage('Saving clip...');
+            const completed = await postUploadJson(completeEndpoint, {
+                storage_path: prepared.storage_path,
+                caption: caption ? caption.value : '',
+                visibility: visibility ? visibility.value : 'public',
+                community_id: communitySelect ? communitySelect.value : '',
+                allow_comments: !!(allowComments && allowComments.checked),
+                allow_downloads: !!(allowDownloads && allowDownloads.checked),
+                autoplay_next: !!(autoplayNext && autoplayNext.checked)
+            });
+            window.location.assign(completed.redirect_url || '/reels');
+        };
+
+        form.addEventListener('submit', async (event) => {
             if (submit && submit.disabled) {
                 event.preventDefault();
+                return;
+            }
+            const file = input && input.files ? input.files[0] : null;
+            if (file && uploadEndpoint && completeEndpoint && window.fetch && window.FormData) {
+                event.preventDefault();
+                if (!lockSubmitForm(form, submit)) return;
+                try {
+                    await uploadDirectly(file);
+                } catch (error) {
+                    unlockSubmitForm(form, submit);
+                    if (submit) submit.textContent = defaultSubmitText;
+                    setMessage(error.message || 'Could not upload that video.', true);
+                }
                 return;
             }
             if (!lockSubmitForm(form, submit)) {

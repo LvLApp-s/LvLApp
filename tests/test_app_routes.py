@@ -2045,6 +2045,8 @@ class AppRouteTests(unittest.TestCase):
         self.assertIn("Upload Clip", html)
         self.assertIn('enctype="multipart/form-data"', html)
         self.assertIn('accept="video/mp4,video/webm,video/quicktime,video/x-m4v"', html)
+        self.assertIn('data-upload-url="/api/reels/upload-url"', html)
+        self.assertIn('data-complete-url="/api/reels/complete-upload"', html)
 
     def test_reel_upload_rejects_missing_video(self):
         viewer = {"id": 7, "username": "demo", "display_name": "Demo User", "profile_photo_url": ""}
@@ -2116,6 +2118,124 @@ class AppRouteTests(unittest.TestCase):
         self.assertEqual(fake.reels.inserted["video_url"], "https://cdn.example.com/reel.mp4")
         self.assertEqual(fake.reels.inserted["storage_path"], "reels/7/reel.mp4")
         award_xp.assert_called_once_with(7, "reel_created", 15, 123)
+
+    def test_reel_signed_upload_url_uses_supabase_storage(self):
+        class FakeBucket:
+            def __init__(self):
+                self.signed_path = None
+
+            def create_signed_upload_url(self, path):
+                self.signed_path = path
+                return {
+                    "signedUrl": f"https://storage.example.test/upload/{path}?token=signed",
+                    "token": "signed",
+                    "path": path,
+                }
+
+            def get_public_url(self, path):
+                return f"https://cdn.example.test/{path}"
+
+        class FakeStorage:
+            def __init__(self):
+                self.bucket = FakeBucket()
+                self.checked_bucket = None
+
+            def get_bucket(self, bucket):
+                self.checked_bucket = bucket
+                return {"name": bucket}
+
+            def from_(self, bucket):
+                self.used_bucket = bucket
+                return self.bucket
+
+        fake = SimpleNamespace(storage=FakeStorage())
+        viewer = {"id": 7, "username": "demo", "display_name": "Demo User", "profile_photo_url": ""}
+        with patch.object(zapp, "get_current_user", return_value=viewer), \
+             patch.object(zapp, "supabase", fake):
+            response = self.client.post("/api/reels/upload-url", json={
+                "filename": "clip.mp4",
+                "content_type": "video/mp4",
+                "size": 1024,
+            }, headers={"X-CSRF-Token": self.csrf()})
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertTrue(data["success"])
+        self.assertTrue(data["storage_path"].startswith("reels/7/"))
+        self.assertTrue(data["storage_path"].endswith(".mp4"))
+        self.assertEqual(data["content_type"], "video/mp4")
+        self.assertEqual(fake.storage.checked_bucket, zapp.SUPABASE_VIDEO_BUCKET)
+        self.assertEqual(fake.storage.bucket.signed_path, data["storage_path"])
+
+    def test_reel_complete_direct_upload_inserts_record(self):
+        class Result:
+            data = [{"id": 321}]
+
+        class FakeTable:
+            def __init__(self):
+                self.inserted = None
+
+            def insert(self, payload):
+                self.inserted = payload
+                return self
+
+            def execute(self):
+                return Result()
+
+        class FakeBucket:
+            def get_public_url(self, path):
+                return f"https://cdn.example.test/{path}"
+
+        class FakeStorage:
+            def from_(self, _bucket):
+                return FakeBucket()
+
+        class FakeSupabase:
+            def __init__(self):
+                self.storage = FakeStorage()
+                self.reels = FakeTable()
+
+            def table(self, _name):
+                return self.reels
+
+        fake = FakeSupabase()
+        viewer = {"id": 7, "username": "demo", "display_name": "Demo User", "profile_photo_url": ""}
+        storage_path = f"reels/7/{'a' * 32}.mp4"
+        with patch.object(zapp, "get_current_user", return_value=viewer), \
+             patch.object(zapp, "get_reel_upload_communities", return_value=[]), \
+             patch.object(zapp, "award_xp") as award_xp, \
+             patch.object(zapp, "supabase", fake):
+            response = self.client.post("/api/reels/complete-upload", json={
+                "storage_path": storage_path,
+                "caption": "direct upload",
+                "visibility": "public",
+                "allow_comments": True,
+                "allow_downloads": False,
+                "autoplay_next": True,
+            }, headers={"X-CSRF-Token": self.csrf()})
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["redirect_url"], "/reels")
+        self.assertEqual(fake.reels.inserted["video_url"], f"https://cdn.example.test/{storage_path}")
+        self.assertEqual(fake.reels.inserted["storage_path"], storage_path)
+        self.assertEqual(fake.reels.inserted["caption"], "direct upload")
+        self.assertTrue(fake.reels.inserted["allow_comments"])
+        self.assertFalse(fake.reels.inserted["allow_downloads"])
+        award_xp.assert_called_once_with(7, "reel_created", 15, 321)
+
+    def test_reel_complete_direct_upload_rejects_foreign_storage_path(self):
+        viewer = {"id": 7, "username": "demo", "display_name": "Demo User", "profile_photo_url": ""}
+        with patch.object(zapp, "get_current_user", return_value=viewer):
+            response = self.client.post("/api/reels/complete-upload", json={
+                "storage_path": f"reels/8/{'b' * 32}.mp4",
+                "caption": "wrong owner",
+                "visibility": "public",
+            }, headers={"X-CSRF-Token": self.csrf()})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.get_json()["error"], "Invalid uploaded video path.")
 
     def test_reel_like_endpoint_toggles_like_json(self):
         class Result:

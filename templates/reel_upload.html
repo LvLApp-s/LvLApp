@@ -13,7 +13,7 @@
     </div>
   </header>
 
-  <form class="reel-upload-form panel" action="{{ url_for('reel_upload') }}" method="post" enctype="multipart/form-data" data-reel-upload-form data-max-video-bytes="{{ max_video_bytes }}">
+  <form class="reel-upload-form panel" action="{{ url_for('reel_upload') }}" method="post" enctype="multipart/form-data" data-reel-upload-form data-max-video-bytes="{{ max_video_bytes }}" data-upload-url="{{ url_for('api_reel_upload_url') }}" data-complete-url="{{ url_for('api_reel_complete_upload') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
     <div class="reel-upload-grid">

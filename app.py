@@ -119,6 +119,8 @@ LOCAL_IMAGE_UPLOAD_FALLBACK = os.getenv("LOCAL_IMAGE_UPLOAD_FALLBACK", "true").l
 MAX_ATTACHMENT_BYTES = int(os.getenv("MAX_ATTACHMENT_BYTES", 15 * 1024 * 1024))
 SUPABASE_ATTACHMENT_BUCKET = os.getenv("SUPABASE_ATTACHMENT_BUCKET", "lvl-attachments")
 LOCAL_ATTACHMENT_UPLOAD_FALLBACK = env_truthy(os.getenv("LOCAL_ATTACHMENT_UPLOAD_FALLBACK"), default=not is_production_runtime())
+REEL_VISIBILITIES = {'public', 'followers', 'community', 'private'}
+REEL_STORAGE_PATH_PATTERN = re.compile(r"^reels/([0-9]+)/[0-9a-f]{32}\.(mp4|webm|mov|m4v)$")
 IMAGE_CONTENT_TYPES = {
     'jpg': 'image/jpeg',
     'jpeg': 'image/jpeg',
@@ -373,6 +375,11 @@ def parse_int(value):
         return int(value)
     except (TypeError, ValueError):
         return None
+
+def parse_bool_input(value):
+    if isinstance(value, bool):
+        return value
+    return str(value or '').strip().lower() in {'1', 'true', 'on', 'yes'}
 
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -1074,6 +1081,62 @@ def allowed_image_file(filename):
 def allowed_video_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_VIDEO_EXTENSIONS
 
+def validate_video_upload_metadata(filename, mimetype='', size=None):
+    if not filename:
+        raise ValueError("Choose a video to upload.")
+    if not allowed_video_file(filename):
+        raise ValueError("Videos must be MP4, WebM, MOV, or M4V.")
+
+    safe_name = secure_filename(filename)
+    if not safe_name or '.' not in safe_name:
+        raise ValueError("Choose a valid video file.")
+    extension = safe_name.rsplit('.', 1)[1].lower()
+
+    parsed_size = parse_int(size) if size is not None else None
+    if parsed_size is not None:
+        if parsed_size <= 0:
+            raise ValueError("Selected video is empty.")
+        if parsed_size > MAX_VIDEO_BYTES:
+            limit_mb = max(1, MAX_VIDEO_BYTES // (1024 * 1024))
+            raise ValueError(f"Videos must be {limit_mb} MB or smaller.")
+
+    expected_content_type = VIDEO_CONTENT_TYPES.get(extension)
+    content_type = (mimetype or '').lower()
+    if content_type and expected_content_type and content_type not in {expected_content_type, 'application/octet-stream'}:
+        if extension == 'm4v' and content_type == 'video/mp4':
+            content_type = 'video/mp4'
+        else:
+            raise ValueError("Selected file type does not match the video extension.")
+
+    return extension, expected_content_type or content_type or "application/octet-stream"
+
+def create_reel_storage_path(viewer_id, extension):
+    return f"{safe_upload_folder(f'reels/{viewer_id}')}/{uuid.uuid4().hex}.{extension}"
+
+def reel_storage_path_belongs_to(storage_path, viewer_id):
+    match = REEL_STORAGE_PATH_PATTERN.fullmatch(str(storage_path or '').strip())
+    return bool(match and match.group(1) == str(viewer_id))
+
+def create_signed_reel_upload(filename, mimetype, size, viewer_id):
+    if not supabase:
+        raise RuntimeError("Supabase Storage is required for direct video uploads.")
+
+    extension, content_type = validate_video_upload_metadata(filename, mimetype, size)
+    storage_path = create_reel_storage_path(viewer_id, extension)
+    ensure_media_bucket(SUPABASE_VIDEO_BUCKET, MAX_VIDEO_BYTES, list(VIDEO_CONTENT_TYPES.values()))
+    signed = supabase.storage.from_(SUPABASE_VIDEO_BUCKET).create_signed_upload_url(storage_path)
+    upload_url = signed.get('signedUrl') or signed.get('signed_url')
+    if not upload_url:
+        raise RuntimeError("Could not prepare the video upload URL. Try again.")
+
+    return {
+        'upload_url': upload_url,
+        'storage_path': storage_path,
+        'public_url': supabase.storage.from_(SUPABASE_VIDEO_BUCKET).get_public_url(storage_path),
+        'content_type': content_type,
+        'max_video_bytes': MAX_VIDEO_BYTES,
+    }
+
 def attachment_upload_dir():
     return os.path.join(app.root_path, 'uploads', 'attachments')
 
@@ -1305,34 +1368,21 @@ def upload_image_to_storage(file_storage, folder, max_bytes=MAX_IMAGE_BYTES):
     raise RuntimeError("Image upload failed. Supabase Storage is not configured for image uploads.")
 
 def upload_video_to_storage(file_storage, folder):
-    if not file_storage or not file_storage.filename:
+    if not file_storage or not getattr(file_storage, 'filename', ''):
         raise ValueError("Choose a video to upload.")
-    if not allowed_video_file(file_storage.filename):
-        raise ValueError("Videos must be MP4, WebM, MOV, or M4V.")
 
     try:
         file_storage.stream.seek(0)
     except (AttributeError, OSError):
         pass
     payload = file_storage.read()
-    if not payload:
-        raise ValueError("Selected video is empty.")
-    if len(payload) > MAX_VIDEO_BYTES:
-        limit_mb = max(1, MAX_VIDEO_BYTES // (1024 * 1024))
-        raise ValueError(f"Videos must be {limit_mb} MB or smaller.")
-
-    filename = secure_filename(file_storage.filename)
-    extension = filename.rsplit('.', 1)[1].lower()
-    expected_content_type = VIDEO_CONTENT_TYPES.get(extension)
-    mimetype = (file_storage.mimetype or '').lower()
-    if mimetype and expected_content_type and mimetype not in {expected_content_type, 'application/octet-stream'}:
-        if extension == 'm4v' and mimetype == 'video/mp4':
-            pass
-        else:
-            raise ValueError("Selected file type does not match the video extension.")
+    extension, content_type = validate_video_upload_metadata(
+        getattr(file_storage, 'filename', ''),
+        getattr(file_storage, 'mimetype', ''),
+        len(payload) if payload is not None else None,
+    )
 
     storage_path = f"{safe_upload_folder(folder)}/{uuid.uuid4().hex}.{extension}"
-    content_type = expected_content_type or mimetype or "application/octet-stream"
 
     if supabase:
         try:
@@ -2656,6 +2706,53 @@ def reels():
                            trending_posts=explore.get('trending_posts', []),
                            home_media=get_home_media_preview(viewer['id']))
 
+def validate_reel_details(viewer_id, caption, visibility, community_id, communities):
+    caption = (caption or '').strip()
+    visibility = visibility or 'public'
+    parsed_community_id = parse_int(community_id)
+
+    if visibility not in REEL_VISIBILITIES:
+        raise ValueError("Choose a valid visibility setting.")
+    if len(caption) > 220:
+        raise ValueError("Caption cannot exceed 220 characters.")
+    if visibility == 'community':
+        allowed_community_ids = {parse_int(item.get('id')) for item in communities or []}
+        if not parsed_community_id or parsed_community_id not in allowed_community_ids:
+            raise ValueError("Choose one of your communities for community-only reels.")
+    else:
+        parsed_community_id = None
+
+    return {
+        'user_id': viewer_id,
+        'community_id': parsed_community_id,
+        'caption': caption,
+        'visibility': visibility,
+    }
+
+def insert_reel_record(viewer_id, video_url, storage_path, details, allow_comments, allow_downloads, autoplay_next):
+    if not supabase:
+        raise RuntimeError("Supabase is not configured.")
+
+    payload = {
+        'user_id': viewer_id,
+        'community_id': details['community_id'],
+        'video_url': video_url,
+        'storage_path': storage_path,
+        'cover_url': None,
+        'caption': details['caption'],
+        'visibility': details['visibility'],
+        'allow_comments': parse_bool_input(allow_comments),
+        'allow_downloads': parse_bool_input(allow_downloads),
+        'autoplay_next': parse_bool_input(autoplay_next),
+        'status': 'active',
+    }
+    res = supabase.table('reels').insert(payload).execute()
+    reel_id = None
+    if res.data:
+        reel_id = res.data[0]['id']
+        award_xp(viewer_id, 'reel_created', 15, reel_id)
+    return payload, reel_id
+
 @app.route('/api/reels')
 def api_reels():
     viewer = get_current_user()
@@ -2669,6 +2766,69 @@ def api_reels():
     except Exception as exc:
         return jsonify({'success': False, 'error': handle_db_error(exc, "Could not load reels.")}), 400
 
+@app.route('/api/reels/upload-url', methods=['POST'])
+def api_reel_upload_url():
+    viewer = get_current_user()
+    if not viewer:
+        return jsonify({'success': False, 'error': 'Authentication required.'}), 401
+
+    data = request.get_json(silent=True) or {}
+    try:
+        upload = create_signed_reel_upload(
+            data.get('filename', ''),
+            data.get('content_type', ''),
+            data.get('size'),
+            viewer['id'],
+        )
+        return jsonify({'success': True, **upload})
+    except (ValueError, RuntimeError) as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 400
+    except Exception as exc:
+        app.logger.exception("Could not create signed reel upload URL")
+        return jsonify({'success': False, 'error': handle_db_error(exc, "Could not prepare that video upload.")}), 400
+
+@app.route('/api/reels/complete-upload', methods=['POST'])
+def api_reel_complete_upload():
+    viewer = get_current_user()
+    if not viewer:
+        return jsonify({'success': False, 'error': 'Authentication required.'}), 401
+
+    data = request.get_json(silent=True) or {}
+    storage_path = str(data.get('storage_path') or '').strip()
+    if not reel_storage_path_belongs_to(storage_path, viewer['id']):
+        return jsonify({'success': False, 'error': 'Invalid uploaded video path.'}), 400
+
+    try:
+        communities = get_reel_upload_communities(viewer['id'])
+        details = validate_reel_details(
+            viewer['id'],
+            data.get('caption', ''),
+            data.get('visibility', 'public'),
+            data.get('community_id'),
+            communities,
+        )
+        video_url = supabase.storage.from_(SUPABASE_VIDEO_BUCKET).get_public_url(storage_path)
+        _payload, reel_id = insert_reel_record(
+            viewer['id'],
+            video_url,
+            storage_path,
+            details,
+            data.get('allow_comments', False),
+            data.get('allow_downloads', False),
+            data.get('autoplay_next', False),
+        )
+        return jsonify({
+            'success': True,
+            'reel_id': reel_id,
+            'redirect_url': url_for('reels'),
+        })
+    except (ValueError, RuntimeError) as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 400
+    except Exception as exc:
+        if reels_table_not_ready(exc):
+            return jsonify({'success': False, 'error': "Reels database table is not ready. Run database/migrations/002_reels.sql in Supabase."}), 400
+        return jsonify({'success': False, 'error': handle_db_error(exc, "Could not finish that video upload.")}), 400
+
 @app.route('/reels/upload', methods=['GET', 'POST'])
 def reel_upload():
     viewer = get_current_user()
@@ -2680,45 +2840,23 @@ def reel_upload():
         video_file = request.files.get('video')
         caption = request.form.get('caption', '').strip()
         visibility = request.form.get('visibility', 'public')
-        community_id = parse_int(request.form.get('community_id'))
+        community_id = request.form.get('community_id')
         allow_comments = request.form.get('allow_comments') == 'on'
         allow_downloads = request.form.get('allow_downloads') == 'on'
         autoplay_next = request.form.get('autoplay_next') == 'on'
-        valid_visibilities = {'public', 'followers', 'community', 'private'}
-
-        if visibility not in valid_visibilities:
-            flash("Choose a valid visibility setting.", "error")
-            return redirect(url_for('reel_upload'))
-        if len(caption) > 220:
-            flash("Caption cannot exceed 220 characters.", "error")
-            return redirect(url_for('reel_upload'))
-        if visibility == 'community':
-            allowed_community_ids = {item['id'] for item in communities}
-            if not community_id or community_id not in allowed_community_ids:
-                flash("Choose one of your communities for community-only reels.", "error")
-                return redirect(url_for('reel_upload'))
-        else:
-            community_id = None
 
         try:
+            details = validate_reel_details(viewer['id'], caption, visibility, community_id, communities)
             video_url, storage_path = upload_video_to_storage(video_file, f"reels/{viewer['id']}")
-            payload = {
-                'user_id': viewer['id'],
-                'community_id': community_id,
-                'video_url': video_url,
-                'storage_path': storage_path,
-                'cover_url': None,
-                'caption': caption,
-                'visibility': visibility,
-                'allow_comments': allow_comments,
-                'allow_downloads': allow_downloads,
-                'autoplay_next': autoplay_next,
-                'status': 'active',
-            }
-            res = supabase.table('reels').insert(payload).execute()
-            if res.data:
-                reel_id = res.data[0]['id']
-                award_xp(viewer['id'], 'reel_created', 15, reel_id)
+            insert_reel_record(
+                viewer['id'],
+                video_url,
+                storage_path,
+                details,
+                allow_comments,
+                allow_downloads,
+                autoplay_next,
+            )
             flash("Reel uploaded.", "success")
             return redirect(url_for('reels'))
         except (ValueError, RuntimeError) as exc:
