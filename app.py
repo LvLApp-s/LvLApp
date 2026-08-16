@@ -3,6 +3,7 @@ import re
 import secrets
 import uuid
 import hashlib
+import hmac
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory, jsonify, get_flashed_messages, abort, Response
@@ -31,21 +32,25 @@ def env_truthy(value, default=True):
     return str(value).strip().lower() not in {'0', 'false', 'no', 'off'}
 
 def runtime_environment(environ=None):
-    environ = environ or os.environ
+    if environ is None:
+        environ = os.environ
     return (environ.get("FLASK_ENV") or environ.get("APP_ENV") or environ.get("VERCEL_ENV") or '').strip().lower()
 
 def is_production_runtime(environ=None):
-    environ = environ or os.environ
+    if environ is None:
+        environ = os.environ
     if (environ.get("VERCEL") or '').strip() == "1":
         return True
     return runtime_environment(environ) in {'production', 'prod'}
 
 def env_value_present(name, environ=None):
-    environ = environ or os.environ
+    if environ is None:
+        environ = os.environ
     return bool((environ.get(name) or '').strip())
 
 def resolve_flask_secret_key(environ=None):
-    environ = environ or os.environ
+    if environ is None:
+        environ = os.environ
     secret_key = (environ.get("FLASK_SECRET_KEY") or '').strip()
     if secret_key:
         return secret_key
@@ -54,7 +59,8 @@ def resolve_flask_secret_key(environ=None):
     return DEFAULT_DEV_SECRET_KEY
 
 def session_cookie_config(environ=None):
-    environ = environ or os.environ
+    if environ is None:
+        environ = os.environ
     cookie_secure = env_truthy(environ.get("SESSION_COOKIE_SECURE"), default=is_production_runtime(environ))
     cookie_samesite = (environ.get("SESSION_COOKIE_SAMESITE") or ('None' if cookie_secure else 'Lax')).strip().capitalize()
     if cookie_samesite not in {'Lax', 'Strict', 'None'}:
@@ -68,7 +74,8 @@ def session_cookie_config(environ=None):
     }
 
 def remember_session_lifetime(environ=None):
-    environ = environ or os.environ
+    if environ is None:
+        environ = os.environ
     raw_days = (environ.get("REMEMBER_SESSION_DAYS") or "30").strip()
     try:
         days = int(raw_days)
@@ -113,6 +120,8 @@ LOCAL_IMAGE_UPLOAD_FALLBACK = os.getenv("LOCAL_IMAGE_UPLOAD_FALLBACK", "true").l
 MAX_ATTACHMENT_BYTES = int(os.getenv("MAX_ATTACHMENT_BYTES", 15 * 1024 * 1024))
 SUPABASE_ATTACHMENT_BUCKET = os.getenv("SUPABASE_ATTACHMENT_BUCKET", "lvl-attachments")
 LOCAL_ATTACHMENT_UPLOAD_FALLBACK = env_truthy(os.getenv("LOCAL_ATTACHMENT_UPLOAD_FALLBACK"), default=not is_production_runtime())
+REEL_VISIBILITIES = {'public', 'followers', 'community', 'private'}
+REEL_STORAGE_PATH_PATTERN = re.compile(r"^reels/([0-9]+)/[0-9a-f]{32}\.(mp4|webm|mov|m4v)$")
 IMAGE_CONTENT_TYPES = {
     'jpg': 'image/jpeg',
     'jpeg': 'image/jpeg',
@@ -368,6 +377,11 @@ def parse_int(value):
     except (TypeError, ValueError):
         return None
 
+def parse_bool_input(value):
+    if isinstance(value, bool):
+        return value
+    return str(value or '').strip().lower() in {'1', 'true', 'on', 'yes'}
+
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 def is_valid_email(value):
@@ -388,6 +402,16 @@ def mail_settings():
         'port': port,
         'use_tls': use_tls,
     }
+
+def mail_delivery_is_configured(settings=None):
+    if settings is None:
+        settings = mail_settings()
+    return bool(settings.get('username') and settings.get('password') and settings.get('from_email'))
+
+def oauth_session_remember(environ=None):
+    if environ is None:
+        environ = os.environ
+    return env_truthy(environ.get("OAUTH_SESSION_REMEMBER"), default=True)
 
 def parse_positive_int(value, default=1, maximum=100):
     parsed = parse_int(value)
@@ -475,9 +499,31 @@ def admin_token_is_valid(token):
     expected = os.getenv("LVL_ADMIN_TOKEN", "")
     return bool(expected and token and secrets.compare_digest(str(token), expected))
 
+def admin_token_session_proof(token):
+    secret = str(app.secret_key or DEFAULT_DEV_SECRET_KEY).encode('utf-8')
+    return hmac.new(secret, str(token or '').encode('utf-8'), hashlib.sha256).hexdigest()
+
+def admin_session_is_valid():
+    expected = os.getenv("LVL_ADMIN_TOKEN", "")
+    proof = session.get('admin_token_proof')
+    if expected and proof and secrets.compare_digest(str(proof), admin_token_session_proof(expected)):
+        return True
+
+    legacy_token = session.pop('admin_token', None)
+    if admin_token_is_valid(legacy_token):
+        session['admin_token_proof'] = admin_token_session_proof(legacy_token)
+        return True
+    return False
+
 ADMIN_JOB_TYPES = {'Full-time', 'Internship', 'Part-time'}
 ADMIN_SUGGESTION_STATUSES = {'New', 'Reviewed', 'Planned', 'Closed'}
 ADMIN_VERIFICATION_DECISIONS = {'Approved', 'Rejected'}
+ADMIN_ACCOUNT_STATUSES = {'active', 'suspended', 'banned'}
+ADMIN_ACCOUNT_STATUS_OPTIONS = [
+    {'value': 'active', 'label': 'Active'},
+    {'value': 'suspended', 'label': 'Suspended'},
+    {'value': 'banned', 'label': 'Banned'},
+]
 ADMIN_SEARCH_UNSAFE_CHARS = re.compile(r"[%*,(){}\[\];\"'\\]")
 ADMIN_UUID_PATTERN = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 
@@ -497,6 +543,42 @@ def admin_search_term(value, max_length=80):
     value = ADMIN_SEARCH_UNSAFE_CHARS.sub(' ', str(value or ''))
     value = re.sub(r"[\x00-\x1f\x7f]", " ", value)
     return re.sub(r"\s+", " ", value).strip()[:max_length]
+
+def admin_notes_text(value, max_length=280):
+    value = re.sub(r"[\x00-\x1f\x7f]", " ", str(value or ""))
+    return re.sub(r"\s+", " ", value).strip()[:max_length]
+
+def normalize_account_status(value):
+    value = str(value or "active").strip().lower()
+    return value if value in ADMIN_ACCOUNT_STATUSES else "active"
+
+def parse_datetime_utc(value):
+    if isinstance(value, datetime):
+        parsed = value
+    elif not value:
+        return None
+    else:
+        try:
+            parsed = datetime.fromisoformat(str(value).replace('Z', '+00:00'))
+        except (TypeError, ValueError):
+            return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+def account_restriction_message(user, now=None):
+    status = normalize_account_status((user or {}).get('account_status'))
+    if status == 'banned':
+        return "This account has been disabled. Contact support if you believe this is a mistake."
+    if status == 'suspended':
+        current = now or datetime.now(timezone.utc)
+        suspended_until = parse_datetime_utc((user or {}).get('suspended_until'))
+        if suspended_until and suspended_until <= current:
+            return None
+        if suspended_until:
+            return f"This account is suspended until {suspended_until.strftime('%Y-%m-%d %H:%M UTC')}."
+        return "This account is suspended. Contact support if you believe this is a mistake."
+    return None
 
 FORCED_LEVEL_ACCOUNT_ALIASES = {'sin', 'sin sin', 'sinsin', 'user sin', 'usersin'}
 FORCED_LEVEL_ACCOUNT_LEVEL = 50
@@ -856,7 +938,11 @@ def get_current_user():
         try:
             res = supabase.table('users').select('*').eq('id', session['user_id']).execute()
             if res.data:
-                return apply_forced_user_levels(res.data[0])
+                user = apply_forced_user_levels(res.data[0])
+                if account_restriction_message(user):
+                    session.clear()
+                    return None
+                return user
         except Exception:
             return None
     return None
@@ -1057,6 +1143,62 @@ def allowed_image_file(filename):
 
 def allowed_video_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_VIDEO_EXTENSIONS
+
+def validate_video_upload_metadata(filename, mimetype='', size=None):
+    if not filename:
+        raise ValueError("Choose a video to upload.")
+    if not allowed_video_file(filename):
+        raise ValueError("Videos must be MP4, WebM, MOV, or M4V.")
+
+    safe_name = secure_filename(filename)
+    if not safe_name or '.' not in safe_name:
+        raise ValueError("Choose a valid video file.")
+    extension = safe_name.rsplit('.', 1)[1].lower()
+
+    parsed_size = parse_int(size) if size is not None else None
+    if parsed_size is not None:
+        if parsed_size <= 0:
+            raise ValueError("Selected video is empty.")
+        if parsed_size > MAX_VIDEO_BYTES:
+            limit_mb = max(1, MAX_VIDEO_BYTES // (1024 * 1024))
+            raise ValueError(f"Videos must be {limit_mb} MB or smaller.")
+
+    expected_content_type = VIDEO_CONTENT_TYPES.get(extension)
+    content_type = (mimetype or '').lower()
+    if content_type and expected_content_type and content_type not in {expected_content_type, 'application/octet-stream'}:
+        if extension == 'm4v' and content_type == 'video/mp4':
+            content_type = 'video/mp4'
+        else:
+            raise ValueError("Selected file type does not match the video extension.")
+
+    return extension, expected_content_type or content_type or "application/octet-stream"
+
+def create_reel_storage_path(viewer_id, extension):
+    return f"{safe_upload_folder(f'reels/{viewer_id}')}/{uuid.uuid4().hex}.{extension}"
+
+def reel_storage_path_belongs_to(storage_path, viewer_id):
+    match = REEL_STORAGE_PATH_PATTERN.fullmatch(str(storage_path or '').strip())
+    return bool(match and match.group(1) == str(viewer_id))
+
+def create_signed_reel_upload(filename, mimetype, size, viewer_id):
+    if not supabase:
+        raise RuntimeError("Supabase Storage is required for direct video uploads.")
+
+    extension, content_type = validate_video_upload_metadata(filename, mimetype, size)
+    storage_path = create_reel_storage_path(viewer_id, extension)
+    ensure_media_bucket(SUPABASE_VIDEO_BUCKET, MAX_VIDEO_BYTES, list(VIDEO_CONTENT_TYPES.values()))
+    signed = supabase.storage.from_(SUPABASE_VIDEO_BUCKET).create_signed_upload_url(storage_path)
+    upload_url = signed.get('signedUrl') or signed.get('signed_url')
+    if not upload_url:
+        raise RuntimeError("Could not prepare the video upload URL. Try again.")
+
+    return {
+        'upload_url': upload_url,
+        'storage_path': storage_path,
+        'public_url': supabase.storage.from_(SUPABASE_VIDEO_BUCKET).get_public_url(storage_path),
+        'content_type': content_type,
+        'max_video_bytes': MAX_VIDEO_BYTES,
+    }
 
 def attachment_upload_dir():
     return os.path.join(app.root_path, 'uploads', 'attachments')
@@ -1289,34 +1431,21 @@ def upload_image_to_storage(file_storage, folder, max_bytes=MAX_IMAGE_BYTES):
     raise RuntimeError("Image upload failed. Supabase Storage is not configured for image uploads.")
 
 def upload_video_to_storage(file_storage, folder):
-    if not file_storage or not file_storage.filename:
+    if not file_storage or not getattr(file_storage, 'filename', ''):
         raise ValueError("Choose a video to upload.")
-    if not allowed_video_file(file_storage.filename):
-        raise ValueError("Videos must be MP4, WebM, MOV, or M4V.")
 
     try:
         file_storage.stream.seek(0)
     except (AttributeError, OSError):
         pass
     payload = file_storage.read()
-    if not payload:
-        raise ValueError("Selected video is empty.")
-    if len(payload) > MAX_VIDEO_BYTES:
-        limit_mb = max(1, MAX_VIDEO_BYTES // (1024 * 1024))
-        raise ValueError(f"Videos must be {limit_mb} MB or smaller.")
-
-    filename = secure_filename(file_storage.filename)
-    extension = filename.rsplit('.', 1)[1].lower()
-    expected_content_type = VIDEO_CONTENT_TYPES.get(extension)
-    mimetype = (file_storage.mimetype or '').lower()
-    if mimetype and expected_content_type and mimetype not in {expected_content_type, 'application/octet-stream'}:
-        if extension == 'm4v' and mimetype == 'video/mp4':
-            pass
-        else:
-            raise ValueError("Selected file type does not match the video extension.")
+    extension, content_type = validate_video_upload_metadata(
+        getattr(file_storage, 'filename', ''),
+        getattr(file_storage, 'mimetype', ''),
+        len(payload) if payload is not None else None,
+    )
 
     storage_path = f"{safe_upload_folder(folder)}/{uuid.uuid4().hex}.{extension}"
-    content_type = expected_content_type or mimetype or "application/octet-stream"
 
     if supabase:
         try:
@@ -2448,6 +2577,11 @@ def get_setup_health():
         "OAuth redirects have a configured base URL." if (env_value_present("OAUTH_REDIRECT_BASE_URL") or env_value_present("APP_BASE_URL")) else "Set OAUTH_REDIRECT_BASE_URL or APP_BASE_URL for Google OAuth callbacks."
     ))
     checks.append(setup_health_check(
+        "Password reset email",
+        mail_delivery_is_configured(),
+        "SMTP delivery is configured for reset emails." if mail_delivery_is_configured() else "Set SMTP_FROM, SMTP_USERNAME, and SMTP_PASSWORD before testing password reset emails."
+    ))
+    checks.append(setup_health_check(
         "Supabase connection",
         bool(supabase),
         "Client configured." if supabase else "Add SUPABASE_URL and SUPABASE_SECRET to .env."
@@ -2635,6 +2769,53 @@ def reels():
                            trending_posts=explore.get('trending_posts', []),
                            home_media=get_home_media_preview(viewer['id']))
 
+def validate_reel_details(viewer_id, caption, visibility, community_id, communities):
+    caption = (caption or '').strip()
+    visibility = visibility or 'public'
+    parsed_community_id = parse_int(community_id)
+
+    if visibility not in REEL_VISIBILITIES:
+        raise ValueError("Choose a valid visibility setting.")
+    if len(caption) > 220:
+        raise ValueError("Caption cannot exceed 220 characters.")
+    if visibility == 'community':
+        allowed_community_ids = {parse_int(item.get('id')) for item in communities or []}
+        if not parsed_community_id or parsed_community_id not in allowed_community_ids:
+            raise ValueError("Choose one of your communities for community-only reels.")
+    else:
+        parsed_community_id = None
+
+    return {
+        'user_id': viewer_id,
+        'community_id': parsed_community_id,
+        'caption': caption,
+        'visibility': visibility,
+    }
+
+def insert_reel_record(viewer_id, video_url, storage_path, details, allow_comments, allow_downloads, autoplay_next):
+    if not supabase:
+        raise RuntimeError("Supabase is not configured.")
+
+    payload = {
+        'user_id': viewer_id,
+        'community_id': details['community_id'],
+        'video_url': video_url,
+        'storage_path': storage_path,
+        'cover_url': None,
+        'caption': details['caption'],
+        'visibility': details['visibility'],
+        'allow_comments': parse_bool_input(allow_comments),
+        'allow_downloads': parse_bool_input(allow_downloads),
+        'autoplay_next': parse_bool_input(autoplay_next),
+        'status': 'active',
+    }
+    res = supabase.table('reels').insert(payload).execute()
+    reel_id = None
+    if res.data:
+        reel_id = res.data[0]['id']
+        award_xp(viewer_id, 'reel_created', 15, reel_id)
+    return payload, reel_id
+
 @app.route('/api/reels')
 def api_reels():
     viewer = get_current_user()
@@ -2648,6 +2829,69 @@ def api_reels():
     except Exception as exc:
         return jsonify({'success': False, 'error': handle_db_error(exc, "Could not load reels.")}), 400
 
+@app.route('/api/reels/upload-url', methods=['POST'])
+def api_reel_upload_url():
+    viewer = get_current_user()
+    if not viewer:
+        return jsonify({'success': False, 'error': 'Authentication required.'}), 401
+
+    data = request.get_json(silent=True) or {}
+    try:
+        upload = create_signed_reel_upload(
+            data.get('filename', ''),
+            data.get('content_type', ''),
+            data.get('size'),
+            viewer['id'],
+        )
+        return jsonify({'success': True, **upload})
+    except (ValueError, RuntimeError) as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 400
+    except Exception as exc:
+        app.logger.exception("Could not create signed reel upload URL")
+        return jsonify({'success': False, 'error': handle_db_error(exc, "Could not prepare that video upload.")}), 400
+
+@app.route('/api/reels/complete-upload', methods=['POST'])
+def api_reel_complete_upload():
+    viewer = get_current_user()
+    if not viewer:
+        return jsonify({'success': False, 'error': 'Authentication required.'}), 401
+
+    data = request.get_json(silent=True) or {}
+    storage_path = str(data.get('storage_path') or '').strip()
+    if not reel_storage_path_belongs_to(storage_path, viewer['id']):
+        return jsonify({'success': False, 'error': 'Invalid uploaded video path.'}), 400
+
+    try:
+        communities = get_reel_upload_communities(viewer['id'])
+        details = validate_reel_details(
+            viewer['id'],
+            data.get('caption', ''),
+            data.get('visibility', 'public'),
+            data.get('community_id'),
+            communities,
+        )
+        video_url = supabase.storage.from_(SUPABASE_VIDEO_BUCKET).get_public_url(storage_path)
+        _payload, reel_id = insert_reel_record(
+            viewer['id'],
+            video_url,
+            storage_path,
+            details,
+            data.get('allow_comments', False),
+            data.get('allow_downloads', False),
+            data.get('autoplay_next', False),
+        )
+        return jsonify({
+            'success': True,
+            'reel_id': reel_id,
+            'redirect_url': url_for('reels'),
+        })
+    except (ValueError, RuntimeError) as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 400
+    except Exception as exc:
+        if reels_table_not_ready(exc):
+            return jsonify({'success': False, 'error': "Reels database table is not ready. Run database/migrations/002_reels.sql in Supabase."}), 400
+        return jsonify({'success': False, 'error': handle_db_error(exc, "Could not finish that video upload.")}), 400
+
 @app.route('/reels/upload', methods=['GET', 'POST'])
 def reel_upload():
     viewer = get_current_user()
@@ -2659,45 +2903,23 @@ def reel_upload():
         video_file = request.files.get('video')
         caption = request.form.get('caption', '').strip()
         visibility = request.form.get('visibility', 'public')
-        community_id = parse_int(request.form.get('community_id'))
+        community_id = request.form.get('community_id')
         allow_comments = request.form.get('allow_comments') == 'on'
         allow_downloads = request.form.get('allow_downloads') == 'on'
         autoplay_next = request.form.get('autoplay_next') == 'on'
-        valid_visibilities = {'public', 'followers', 'community', 'private'}
-
-        if visibility not in valid_visibilities:
-            flash("Choose a valid visibility setting.", "error")
-            return redirect(url_for('reel_upload'))
-        if len(caption) > 220:
-            flash("Caption cannot exceed 220 characters.", "error")
-            return redirect(url_for('reel_upload'))
-        if visibility == 'community':
-            allowed_community_ids = {item['id'] for item in communities}
-            if not community_id or community_id not in allowed_community_ids:
-                flash("Choose one of your communities for community-only reels.", "error")
-                return redirect(url_for('reel_upload'))
-        else:
-            community_id = None
 
         try:
+            details = validate_reel_details(viewer['id'], caption, visibility, community_id, communities)
             video_url, storage_path = upload_video_to_storage(video_file, f"reels/{viewer['id']}")
-            payload = {
-                'user_id': viewer['id'],
-                'community_id': community_id,
-                'video_url': video_url,
-                'storage_path': storage_path,
-                'cover_url': None,
-                'caption': caption,
-                'visibility': visibility,
-                'allow_comments': allow_comments,
-                'allow_downloads': allow_downloads,
-                'autoplay_next': autoplay_next,
-                'status': 'active',
-            }
-            res = supabase.table('reels').insert(payload).execute()
-            if res.data:
-                reel_id = res.data[0]['id']
-                award_xp(viewer['id'], 'reel_created', 15, reel_id)
+            insert_reel_record(
+                viewer['id'],
+                video_url,
+                storage_path,
+                details,
+                allow_comments,
+                allow_downloads,
+                autoplay_next,
+            )
             flash("Reel uploaded.", "success")
             return redirect(url_for('reels'))
         except (ValueError, RuntimeError) as exc:
@@ -2851,7 +3073,7 @@ def api_reel_comments(reel_id):
 def send_verification_email(to_email, first_name, token):
     settings = mail_settings()
 
-    if not settings['username'] or not settings['password'] or not settings['from_email']:
+    if not mail_delivery_is_configured(settings):
         app.logger.warning("Email credentials missing. Cannot send verification email.")
         return False
 
@@ -2897,7 +3119,7 @@ def send_password_reset_email(user, token):
     settings = mail_settings()
     reset_url = external_url_for('reset_password', token=token)
 
-    if not settings['username'] or not settings['password'] or not settings['from_email']:
+    if not mail_delivery_is_configured(settings):
         app.logger.warning("Email credentials missing. Password reset link for %s: %s", to_email, reset_url)
         return False
 
@@ -3094,8 +3316,13 @@ def oauth_callback():
 
         app_user = first_oauth_user_match(profile)
         if app_user:
+            restriction = account_restriction_message(app_user)
+            if restriction:
+                clear_oauth_flow_session(include_pending=True)
+                flash(restriction, "error")
+                return redirect(url_for('auth'))
             sync_oauth_user_fields(app_user, profile)
-            start_user_session(app_user['id'])
+            start_user_session(app_user['id'], remember=oauth_session_remember())
             clear_oauth_flow_session(include_pending=True)
             award_xp(app_user['id'], 'daily_login', 5)
             flash(f"Signed in with {oauth_provider_label(profile['provider'])}.", "success")
@@ -3143,8 +3370,13 @@ def oauth_onboarding():
 
         existing_user = first_oauth_user_match({**profile, 'email': email})
         if existing_user:
+            restriction = account_restriction_message(existing_user)
+            if restriction:
+                clear_oauth_flow_session(include_pending=True)
+                flash(restriction, "error")
+                return redirect(url_for('auth'))
             sync_oauth_user_fields(existing_user, profile)
-            start_user_session(existing_user['id'])
+            start_user_session(existing_user['id'], remember=oauth_session_remember())
             award_xp(existing_user['id'], 'daily_login', 5)
             flash("Your social login is now connected to your existing LvL account.", "success")
             return redirect(url_for('index'))
@@ -3175,7 +3407,7 @@ def oauth_onboarding():
         try:
             new_user = supabase.table('users').insert(payload).execute()
             if new_user.data:
-                start_user_session(new_user.data[0]['id'])
+                start_user_session(new_user.data[0]['id'], remember=oauth_session_remember())
                 award_xp(new_user.data[0]['id'], 'account_created', 20)
                 flash(f"Welcome to LvL, {first_name}! Your social login is connected.", "success")
                 return redirect(url_for('index'))
@@ -3215,6 +3447,12 @@ def auth():
                 if res.data:
                     user = res.data[0]
                     if bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
+                        restriction = account_restriction_message(user)
+                        if restriction:
+                            clear_login_failures(username)
+                            session.clear()
+                            flash(restriction, "error")
+                            return render_template('auth.html')
                         start_user_session(user['id'], remember=remember)
                         clear_login_failures(username)
                         award_xp(user['id'], 'daily_login', 5)
@@ -3324,10 +3562,17 @@ def reset_password(token):
                 return render_template('password_reset.html', mode='reset', token=token)
             hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
             try:
+                user_res = supabase.table('users').select('*').eq('id', record['user_id']).execute()
+                reset_user = user_res.data[0] if user_res and user_res.data else {}
+                restriction = account_restriction_message(reset_user)
+                if restriction:
+                    flash(restriction, "error")
+                    return redirect(url_for('auth'))
                 supabase.table('users').update({'password_hash': hashed_pw}).eq('id', record['user_id']).execute()
                 mark_password_reset_used(record)
-                flash("Password updated. Log in with your new password.", "success")
-                return redirect(url_for('auth'))
+                start_user_session(record['user_id'])
+                flash("Password updated. You are signed in.", "success")
+                return redirect(url_for('index'))
             except Exception as exc:
                 flash(handle_db_error(exc, "Password could not be updated."), "error")
 
@@ -4775,13 +5020,7 @@ def admin_dashboard():
     if not viewer:
         return redirect(url_for('auth'))
         
-    # Helper to check token with development fallback
-    def is_token_valid(token):
-        return admin_token_is_valid(token)
-
-    # Authenticate check from session
-    session_token = session.get('admin_token')
-    is_authenticated = is_token_valid(session_token)
+    is_authenticated = admin_session_is_valid()
 
     login_error = None
 
@@ -4790,10 +5029,13 @@ def admin_dashboard():
         
         if action == 'login':
             token_input = request.form.get('admin_token', '')
-            if is_token_valid(token_input):
-                session['admin_token'] = token_input
+            if admin_token_is_valid(token_input):
+                session.pop('admin_token', None)
+                session['admin_token_proof'] = admin_token_session_proof(token_input)
                 return redirect(url_for('admin_dashboard'))
             else:
+                session.pop('admin_token', None)
+                session.pop('admin_token_proof', None)
                 login_error = "Invalid admin token. Please try again."
                 is_authenticated = False
                 
@@ -4911,6 +5153,57 @@ def admin_dashboard():
                         flash(f"Error removing post: {exc}", "error")
                 return redirect(url_for('admin_dashboard'))
 
+            elif action == 'delete_comment_global':
+                comment_id = parse_positive_id(request.form.get('id'))
+                if comment_id and supabase:
+                    try:
+                        log_admin_action(viewer['username'], 'delete_comment_global', comment_id)
+                        supabase.table('comment_likes').delete().eq('comment_id', comment_id).execute()
+                        supabase.table('comment_reposts').delete().eq('comment_id', comment_id).execute()
+                        supabase.table('comments').delete().eq('id', comment_id).execute()
+                        flash("Comment removed successfully.", "success")
+                    except Exception as exc:
+                        flash(f"Error removing comment: {exc}", "error")
+                return redirect(url_for('admin_dashboard'))
+
+            elif action == 'delete_reel_comment_global':
+                comment_id = parse_positive_id(request.form.get('id'))
+                if comment_id and supabase:
+                    try:
+                        log_admin_action(viewer['username'], 'delete_reel_comment_global', comment_id)
+                        supabase.table('reel_comments').update({'deleted_at': datetime.now(timezone.utc).isoformat()}).eq('id', comment_id).execute()
+                        flash("Reel reply removed successfully.", "success")
+                    except Exception as exc:
+                        flash(f"Error removing reel reply: {exc}", "error")
+                return redirect(url_for('admin_dashboard'))
+
+            elif action == 'delete_reel_global':
+                reel_id = parse_positive_id(request.form.get('id'))
+                if reel_id and supabase:
+                    try:
+                        timestamp = datetime.now(timezone.utc).isoformat()
+                        log_admin_action(viewer['username'], 'delete_reel_global', reel_id)
+                        supabase.table('reels').update({
+                            'status': 'deleted',
+                            'deleted_at': timestamp,
+                            'updated_at': timestamp,
+                        }).eq('id', reel_id).execute()
+                        flash("Reel removed successfully.", "success")
+                    except Exception as exc:
+                        flash(f"Error removing reel: {exc}", "error")
+                return redirect(url_for('admin_dashboard'))
+
+            elif action == 'delete_community_global':
+                community_id = parse_positive_id(request.form.get('id'))
+                if community_id and supabase:
+                    try:
+                        log_admin_action(viewer['username'], 'delete_community_global', community_id)
+                        supabase.table('communities').delete().eq('id', community_id).execute()
+                        flash("Community removed successfully.", "success")
+                    except Exception as exc:
+                        flash(f"Error removing community: {exc}", "error")
+                return redirect(url_for('admin_dashboard'))
+
             elif action == 'warn_user':
                 user_id = parse_positive_id(request.form.get('id'))
                 warning_text = request.form.get('warning_text', '').strip()
@@ -4946,6 +5239,39 @@ def admin_dashboard():
                         flash(f"Error updating user verification: {exc}", "error")
                 return redirect(url_for('admin_dashboard'))
 
+            elif action == 'update_user_status':
+                user_id = parse_positive_id(request.form.get('id'))
+                requested_status = str(request.form.get('account_status') or '').strip().lower()
+                status = normalize_account_status(requested_status)
+                reason = admin_notes_text(request.form.get('account_status_reason'))
+                if user_id == viewer['id']:
+                    flash("Admins cannot restrict their own account.", "error")
+                    return redirect(url_for('admin_dashboard'))
+                if requested_status not in ADMIN_ACCOUNT_STATUSES:
+                    flash("Invalid account status.", "error")
+                    return redirect(url_for('admin_dashboard'))
+                if user_id and supabase:
+                    try:
+                        timestamp = datetime.now(timezone.utc)
+                        payload = {
+                            'account_status': status,
+                            'account_status_reason': reason,
+                            'account_status_updated_at': timestamp.isoformat(),
+                            'account_status_updated_by': viewer['id'],
+                            'suspended_until': None,
+                        }
+                        if status == 'suspended':
+                            days = parse_positive_int(request.form.get('suspension_days'), default=7, maximum=365)
+                            payload['suspended_until'] = (timestamp + timedelta(days=days)).isoformat()
+                        elif status == 'active':
+                            payload['account_status_reason'] = ''
+                        supabase.table('users').update(payload).eq('id', user_id).execute()
+                        log_admin_action(viewer['username'], 'update_user_status', user_id, f"status={status}")
+                        flash("User account status updated.", "success")
+                    except Exception as exc:
+                        flash(f"Error updating user account status: {exc}", "error")
+                return redirect(url_for('admin_dashboard'))
+
             elif action == 'delete_user_global':
                 user_id = parse_positive_id(request.form.get('id'))
                 if user_id == viewer['id']:
@@ -4977,10 +5303,17 @@ def admin_dashboard():
     safety_reports = []
     system_users = []
     system_posts = []
+    system_comments = []
+    system_reels = []
+    system_reel_comments = []
+    system_communities = []
     admin_logs = []
     
     q_user = admin_search_term(request.args.get('q_user', ''))
     q_post = admin_search_term(request.args.get('q_post', ''))
+    q_comment = admin_search_term(request.args.get('q_comment', ''))
+    q_reel = admin_search_term(request.args.get('q_reel', ''))
+    q_community = admin_search_term(request.args.get('q_community', ''))
 
     if is_authenticated and supabase:
         try:
@@ -5044,6 +5377,47 @@ def admin_dashboard():
         except Exception as exc:
             app.logger.warning(f"Failed to fetch posts search: {exc}")
 
+        try:
+            comment_select = '*, user:users!comments_user_id_fkey(*), post:posts!comments_post_id_fkey(id,content,user_id)'
+            if q_comment:
+                res_c_search = supabase.table('comments').select(comment_select).ilike('comment', f'%{q_comment}%').limit(50).execute()
+            else:
+                res_c_search = supabase.table('comments').select(comment_select).order('created_at', desc=True).limit(50).execute()
+            if res_c_search and res_c_search.data:
+                system_comments = res_c_search.data
+        except Exception as exc:
+            app.logger.warning(f"Failed to fetch comments search: {exc}")
+
+        try:
+            reel_select = '*, user:users!reels_user_id_fkey(*), community:communities!reels_community_id_fkey(id,name,slug)'
+            if q_reel:
+                res_reels = supabase.table('reels').select(reel_select).ilike('caption', f'%{q_reel}%').is_('deleted_at', 'null').limit(50).execute()
+            else:
+                res_reels = supabase.table('reels').select(reel_select).is_('deleted_at', 'null').order('created_at', desc=True).limit(50).execute()
+            if res_reels and res_reels.data:
+                system_reels = res_reels.data
+        except Exception as exc:
+            app.logger.warning(f"Failed to fetch reels for admin: {exc}")
+
+        try:
+            reel_comment_select = '*, user:users!reel_comments_user_id_fkey(*), reel:reels!reel_comments_reel_id_fkey(id,caption,user_id)'
+            res_reel_comments = supabase.table('reel_comments').select(reel_comment_select).is_('deleted_at', 'null').order('created_at', desc=True).limit(50).execute()
+            if res_reel_comments and res_reel_comments.data:
+                system_reel_comments = res_reel_comments.data
+        except Exception as exc:
+            app.logger.warning(f"Failed to fetch reel replies for admin: {exc}")
+
+        try:
+            community_select = '*, owner:users!communities_owner_id_fkey(*)'
+            if q_community:
+                res_communities = supabase.table('communities').select(community_select).or_(f"name.ilike.%{q_community}%,slug.ilike.%{q_community}%,description.ilike.%{q_community}%").limit(50).execute()
+            else:
+                res_communities = supabase.table('communities').select(community_select).order('created_at', desc=True).limit(50).execute()
+            if res_communities and res_communities.data:
+                system_communities = res_communities.data
+        except Exception as exc:
+            app.logger.warning(f"Failed to fetch communities for admin: {exc}")
+
         # Read audit activity log file
         log_file = os.path.join(app.root_path, 'database', 'admin_activity.log')
         if os.path.exists(log_file):
@@ -5068,9 +5442,17 @@ def admin_dashboard():
                            safety_reports=safety_reports,
                            system_users=system_users,
                            system_posts=system_posts,
+                           system_comments=system_comments,
+                           system_reels=system_reels,
+                           system_reel_comments=system_reel_comments,
+                           system_communities=system_communities,
                            admin_logs=admin_logs,
+                           account_status_options=ADMIN_ACCOUNT_STATUS_OPTIONS,
                            q_user=q_user,
-                           q_post=q_post)
+                           q_post=q_post,
+                           q_comment=q_comment,
+                           q_reel=q_reel,
+                           q_community=q_community)
 
 
 @app.route('/activity')

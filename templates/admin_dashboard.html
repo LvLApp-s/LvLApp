@@ -43,6 +43,10 @@
         <button class="guide-tab" onclick="switchAdminTab('reports')">Reports ({{ safety_reports|length }})</button>
         <button class="guide-tab" onclick="switchAdminTab('users')">Users ({{ system_users|length }})</button>
         <button class="guide-tab" onclick="switchAdminTab('posts')">Posts ({{ system_posts|length }})</button>
+        <button class="guide-tab" onclick="switchAdminTab('comments')">Comments ({{ system_comments|length }})</button>
+        <button class="guide-tab" onclick="switchAdminTab('reels')">Reels ({{ system_reels|length }})</button>
+        <button class="guide-tab" onclick="switchAdminTab('reel-comments')">Reel Replies ({{ system_reel_comments|length }})</button>
+        <button class="guide-tab" onclick="switchAdminTab('communities')">Communities ({{ system_communities|length }})</button>
         <button class="guide-tab" onclick="switchAdminTab('logs')">Audit Logs</button>
       </div>
 
@@ -397,9 +401,21 @@
               <div class="guide-form-card admin-panel-card">
                 <div class="admin-user-summary">
                   <div>
+                    {% set account_status = u.account_status|default('active', true) %}
                     <strong>{{ u.display_name }}</strong> (@{{ u.username }})
                     <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
                       Email: {{ u.email }} | Level: {{ u.level or 1 }} | XP: {{ u.total_xp or 0 }}
+                    </div>
+                    <div class="admin-user-status-line">
+                      <span class="admin-status-pill {% if account_status == 'active' %}active{% elif account_status == 'banned' %}danger{% endif %}">
+                        {{ account_status|title }}
+                      </span>
+                      {% if u.suspended_until and account_status == 'suspended' %}
+                        <span class="admin-text-muted">Until {{ u.suspended_until[:16] }}</span>
+                      {% endif %}
+                      {% if u.account_status_reason %}
+                        <span class="admin-text-muted">Reason: {{ u.account_status_reason }}</span>
+                      {% endif %}
                     </div>
                   </div>
                   <div class="admin-button-row">
@@ -422,6 +438,20 @@
                   <button type="button" class="outline-button small" onclick="openWarningModal('{{ u.id }}', '{{ u.display_name }}')">
                     Warn User
                   </button>
+
+                  <form action="{{ url_for('admin_dashboard') }}" method="post" class="admin-user-restriction-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="update_user_status">
+                    <input type="hidden" name="id" value="{{ u.id }}">
+                    <select name="account_status" class="admin-select-input admin-select-compact" aria-label="Account status">
+                      {% for option in account_status_options %}
+                        <option value="{{ option.value }}" {% if account_status == option.value %}selected{% endif %}>{{ option.label }}</option>
+                      {% endfor %}
+                    </select>
+                    <input type="number" name="suspension_days" min="1" max="365" value="7" class="admin-days-input" aria-label="Suspension days">
+                    <input type="text" name="account_status_reason" maxlength="280" value="{{ u.account_status_reason or '' }}" placeholder="Reason" class="admin-reason-input">
+                    <button type="submit" class="outline-button small">Update Status</button>
+                  </form>
 
                   <form action="{{ url_for('admin_dashboard') }}" method="post" style="margin: 0;" onsubmit="return confirm('Permanently delete user account? This cannot be undone.');">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -477,7 +507,159 @@
         {% endif %}
       </section>
 
-      {# ── SECTION 9: AUDIT LOGS ── #}
+      {# ── SECTION 9: COMMENT MANAGEMENT ── #}
+      <section id="admin-sec-comments" class="admin-section admin-sec-hidden">
+        <h3>Comment Directory</h3>
+        <form method="get" action="{{ url_for('admin_dashboard') }}" class="admin-search-form">
+          <input type="hidden" name="tab" value="comments">
+          <input type="text" name="q_comment" value="{{ q_comment }}" placeholder="Search comments..." class="admin-search-input">
+          <button type="submit" class="primary-button small admin-search-button">Search</button>
+        </form>
+
+        {% if system_comments %}
+          <div class="admin-grid-container admin-grid-container-sm">
+            {% for c in system_comments %}
+              <div class="guide-form-card admin-post-card">
+                <div class="admin-post-header">
+                  <strong>@{{ c.user.username if c.user else 'Unknown' }}</strong>
+                  <span style="font-size: 11px; color: var(--text-muted);">{{ c.created_at[:16] if c.created_at else '' }}</span>
+                </div>
+                <p class="admin-post-content">{{ c.comment }}</p>
+                {% if c.post %}
+                  <p class="admin-related-content"><strong>Post:</strong> {{ c.post.content }}</p>
+                {% endif %}
+
+                <form action="{{ url_for('admin_dashboard') }}" method="post" style="margin: 0;" onsubmit="return confirm('Delete this comment permanently?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="action" value="delete_comment_global">
+                  <input type="hidden" name="id" value="{{ c.id }}">
+                  <button type="submit" class="danger-button small admin-button-xs">Delete Comment</button>
+                </form>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="careers-no-positions">
+            <span>Comments</span>
+            <p>No comments found matching query.</p>
+          </div>
+        {% endif %}
+      </section>
+
+      {# ── SECTION 10: REEL MANAGEMENT ── #}
+      <section id="admin-sec-reels" class="admin-section admin-sec-hidden">
+        <h3>Reel Directory</h3>
+        <form method="get" action="{{ url_for('admin_dashboard') }}" class="admin-search-form">
+          <input type="hidden" name="tab" value="reels">
+          <input type="text" name="q_reel" value="{{ q_reel }}" placeholder="Search reel captions..." class="admin-search-input">
+          <button type="submit" class="primary-button small admin-search-button">Search</button>
+        </form>
+
+        {% if system_reels %}
+          <div class="admin-grid-container admin-grid-container-sm">
+            {% for r in system_reels %}
+              <div class="guide-form-card admin-post-card">
+                <div class="admin-post-header">
+                  <strong>@{{ r.user.username if r.user else 'Unknown' }}</strong>
+                  <span style="font-size: 11px; color: var(--text-muted);">{{ r.created_at[:16] if r.created_at else '' }}</span>
+                </div>
+                <p class="admin-post-content">{{ r.caption or 'No caption' }}</p>
+                <div class="admin-card-footer">
+                  <span class="admin-status-pill {% if r.status == 'active' %}active{% elif r.status == 'deleted' %}danger{% endif %}">{{ r.status or 'active' }}</span>
+                  <span class="admin-text-muted">{{ r.visibility or 'public' }}{% if r.community %} · {{ r.community.name }}{% endif %}</span>
+                </div>
+
+                <form action="{{ url_for('admin_dashboard') }}" method="post" style="margin: 0;" onsubmit="return confirm('Delete this reel for everyone?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="action" value="delete_reel_global">
+                  <input type="hidden" name="id" value="{{ r.id }}">
+                  <button type="submit" class="danger-button small admin-button-xs">Delete Reel</button>
+                </form>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="careers-no-positions">
+            <span>Reels</span>
+            <p>No reels found matching query.</p>
+          </div>
+        {% endif %}
+      </section>
+
+      {# ── SECTION 11: REEL REPLY MANAGEMENT ── #}
+      <section id="admin-sec-reel-comments" class="admin-section admin-sec-hidden">
+        <h3>Reel Replies</h3>
+        {% if system_reel_comments %}
+          <div class="admin-grid-container admin-grid-container-sm">
+            {% for c in system_reel_comments %}
+              <div class="guide-form-card admin-post-card">
+                <div class="admin-post-header">
+                  <strong>@{{ c.user.username if c.user else 'Unknown' }}</strong>
+                  <span style="font-size: 11px; color: var(--text-muted);">{{ c.created_at[:16] if c.created_at else '' }}</span>
+                </div>
+                <p class="admin-post-content">{{ c.comment }}</p>
+                {% if c.reel %}
+                  <p class="admin-related-content"><strong>Reel:</strong> {{ c.reel.caption or ('#' ~ c.reel.id) }}</p>
+                {% endif %}
+
+                <form action="{{ url_for('admin_dashboard') }}" method="post" style="margin: 0;" onsubmit="return confirm('Delete this reel reply?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="action" value="delete_reel_comment_global">
+                  <input type="hidden" name="id" value="{{ c.id }}">
+                  <button type="submit" class="danger-button small admin-button-xs">Delete Reply</button>
+                </form>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="careers-no-positions">
+            <span>Replies</span>
+            <p>No reel replies need review.</p>
+          </div>
+        {% endif %}
+      </section>
+
+      {# ── SECTION 12: COMMUNITY MANAGEMENT ── #}
+      <section id="admin-sec-communities" class="admin-section admin-sec-hidden">
+        <h3>Community Directory</h3>
+        <form method="get" action="{{ url_for('admin_dashboard') }}" class="admin-search-form">
+          <input type="hidden" name="tab" value="communities">
+          <input type="text" name="q_community" value="{{ q_community }}" placeholder="Search communities..." class="admin-search-input">
+          <button type="submit" class="primary-button small admin-search-button">Search</button>
+        </form>
+
+        {% if system_communities %}
+          <div class="admin-grid-container admin-grid-container-sm">
+            {% for community in system_communities %}
+              <div class="guide-form-card admin-post-card">
+                <div class="admin-post-header">
+                  <strong>{{ community.name }}</strong>
+                  <span style="font-size: 11px; color: var(--text-muted);">{{ community.created_at[:16] if community.created_at else '' }}</span>
+                </div>
+                <p class="admin-post-content">{{ community.description or 'No description' }}</p>
+                <div class="admin-card-footer">
+                  <span class="admin-text-muted">/{{ community.slug }}</span>
+                  <span class="admin-text-muted">Owner: @{{ community.owner.username if community.owner else 'Unknown' }}</span>
+                </div>
+
+                <form action="{{ url_for('admin_dashboard') }}" method="post" style="margin: 0;" onsubmit="return confirm('Delete this community? Community membership and links will be removed.');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="action" value="delete_community_global">
+                  <input type="hidden" name="id" value="{{ community.id }}">
+                  <button type="submit" class="danger-button small admin-button-xs">Delete Community</button>
+                </form>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="careers-no-positions">
+            <span>Communities</span>
+            <p>No communities found matching query.</p>
+          </div>
+        {% endif %}
+      </section>
+
+      {# ── SECTION 13: AUDIT LOGS ── #}
       <section id="admin-sec-logs" class="admin-section admin-sec-hidden">
         <h3>Audit Activity Logs</h3>
         <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">Most recent admin dashboard action records from the log file.</p>
@@ -573,6 +755,7 @@
 .admin-button-row,
 .admin-status-form,
 .admin-search-form,
+.admin-user-restriction-form,
 .admin-warning-actions {
   display: flex;
   gap: 8px;
@@ -642,6 +825,9 @@
   font-size: 13px;
   color: var(--text-secondary);
 }
+.admin-text-muted {
+  color: var(--text-muted);
+}
 .admin-card-footer {
   margin-top: 10px;
   padding-top: 10px;
@@ -663,6 +849,8 @@
 }
 .admin-text-input,
 .admin-search-input,
+.admin-days-input,
+.admin-reason-input,
 .admin-warning-textarea {
   width: 100%;
   padding: 8px;
@@ -715,6 +903,26 @@
   gap: 8px;
   flex-wrap: wrap;
 }
+.admin-user-status-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 8px;
+  font-size: 12px;
+}
+.admin-user-restriction-form {
+  align-items: center;
+  flex-wrap: wrap;
+  flex: 1 1 100%;
+}
+.admin-days-input {
+  width: 84px;
+}
+.admin-reason-input {
+  min-width: 180px;
+  flex: 1 1 220px;
+}
 .admin-post-card {
   padding: 16px;
   border: 1px solid var(--border-color);
@@ -729,6 +937,15 @@
   color: var(--text-secondary);
   line-height: 1.4;
   margin-bottom: 12px;
+}
+.admin-related-content {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--lvl-surface-3);
 }
 .admin-log-box {
   background: var(--lvl-surface-3);

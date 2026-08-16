@@ -99,11 +99,15 @@ social-media-main/
    APP_BASE_URL=http://127.0.0.1:5000
    OAUTH_REDIRECT_BASE_URL=http://127.0.0.1:5000
    REMEMBER_SESSION_DAYS=30
+   OAUTH_SESSION_REMEMBER=1
    SUPABASE_STORAGE_BUCKET=lvl-media
    SUPABASE_VIDEO_BUCKET=lvl-media
    SUPABASE_ATTACHMENT_BUCKET=lvl-attachments
    MAX_VIDEO_BYTES=52428800
    MAX_ATTACHMENT_BYTES=15728640
+   SMTP_FROM=noreply@example.com
+   SMTP_USERNAME=mailer@example.com
+   SMTP_PASSWORD=your-smtp-password
    ```
 
 2. Install Python dependencies:
@@ -138,6 +142,7 @@ LVL_ADMIN_TOKEN
 APP_BASE_URL
 OAUTH_REDIRECT_BASE_URL
 REMEMBER_SESSION_DAYS
+OAUTH_SESSION_REMEMBER
 SUPABASE_STORAGE_BUCKET
 SUPABASE_VIDEO_BUCKET
 SUPABASE_ATTACHMENT_BUCKET
@@ -145,9 +150,15 @@ LOCAL_IMAGE_UPLOAD_FALLBACK
 LOCAL_ATTACHMENT_UPLOAD_FALLBACK
 MAX_VIDEO_BYTES
 MAX_ATTACHMENT_BYTES
+SMTP_FROM
+SMTP_USERNAME
+SMTP_PASSWORD
+SMTP_HOST
+SMTP_PORT
+SMTP_USE_TLS
 ```
 
-Use `MAX_VIDEO_BYTES=52428800` unless the Supabase `lvl-media` bucket limit is changed. Message attachments default to `MAX_ATTACHMENT_BYTES=15728640` and use a private Supabase Storage bucket named by `SUPABASE_ATTACHMENT_BUCKET`; local fallback is for development only. `REMEMBER_SESSION_DAYS` defaults to 30 and is clamped between 1 and 90 days. For production, set `APP_BASE_URL` and `OAUTH_REDIRECT_BASE_URL` to the deployed HTTPS app URL. Local development can keep `SESSION_COOKIE_SECURE=0` and `SESSION_COOKIE_SAMESITE=Lax`; Vercel production defaults to secure cookies.
+Use `MAX_VIDEO_BYTES=52428800` unless the Supabase `lvl-media` bucket limit is changed. Reel uploads use signed Supabase Storage URLs so browser uploads go directly to `SUPABASE_VIDEO_BUCKET` instead of passing video bytes through the Vercel function. Message attachments default to `MAX_ATTACHMENT_BYTES=15728640` and use a private Supabase Storage bucket named by `SUPABASE_ATTACHMENT_BUCKET`; local fallback is for development only. `REMEMBER_SESSION_DAYS` defaults to 30 and is clamped between 1 and 90 days. Google OAuth sessions are persistent by default and can be disabled with `OAUTH_SESSION_REMEMBER=0`. Password reset emails require `SMTP_FROM`, `SMTP_USERNAME`, and `SMTP_PASSWORD`; `SMTP_HOST`, `SMTP_PORT`, and `SMTP_USE_TLS` are optional when the defaults are correct. For production, set `APP_BASE_URL` and `OAUTH_REDIRECT_BASE_URL` to the deployed HTTPS app URL. Local development can keep `SESSION_COOKIE_SECURE=0` and `SESSION_COOKIE_SAMESITE=Lax`; Vercel production defaults to secure cookies.
 
 ## Legacy PHP Version
 

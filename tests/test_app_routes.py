@@ -8,7 +8,7 @@ from email import message_from_string
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 from werkzeug.datastructures import FileStorage
 
 import bcrypt
@@ -207,6 +207,25 @@ class AppRouteTests(unittest.TestCase):
             self.assertTrue(zapp.admin_token_is_valid("secret"))
             self.assertFalse(zapp.admin_token_is_valid("admin123"))
 
+    def test_admin_login_stores_session_proof_not_raw_token(self):
+        viewer = {"id": 7, "username": "admin"}
+        with self.client.session_transaction() as sess:
+            sess["csrf_token"] = "token"
+
+        with patch.dict(os.environ, {"LVL_ADMIN_TOKEN": "secret"}), \
+             patch.object(zapp, "get_current_user", return_value=viewer):
+            response = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "login",
+                "admin_token": "secret",
+            })
+
+        self.assertEqual(response.status_code, 302)
+        with self.client.session_transaction() as sess:
+            self.assertNotIn("admin_token", sess)
+            self.assertIn("admin_token_proof", sess)
+            self.assertNotEqual(sess["admin_token_proof"], "secret")
+
     def test_flask_secret_key_is_required_in_production(self):
         with self.assertRaises(RuntimeError):
             zapp.resolve_flask_secret_key({"VERCEL_ENV": "production"})
@@ -252,6 +271,38 @@ class AppRouteTests(unittest.TestCase):
 
         with patch.dict(os.environ, {"APP_ENV": "development"}, clear=True):
             self.assertTrue(zapp.password_reset_memory_fallback_enabled())
+
+    def test_mail_delivery_configuration_requires_sender_credentials(self):
+        self.assertFalse(zapp.mail_delivery_is_configured({
+            "username": "mailer@lvl.test",
+            "password": "",
+            "from_email": "noreply@lvl.test",
+        }))
+        self.assertTrue(zapp.mail_delivery_is_configured({
+            "username": "mailer@lvl.test",
+            "password": "smtp-secret",
+            "from_email": "noreply@lvl.test",
+        }))
+
+    def test_oauth_sessions_are_persistent_by_default(self):
+        self.assertTrue(zapp.oauth_session_remember({}))
+        self.assertFalse(zapp.oauth_session_remember({"OAUTH_SESSION_REMEMBER": "0"}))
+
+    def test_setup_health_reports_password_reset_email_readiness(self):
+        with patch.object(zapp, "supabase", None), patch.dict(os.environ, {}, clear=True):
+            missing = {check["label"]: check for check in zapp.get_setup_health()}
+
+        self.assertEqual(missing["Password reset email"]["status"], "needs_attention")
+
+        env = {
+            "SMTP_FROM": "noreply@lvl.test",
+            "SMTP_USERNAME": "mailer@lvl.test",
+            "SMTP_PASSWORD": "smtp-secret",
+        }
+        with patch.object(zapp, "supabase", None), patch.dict(os.environ, env, clear=True):
+            ready = {check["label"]: check for check in zapp.get_setup_health()}
+
+        self.assertEqual(ready["Password reset email"]["status"], "ready")
 
     def test_default_video_upload_limit_matches_storage_bucket(self):
         self.assertEqual(zapp.MAX_VIDEO_BYTES, 50 * 1024 * 1024)
@@ -441,6 +492,51 @@ class AppRouteTests(unittest.TestCase):
             self.assertEqual(sess["user_id"], 12)
             self.assertFalse(sess.permanent)
 
+    def test_password_login_blocks_restricted_accounts(self):
+        class Result:
+            def __init__(self, data=None):
+                self.data = data or []
+
+        class FakeUsersTable:
+            def __init__(self):
+                self.filters = {}
+
+            def select(self, *_args, **_kwargs):
+                return self
+
+            def eq(self, key, value):
+                self.filters[key] = value
+                return self
+
+            def execute(self):
+                if self.filters.get("username") == "demo":
+                    return Result([{
+                        "id": 12,
+                        "username": "demo",
+                        "email": "demo@example.com",
+                        "password_hash": "hashed",
+                        "account_status": "banned",
+                    }])
+                return Result([])
+
+        fake = SimpleNamespace(table=lambda _name: FakeUsersTable())
+        with patch.object(zapp, "supabase", fake), \
+             patch.object(zapp.bcrypt, "checkpw", return_value=True), \
+             patch.object(zapp, "award_xp") as award:
+            response = self.client.post("/auth", data={
+                "csrf_token": self.csrf(),
+                "action": "login",
+                "username": "demo",
+                "password": "secret123",
+                "remember_me": "1",
+            })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"This account has been disabled.", response.data)
+        award.assert_not_called()
+        with self.client.session_transaction() as sess:
+            self.assertNotIn("user_id", sess)
+
     def test_nickname_fields_allow_uppercase_input(self):
         auth_html = self.client.get("/auth").data.decode()
         self.assertIn('name="nickname" pattern="[A-Za-z0-9_]{3,24}"', auth_html)
@@ -528,7 +624,8 @@ class AppRouteTests(unittest.TestCase):
 
         fake = SimpleNamespace(auth=FakeAuth())
 
-        with patch.object(zapp, "supabase", fake):
+        with patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "create_oauth_supabase_client", return_value=fake):
             response = self.client.get("/auth/oauth/google")
 
         self.assertEqual(response.status_code, 302)
@@ -563,6 +660,7 @@ class AppRouteTests(unittest.TestCase):
         fake = SimpleNamespace(auth=FakeAuth())
 
         with patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "create_oauth_supabase_client", return_value=fake), \
              patch.dict(os.environ, {"APP_BASE_URL": "http://127.0.0.1:5055", "OAUTH_REDIRECT_BASE_URL": "http://127.0.0.1:5050"}):
             response = self.client.get("/auth/oauth/google", base_url="http://127.0.0.1:5055")
 
@@ -591,6 +689,7 @@ class AppRouteTests(unittest.TestCase):
         fake = SimpleNamespace(auth=FakeAuth())
 
         with patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "create_oauth_supabase_client", return_value=fake), \
              patch.dict(os.environ, {"APP_BASE_URL": "http://127.0.0.1:5055", "OAUTH_REDIRECT_BASE_URL": "http://127.0.0.1:5050"}):
             response = self.client.get("/auth/oauth/google", base_url="https://lvl.example.test")
 
@@ -856,12 +955,16 @@ class AppRouteTests(unittest.TestCase):
                 "csrf_token": self.csrf(),
                 "password": "newpass123",
                 "confirm_password": "newpass123",
-            }, follow_redirects=True)
+            })
 
-        self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Password updated. Log in with your new password.", response.data)
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.location.endswith("/"))
         self.assertTrue(bcrypt.checkpw(b"newpass123", fake.user_update["password_hash"].encode("utf-8")))
         self.assertIsNotNone(fake.reset_update["used_at"])
+        with self.client.session_transaction() as sess:
+            self.assertEqual(sess["user_id"], 12)
+            self.assertFalse(sess.permanent)
+            self.assertIn(("success", "Password updated. You are signed in."), sess.get("_flashes", []))
 
     def test_reset_password_rejects_expired_token(self):
         raw_token = "expired-token"
@@ -956,7 +1059,8 @@ class AppRouteTests(unittest.TestCase):
             sess["oauth_provider"] = "google"
             sess["oauth_code_verifier"] = "stored-verifier"
 
-        with patch.object(zapp, "supabase", fake):
+        with patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "create_oauth_supabase_client", return_value=fake):
             response = self.client.get("/auth/oauth/callback?code=abc123&state=expected-state")
 
         self.assertEqual(response.status_code, 302)
@@ -967,6 +1071,7 @@ class AppRouteTests(unittest.TestCase):
         self.assertEqual(fake.updated_payload["oauth_provider"], "google")
         with self.client.session_transaction() as sess:
             self.assertEqual(sess["user_id"], 44)
+            self.assertTrue(sess.permanent)
             self.assertNotIn("pending_oauth_profile", sess)
 
     def test_oauth_callback_uses_isolated_auth_client_for_exchange(self):
@@ -1063,6 +1168,7 @@ class AppRouteTests(unittest.TestCase):
         self.assertEqual(shared.updated_payload["supabase_auth_user_id"], "66666666-6666-6666-6666-666666666666")
         with self.client.session_transaction() as sess:
             self.assertEqual(sess["user_id"], 66)
+            self.assertTrue(sess.permanent)
             self.assertNotIn("pending_oauth_profile", sess)
 
     def test_oauth_callback_sends_new_user_to_social_onboarding(self):
@@ -1100,7 +1206,8 @@ class AppRouteTests(unittest.TestCase):
             sess["oauth_provider"] = "google"
             sess["oauth_code_verifier"] = "stored-verifier"
 
-        with patch.object(zapp, "supabase", fake):
+        with patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "create_oauth_supabase_client", return_value=fake):
             response = self.client.get("/auth/oauth/callback?code=abc123&state=expected-state")
 
         self.assertEqual(response.status_code, 302)
@@ -1153,7 +1260,8 @@ class AppRouteTests(unittest.TestCase):
             sess["oauth_provider"] = "google"
             sess["oauth_code_verifier"] = "stored-verifier"
 
-        with patch.object(zapp, "supabase", fake):
+        with patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "create_oauth_supabase_client", return_value=fake):
             response = self.client.get("/auth/oauth/callback?code=abc123")
 
         self.assertEqual(response.status_code, 302)
@@ -1186,7 +1294,8 @@ class AppRouteTests(unittest.TestCase):
 
         fake = SimpleNamespace(auth=FakeAuth(), table=lambda _name: FakeUsersTable())
 
-        with patch.object(zapp, "supabase", fake):
+        with patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "create_oauth_supabase_client", return_value=fake):
             response = self.client.get("/auth/oauth/callback?code=abc123&state=returned-state")
 
         self.assertEqual(response.status_code, 302)
@@ -1249,6 +1358,7 @@ class AppRouteTests(unittest.TestCase):
         self.assertEqual(fake.inserted_payload["username"], "joinmember")
         with self.client.session_transaction() as sess:
             self.assertEqual(sess["user_id"], 55)
+            self.assertTrue(sess.permanent)
             self.assertNotIn("pending_oauth_profile", sess)
 
     def test_shared_post_card_has_menu_actions(self):
@@ -1567,6 +1677,26 @@ class AppRouteTests(unittest.TestCase):
         self.assertNotIn(")", term)
         self.assertLessEqual(len(zapp.admin_search_term("a" * 200)), 80)
 
+    def test_account_restriction_messages_cover_ban_and_suspension(self):
+        now = datetime(2026, 8, 16, 12, 0, tzinfo=timezone.utc)
+
+        self.assertIsNone(zapp.account_restriction_message({}, now=now))
+        self.assertIn(
+            "disabled",
+            zapp.account_restriction_message({"account_status": "banned"}, now=now),
+        )
+        self.assertIn(
+            "2026-08-17 12:00 UTC",
+            zapp.account_restriction_message({
+                "account_status": "suspended",
+                "suspended_until": "2026-08-17T12:00:00+00:00",
+            }, now=now),
+        )
+        self.assertIsNone(zapp.account_restriction_message({
+            "account_status": "suspended",
+            "suspended_until": "2026-08-15T12:00:00+00:00",
+        }, now=now))
+
     def test_admin_dashboard_requires_valid_admin_session_for_actions(self):
         class FakeSupabase:
             def __init__(self):
@@ -1644,8 +1774,20 @@ class AppRouteTests(unittest.TestCase):
                 "id": "7",
                 "warning_text": "Stop testing yourself.",
             })
+            self_restrict = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "update_user_status",
+                "id": "7",
+                "account_status": "banned",
+            })
+            invalid_status = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "update_user_status",
+                "id": "8",
+                "account_status": "owner",
+            })
 
-        for response in (invalid_suggestion, invalid_verification, invalid_position, invalid_id, self_delete, self_warn):
+        for response in (invalid_suggestion, invalid_verification, invalid_position, invalid_id, self_delete, self_warn, self_restrict, invalid_status):
             self.assertEqual(response.status_code, 302)
             self.assertTrue(response.headers["Location"].endswith("/admin-dashboard"))
         self.assertEqual(fake.calls, [])
@@ -1747,6 +1889,238 @@ class AppRouteTests(unittest.TestCase):
         audit.assert_any_call("admin", "update_suggestion_status", suggestion_id, "Reviewed")
         audit.assert_any_call("admin", "respond_verification", verification_id, "status=Approved")
         audit.assert_any_call("admin", "toggle_position", position_id, "new_status=False")
+
+    def test_admin_dashboard_updates_user_account_status(self):
+        class Result:
+            def __init__(self, data=None):
+                self.data = data or []
+
+        class FakeTable:
+            def __init__(self, db, name):
+                self.db = db
+                self.name = name
+                self.action = None
+                self.values = None
+                self.filters = []
+
+            def update(self, values):
+                self.action = "update"
+                self.values = values
+                return self
+
+            def eq(self, key, value):
+                self.filters.append((key, value))
+                return self
+
+            def execute(self):
+                self.db.calls.append((self.name, self.action, self.values, tuple(self.filters)))
+                return Result([self.values or {}])
+
+        class FakeSupabase:
+            def __init__(self):
+                self.calls = []
+
+            def table(self, name):
+                return FakeTable(self, name)
+
+        fake = FakeSupabase()
+        with self.client.session_transaction() as sess:
+            sess["csrf_token"] = "token"
+            sess["admin_token"] = "secret"
+
+        viewer = {"id": 7, "username": "admin"}
+        with patch.dict(os.environ, {"LVL_ADMIN_TOKEN": "secret"}), \
+             patch.object(zapp, "get_current_user", return_value=viewer), \
+             patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "log_admin_action") as audit:
+            response = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "update_user_status",
+                "id": "12",
+                "account_status": "suspended",
+                "suspension_days": "3",
+                "account_status_reason": "Repeated spam reports",
+            })
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.headers["Location"].endswith("/admin-dashboard"))
+        update = next(call for call in fake.calls if call[0] == "users")
+        self.assertEqual(update[1], "update")
+        self.assertEqual(update[2]["account_status"], "suspended")
+        self.assertEqual(update[2]["account_status_reason"], "Repeated spam reports")
+        self.assertEqual(update[2]["account_status_updated_by"], 7)
+        self.assertIsNotNone(datetime.fromisoformat(update[2]["account_status_updated_at"]).tzinfo)
+        self.assertIsNotNone(datetime.fromisoformat(update[2]["suspended_until"]).tzinfo)
+        self.assertEqual(update[3], (("id", 12),))
+        audit.assert_any_call("admin", "update_user_status", 12, "status=suspended")
+
+    def test_admin_dashboard_moderates_comments_reels_and_communities(self):
+        class Result:
+            def __init__(self, data=None):
+                self.data = data or []
+
+        class FakeTable:
+            def __init__(self, db, name):
+                self.db = db
+                self.name = name
+                self.action = None
+                self.values = None
+                self.filters = []
+
+            def delete(self):
+                self.action = "delete"
+                return self
+
+            def update(self, values):
+                self.action = "update"
+                self.values = values
+                return self
+
+            def eq(self, key, value):
+                self.filters.append((key, value))
+                return self
+
+            def execute(self):
+                self.db.calls.append((self.name, self.action, self.values, tuple(self.filters)))
+                return Result([self.values or {}])
+
+        class FakeSupabase:
+            def __init__(self):
+                self.calls = []
+
+            def table(self, name):
+                return FakeTable(self, name)
+
+        fake = FakeSupabase()
+        with self.client.session_transaction() as sess:
+            sess["csrf_token"] = "token"
+            sess["admin_token"] = "secret"
+
+        viewer = {"id": 7, "username": "admin"}
+        with patch.dict(os.environ, {"LVL_ADMIN_TOKEN": "secret"}), \
+             patch.object(zapp, "get_current_user", return_value=viewer), \
+             patch.object(zapp, "supabase", fake), \
+             patch.object(zapp, "log_admin_action") as audit:
+            comment = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "delete_comment_global",
+                "id": "41",
+            })
+            reel_comment = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "delete_reel_comment_global",
+                "id": "42",
+            })
+            reel = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "delete_reel_global",
+                "id": "43",
+            })
+            community = self.client.post("/admin-dashboard", data={
+                "csrf_token": "token",
+                "action": "delete_community_global",
+                "id": "44",
+            })
+
+        for response in (comment, reel_comment, reel, community):
+            self.assertEqual(response.status_code, 302)
+            self.assertTrue(response.headers["Location"].endswith("/admin-dashboard"))
+        self.assertIn(("comment_likes", "delete", None, (("comment_id", 41),)), fake.calls)
+        self.assertIn(("comment_reposts", "delete", None, (("comment_id", 41),)), fake.calls)
+        self.assertIn(("comments", "delete", None, (("id", 41),)), fake.calls)
+        self.assertIn(("reel_comments", "update", ANY, (("id", 42),)), fake.calls)
+        self.assertIn(("communities", "delete", None, (("id", 44),)), fake.calls)
+
+        reel_update = next(call for call in fake.calls if call[0] == "reels" and call[1] == "update")
+        self.assertEqual(reel_update[2]["status"], "deleted")
+        self.assertIsNotNone(datetime.fromisoformat(reel_update[2]["deleted_at"]).tzinfo)
+        self.assertIsNotNone(datetime.fromisoformat(reel_update[2]["updated_at"]).tzinfo)
+        self.assertEqual(reel_update[3], (("id", 43),))
+        audit.assert_any_call("admin", "delete_comment_global", 41)
+        audit.assert_any_call("admin", "delete_reel_comment_global", 42)
+        audit.assert_any_call("admin", "delete_reel_global", 43)
+        audit.assert_any_call("admin", "delete_community_global", 44)
+
+    def test_admin_dashboard_renders_content_moderation_sections(self):
+        context = {
+            "viewer": {"id": 7, "username": "admin"},
+            "highlights": [],
+            "is_authenticated": True,
+            "login_error": None,
+            "positions": [],
+            "applications": [],
+            "messages": [],
+            "suggestions": [],
+            "contact_messages": [],
+            "verification_requests": [],
+            "safety_reports": [],
+            "system_users": [{
+                "id": 12,
+                "display_name": "Demo User",
+                "username": "demo",
+                "email": "demo@example.com",
+                "level": 1,
+                "total_xp": 0,
+                "is_profile_verified": False,
+                "account_status": "suspended",
+                "suspended_until": "2026-08-17T12:00:00+00:00",
+                "account_status_reason": "Review pending",
+            }],
+            "system_posts": [],
+            "system_comments": [{
+                "id": 41,
+                "comment": "bad comment",
+                "created_at": "2026-08-16T10:00:00",
+                "user": {"username": "member"},
+                "post": {"content": "related post"},
+            }],
+            "system_reels": [{
+                "id": 43,
+                "caption": "bad reel",
+                "status": "active",
+                "visibility": "public",
+                "created_at": "2026-08-16T10:00:00",
+                "user": {"username": "creator"},
+                "community": None,
+            }],
+            "system_reel_comments": [{
+                "id": 42,
+                "comment": "bad reply",
+                "created_at": "2026-08-16T10:00:00",
+                "user": {"username": "replyuser"},
+                "reel": {"id": 43, "caption": "bad reel"},
+            }],
+            "system_communities": [{
+                "id": 44,
+                "name": "Bad Community",
+                "slug": "bad-community",
+                "description": "Needs review",
+                "created_at": "2026-08-16T10:00:00",
+                "owner": {"username": "owner"},
+            }],
+            "admin_logs": [],
+            "account_status_options": zapp.ADMIN_ACCOUNT_STATUS_OPTIONS,
+            "q_user": "",
+            "q_post": "",
+            "q_comment": "",
+            "q_reel": "",
+            "q_community": "",
+        }
+        with zapp.app.test_request_context("/admin-dashboard"):
+            html = zapp.render_template("admin_dashboard.html", **context)
+
+        self.assertIn("Comments (1)", html)
+        self.assertIn("Reels (1)", html)
+        self.assertIn("Reel Replies (1)", html)
+        self.assertIn("Communities (1)", html)
+        self.assertIn("Users (1)", html)
+        self.assertIn('value="delete_comment_global"', html)
+        self.assertIn('value="delete_reel_global"', html)
+        self.assertIn('value="delete_reel_comment_global"', html)
+        self.assertIn('value="delete_community_global"', html)
+        self.assertIn('value="update_user_status"', html)
+        self.assertIn('name="account_status"', html)
+        self.assertIn("Review pending", html)
 
     def test_level_guide_page_explains_xp_and_rewards(self):
         fake_user = {
@@ -1999,6 +2373,8 @@ class AppRouteTests(unittest.TestCase):
         self.assertIn("Upload Clip", html)
         self.assertIn('enctype="multipart/form-data"', html)
         self.assertIn('accept="video/mp4,video/webm,video/quicktime,video/x-m4v"', html)
+        self.assertIn('data-upload-url="/api/reels/upload-url"', html)
+        self.assertIn('data-complete-url="/api/reels/complete-upload"', html)
 
     def test_reel_upload_rejects_missing_video(self):
         viewer = {"id": 7, "username": "demo", "display_name": "Demo User", "profile_photo_url": ""}
@@ -2070,6 +2446,124 @@ class AppRouteTests(unittest.TestCase):
         self.assertEqual(fake.reels.inserted["video_url"], "https://cdn.example.com/reel.mp4")
         self.assertEqual(fake.reels.inserted["storage_path"], "reels/7/reel.mp4")
         award_xp.assert_called_once_with(7, "reel_created", 15, 123)
+
+    def test_reel_signed_upload_url_uses_supabase_storage(self):
+        class FakeBucket:
+            def __init__(self):
+                self.signed_path = None
+
+            def create_signed_upload_url(self, path):
+                self.signed_path = path
+                return {
+                    "signedUrl": f"https://storage.example.test/upload/{path}?token=signed",
+                    "token": "signed",
+                    "path": path,
+                }
+
+            def get_public_url(self, path):
+                return f"https://cdn.example.test/{path}"
+
+        class FakeStorage:
+            def __init__(self):
+                self.bucket = FakeBucket()
+                self.checked_bucket = None
+
+            def get_bucket(self, bucket):
+                self.checked_bucket = bucket
+                return {"name": bucket}
+
+            def from_(self, bucket):
+                self.used_bucket = bucket
+                return self.bucket
+
+        fake = SimpleNamespace(storage=FakeStorage())
+        viewer = {"id": 7, "username": "demo", "display_name": "Demo User", "profile_photo_url": ""}
+        with patch.object(zapp, "get_current_user", return_value=viewer), \
+             patch.object(zapp, "supabase", fake):
+            response = self.client.post("/api/reels/upload-url", json={
+                "filename": "clip.mp4",
+                "content_type": "video/mp4",
+                "size": 1024,
+            }, headers={"X-CSRF-Token": self.csrf()})
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertTrue(data["success"])
+        self.assertTrue(data["storage_path"].startswith("reels/7/"))
+        self.assertTrue(data["storage_path"].endswith(".mp4"))
+        self.assertEqual(data["content_type"], "video/mp4")
+        self.assertEqual(fake.storage.checked_bucket, zapp.SUPABASE_VIDEO_BUCKET)
+        self.assertEqual(fake.storage.bucket.signed_path, data["storage_path"])
+
+    def test_reel_complete_direct_upload_inserts_record(self):
+        class Result:
+            data = [{"id": 321}]
+
+        class FakeTable:
+            def __init__(self):
+                self.inserted = None
+
+            def insert(self, payload):
+                self.inserted = payload
+                return self
+
+            def execute(self):
+                return Result()
+
+        class FakeBucket:
+            def get_public_url(self, path):
+                return f"https://cdn.example.test/{path}"
+
+        class FakeStorage:
+            def from_(self, _bucket):
+                return FakeBucket()
+
+        class FakeSupabase:
+            def __init__(self):
+                self.storage = FakeStorage()
+                self.reels = FakeTable()
+
+            def table(self, _name):
+                return self.reels
+
+        fake = FakeSupabase()
+        viewer = {"id": 7, "username": "demo", "display_name": "Demo User", "profile_photo_url": ""}
+        storage_path = f"reels/7/{'a' * 32}.mp4"
+        with patch.object(zapp, "get_current_user", return_value=viewer), \
+             patch.object(zapp, "get_reel_upload_communities", return_value=[]), \
+             patch.object(zapp, "award_xp") as award_xp, \
+             patch.object(zapp, "supabase", fake):
+            response = self.client.post("/api/reels/complete-upload", json={
+                "storage_path": storage_path,
+                "caption": "direct upload",
+                "visibility": "public",
+                "allow_comments": True,
+                "allow_downloads": False,
+                "autoplay_next": True,
+            }, headers={"X-CSRF-Token": self.csrf()})
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["redirect_url"], "/reels")
+        self.assertEqual(fake.reels.inserted["video_url"], f"https://cdn.example.test/{storage_path}")
+        self.assertEqual(fake.reels.inserted["storage_path"], storage_path)
+        self.assertEqual(fake.reels.inserted["caption"], "direct upload")
+        self.assertTrue(fake.reels.inserted["allow_comments"])
+        self.assertFalse(fake.reels.inserted["allow_downloads"])
+        award_xp.assert_called_once_with(7, "reel_created", 15, 321)
+
+    def test_reel_complete_direct_upload_rejects_foreign_storage_path(self):
+        viewer = {"id": 7, "username": "demo", "display_name": "Demo User", "profile_photo_url": ""}
+        with patch.object(zapp, "get_current_user", return_value=viewer):
+            response = self.client.post("/api/reels/complete-upload", json={
+                "storage_path": f"reels/8/{'b' * 32}.mp4",
+                "caption": "wrong owner",
+                "visibility": "public",
+            }, headers={"X-CSRF-Token": self.csrf()})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.get_json()["error"], "Invalid uploaded video path.")
 
     def test_reel_like_endpoint_toggles_like_json(self):
         class Result:
