@@ -1617,6 +1617,8 @@ def get_social_list(profile_user, list_type, viewer_id):
         'following': 'Following',
         'friends': 'Friends'
     }.get(list_type, 'People')
+    
+    streaks_by_user = {}
 
     if list_type == 'followers':
         rows = supabase.table('follows').select('follower_id').eq('following_id', profile_id).execute()
