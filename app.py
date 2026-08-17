@@ -183,7 +183,7 @@ ATTACHMENT_CONTENT_TYPES = {
     'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'txt': 'text/plain',
 }
-ASSET_VERSION = "110"
+ASSET_VERSION = "114"
 HOME_REEL_PREVIEW_LIMIT = 12
 HOME_MEDIA_PREVIEW_LIMIT = 12
 
@@ -2076,13 +2076,17 @@ def delete_post_draft_for_user(user_id, draft_id):
         .execute()
     return bool(res and res.data)
 
-def insert_user_post(user_id, content, image_url=None):
+def insert_user_post(user_id, content, image_url=None, gif_url=None, sticker=None):
     payload = {
         'user_id': user_id,
         'content': content or ''
     }
     if image_url:
         payload['image_url'] = image_url
+    if gif_url:
+        payload['gif_url'] = gif_url
+    if sticker:
+        payload['sticker'] = sticker
     res = supabase.table('posts').insert(payload).execute()
     post = res.data[0] if res and res.data else {}
     if post.get('id'):
@@ -3329,7 +3333,7 @@ def oauth_callback():
             start_user_session(app_user['id'], remember=oauth_session_remember())
             clear_oauth_flow_session(include_pending=True)
             award_xp(app_user['id'], 'daily_login', 5)
-            flash(f"Signed in with {oauth_provider_label(profile['provider'])}.", "success")
+            flash("Login successful.", "success")
             return redirect(url_for('index'))
 
         session['pending_oauth_profile'] = profile
@@ -3475,22 +3479,24 @@ def auth():
             gender = normalize_gender(request.form.get('gender', ''))
             birthday = request.form.get('birthday', '').strip()
 
+            _reg_form = dict(request.form)
+
             if not all([first_name, last_name, nickname, email, password, gender]):
                 flash("All fields are required.", "error")
-                return render_template('auth.html')
+                return render_template('auth.html', active_tab='register', register_form_data=_reg_form)
 
             if len(password) < 8:
                 flash("Password must be at least 8 characters.", "error")
-                return render_template('auth.html')
+                return render_template('auth.html', active_tab='register', register_form_data=_reg_form)
 
             if not re.match(r'^[a-z0-9_]{3,24}$', nickname):
                 flash("Username must be 3-24 characters: letters, numbers, or underscores only.", "error")
-                return render_template('auth.html')
+                return render_template('auth.html', active_tab='register', register_form_data=_reg_form)
 
             birthday_value, birthday_error = validate_birthday(birthday, required=True)
             if birthday_error:
                 flash(birthday_error, "error")
-                return render_template('auth.html')
+                return render_template('auth.html', active_tab='register', register_form_data=_reg_form)
 
             hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
             defaults = gender_defaults(gender)
@@ -3518,7 +3524,11 @@ def auth():
                     flash(f"Welcome to LvL, {first_name}! You've earned 20 XP for joining.", "success")
                     return redirect(url_for('index'))
             except Exception as e:
-                flash(handle_db_error(e), "error")
+                err_msg = handle_db_error(e)
+                if err_msg == "This username is already taken.":
+                    _reg_form['nickname'] = ''
+                flash(err_msg, "error")
+                return render_template('auth.html', active_tab='register', register_form_data=_reg_form)
 
     return render_template('auth.html')
 
@@ -3597,6 +3607,10 @@ def create_post():
     draft_image_cleared = request.form.get('draft_clear_image') == '1'
     content = request.form.get('content', '').strip()
     intent = request.form.get('intent', 'publish')
+    gif_url = request.form.get('gif_url', '').strip()
+    sticker = request.form.get('sticker', '').strip()
+    allowed_stickers = {'🔥', '👏', '💯', '❤️', '😂', '🎉', '👍', '✨'}
+    sticker = sticker if sticker in allowed_stickers else ''
     image_url = None
     if request.files.get('image'):
         try:
@@ -3611,7 +3625,7 @@ def create_post():
         except Exception:
             image_url = None
 
-    if content or image_url:
+    if content or image_url or gif_url or sticker:
         if len(content) > 280:
             flash("Post cannot exceed 280 characters.", "error")
         elif intent != 'draft' and content and not image_url and recent_duplicate_submission('posts', {'user_id': viewer['id']}, 'content', content):
@@ -3627,10 +3641,14 @@ def create_post():
                     }
                     if image_url:
                         payload['image_url'] = image_url
+                    if gif_url:
+                        payload['gif_url'] = gif_url
+                    if sticker:
+                        payload['sticker'] = sticker
                     supabase.table('posts').insert(payload).execute()
                     flash("Draft saved.", "success")
                 else:
-                    insert_user_post(viewer['id'], content, image_url)
+                    insert_user_post(viewer['id'], content, image_url, gif_url, sticker)
                     if draft_id:
                         try:
                             delete_post_draft_for_user(viewer['id'], draft_id)
@@ -3953,25 +3971,76 @@ def create_community_post(slug):
 @app.route('/delete_post', methods=['POST'])
 def delete_post():
     viewer = get_current_user()
+    is_ajax = request.form.get('ajax') == '1'
     if not viewer:
+        if is_ajax:
+            return jsonify({'success': False, 'error': 'Login required.'}), 401
         return redirect(url_for('auth'))
 
     post_id = parse_int(request.form.get('post_id'))
     if not post_id:
+        if is_ajax:
+            return jsonify({'success': False, 'error': 'Post not found.'}), 400
         flash("Post not found.", "error")
         return redirect(safe_redirect_url())
 
     try:
         post_res = supabase.table('posts').select('id,user_id').eq('id', post_id).execute()
         if not post_res.data:
+            if is_ajax:
+                return jsonify({'success': False, 'error': 'Post not found.'}), 404
             flash("Post not found.", "error")
         elif post_res.data[0].get('user_id') != viewer['id']:
+            if is_ajax:
+                return jsonify({'success': False, 'error': 'You can only delete your own posts.'}), 403
             flash("You can only delete your own posts.", "error")
         else:
             supabase.table('posts').update({'deleted_at': datetime.now(timezone.utc).isoformat()}).eq('id', post_id).execute()
+            if is_ajax:
+                return jsonify({'success': True})
             flash("Post deleted.", "success")
     except Exception as e:
+        if is_ajax:
+            return jsonify({'success': False, 'error': handle_db_error(e, 'Could not delete that post.')}), 400
         flash(handle_db_error(e, "Could not delete that post."), "error")
+    return redirect(safe_redirect_url())
+
+
+@app.route('/delete_comment', methods=['POST'])
+def delete_comment():
+    viewer = get_current_user()
+    is_ajax = request.form.get('ajax') == '1'
+    if not viewer:
+        if is_ajax:
+            return jsonify({'success': False, 'error': 'Login required.'}), 401
+        return redirect(url_for('auth'))
+
+    comment_id = parse_int(request.form.get('comment_id'))
+    if not comment_id:
+        if is_ajax:
+            return jsonify({'success': False, 'error': 'Reply not found.'}), 400
+        flash("Reply not found.", "error")
+        return redirect(safe_redirect_url())
+
+    try:
+        res = supabase.table('comments').select('id,user_id').eq('id', comment_id).execute()
+        if not res.data:
+            if is_ajax:
+                return jsonify({'success': False, 'error': 'Reply not found.'}), 404
+            flash("Reply not found.", "error")
+        elif res.data[0].get('user_id') != viewer['id']:
+            if is_ajax:
+                return jsonify({'success': False, 'error': 'You can only delete your own replies.'}), 403
+            flash("You can only delete your own replies.", "error")
+        else:
+            supabase.table('comments').delete().eq('id', comment_id).execute()
+            if is_ajax:
+                return jsonify({'success': True})
+            flash("Reply deleted.", "success")
+    except Exception as e:
+        if is_ajax:
+            return jsonify({'success': False, 'error': handle_db_error(e, 'Could not delete that reply.')}), 400
+        flash(handle_db_error(e, "Could not delete that reply."), "error")
     return redirect(safe_redirect_url())
 
 @app.route('/share_post/<int:post_id>', methods=['GET', 'POST'])
@@ -4802,9 +4871,10 @@ def level_guide():
                 pass
 
     # Read custom success flags from flash
-    flashed = get_flashed_messages()
-    contact_success = 'contact_success' in flashed
-    careers_success = 'careers_success' in flashed
+    flashed = get_flashed_messages(with_categories=True)
+    flashed_msgs = [msg for _cat, msg in flashed]
+    contact_success = 'contact_success' in flashed_msgs
+    careers_success = any(cat == 'sentinel' and msg == 'careers_success' for cat, msg in flashed)
 
     return render_template('level_guide.html',
                            viewer=viewer,
@@ -4961,21 +5031,22 @@ def guide_careers():
     cv_filename = None
     if not name or not email or not position_title or not message:
         flash("All fields are required.", "error")
+    elif not cv_file or not cv_file.filename:
+        flash("A CV / resume is required to submit your application.", "error")
     elif not is_valid_email(email):
         flash("Please enter a valid email address.", "error")
     else:
-        if cv_file and cv_file.filename:
-            allowed_ext = {'.pdf', '.doc', '.docx'}
-            ext = os.path.splitext(cv_file.filename.lower())[1]
-            if ext not in allowed_ext:
-                flash("CV must be a PDF, DOC, or DOCX file.", "error")
-                return redirect(url_for('level_guide') + '#careers')
-            safe_name = f"cv_{uuid.uuid4().hex}{ext}"
-            upload_dir = os.path.join(app.root_path, 'static', 'uploads', 'cvs')
-            os.makedirs(upload_dir, exist_ok=True)
-            cv_path = os.path.join(upload_dir, safe_name)
-            cv_file.save(cv_path)
-            cv_filename = safe_name
+        allowed_ext = {'.pdf', '.doc', '.docx'}
+        ext = os.path.splitext(cv_file.filename.lower())[1]
+        if ext not in allowed_ext:
+            flash("CV must be a PDF, DOC, or DOCX file.", "error")
+            return redirect(url_for('level_guide') + '#careers')
+        safe_name = f"cv_{uuid.uuid4().hex}{ext}"
+        upload_dir = os.path.join(app.root_path, 'static', 'uploads', 'cvs')
+        os.makedirs(upload_dir, exist_ok=True)
+        cv_path = os.path.join(upload_dir, safe_name)
+        cv_file.save(cv_path)
+        cv_filename = safe_name
 
         # Resolve position_id if matches an active posting
         position_id = None
@@ -5000,7 +5071,9 @@ def guide_careers():
                 app.logger.error(f"Failed to save job application to DB: {exc}")
                 
         app.logger.info(f"[CAREERS] from={email} name={name} position={position_title} cv={cv_filename}")
-        flash('careers_success')
+        # Sentinel for template detection + visible localized message
+        flash('careers_success', 'sentinel')
+        flash('Application submitted successfully!', 'success')
         
     return redirect(url_for('level_guide') + '#careers')
 

@@ -57,6 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initPreferencesSettings();
     initRichReplies();
     initProgressiveMedia();
+    initAjaxDeletePosts();
 
     const SoundEffects = {
         audioCtx: null,
@@ -217,11 +218,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const suffix = t.composer_char_count_suffix || 'left';
                 charCount.textContent = `${remaining} ${suffix}`;
                 const hasImage = (imageInput && imageInput.files && imageInput.files.length > 0) || Boolean(draftImageUrl);
+                const hasGif = Boolean(composer.querySelector('input[name="gif_url"]')?.value);
+                const hasSticker = Boolean(composer.querySelector('input[name="sticker"]')?.value);
 
                 if (remaining < 0) {
                     charCount.style.color = 'var(--error-color)';
                     submitBtn.disabled = true;
-                } else if (textarea.value.trim().length === 0 && !hasImage) {
+                } else if (textarea.value.trim().length === 0 && !hasImage && !hasGif && !hasSticker) {
                     submitBtn.disabled = true;
                 } else {
                     charCount.style.color = 'var(--text-secondary)';
@@ -1508,6 +1511,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 displayMessage = 'Action failed. Please try again.';
             }
         }
+        
+        // Always attempt to translate the toast
         const originalDisplayMessage = displayMessage;
         if (window.LvLI18n && typeof window.LvLI18n.translateServerMessage === 'function') {
             displayMessage = window.LvLI18n.translateServerMessage(originalDisplayMessage, window.LvLI18n.getCurrentLang());
@@ -2723,16 +2728,18 @@ function initRichReplies() {
     };
     toggle('[data-emoji-toggle]', '[data-emoji-picker]');
     toggle('[data-sticker-toggle]', '[data-sticker-picker]');
-    toggle('[data-gif-toggle]', '[data-gif-field]');
+    // Note: [data-gif-toggle] is handled by the GIF picker block below
 
     form.querySelectorAll('[data-insert-emoji]').forEach((button) => button.addEventListener('click', () => {
         const start = textarea.selectionStart || textarea.value.length;
         textarea.setRangeText(button.dataset.insertEmoji, start, textarea.selectionEnd || start, 'end');
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
         textarea.focus();
     }));
     form.querySelectorAll('[data-select-sticker]').forEach((button) => button.addEventListener('click', () => {
         stickerInput.value = button.dataset.selectSticker;
         status.textContent = `${translateReplyUi('reply_sticker_selected', 'Sticker selected:')} ${button.dataset.selectSticker}`;
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
     }));
     if (imageInput) imageInput.addEventListener('change', () => {
         status.textContent = imageInput.files[0] ? `${translateReplyUi('reply_photo_selected', 'Photo selected:')} ${imageInput.files[0].name}` : '';
@@ -2799,12 +2806,15 @@ function initRichReplies() {
             commentsFeed.querySelector('.empty-state')?.remove();
             commentsFeed.appendChild(card);
             bindInsertedActions(card);
+            bindDeleteComment(card);
             const total = commentsFeed.querySelectorAll('[data-comment-id]').length;
             countLabel.textContent = `${total} ${translateReplyUi(total === 1 ? 'reply_singular' : 'reply_plural', total === 1 ? 'reply' : 'replies')}`;
             form.reset();
             parentInput.value = '';
             status.textContent = '';
             form.querySelectorAll('.reply-picker, [data-gif-field]').forEach((panel) => { panel.hidden = true; });
+            const gifUrlInput = form.querySelector('input[name="gif_url"]');
+            if (gifUrlInput) gifUrlInput.value = '';
             card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         } catch (error) {
             console.error(error);
@@ -2812,6 +2822,191 @@ function initRichReplies() {
         } finally {
             delete submit.dataset.pending;
             submit.disabled = false;
+        }
+    });
+    // ── GIF Picker (Giphy) ───────────────────────────────────────────────────
+    const gifField = form.querySelector('[data-gif-field]');
+    const gifToggle = form.querySelector('[data-gif-toggle]');
+    if (gifField && gifToggle) {
+        const gifSearch = gifField.querySelector('[data-gif-search]');
+        const gifSearchBtn = gifField.querySelector('[data-gif-search-btn]');
+        const gifResults = gifField.querySelector('[data-gif-results]');
+        const gifSelectedPreview = gifField.querySelector('[data-gif-selected-preview]');
+        const gifPreviewImg = gifField.querySelector('[data-gif-preview-img]');
+        const gifClear = gifField.querySelector('[data-gif-clear]');
+        const gifUrlInput = form.querySelector('input[name="gif_url"]');
+        // For demonstration, use a fallback if not provided via meta tag or env.
+        const metaKey = document.querySelector('meta[name="giphy-api-key"]')?.content;
+        // DO NOT HARDCODE production keys here.
+        const GIPHY_KEY = metaKey || 'YOUR_GIPHY_API_KEY';
+        const GIPHY_BASE = 'https://api.giphy.com/v1/gifs';
+
+        const t = (key, fb) => translateReplyUi(key, fb);
+
+        const renderGifResults = (gifs) => {
+            gifResults.innerHTML = '';
+            if (!gifs || !gifs.length) {
+                gifResults.textContent = t('gif_no_results', 'No GIFs found');
+                return;
+            }
+            gifs.forEach((gif) => {
+                // Thumbnail for the grid (small & fast), full URL for the post
+                const thumbUrl = gif.images?.fixed_width_small?.url
+                    || gif.images?.fixed_width?.url
+                    || gif.images?.downsized?.url || '';
+                const fullUrl = gif.images?.original?.url
+                    || gif.images?.downsized_large?.url
+                    || thumbUrl;
+                if (!thumbUrl) return;
+                const img = document.createElement('img');
+                img.src = thumbUrl;
+                img.alt = gif.title || 'GIF';
+                img.loading = 'lazy';
+                img.className = 'gif-result-item';
+                img.addEventListener('click', () => {
+                    gifUrlInput.value = fullUrl;
+                    gifPreviewImg.src = thumbUrl;
+                    gifSelectedPreview.hidden = false;
+                    gifResults.hidden = true;
+                    gifSearch.value = gif.title || '';
+                    
+                    // Explicitly enable the submit button so users can post just a GIF
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) submitBtn.disabled = false;
+                    
+                    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                });
+                gifResults.appendChild(img);
+            });
+        };
+
+        const loadGifs = async (query) => {
+            gifResults.textContent = t('gif_loading', 'Loading…');
+            gifResults.hidden = false;
+            try {
+                const endpoint = query
+                    ? `${GIPHY_BASE}/search?api_key=${GIPHY_KEY}&q=${encodeURIComponent(query)}&limit=20&rating=g&lang=en`
+                    : `${GIPHY_BASE}/trending?api_key=${GIPHY_KEY}&limit=20&rating=g`;
+                const resp = await fetch(endpoint);
+                const json = await resp.json();
+                renderGifResults(json.data || []);
+            } catch {
+                gifResults.textContent = t('gif_no_results', 'No GIFs found');
+            }
+        };
+
+        // On toggle open, load trending GIFs
+        gifToggle.addEventListener('click', () => {
+            const isOpen = !gifField.hidden;
+            gifField.hidden = isOpen;
+            if (!isOpen && !gifUrlInput.value) {
+                loadGifs('');
+            }
+        });
+
+        if (gifSearchBtn) gifSearchBtn.addEventListener('click', () => loadGifs(gifSearch.value.trim()));
+        if (gifSearch) gifSearch.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); loadGifs(gifSearch.value.trim()); }
+        });
+        if (gifClear) gifClear.addEventListener('click', () => {
+            gifUrlInput.value = '';
+            gifPreviewImg.src = '';
+            gifSelectedPreview.hidden = true;
+            gifResults.hidden = false;
+            gifSearch.value = '';
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+            loadGifs('');
+        });
+
+        // Note: toggle is handled above, not by the generic toggle()
+    }
+
+    const bindDeleteComment = (root) => {
+        root.querySelectorAll('.action-trigger-delete-comment').forEach((btn) => {
+            if (btn.dataset.deleteCommentBound === '1') return;
+            btn.dataset.deleteCommentBound = '1';
+            btn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const article = btn.closest('article.comment');
+                const commentId = btn.dataset.commentId;
+                const data = new FormData();
+                data.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
+                data.append('comment_id', commentId);
+                data.append('ajax', '1');
+                try {
+                    const resp = await fetch('/delete_comment', { method: 'POST', body: data, headers: { Accept: 'application/json' } });
+                    const result = await resp.json();
+                    if (!result.success) { showAppToast(result.error || translateReplyUi('reply_delete_error', 'Could not delete reply.')); return; }
+                    if (article) {
+                        article.style.opacity = '0';
+                        article.style.transition = 'opacity 0.2s';
+                        setTimeout(() => article.remove(), 220);
+                    }
+                    const feed = commentsFeed;
+                    if (feed) {
+                        const total = feed.querySelectorAll('[data-comment-id]').length - 1;
+                        if (total <= 0) {
+                            if (!feed.querySelector('.empty-state')) feed.innerHTML = `<div class="empty-state">${translateReplyUi('comments_empty', 'No replies yet.')}</div>`;
+                            if (countLabel) countLabel.textContent = `0 ${translateReplyUi('reply_plural', 'replies')}`;
+                        } else {
+                            if (countLabel) countLabel.textContent = `${total} ${translateReplyUi(total === 1 ? 'reply_singular' : 'reply_plural', total === 1 ? 'reply' : 'replies')}`;
+                        }
+                    }
+                } catch (err) {
+                    console.error(err);
+                    showAppToast(translateReplyUi('reply_delete_error', 'Could not delete reply.'));
+                }
+            });
+        });
+    };
+
+    bindDeleteComment(document);
+
+    // Also bind on newly-inserted comment cards
+    const origBind = bindInsertedActions;
+    const augmentedBind = (root) => {
+        origBind(root);
+        bindDeleteComment(root);
+    };
+}
+
+// ▪ AJAX Delete Post (global, outside initRichReplies) ▪
+function initAjaxDeletePosts() {
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.action-trigger-delete');
+        if (!btn) return;
+        e.preventDefault();
+        
+        const article = btn.closest('article.post');
+        const postId = btn.dataset.postId;
+        const data = new FormData();
+        data.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
+        data.append('post_id', postId);
+        data.append('ajax', '1');
+        
+        const t = (k, fb) => {
+            const lang = window.LvLI18n?.getCurrentLang?.() || 'en';
+            return window.LvLI18n?.TRANSLATIONS?.[lang]?.[k] || fb;
+        };
+        
+        try {
+            const resp = await fetch('/delete_post', { method: 'POST', body: data, headers: { Accept: 'application/json' } });
+            const result = await resp.json();
+            if (!result.success) { showAppToast(result.error || t('post_delete_error', 'Could not delete post.')); return; }
+            if (article) {
+                article.style.opacity = '0';
+                article.style.transition = 'opacity 0.25s';
+                setTimeout(() => {
+                    article.remove();
+                    // If on detail page, go home
+                    if (document.querySelector('.thread-root') && !document.querySelector('article.post')) {
+                        window.location.href = '/';
+                    }
+                }, 250);
+            }
+        } catch (err) {
+            console.error(err);
+            showAppToast(t('post_delete_error', 'Could not delete post.'));
         }
     });
 }

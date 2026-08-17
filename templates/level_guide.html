@@ -165,7 +165,7 @@
       {% if messages %}
         {% for category, msg in messages %}
           {% if 'verification' not in msg %}
-            <div class="flash {{ category }}" style="margin-bottom: 20px;">{{ msg }}</div>
+            <div class="flash {{ category }}" style="margin-bottom: 20px;" data-server-message data-server-message-original="{{ msg }}">{{ msg }}</div>
           {% endif %}
         {% endfor %}
       {% endif %}
@@ -222,8 +222,8 @@
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, msg in messages %}
-          {% if 'verification' in msg or 'cooldown' in msg or 'reapply' in msg or 'Verify' in msg or 'Verify me' in msg %}
-            <div class="flash {{ category }}" style="margin-bottom: 20px;">{{ msg }}</div>
+          {% if 'verification' in msg %}
+            <div class="flash {{ category }}" style="margin-bottom: 20px;" data-server-message data-server-message-original="{{ msg }}">{{ msg }}</div>
           {% endif %}
         {% endfor %}
       {% endif %}
@@ -365,8 +365,8 @@
           <textarea name="message" rows="6" maxlength="3000" required id="careers-message-input" data-i18n-placeholder="careers_message_placeholder" placeholder="Tell us about yourself and why you want to join LvL..."></textarea>
         </label>
         <label class="form-group">
-          <span data-i18n="careers_cv">CV / Resume (optional)</span>
-          <input type="file" name="cv" accept=".pdf,.doc,.docx" id="careers-cv-input">
+          <span data-i18n="careers_cv">CV / Resume</span>
+          <input type="file" name="cv" accept=".pdf,.doc,.docx" id="careers-cv-input" required>
           <small data-i18n="careers_cv_hint">PDF, DOC, or DOCX up to 5 MB</small>
         </label>
         {% if careers_success %}

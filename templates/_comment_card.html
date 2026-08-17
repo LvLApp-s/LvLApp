@@ -1,7 +1,18 @@
 <article class="post comment" data-comment-id="{{ comment.id }}">
   <div class="post-avatar"><a href="{{ url_for('profile', username=comment.user.username) }}"><img class="avatar small-avatar" src="{{ comment.user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="{{ comment.user.display_name }}" loading="lazy"></a></div>
   <div class="post-content">
-    <div class="post-header"><a href="{{ url_for('profile', username=comment.user.username) }}"><strong>{{ comment.user.display_name }}</strong></a><span>@{{ comment.user.username }}</span><span class="time" title="{{ comment.created_at }}">· <time datetime="{{ comment.created_at }}" data-relative-time>{{ relative_time(comment.created_at) }}</time></span></div>
+    <div class="post-header"><a href="{{ url_for('profile', username=comment.user.username) }}"><strong>{{ comment.user.display_name }}</strong></a><span>@{{ comment.user.username }}</span><span class="time" title="{{ comment.created_at }}">· <time datetime="{{ comment.created_at }}" data-relative-time>{{ relative_time(comment.created_at) }}</time></span>
+      {% if viewer and (comment.user.id|string == viewer.id|string or comment.user_id|string == viewer.id|string) %}
+      <div class="post-menu-wrap">
+        <button class="post-menu-toggle" type="button" data-post-menu-toggle aria-expanded="false" aria-label="Reply options" data-i18n-aria="comment_options_aria">···</button>
+        <div class="post-menu" data-post-menu hidden>
+          {% if viewer and (comment.user_id|string == viewer.id|string or (post and post.user_id|string == viewer.id|string)) %}
+            <button type="button" class="danger-action action-trigger-delete-comment" data-comment-id="{{ comment.id }}" data-i18n="comment_delete">Delete reply</button>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
     {% if comment.comment %}<div class="post-body">{{ comment.comment | linkify_mentions }}</div>{% endif %}
     {% if comment.image_url %}<a class="comment-media" href="{{ comment.image_url }}" target="_blank" rel="noopener"><img src="{{ comment.image_url }}" alt="Reply image" loading="lazy"></a>{% endif %}
     {% if comment.gif_url %}<a class="comment-media" href="{{ comment.gif_url }}" target="_blank" rel="noopener"><img src="{{ comment.gif_url }}" alt="Reply GIF" loading="lazy"></a>{% endif %}
@@ -13,3 +24,4 @@
     </div>
   </div>
 </article>
+

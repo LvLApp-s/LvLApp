@@ -72,13 +72,15 @@ const TRANSLATIONS = {
     /* Verification */
     verification_title:"Request Profile Verification",verification_subtitle:"Verify your identity to get a cyan verified badge on your profile.",verification_reason:"Reason for Verification",verification_reason_placeholder:"Why should your profile be verified? (e.g. public figure, organization representative, content creator...)",verification_links:"Social Media or Official Website Links",verification_document:"Proof / Identification Document (optional, Max 15 MB)",verification_document_hint:"Upload passport, ID card, official letter, or other proof (PDF, JPG, PNG, DOCX).",verification_submit:"Submit Request",verification_success:"Your verification request has been submitted! Admins will review it soon.",verification_status:"Request Status",verification_submitted:"Submitted on",verification_pending:"Your request is under review. You will be notified once an admin takes action.",verification_approved:"Congratulations! Your profile has been verified. The cyan badge is active on your profile card.",verification_admin_notes:"Admin Notes",
     /* Careers */
-    careers_title:"Join Our Team",careers_subtitle:"We're building the future of social interaction. Come help us shape it.",careers_open:"Open Positions",careers_no_positions:"No open positions at the moment.",careers_no_positions_sub:"We're not actively hiring right now, but we're always happy to hear from talented people.",careers_apply_title:"Apply Now",careers_apply_subtitle:"Interested in joining LvL? Fill out the form below.",careers_position:"Position",careers_position_placeholder:"Which role are you applying for?",careers_name:"Full Name",careers_email:"Email Address",careers_message:"Cover Letter / Message",careers_message_placeholder:"Tell us about yourself and why you want to join LvL...",careers_cv:"CV / Resume (optional)",careers_cv_hint:"PDF, DOC, or DOCX up to 5 MB",careers_submit:"Submit Application",careers_success:"Your application has been submitted! We'll review it and get back to you.",careers_fulltime:"Full-time",careers_internship:"Internship",careers_parttime:"Part-time",
+    careers_title:"Join Our Team",careers_subtitle:"We're building the future of social interaction. Come help us shape it.",careers_open:"Open Positions",careers_no_positions:"No open positions at the moment.",careers_no_positions_sub:"We're not actively hiring right now, but we're always happy to hear from talented people.",careers_apply_title:"Apply Now",careers_apply_subtitle:"Interested in joining LvL? Fill out the form below.",careers_position:"Position",careers_position_placeholder:"Which role are you applying for?",careers_name:"Full Name",careers_email:"Email Address",careers_message:"Cover Letter / Message",careers_message_placeholder:"Tell us about yourself and why you want to join LvL...",careers_cv:"CV / Resume",careers_cv_hint:"PDF, DOC, or DOCX up to 5 MB",careers_submit:"Submit Application",careers_success:"Your application has been submitted! We'll review it and get back to you.",careers_fulltime:"Full-time",careers_internship:"Internship",careers_parttime:"Part-time",
     /* Notifications */
     notif_empty:"No notifications yet",notif_empty_sub:"When people interact with you or your posts, you'll see it here.",notif_mark_read:"Mark read",notif_alerts_title:"Alerts",notif_alerts_desc:"Short grouped updates for likes, comments, follows, messages, and high-fives.",notif_like:"liked your post",notif_reel_like:"liked your reel",notif_repost:"reposted your post",notif_comment:"commented on your post",notif_comment_reply:"replied to your comment",notif_comment_like:"liked your comment",notif_comment_repost:"reposted your comment",notif_reel_comment:"commented on your reel",notif_follow:"followed you",notif_friend_request:"sent you a friend request",notif_friend_accept:"accepted your friend request",notif_message:"sent you a message",notif_high_five:"high-fived you",notif_open_post:"Open post",notif_open_clip:"Open clip",notif_open_message:"Open message",notif_accept:"Accept",notif_decline:"Decline",notif_total:"total",
     /* Profile */
     profile_posts:"Posts",profile_following:"Following",profile_followers:"Followers",profile_friends:"Friends",profile_no_bio:"No bio yet.",profile_activity:"Activity",profile_edit_settings:"Settings",profile_guide:"LvL Guide",profile_follow:"Follow",profile_unfollow:"Unfollow",profile_message:"Message",profile_mute:"Mute",profile_muted:"Muted",profile_block:"Block",profile_unblock:"Unblock",profile_total_xp:"Total XP",profile_next_reward:"Next reward",profile_open_guide:"Open LvL Guide",profile_streak_friend:"Friend streak active",profile_streak_keep:"Keep it alive daily.",profile_streak_days_left:"more daily interactions to become friends.",profile_streak_start:"Friendship starts with a streak",profile_streak_hint:"High-five or trade messages daily for 7 days to become friends.",
     /* Post card */
-    post_copy_link:"Copy link",post_share_dm:"Share via DM",post_delete:"Delete post",post_report:"Report post",post_mute_user:"Mute",post_block_user:"Block",post_reposted_by:"reposted",
+    post_copy_link:"Copy link",post_share_dm:"Share via DM",post_delete:"Delete post",post_report:"Report post",post_mute_user:"Mute",post_block_user:"Block",post_reposted_by:"reposted",post_edit:"Edit post",comment_delete:"Delete reply",
+    /* GIF Picker */
+    gif_search_placeholder:"Search GIFs…",gif_loading:"Loading…",gif_no_results:"No GIFs found",gif_trending:"Trending",
     /* Search */
     search_placeholder:"Search LvL",search_no_results:"No results found",search_results_for:"Results for",
     /* General */
@@ -250,13 +252,15 @@ const TRANSLATIONS = {
     /* Doğrulama */
     verification_title:"Profil Doğrulama Talebi",verification_subtitle:"Profilinize cyan onaylı rozet almak için kimliğinizi doğrulayın.",verification_reason:"Doğrulama Nedeni",verification_reason_placeholder:"Profiliniz neden doğrulanmalı? (ör. kamuya mal olmuş kişi, kuruluş temsilcisi, içerik üreticisi...)",verification_links:"Sosyal Medya veya Resmi Web Sitesi Bağlantıları",verification_document:"Kanıt / Kimlik Belgesi (isteğe bağlı, Maks. 15 MB)",verification_document_hint:"Pasaport, kimlik kartı, resmi mektup veya diğer kanıtları yükleyin (PDF, JPG, PNG, DOCX).",verification_submit:"Talebi Gönder",verification_success:"Doğrulama talebiniz gönderildi! Yöneticiler yakında inceleyecek.",verification_status:"Talep Durumu",verification_submitted:"Gönderildi",verification_pending:"Talebiniz incelenmektedir. Bir yönetici işlem yaptığında bildirim alacaksınız.",verification_approved:"Tebrikler! Profiliniz doğrulandı. Cyan rozeti profil kartınızda aktif.",verification_admin_notes:"Yönetici Notları",
     /* Kariyer */
-    careers_title:"Ekibimize Katılın",careers_subtitle:"Sosyal etkileşimin geleceğini inşa ediyoruz.",careers_open:"Açık Pozisyonlar",careers_no_positions:"Şu anda açık pozisyon bulunmuyor.",careers_no_positions_sub:"Aktif işe alım yapmıyoruz ama yetenekli insarlardan duymaktan mutluluk duyarız.",careers_apply_title:"Şimdi Başvur",careers_apply_subtitle:"LvL'e katılmak ister misiniz?",careers_position:"Pozisyon",careers_position_placeholder:"Hangi role başvuruyorsunuz?",careers_name:"Ad Soyad",careers_email:"E-posta Adresi",careers_message:"Ön Yazı / Mesaj",careers_message_placeholder:"Kendinizden ve neden LvL'e katılmak istediğinizden bahsedin...",careers_cv:"CV / Özgeçmiş (isteğe bağlı)",careers_cv_hint:"PDF, DOC veya DOCX, maks. 5 MB",careers_submit:"Başvuruyu Gönder",careers_success:"Başvurunuz iletildi!",careers_fulltime:"Tam Zamanlı",careers_internship:"Staj",careers_parttime:"Yarı Zamanlı",
+    careers_title:"Ekibimize Katılın",careers_subtitle:"Sosyal etkileşimin geleceğini inşa ediyoruz.",careers_open:"Açık Pozisyonlar",careers_no_positions:"Şu anda açık pozisyon bulunmuyor.",careers_no_positions_sub:"Aktif işe alım yapmıyoruz ama yetenekli insarlardan duymaktan mutluluk duyarız.",careers_apply_title:"Şimdi Başvur",careers_apply_subtitle:"LvL'e katılmak ister misiniz?",careers_position:"Pozisyon",careers_position_placeholder:"Hangi role başvuruyorsunuz?",careers_name:"Ad Soyad",careers_email:"E-posta Adresi",careers_message:"Ön Yazı / Mesaj",careers_message_placeholder:"Kendinizden ve neden LvL'e katılmak istediğinizden bahsedin...",careers_cv:"CV / Özgeçmiş",careers_cv_hint:"PDF, DOC veya DOCX, maks. 5 MB",careers_submit:"Başvuruyu Gönder",careers_success:"Başvurunuz iletildi!",careers_fulltime:"Tam Zamanlı",careers_internship:"Staj",careers_parttime:"Yarı Zamanlı",
     /* Bildirimler */
     notif_empty:"Henüz bildirim yok",notif_empty_sub:"İnsanlar sizinle veya gönderilerinizle etkileşime girdiğinde burada göreceksiniz.",notif_mark_read:"Okundu işaretle",notif_alerts_title:"Bildirimler",notif_alerts_desc:"Beğeniler, yorumlar, takipler, mesajlar ve beşlik çakmalar için kısa özet güncellemeler.",notif_like:"gönderinizi beğendi",notif_reel_like:"kliinizi beğendi",notif_repost:"gönderinizi paylaştı",notif_comment:"gönderinize yorum yaptı",notif_comment_reply:"yorumunuza yanıt verdi",notif_comment_like:"yorumunuzu beğendi",notif_comment_repost:"yorumunuzu paylaştı",notif_reel_comment:"kliinize yorum yaptı",notif_follow:"sizi takip etti",notif_friend_request:"size arkadaşlık isteği gönderdi",notif_friend_accept:"arkadaşlık isteğinizi kabul etti",notif_message:"size mesaj gönderdi",notif_high_five:"size beşlik çaktı",notif_open_post:"Gönderiyi aç",notif_open_clip:"Klibi aç",notif_open_message:"Mesajı aç",notif_accept:"Kabul Et",notif_decline:"Reddet",notif_total:"toplam",
     /* Profil */
     profile_posts:"Gönderiler",profile_following:"Takip Edilen",profile_followers:"Takipçiler",profile_friends:"Arkadaşlar",profile_no_bio:"Henüz bio yok.",profile_activity:"Aktivite",profile_edit_settings:"Ayarlar",profile_guide:"LvL Rehberi",profile_follow:"Takip Et",profile_unfollow:"Takibi Bırak",profile_message:"Mesaj",profile_mute:"Sustur",profile_muted:"Susturuldu",profile_block:"Engelle",profile_unblock:"Engeli Kaldır",profile_total_xp:"Toplam XP",profile_next_reward:"Sonraki ödül",profile_open_guide:"LvL Rehberini Aç",profile_streak_friend:"Arkadaşlık serisi aktif",profile_streak_keep:"Her gün canlı tutun.",profile_streak_days_left:"gün daha arkadaş olmak için etkileşin.",profile_streak_start:"Arkadaşlık bir seriyle başlar",profile_streak_hint:"7 gün boyunca günlük çarpık el verin veya mesajlaşın.",
     /* Gönderi kartı */
-    post_copy_link:"Bağlantıyı kopyala",post_share_dm:"DM ile paylaş",post_delete:"Gönderiyi sil",post_report:"Gönderiyi şikayet et",post_mute_user:"Sustur",post_block_user:"Engelle",post_reposted_by:"yeniden paylaştı",
+    post_copy_link:"Bağlantıyı kopyala",post_share_dm:"DM ile paylaş",post_delete:"Gönderiyi sil",post_report:"Gönderiyi şikayet et",post_mute_user:"Sustur",post_block_user:"Engelle",post_reposted_by:"yeniden paylaştı",post_edit:"Gönderiyi düzenle",comment_delete:"Yanıtı sil",
+    /* GIF Seçici */
+    gif_search_placeholder:"GIF ara…",gif_loading:"Yükleniyor…",gif_no_results:"GIF bulunamadı",gif_trending:"Trend",
     /* Arama */
     search_placeholder:"LvL'de ara",search_no_results:"Sonuç bulunamadı",search_results_for:"Arama sonuçları:",
     /* Genel */
@@ -684,13 +688,30 @@ Object.assign(TURKISH_SERVER_MESSAGES, {
   "Your message has been sent successfully! We'll get back to you soon.": "Mesajınız başarıyla gönderildi! En kısa sürede size döneceğiz.",
   "Your verification request has been submitted successfully! Admins will review it soon.": "Doğrulama talebiniz başarıyla gönderildi! Yöneticiler yakında inceleyecek.",
   "CV must be a PDF, DOC, or DOCX file.": "CV, PDF, DOC veya DOCX biçiminde olmalıdır.",
+  "A CV / resume is required to submit your application.": "Başvurunuzu göndermek için CV / özgeçmiş gereklidir.",
   "Community name is required and must be 80 characters or less.": "Topluluk adı zorunludur ve en fazla 80 karakter olabilir.",
   "Community description cannot exceed 240 characters.": "Topluluk açıklaması 240 karakteri aşamaz.",
   "That community URL is already taken.": "Bu topluluk URL'si zaten kullanılıyor.",
   "Only the community owner can edit this community.": "Bu topluluğu yalnızca sahibi düzenleyebilir.",
   "Owners cannot leave their own community.": "Topluluk sahipleri kendi topluluklarından ayrılamaz.",
   "You cannot high-five yourself.": "Kendinize beşlik gönderemezsiniz.",
-  "That safety action is not available.": "Bu güvenlik işlemi kullanılamıyor."
+  "That safety action is not available.": "Bu güvenlik işlemi kullanılamıyor.",
+  "File size too large.": "Dosya boyutu çok büyük.",
+  "Unsupported file format.": "Desteklenmeyen dosya biçimi.",
+  "Access denied.": "Erişim reddedildi.",
+  "Action failed. Please try again.": "İşlem başarısız oldu. Lütfen tekrar deneyin.",
+  "An error occurred. Please try again.": "Bir hata oluştu. Lütfen tekrar deneyin.",
+  "Could not delete post.": "Gönderi silinemedi.",
+  "Could not delete that post.": "Gönderi silinemedi.",
+  "Post deleted.": "Gönderi silindi.",
+  "Login required.": "Giriş yapmanız gerekiyor.",
+  "Login successful.": "Giriş başarılı.",
+  "Post not found.": "Gönderi bulunamadı.",
+  "You can only delete your own posts.": "Yalnızca kendi gönderilerinizi silebilirsiniz.",
+  "Could not post comment.": "Yorum paylaşılamadı.",
+  "Reply not found.": "Yanıt bulunamadı.",
+  "You can only delete your own replies.": "Yalnızca kendi yanıtlarınızı silebilirsiniz.",
+  "Could not delete that reply.": "Yanıt silinemedi."
 });
 
 function translateServerMessage(message, lang) {
@@ -702,6 +723,11 @@ function translateServerMessage(message, lang) {
   if (match) return `Seviye atladınız! LvL ${match[1]} seviyesine ulaştınız.`;
   match = original.match(/^Welcome to LvL, (.+)! You've earned 20 XP for joining\.$/);
   if (match) return `LvL'ye hoş geldin, ${match[1]}! Katıldığın için 20 XP kazandın.`;
+  match = original.match(/^Signed in with (.+?)\.?$/i);
+  if (match) {
+      let provider = match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
+      return `${provider} ile giriş yapıldı.`;
+  }
   match = original.match(/^The ([a-z0-9_]+) table is queryable\.$/i);
   if (match) return `${match[1]} tablosu sorgulanabiliyor.`;
   match = original.match(/^(.+) is configured\.$/);

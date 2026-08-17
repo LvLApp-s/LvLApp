@@ -38,7 +38,7 @@
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
-          <div class="flash {{ category }}" role="status" data-server-message>{{ message }}</div>
+          <div class="flash {{ category }}" role="status" data-server-message data-server-message-original="{{ message }}">{{ message }}</div>
         {% endfor %}
       {% endif %}
     {% endwith %}
@@ -49,8 +49,8 @@
     </div>
 
     <div class="auth-tabs" role="tablist">
-      <button class="active" type="button" data-auth-tab="login" data-i18n="auth_login_tab">Login</button>
-      <button type="button" data-auth-tab="register" data-i18n="auth_register_tab">Register</button>
+      <button class="{% if active_tab == 'register' %}{% else %}active{% endif %}" type="button" data-auth-tab="login" data-i18n="auth_login_tab">Login</button>
+      <button class="{% if active_tab == 'register' %}active{% endif %}" type="button" data-auth-tab="register" data-i18n="auth_register_tab">Register</button>
     </div>
 
     <div class="social-auth-section">
@@ -71,7 +71,7 @@
 
     <div class="auth-divider"><span data-i18n="auth_or_email">or continue with email</span></div>
     
-    <form class="auth-form active" data-auth-panel="login" action="{{ url_for('auth') }}" method="post">
+    <form class="auth-form {% if active_tab != 'register' %}active{% endif %}" data-auth-panel="login" action="{{ url_for('auth') }}" method="post">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="action" value="login">
       <label>
@@ -90,29 +90,29 @@
       <button type="submit" data-i18n="auth_login_btn">Login</button>
     </form>
     
-    <form class="auth-form" data-auth-panel="register" action="{{ url_for('auth') }}" method="post">
+    <form class="auth-form {% if active_tab == 'register' %}active{% endif %}" data-auth-panel="register" action="{{ url_for('auth') }}" method="post">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="action" value="register">
       <label>
         <span data-i18n="auth_first_name">First name</span>
-        <input name="first_name" maxlength="60" autocomplete="given-name" required>
+        <input name="first_name" maxlength="60" autocomplete="given-name" required value="{{ register_form_data.get('first_name', '') if register_form_data else '' }}">
       </label>
       <label>
         <span data-i18n="auth_last_name">Last name</span>
-        <input name="last_name" maxlength="60" autocomplete="family-name" required>
+        <input name="last_name" maxlength="60" autocomplete="family-name" required value="{{ register_form_data.get('last_name', '') if register_form_data else '' }}">
       </label>
       <label>
         <span data-i18n="auth_nickname">Nickname</span>
-        <input name="nickname" pattern="[A-Za-z0-9_]{3,24}" minlength="3" maxlength="24" title="3-24 letters, numbers, or underscores." data-i18n-title="settings_username_hint" autocomplete="username" required>
+        <input name="nickname" pattern="[A-Za-z0-9_]{3,24}" minlength="3" maxlength="24" title="3-24 letters, numbers, or underscores." data-i18n-title="settings_username_hint" autocomplete="username" required value="{{ register_form_data.get('nickname', '') if register_form_data else '' }}">
       </label>
       <label>
         <span data-i18n="auth_email">Email</span>
-        <input type="email" name="email" autocomplete="email" required>
+        <input type="email" name="email" autocomplete="email" required value="{{ register_form_data.get('email', '') if register_form_data else '' }}">
       </label>
       <label>
         <span data-i18n="auth_birthday">Birthday</span>
         {% set limits = birthday_limits() %}
-        <input type="date" name="birthday" min="{{ limits.min.isoformat() }}" max="{{ limits.max.isoformat() }}" autocomplete="bday" required>
+        <input type="date" name="birthday" min="{{ limits.min.isoformat() }}" max="{{ limits.max.isoformat() }}" autocomplete="bday" required value="{{ register_form_data.get('birthday', '') if register_form_data else '' }}">
       </label>
       <label>
         <span data-i18n="auth_password">Password</span>
@@ -122,11 +122,11 @@
         <legend data-i18n="auth_gender">Gender</legend>
         <div class="gender-options">
           <label class="gender-option male-option">
-            <input type="radio" name="gender" value="Male" data-avatar-url="{{ url_for('static', filename='assets/default-male-avatar.svg') }}" data-theme-color="{{ theme_colors.primary }}" required>
+            <input type="radio" name="gender" value="Male" data-avatar-url="{{ url_for('static', filename='assets/default-male-avatar.svg') }}" data-theme-color="{{ theme_colors.primary }}" required {% if register_form_data and register_form_data.get('gender', '') == 'Male' %}checked{% endif %}>
             <span><b aria-hidden="true">♂</b> <span data-i18n="auth_male">Male</span></span>
           </label>
           <label class="gender-option female-option">
-            <input type="radio" name="gender" value="Female" data-avatar-url="{{ url_for('static', filename='assets/default-female-avatar.svg') }}" data-theme-color="{{ theme_colors.female }}" required>
+            <input type="radio" name="gender" value="Female" data-avatar-url="{{ url_for('static', filename='assets/default-female-avatar.svg') }}" data-theme-color="{{ theme_colors.female }}" required {% if register_form_data and register_form_data.get('gender', '') == 'Female' %}checked{% endif %}>
             <span><b aria-hidden="true">♀</b> <span data-i18n="auth_female">Female</span></span>
           </label>
         </div>
