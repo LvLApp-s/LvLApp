@@ -6,7 +6,7 @@
     </div>
     <a href="{{ url_for('reels') }}" class="home-reel-see-all" data-i18n="see_all">See all →</a>
   </div>
-  <div class="home-reel-slides" data-home-reel-slides tabindex="0" aria-label="Home reels">
+  <div class="home-reel-slides" data-home-reel-slides tabindex="0" aria-label="Home reels" data-i18n-aria="home_reels_aria">
     {% for reel in home_reels %}
     {% set reel_author = reel.author or reel.user or {} %}
     <div class="home-reel-slide{% if loop.first %} is-active{% endif %}"
@@ -21,10 +21,10 @@
                {% if reel.cover_url %}poster="{{ reel.cover_url }}"{% endif %}>
           <source src="{{ reel.video_url }}" type="video/mp4">
         </video>
-        <button class="home-reel-play-btn" type="button" data-home-reel-play aria-label="Play or pause">
+        <button class="home-reel-play-btn" type="button" data-home-reel-play aria-label="Play or pause" data-i18n-aria="reel_play_pause_aria">
           <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor" data-play-icon><path d="M8 5v14l11-7z"/></svg>
         </button>
-        <button class="home-reel-mute-btn" type="button" data-home-reel-mute aria-label="Toggle sound">
+        <button class="home-reel-mute-btn" type="button" data-home-reel-mute aria-label="Toggle sound" data-i18n-aria="reel_toggle_sound">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
         </button>
       </div>
@@ -32,7 +32,7 @@
         <div class="home-reel-author">
           <img class="avatar small-avatar" src="{{ reel_author.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="">
           <strong>{{ reel_author.display_name or 'LvL' }}</strong>
-          {% if reel.is_demo %}<em class="demo-badge">Demo</em>{% endif %}
+          {% if reel.is_demo %}<em class="demo-badge" data-i18n="reel_demo">Demo</em>{% endif %}
         </div>
         {% if reel.caption %}
         <p class="home-reel-caption">{{ reel.caption }}</p>

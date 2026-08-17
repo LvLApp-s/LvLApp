@@ -542,6 +542,201 @@ const TRANSLATIONS = {
 const SUPPORTED_LANGS = ['en', 'tr', 'ar'];
 const RTL_LANGS = ['ar'];
 const STORAGE_KEY = 'lvl_lang';
+
+const TURKISH_SERVER_MESSAGES = {
+  "Security check failed. Refresh the page and try again.": "Güvenlik kontrolü başarısız oldu. Sayfayı yenileyip tekrar deneyin.",
+  "Supabase connection failed. Add SUPABASE_URL and SUPABASE_SECRET to your .env file.": "Supabase bağlantısı başarısız oldu. .env dosyanıza SUPABASE_URL ve SUPABASE_SECRET ekleyin.",
+  "Supabase connection failed. Check your Project URL/DNS and .env values.": "Supabase bağlantısı başarısız oldu. Proje URL'sini, DNS'i ve .env değerlerini kontrol edin.",
+  "Supabase key appears to be invalid. Check your SUPABASE_SECRET value.": "Supabase anahtarı geçersiz görünüyor. SUPABASE_SECRET değerini kontrol edin.",
+  "Database connection error.": "Veritabanı bağlantı hatası.",
+  "An error occurred. Please try again.": "Bir hata oluştu. Lütfen tekrar deneyin.",
+  "An error occurred during login.": "Giriş sırasında bir hata oluştu.",
+  "Username and password are required.": "Kullanıcı adı ve şifre zorunludur.",
+  "Invalid username or password.": "Kullanıcı adı veya şifre hatalı.",
+  "Too many failed login attempts. Wait a few minutes and try again.": "Çok fazla başarısız giriş denemesi yapıldı. Birkaç dakika bekleyip tekrar deneyin.",
+  "All fields are required.": "Tüm alanlar zorunludur.",
+  "Password must be at least 8 characters.": "Şifre en az 8 karakter olmalıdır.",
+  "Passwords do not match.": "Şifreler eşleşmiyor.",
+  "Username must be 3-24 characters: letters, numbers, or underscores only.": "Kullanıcı adı 3-24 karakter olmalı ve yalnızca harf, rakam veya alt çizgi içermelidir.",
+  "This username is already taken.": "Bu kullanıcı adı zaten kullanılıyor.",
+  "This email is already registered.": "Bu e-posta zaten kayıtlı.",
+  "If that account exists, a reset link has been sent.": "Bu hesap mevcutsa şifre sıfırlama bağlantısı gönderildi.",
+  "That reset link is invalid or expired.": "Bu şifre sıfırlama bağlantısı geçersiz veya süresi dolmuş.",
+  "Password updated. Log in with your new password.": "Şifre güncellendi. Yeni şifrenizle giriş yapın.",
+  "Password could not be updated.": "Şifre güncellenemedi.",
+  "Post content cannot be empty.": "Gönderi içeriği boş olamaz.",
+  "Post cannot exceed 280 characters.": "Gönderi 280 karakteri aşamaz.",
+  "Post shared.": "Gönderi paylaşıldı.",
+  "Post published.": "Gönderi yayımlandı.",
+  "Post deleted.": "Gönderi silindi.",
+  "Post not found.": "Gönderi bulunamadı.",
+  "Could not delete that post.": "Gönderi silinemedi.",
+  "Draft saved.": "Taslak kaydedildi.",
+  "Draft deleted.": "Taslak silindi.",
+  "Draft not found.": "Taslak bulunamadı.",
+  "Write a comment first.": "Önce bir yorum yazın.",
+  "Comment cannot exceed 280 characters.": "Yorum 280 karakteri aşamaz.",
+  "Comment posted.": "Yorum gönderildi.",
+  "Already commented.": "Bu yorum zaten gönderildi.",
+  "Already posted.": "Bu gönderi zaten paylaşıldı.",
+  "Already sent.": "Bu mesaj zaten gönderildi.",
+  "Message cannot exceed 1000 characters.": "Mesaj 1000 karakteri aşamaz.",
+  "Message not found.": "Mesaj bulunamadı.",
+  "Message deleted.": "Mesaj silindi.",
+  "You cannot send a message to yourself.": "Kendinize mesaj gönderemezsiniz.",
+  "You cannot interact with this user.": "Bu kullanıcıyla etkileşim kuramazsınız.",
+  "You can only delete your own posts.": "Yalnızca kendi gönderilerinizi silebilirsiniz.",
+  "You can only delete your own messages.": "Yalnızca kendi mesajlarınızı silebilirsiniz.",
+  "Delete for everyone time limit (15 minutes) exceeded.": "Herkesten silme süresi (15 dakika) aşıldı.",
+  "Profile updated.": "Profil güncellendi.",
+  "Profile not found.": "Profil bulunamadı.",
+  "Current password is incorrect.": "Mevcut şifre yanlış.",
+  "Your account has been deleted.": "Hesabınız silindi.",
+  "Please enter a valid email address.": "Lütfen geçerli bir e-posta adresi girin.",
+  "Please wait 30 seconds before sending another message.": "Yeni bir mesaj göndermeden önce 30 saniye bekleyin.",
+  "Community created.": "Topluluk oluşturuldu.",
+  "Community updated.": "Topluluk güncellendi.",
+  "Joined community.": "Topluluğa katıldınız.",
+  "Left community.": "Topluluktan ayrıldınız.",
+  "Join this community before posting.": "Gönderi paylaşmadan önce bu topluluğa katılın.",
+  "Community tables are not ready yet. Apply database/community_schema.sql in Supabase, then try again.": "Topluluk tabloları henüz hazır değil. Supabase'te database/community_schema.sql dosyasını uygulayıp tekrar deneyin.",
+  "Reel uploaded.": "Klip yüklendi.",
+  "Reel deleted.": "Klip silindi.",
+  "Reel not found.": "Klip bulunamadı.",
+  "Could not load reels.": "Klipler yüklenemedi.",
+  "Could not upload that reel.": "Klip yüklenemedi.",
+  "Could not delete that reel.": "Klip silinemedi.",
+  "Choose a valid visibility setting.": "Geçerli bir görünürlük seçeneği seçin.",
+  "Caption cannot exceed 220 characters.": "Açıklama 220 karakteri aşamaz.",
+  "Comments are closed for this reel.": "Bu klipte yorumlar kapalı.",
+  "Friend request accepted.": "Arkadaşlık isteği kabul edildi.",
+  "Friend request declined.": "Arkadaşlık isteği reddedildi.",
+  "File size too large.": "Dosya boyutu çok büyük.",
+  "Unsupported file format.": "Desteklenmeyen dosya biçimi.",
+  "Access denied.": "Erişim reddedildi.",
+  "Action failed.": "İşlem başarısız oldu.",
+  "Action failed. Please try again.": "İşlem başarısız oldu. Lütfen tekrar deneyin.",
+  "Supabase is not configured.": "Supabase yapılandırılmamış.",
+  "Client configured.": "İstemci yapılandırıldı.",
+  "Social login identity columns are available.": "Sosyal giriş kimlik sütunları kullanılabilir.",
+  "Attachments and deletion columns are available.": "Ek ve silme sütunları kullanılabilir."
+};
+
+Object.assign(TURKISH_SERVER_MESSAGES, {
+  "Flask secret key": "Flask gizli anahtarı",
+  "Admin token": "Yönetici belirteci",
+  "App base URL": "Uygulama temel URL'si",
+  "OAuth redirect base URL": "OAuth yönlendirme temel URL'si",
+  "Supabase connection": "Supabase bağlantısı",
+  "Users table": "Kullanıcılar tablosu",
+  "Posts table": "Gönderiler tablosu",
+  "Reels table": "Klipler tablosu",
+  "Communities table": "Topluluklar tablosu",
+  "Safety actions table": "Güvenlik işlemleri tablosu",
+  "Job positions table": "İş pozisyonları tablosu",
+  "Job applications table": "İş başvuruları tablosu",
+  "Contact messages table": "İletişim mesajları tablosu",
+  "Verification requests table": "Doğrulama talepleri tablosu",
+  "OAuth identity columns": "OAuth kimlik sütunları",
+  "Messages schema updates": "Mesaj şeması güncellemeleri",
+  "Media storage bucket": "Medya depolama alanı",
+  "Private attachment bucket": "Özel ek depolama alanı",
+  "PWA manifest": "PWA manifest dosyası",
+  "Service worker": "Servis çalışanı",
+  "PWA 192 icon": "PWA 192 simgesi",
+  "PWA 512 icon": "PWA 512 simgesi",
+  "Set FLASK_SECRET_KEY in Vercel and local .env before shared testing.": "Ortak testten önce Vercel ve yerel .env içinde FLASK_SECRET_KEY değerini ayarlayın.",
+  "Set LVL_ADMIN_TOKEN before using admin-only backend tools.": "Yalnızca yöneticilere özel backend araçlarını kullanmadan önce LVL_ADMIN_TOKEN değerini ayarlayın.",
+  "Set APP_BASE_URL to the local, preview, or production app URL.": "APP_BASE_URL değerini yerel, önizleme veya üretim uygulaması URL'si olarak ayarlayın.",
+  "OAuth redirects have a configured base URL.": "OAuth yönlendirmeleri için temel URL yapılandırıldı.",
+  "Set OAUTH_REDIRECT_BASE_URL or APP_BASE_URL for Google OAuth callbacks.": "Google OAuth geri çağrıları için OAUTH_REDIRECT_BASE_URL veya APP_BASE_URL değerini ayarlayın.",
+  "Add SUPABASE_URL and SUPABASE_SECRET to .env.": ".env dosyasına SUPABASE_URL ve SUPABASE_SECRET ekleyin."
+});
+
+Object.assign(TURKISH_SERVER_MESSAGES, {
+  "Your email has been successfully verified! You can now log in and start leveling up.": "E-postanız başarıyla doğrulandı! Artık giriş yapıp seviye atlamaya başlayabilirsiniz.",
+  "Invalid or expired verification link. Please request a new one.": "Doğrulama bağlantısı geçersiz veya süresi dolmuş. Lütfen yeni bir bağlantı isteyin.",
+  "An error occurred during verification.": "Doğrulama sırasında bir hata oluştu.",
+  "That social login provider is not supported by LvL.": "Bu sosyal giriş sağlayıcısı LvL tarafından desteklenmiyor.",
+  "Supabase connection is required for social login.": "Sosyal giriş için Supabase bağlantısı gereklidir.",
+  "Social login did not return an authorization code.": "Sosyal giriş bir yetkilendirme kodu döndürmedi.",
+  "Start with a social login provider first.": "Önce bir sosyal giriş sağlayıcısıyla başlayın.",
+  "All fields are required to finish social registration.": "Sosyal kaydı tamamlamak için tüm alanlar zorunludur.",
+  "Your social login is now connected to your existing LvL account.": "Sosyal girişiniz mevcut LvL hesabınıza bağlandı.",
+  "The reply target was not found.": "Yanıtlanacak içerik bulunamadı.",
+  "Enter a valid GIF URL.": "Geçerli bir GIF bağlantısı girin.",
+  "Choose someone else to share with.": "Paylaşmak için başka birini seçin.",
+  "You cannot share posts with this user.": "Bu kullanıcıyla gönderi paylaşamazsınız.",
+  "Post shared via DM!": "Gönderi direkt mesajla paylaşıldı!",
+  "Could not share post.": "Gönderi paylaşılamadı.",
+  "Image upload failed. Try again.": "Görsel yüklenemedi. Tekrar deneyin.",
+  "Write a post or add an image first.": "Önce bir gönderi yazın veya görsel ekleyin.",
+  "Shared to community.": "Toplulukta paylaşıldı.",
+  "There is no friend request for you to respond to.": "Yanıtlayabileceğiniz bir arkadaşlık isteği yok.",
+  "First name, last name, and username are required.": "Ad, soyad ve kullanıcı adı zorunludur.",
+  "Website must start with http:// or https://.": "Web sitesi http:// veya https:// ile başlamalıdır.",
+  "Type your username exactly to delete your account.": "Hesabınızı silmek için kullanıcı adınızı eksiksiz yazın.",
+  "Enter your current password to delete your account.": "Hesabınızı silmek için mevcut şifrenizi girin.",
+  "Current password could not be verified.": "Mevcut şifre doğrulanamadı.",
+  "Could not delete your account.": "Hesabınız silinemedi.",
+  "Your profile is ready.": "Profiliniz hazır.",
+  "Thank you for your valuable suggestion! We appreciate your feedback to help level up our platform.": "Değerli öneriniz için teşekkür ederiz! Platformumuzu geliştirmemize yardımcı olan geri bildiriminizi önemsiyoruz.",
+  "Your message has been sent successfully! We'll get back to you soon.": "Mesajınız başarıyla gönderildi! En kısa sürede size döneceğiz.",
+  "Your verification request has been submitted successfully! Admins will review it soon.": "Doğrulama talebiniz başarıyla gönderildi! Yöneticiler yakında inceleyecek.",
+  "CV must be a PDF, DOC, or DOCX file.": "CV, PDF, DOC veya DOCX biçiminde olmalıdır.",
+  "Community name is required and must be 80 characters or less.": "Topluluk adı zorunludur ve en fazla 80 karakter olabilir.",
+  "Community description cannot exceed 240 characters.": "Topluluk açıklaması 240 karakteri aşamaz.",
+  "That community URL is already taken.": "Bu topluluk URL'si zaten kullanılıyor.",
+  "Only the community owner can edit this community.": "Bu topluluğu yalnızca sahibi düzenleyebilir.",
+  "Owners cannot leave their own community.": "Topluluk sahipleri kendi topluluklarından ayrılamaz.",
+  "You cannot high-five yourself.": "Kendinize beşlik gönderemezsiniz.",
+  "That safety action is not available.": "Bu güvenlik işlemi kullanılamıyor."
+});
+
+function translateServerMessage(message, lang) {
+  const original = String(message || '').trim();
+  if (!original || lang !== 'tr') return original;
+  if (TURKISH_SERVER_MESSAGES[original]) return TURKISH_SERVER_MESSAGES[original];
+
+  let match = original.match(/^Level up! You reached LvL (\d+)\.$/);
+  if (match) return `Seviye atladınız! LvL ${match[1]} seviyesine ulaştınız.`;
+  match = original.match(/^Welcome to LvL, (.+)! You've earned 20 XP for joining\.$/);
+  if (match) return `LvL'ye hoş geldin, ${match[1]}! Katıldığın için 20 XP kazandın.`;
+  match = original.match(/^The ([a-z0-9_]+) table is queryable\.$/i);
+  if (match) return `${match[1]} tablosu sorgulanabiliyor.`;
+  match = original.match(/^(.+) is configured\.$/);
+  if (match) return `${match[1]} yapılandırıldı.`;
+  match = original.match(/^(.+) is available\.$/);
+  if (match) return `${match[1]} kullanılabilir.`;
+  match = original.match(/^(.+) exists\.$/);
+  if (match) return `${match[1]} mevcut.`;
+  match = original.match(/^(.+) is missing\.$/);
+  if (match) return `${match[1]} eksik.`;
+  match = original.match(/^Run (.+) in Supabase\.$/);
+  if (match) return `Supabase'te ${match[1]} dosyasını çalıştırın.`;
+  match = original.match(/^Set (.+) before (.+)\.$/);
+  if (match) return `${match[2]} öncesinde ${match[1]} değerini ayarlayın.`;
+  match = original.match(/^Add (.+) to (.+)\.$/);
+  if (match) return `${match[2]} içine ${match[1]} ekleyin.`;
+  return original;
+}
+
+function formatRelativeTime(value, lang) {
+  const target = new Date(value);
+  if (Number.isNaN(target.getTime())) return '';
+  const seconds = Math.max(0, Math.floor((Date.now() - target.getTime()) / 1000));
+  let amount, unit;
+  if (seconds < 60) { amount = seconds; unit = 'second'; }
+  else if (seconds < 3600) { amount = Math.floor(seconds / 60); unit = 'minute'; }
+  else if (seconds < 86400) { amount = Math.floor(seconds / 3600); unit = 'hour'; }
+  else if (seconds < 2592000) { amount = Math.floor(seconds / 86400); unit = 'day'; }
+  else if (seconds < 31536000) { amount = Math.floor(seconds / 2592000); unit = 'month'; }
+  else { amount = Math.max(1, Math.floor(seconds / 31536000)); unit = 'year'; }
+  const suffixes = lang === 'tr'
+    ? {second:'sn', minute:'dk', hour:'sa', day:'g', month:'ay', year:'yıl'}
+    : {second:'s', minute:'m', hour:'h', day:'d', month:'mo', year:'y'};
+  return `${amount}${suffixes[unit]}`;
+}
 function getCurrentLang() {
   try { const s = localStorage.getItem(STORAGE_KEY); if (s && SUPPORTED_LANGS.includes(s)) return s; } catch(_){}
   const b = (navigator.language||'en').split('-')[0].toLowerCase();
@@ -557,14 +752,34 @@ function applyLanguage(lang, save) {
   document.querySelectorAll('[data-i18n-placeholder]').forEach(function(el){const k=el.getAttribute('data-i18n-placeholder');if(t[k]!==undefined)el.setAttribute('placeholder',t[k]);});
   document.querySelectorAll('[data-i18n-aria]').forEach(function(el){const k=el.getAttribute('data-i18n-aria');if(t[k]!==undefined)el.setAttribute('aria-label',t[k]);});
   document.querySelectorAll('[data-i18n-title]').forEach(function(el){const k=el.getAttribute('data-i18n-title');if(t[k]!==undefined)el.setAttribute('title',t[k]);});
+  document.querySelectorAll('[data-i18n-alt]').forEach(function(el){const k=el.getAttribute('data-i18n-alt');if(t[k]!==undefined)el.setAttribute('alt',t[k]);});
   document.querySelectorAll('[data-i18n-option]').forEach(function(el){const k=el.getAttribute('data-i18n-option');if(t[k]!==undefined)el.textContent=t[k];});
+  document.querySelectorAll('[data-i18n-document]').forEach(function(el){const k=el.getAttribute('data-i18n-document');if(t[k]!==undefined)document.title=t[k]+' - LvL';});
+  document.querySelectorAll('[data-server-message]').forEach(function(el){
+    if (!el.dataset.serverMessageOriginal) el.dataset.serverMessageOriginal = el.textContent.trim();
+    const target = el.querySelector('.flash-message-text') || el;
+    target.textContent = translateServerMessage(el.dataset.serverMessageOriginal, lang);
+  });
+  document.querySelectorAll('[data-relative-time]').forEach(function(el){
+    const formatted = formatRelativeTime(el.getAttribute('datetime') || el.dataset.relativeTime, lang);
+    if (formatted) el.textContent = formatted;
+  });
   document.querySelectorAll('[data-lang-btn]').forEach(function(btn){const l=btn.getAttribute('data-lang-btn');btn.classList.toggle('active',l===lang);btn.setAttribute('aria-pressed',l===lang?'true':'false');});
+  document.querySelectorAll('svg[title="Official Account"], svg[title="Official account"]').forEach(function(el){
+    el.setAttribute('title', t.official_account || (lang === 'tr' ? 'Resmî hesap' : 'Official account'));
+  });
+  document.querySelectorAll('[data-high-five-streak-title]').forEach(function(el){
+    const count = el.dataset.streakCount || '0';
+    const name = el.dataset.streakName || '';
+    const label = lang === 'tr' ? `${count} günlük beşlik serisi` : `${count}-day high-five streak`;
+    el.setAttribute('title', name ? (lang === 'tr' ? `${label} · ${name}` : `${label} with ${name}`) : label);
+  });
   if(save){try{localStorage.setItem(STORAGE_KEY,lang);}catch(_){};}
   document.dispatchEvent(new CustomEvent('lvl:langchange',{detail:{lang:lang}}));
 }
 function initI18n(){applyLanguage(getCurrentLang(),false);}
 if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initI18n);}else{initI18n();}
-window.LvLI18n={applyLanguage:applyLanguage,getCurrentLang:getCurrentLang,TRANSLATIONS:TRANSLATIONS,STORAGE_KEY:STORAGE_KEY};
+window.LvLI18n={applyLanguage:applyLanguage,getCurrentLang:getCurrentLang,translateServerMessage:translateServerMessage,formatRelativeTime:formatRelativeTime,TRANSLATIONS:TRANSLATIONS,STORAGE_KEY:STORAGE_KEY};
 
 // Append post action translations
 if (typeof TRANSLATIONS !== 'undefined') {
@@ -584,3 +799,649 @@ if (typeof TRANSLATIONS !== 'undefined') {
       post_like_aria: "الإعجاب بالمنشور", post_like_title: "إعجاب"
     });
 }
+
+// Frontend localization coverage for the public TR / EN product surfaces.
+// These assignments intentionally override older duplicate keys above.
+Object.assign(TRANSLATIONS.en, {
+  nav_primary_aria: "Primary navigation",
+  profile_posts: "Posts",
+  profile_likes: "Likes",
+  profile_no_posts: "No posts",
+  profile_no_posts_desc: "This profile has not posted yet.",
+  profile_no_liked_posts: "No liked posts",
+  profile_no_liked_posts_desc: "This user hasn't liked any posts yet.",
+  community_desc_main: "Move between followers, following, and group threads without leaving the LvL feed.",
+  community_create_group: "Create group",
+  community_join_desc: "Join the conversation",
+  timeline_hub: "Timeline hub",
+  timeline_hub_title: "Choose whose posts shape your LvL",
+  settings_language_title: "Language",
+  nav_mobile_primary_aria: "Mobile navigation",
+  nav_page_tools_aria: "Page tools",
+  nav_more_options_aria: "More options",
+  nav_close: "Close",
+  back: "Go back",
+  avatar_alt: "Profile picture",
+  official_account: "Official account",
+  auth_login_page_title: "Login",
+  auth_ranks: "Ranks",
+  auth_badges: "Badges",
+  drafts_title: "Drafts",
+  drafts_description: "Finish an idea before publishing it.",
+  drafts_back_to_feed: "Back to feed",
+  draft_image_post: "Image post",
+  draft_last_saved: "Last saved",
+  draft_edit: "Edit",
+  draft_delete: "Delete draft",
+  drafts_empty_title: "No drafts yet",
+  drafts_empty_desc: "Use “Save draft” in the home composer.",
+  draft_save: "Save draft",
+  draft_discard: "Discard draft",
+  edit_post_title: "Edit post",
+  edit_post_description: "Review your text before saving or publishing.",
+  previous_btn: "Previous",
+  more_btn: "More",
+  more_posts_btn: "More posts",
+  reel_upload_btn: "Upload",
+  reel_upload_clip: "Upload clip",
+  reel_empty_title: "No clips yet",
+  reel_empty_desc: "Upload the first LvL clip or check Setup Health if uploads are not appearing.",
+  reel_setup_health: "Setup Health",
+  reel_no_more: "No more clips",
+  reel_feed_aria: "Clips feed",
+  reel_filter_aria: "Clips filter",
+  reel_video_unsupported: "Your browser does not support short videos.",
+  reel_play_pause_aria: "Play or pause clip",
+  reel_play: "Play",
+  reel_pause: "Pause",
+  reel_demo: "Demo",
+  reel_actions_aria: "Clip actions",
+  reel_toggle_sound: "Toggle sound",
+  reel_muted: "Muted",
+  reel_sound_on: "Sound on",
+  reel_like_aria: "Like clip",
+  reel_view_comments: "View comments",
+  reel_share_aria: "Share clip with friends",
+  reel_download_aria: "Download clip",
+  reel_delete_aria: "Delete clip",
+  reel_comments: "Comments",
+  reel_comments_aria: "Clip comments",
+  reel_close_comments: "Close comments",
+  reel_loading_comments: "Loading comments…",
+  reel_comment_placeholder: "Add a comment…",
+  reel_comment_post: "Post",
+  reel_comments_unavailable: "Comments are not available.",
+  reel_comments_load_error: "Could not load comments.",
+  reel_comments_empty: "No comments yet. Be the first!",
+  reel_upload_kicker: "Create video",
+  reel_upload_title: "Upload Clip",
+  reel_upload_desc: "Upload a short vertical video for the Clips feed. Public clips can appear in For You, follower clips stay close to your network, and community clips attach to a group.",
+  reel_choose_video: "Choose video",
+  reel_video_selected: "Video selected",
+  reel_video_too_large: "This video is larger than the configured upload limit.",
+  reel_video_type_error: "Choose an MP4, WebM, MOV, or M4V video.",
+  reel_ready_upload: "Ready to upload.",
+  reel_unmute_aria: "Unmute clips",
+  reel_mute_aria: "Mute clips",
+  reel_share_no_users: "No users found.",
+  reel_share_searching: "Searching…",
+  reel_share_search_error: "Could not search users.",
+  reel_share_load_error: "Could not load friends.",
+  reel_file_hint: "MP4, WebM, MOV, or M4V. Use short mobile clips for the cleanest feed fit.",
+  reel_max_size_prefix: "Maximum",
+  reel_caption: "Caption",
+  reel_caption_placeholder: "Write a caption",
+  reel_characters_left: "characters left",
+  reel_visibility: "Visibility",
+  reel_visibility_public: "Public",
+  reel_visibility_followers: "Followers",
+  reel_visibility_community: "Community",
+  reel_visibility_private: "Private",
+  reel_visibility_hint: "Choose where the clip can be discovered after upload.",
+  reel_choose_community: "Choose community",
+  reel_community_hint: "Required only when Visibility is set to Community.",
+  reel_allow_comments: "Allow comments",
+  reel_allow_downloads: "Allow downloads",
+  reel_autoplay_next: "Autoplay next",
+  reel_settings_aria: "Clip settings",
+  reel_upload_submit: "Upload clip",
+  community_detail_kicker: "Community",
+  community_created_by: "Created by",
+  community_default_owner: "owner",
+  community_edit: "Edit",
+  community_joined: "Joined",
+  community_join: "Join",
+  community_compose_placeholder: "Share something with this community",
+  community_add_image: "Add image",
+  community_remove_image: "Remove",
+  community_join_to_post: "Join to post",
+  community_join_to_post_desc: "Members can share posts, images, and replies in this community.",
+  community_empty_posts_title: "No community posts yet",
+  community_empty_posts_desc: "Start the conversation with a post, image, or reply.",
+  community_members: "Members",
+  community_no_members: "No members yet.",
+  community_role_owner: "owner",
+  community_role_member: "member",
+  community_form_create_title: "Create Community",
+  community_form_edit_title: "Edit Community",
+  community_following_empty_title: "Follow people to fill this timeline",
+  post_not_found_title: "Post not found",
+  post_not_found_desc: "The post was deleted or never existed.",
+  post_title: "Post",
+  post_positive_desc: "Make someone's day better with positivity.",
+  post_copy_link: "Copy link",
+  post_share_dm: "Share via DM",
+  post_edit: "Edit post",
+  post_delete: "Delete post",
+  post_report: "Report post",
+  post_options: "Post options",
+  post_photo: "Photo",
+  post_sticker: "Sticker",
+  post_gif_url: "GIF image URL",
+  post_comment: "Comment",
+  post_replies: "Replies",
+  post_no_comments: "No comments yet",
+  post_no_comments_desc: "Remember to be kind to everyone.",
+  search_top: "Top",
+  search_title: "Search",
+  search_latest: "Latest",
+  search_people: "People",
+  search_anything_title: "Search for anything",
+  search_anything_desc: "Find people, posts, and more on LvL.",
+  search_discover_people: "People to discover",
+  search_recent_posts: "Recent posts",
+  search_no_results_for: "No results for",
+  search_new_to_lvl: "New to LvL.",
+  search_more_people: "More people",
+  search_more_results: "More results",
+  settings_crop_title: "Crop and zoom",
+  settings_crop_description: "Drag the image to reposition it. The saved photo uses the square preview.",
+  settings_language_aria: "Language selection",
+  share_dm_title: "Share via DM",
+  share_dm_description: "Select a person to send this post to.",
+  share_dm_empty: "No users found to share with.",
+  share_send_action: "Send",
+  install_title: "Install LvL",
+  install_desc: "Put LvL on your home screen for a faster app-like experience.",
+  install_manual: "Use your browser menu and choose Install app or Add to Home Screen.",
+  install_manual_fallback: "Install LvL from your browser menu when the native install button is not available.",
+  install_ios_desc: "Install LvL from Safari using Share, then Add to Home Screen.",
+  install_step_share: "Tap Share in Safari.",
+  install_step_add: "Choose Add to Home Screen.",
+  install_step_open: "Open LvL from the new icon.",
+  install_action: "Install app",
+  install_dismiss: "Not now",
+  messages_shared_post: "Shared a post:",
+  messages_shared_clip: "Shared a clip:",
+  messages_load_older: "Load older messages",
+  message_delete_options: "Delete options",
+  profile_picture: "Profile picture",
+  copied_label: "Copied",
+  copy_prompt: "Copy this link",
+  action_failed: "Action did not finish. Try again.",
+  mobile_create_post: "Create post",
+  unread_messages: "unread messages",
+  unread_notifications: "unread notifications",
+  unread_more: "unread items",
+  onboarding_title: "Make LvL feel like yours",
+  onboarding_desc: "Add a few details and follow people so your feed is not empty.",
+  onboarding_profile_basics: "Profile basics",
+  onboarding_bio: "Bio",
+  onboarding_bio_placeholder: "One short line about you",
+  onboarding_location: "Location",
+  onboarding_interests: "Interests",
+  onboarding_follow_people: "Follow a few people",
+  onboarding_skip: "Skip",
+  onboarding_finish: "Finish setup",
+  interest_campus: "Campus",
+  interest_study: "Study",
+  interest_sports: "Sports",
+  interest_music: "Music",
+  interest_food: "Food",
+  interest_gaming: "Gaming",
+  interest_events: "Events",
+  interest_tech: "Tech",
+  oauth_page_title: "Finish Social Login",
+  oauth_finish_title: "Finish your LvL profile.",
+  oauth_finish_desc: "Your social provider approved your identity. LvL still needs your nickname, age check, and profile basics before the account opens.",
+  oauth_social_login: "Social login",
+  oauth_profile_ready: "Profile ready",
+  oauth_step: "Step 2 of 2",
+  oauth_create_title: "Create your LvL account",
+  oauth_create_desc: "Sign-in worked. Complete these required LvL profile fields to create the account.",
+  oauth_create_action: "Create account and enter LvL",
+  oauth_selected_avatar: "Selected default avatar",
+  reset_page_title: "Reset Password",
+  forgot_page_title: "Forgot Password",
+  reset_hero_title: "Set a new password.",
+  forgot_hero_title: "Get back into LvL.",
+  reset_hero_desc: "Choose a new password with at least 8 characters.",
+  forgot_hero_desc: "Enter your nickname or email and we will send a reset link if the account exists.",
+  reset_title: "Reset password",
+  forgot_title: "Forgot password",
+  reset_new_password: "New password",
+  reset_confirm_password: "Confirm password",
+  reset_update_action: "Update password",
+  reset_send_action: "Send reset link",
+  reset_back_login: "Back to login",
+  social_back_profile: "Back to profile",
+  social_friends_desc: "People with an active 7-day high-five or message streak.",
+  social_connected_desc: "People connected to this profile.",
+  social_empty_title: "No connections yet",
+  social_empty_desc: "This list will update as people connect on LvL.",
+  social_day_streak: "day streak",
+  verification_no_notes: "No notes provided.",
+  verification_status_approved: "Approved",
+  verification_status_rejected: "Rejected",
+  verification_status_pending: "Pending",
+  verification_cooldown: "Reapplication cooldown is active. You can apply again in:",
+  verification_links_placeholder: "e.g. https://example.com/username, https://mywebsite.com",
+  guide_sections_aria: "LvL Guide sections"
+  ,verification_login_required: "Please log in to submit a verification request."
+  ,auth_login_action: "Log in"
+  ,community_summary_aria: "Community timeline counts"
+  ,community_shortcuts_aria: "Community shortcuts"
+  ,community_timelines_aria: "Community timelines"
+  ,community_feeds_aria: "LvL community feeds"
+  ,community_join_aria: "Communities to join"
+  ,brand_home_aria: "LvL home"
+  ,timeline_aria: "Timeline"
+  ,timeline_pagination_aria: "Timeline pagination"
+  ,saved_drafts_aria: "Saved drafts"
+  ,post_share_aria: "Share post"
+  ,post_share_title: "Share via direct message"
+  ,post_bookmark_aria: "Bookmark post"
+  ,post_bookmark_title: "Bookmark"
+  ,post_reply_tools_aria: "Reply media tools"
+  ,comment_reply_aria: "Reply to comment"
+  ,comment_repost_aria: "Repost comment"
+  ,comment_like_aria: "Like comment"
+  ,sticker_aria: "Sticker"
+  ,profile_view_picture_aria: "View profile picture"
+  ,profile_high_five_aria: "High-five profile"
+  ,profile_xp_aria: "Profile XP summary"
+  ,profile_xp_progress_aria: "XP progress to next level"
+  ,profile_achievements_aria: "Profile achievements"
+  ,profile_tabs_aria: "Profile tabs"
+  ,profile_pagination_aria: "Profile post pagination"
+  ,messages_back_people_aria: "Back to people"
+  ,messages_cancel_upload_aria: "Cancel upload"
+  ,messages_add_attachment_aria: "Add attachment"
+  ,messages_send_aria: "Send message"
+  ,messages_close_new_aria: "Close new conversation panel"
+  ,guide_how_aria: "How LvL works"
+  ,guide_roadmap_aria: "LvL reward roadmap"
+  ,activity_recent_aria: "Recent activity"
+  ,home_reels_aria: "Home clips"
+  ,home_media_aria: "Non-clip media"
+  ,cancel_btn: "Cancel"
+  ,share_btn: "Share"
+  ,profile_streak_days: "day streak"
+  ,profile_streak_friend_prefix: "Friend streak with"
+  ,composer_image_selected: "Image selected"
+  ,composer_saved_image: "Saved image attached"
+  ,draft_image_label: "Image draft"
+  ,draft_untitled_label: "Untitled draft"
+  ,upload_failed: "Upload failed"
+  ,upload_error: "Upload error"
+  ,upload_wait: "Please wait for the file to finish uploading."
+  ,profile_preview_your_name: "Your name"
+  ,profile_preview_username: "username"
+  ,home_unmute_aria: "Unmute"
+  ,home_mute_aria: "Mute"
+  ,reply_sticker_selected: "Sticker selected:"
+  ,reply_photo_selected: "Photo selected:"
+  ,reply_singular: "reply"
+  ,reply_plural: "replies"
+  ,reply_post_error: "Reply could not be posted."
+  ,birthday_future_error: "Birthday cannot be in the future."
+  ,birthday_min_age_error: "You must be at least 14 years old to use LvL."
+  ,birthday_realistic_error: "Please enter a realistic birthday."
+  ,notif_open_profile: "View profile"
+  ,notif_update: "sent an update"
+  ,notif_someone: "Someone"
+  ,notif_just_now: "just now"
+  ,message_send_error: "Message did not send. Try again."
+  ,message_delete_error: "Failed to delete message. Try again."
+  ,comment_post_error: "Comment did not post. Try again."
+  ,settings_photo_size_error: "Profile photos must be 5 MB or smaller."
+});
+
+Object.assign(TRANSLATIONS.tr, {
+  nav_primary_aria: "Ana gezinme",
+  community_join_desc: "Sohbete katıl",
+  settings_language_title: "Dil",
+  profile_no_bio: "Henüz biyografi yok.",
+  no_bio: "Henüz biyografi yok.",
+  profile_streak_hint: "Arkadaş olmak için 7 gün boyunca her gün beşlik çakın veya mesajlaşın.",
+  notif_reel_like: "klibinizi beğendi",
+  notif_reel_comment: "klibinize yorum yaptı",
+  verification_subtitle: "Profilinizde camgöbeği doğrulanmış rozeti almak için kimliğinizi doğrulayın.",
+  verification_approved: "Tebrikler! Profiliniz doğrulandı. Camgöbeği rozet profil kartınızda etkin.",
+  verification_submit_desc: "Lütfen resmî web siteleri veya belge yüklemeleri gibi kimlik kanıtları sağlayın ve hesabınızın neden doğrulanması gerektiğini belirtin.",
+  nav_mobile_primary_aria: "Mobil gezinme",
+  nav_page_tools_aria: "Sayfa araçları",
+  nav_more_options_aria: "Diğer seçenekler",
+  nav_close: "Kapat",
+  back: "Geri dön",
+  avatar_alt: "Profil resmi",
+  official_account: "Resmî hesap",
+  auth_login_page_title: "Giriş Yap",
+  auth_ranks: "Seviyeler",
+  auth_badges: "Rozetler",
+  drafts_title: "Taslaklar",
+  drafts_description: "Bir fikri yayımlamadan önce tamamlayın.",
+  drafts_back_to_feed: "Akışa dön",
+  draft_image_post: "Görsel gönderisi",
+  draft_last_saved: "Son kaydedilme",
+  draft_edit: "Düzenle",
+  draft_delete: "Taslağı Sil",
+  drafts_empty_title: "Henüz taslak yok",
+  drafts_empty_desc: "Ana sayfadaki oluşturucuda “Taslak Olarak Kaydet” seçeneğini kullanın.",
+  draft_save: "Taslak Olarak Kaydet",
+  draft_discard: "Taslağı Bırak",
+  edit_post_title: "Gönderiyi düzenle",
+  edit_post_description: "Kaydetmeden veya yayımlamadan önce metninizi gözden geçirin.",
+  previous_btn: "Önceki",
+  more_btn: "Daha fazla",
+  more_posts_btn: "Daha fazla gönderi",
+  reel_upload_btn: "Yükle",
+  reel_upload_clip: "Klip yükle",
+  reel_empty_title: "Henüz klip yok",
+  reel_empty_desc: "İlk LvL klibini yükleyin veya yüklemeler görünmüyorsa Kurulum Durumu'nu kontrol edin.",
+  reel_setup_health: "Kurulum Durumu",
+  reel_no_more: "Başka klip yok",
+  reel_feed_aria: "Klip akışı",
+  reel_filter_aria: "Klip filtresi",
+  reel_video_unsupported: "Tarayıcınız kısa videoları desteklemiyor.",
+  reel_play_pause_aria: "Klibi oynat veya duraklat",
+  reel_play: "Oynat",
+  reel_pause: "Duraklat",
+  reel_demo: "Demo",
+  reel_actions_aria: "Klip işlemleri",
+  reel_toggle_sound: "Sesi aç veya kapat",
+  reel_muted: "Sessiz",
+  reel_sound_on: "Ses açık",
+  reel_like_aria: "Klibi beğen",
+  reel_view_comments: "Yorumları görüntüle",
+  reel_share_aria: "Klibi arkadaşlarla paylaş",
+  reel_download_aria: "Klibi indir",
+  reel_delete_aria: "Klibi sil",
+  reel_comments: "Yorumlar",
+  reel_comments_aria: "Klip yorumları",
+  reel_close_comments: "Yorumları kapat",
+  reel_loading_comments: "Yorumlar yükleniyor…",
+  reel_comment_placeholder: "Yorum ekle…",
+  reel_comment_post: "Paylaş",
+  reel_comments_unavailable: "Yorumlar kullanılamıyor.",
+  reel_comments_load_error: "Yorumlar yüklenemedi.",
+  reel_comments_empty: "Henüz yorum yok. İlk yorumu siz yapın!",
+  reel_upload_kicker: "Video oluştur",
+  reel_upload_title: "Klip Yükle",
+  reel_upload_desc: "Klip akışı için kısa ve dikey bir video yükleyin. Herkese açık klipler Sizin İçin bölümünde görünebilir; takipçi klipleri ağınıza yakın kalır ve topluluk klipleri bir gruba bağlanır.",
+  reel_choose_video: "Video seç",
+  reel_video_selected: "Video seçildi",
+  reel_video_too_large: "Bu video, yapılandırılan yükleme sınırından büyük.",
+  reel_video_type_error: "MP4, WebM, MOV veya M4V biçiminde bir video seçin.",
+  reel_ready_upload: "Yüklemeye hazır.",
+  reel_unmute_aria: "Kliplerin sesini aç",
+  reel_mute_aria: "Klipleri sessize al",
+  reel_share_no_users: "Kullanıcı bulunamadı.",
+  reel_share_searching: "Aranıyor…",
+  reel_share_search_error: "Kullanıcılar aranamadı.",
+  reel_share_load_error: "Arkadaşlar yüklenemedi.",
+  reel_file_hint: "MP4, WebM, MOV veya M4V. En temiz akış görünümü için kısa mobil klipler kullanın.",
+  reel_max_size_prefix: "En fazla",
+  reel_caption: "Açıklama",
+  reel_caption_placeholder: "Bir açıklama yazın",
+  reel_characters_left: "karakter kaldı",
+  reel_visibility: "Görünürlük",
+  reel_visibility_public: "Herkese açık",
+  reel_visibility_followers: "Takipçiler",
+  reel_visibility_community: "Topluluk",
+  reel_visibility_private: "Özel",
+  reel_visibility_hint: "Klibin yüklendikten sonra nerede keşfedilebileceğini seçin.",
+  reel_choose_community: "Topluluk seç",
+  reel_community_hint: "Yalnızca görünürlük Topluluk olarak ayarlandığında gereklidir.",
+  reel_allow_comments: "Yorumlara izin ver",
+  reel_allow_downloads: "İndirmelere izin ver",
+  reel_autoplay_next: "Sonrakini otomatik oynat",
+  reel_settings_aria: "Klip ayarları",
+  reel_upload_submit: "Klip yükle",
+  community_detail_kicker: "Topluluk",
+  community_created_by: "Oluşturan",
+  community_default_owner: "sahip",
+  community_edit: "Düzenle",
+  community_joined: "Katıldınız",
+  community_join: "Katıl",
+  community_compose_placeholder: "Bu toplulukta bir şey paylaşın",
+  community_add_image: "Görsel ekle",
+  community_remove_image: "Kaldır",
+  community_join_to_post: "Gönderi paylaşmak için katılın",
+  community_join_to_post_desc: "Üyeler bu toplulukta gönderi, görsel ve yanıt paylaşabilir.",
+  community_empty_posts_title: "Henüz topluluk gönderisi yok",
+  community_empty_posts_desc: "Bir gönderi, görsel veya yanıtla sohbeti başlatın.",
+  community_members: "Üyeler",
+  community_no_members: "Henüz üye yok.",
+  community_role_owner: "sahip",
+  community_role_member: "üye",
+  community_form_create_title: "Topluluk Oluştur",
+  community_form_edit_title: "Topluluğu Düzenle",
+  community_following_empty_title: "Bu akışı doldurmak için kişileri takip edin",
+  post_not_found_title: "Gönderi bulunamadı",
+  post_not_found_desc: "Gönderi silinmiş veya hiç var olmamış olabilir.",
+  post_title: "Gönderi",
+  post_positive_desc: "Olumlu bir paylaşımla birinin gününü güzelleştirin.",
+  post_copy_link: "Bağlantıyı kopyala",
+  post_share_dm: "Direkt mesajla paylaş",
+  post_edit: "Gönderiyi düzenle",
+  post_delete: "Gönderiyi sil",
+  post_report: "Gönderiyi bildir",
+  post_options: "Gönderi seçenekleri",
+  post_photo: "Fotoğraf",
+  post_sticker: "Çıkartma",
+  post_gif_url: "GIF görsel bağlantısı",
+  post_comment: "Yorum Yap",
+  post_replies: "Yanıtlar",
+  post_no_comments: "Henüz yorum yok",
+  post_no_comments_desc: "Herkese karşı nazik olmayı unutmayın.",
+  search_top: "Öne çıkanlar",
+  search_title: "Ara",
+  search_latest: "En yeni",
+  search_people: "Kişiler",
+  search_anything_title: "LvL'de arayın",
+  search_anything_desc: "Kişileri, gönderileri ve daha fazlasını bulun.",
+  search_discover_people: "Keşfedilecek kişiler",
+  search_recent_posts: "Son gönderiler",
+  search_no_results_for: "Sonuç bulunamadı:",
+  search_new_to_lvl: "LvL'e yeni katıldı.",
+  search_more_people: "Daha fazla kişi",
+  search_more_results: "Daha fazla sonuç",
+  settings_crop_title: "Kırp ve yakınlaştır",
+  settings_crop_description: "Görseli yeniden konumlandırmak için sürükleyin. Kaydedilen fotoğraf kare önizlemeyi kullanır.",
+  settings_language_aria: "Dil seçimi",
+  share_dm_title: "Direkt Mesajla Paylaş",
+  share_dm_description: "Bu gönderiyi göndermek istediğiniz kişiyi seçin.",
+  share_dm_empty: "Paylaşılabilecek kullanıcı bulunamadı.",
+  share_send_action: "Gönder",
+  install_title: "LvL'yi Yükle",
+  install_desc: "Daha hızlı, uygulama benzeri bir deneyim için LvL'yi ana ekranınıza ekleyin.",
+  install_manual: "Tarayıcı menüsünden Uygulamayı yükle veya Ana Ekrana Ekle seçeneğini kullanın.",
+  install_manual_fallback: "Yerel yükleme düğmesi kullanılamıyorsa LvL'yi tarayıcı menüsünden yükleyin.",
+  install_ios_desc: "Safari'de Paylaş'ı, ardından Ana Ekrana Ekle'yi kullanarak LvL'yi yükleyin.",
+  install_step_share: "Safari'de Paylaş'a dokunun.",
+  install_step_add: "Ana Ekrana Ekle'yi seçin.",
+  install_step_open: "Yeni simgeden LvL'yi açın.",
+  install_action: "Uygulamayı yükle",
+  install_dismiss: "Şimdi değil",
+  messages_shared_post: "Bir gönderi paylaştı:",
+  messages_shared_clip: "Bir klip paylaştı:",
+  messages_load_older: "Eski mesajları yükle",
+  message_delete_options: "Silme seçenekleri",
+  profile_picture: "Profil resmi",
+  copied_label: "Kopyalandı",
+  copy_prompt: "Bu bağlantıyı kopyalayın",
+  action_failed: "İşlem tamamlanamadı. Tekrar deneyin.",
+  mobile_create_post: "Gönderi oluştur",
+  unread_messages: "okunmamış mesaj",
+  unread_notifications: "okunmamış bildirim",
+  unread_more: "okunmamış öğe",
+  onboarding_title: "LvL'yi kendinize göre şekillendirin",
+  onboarding_desc: "Akışınız boş kalmasın diye birkaç bilgi ekleyin ve kişileri takip edin.",
+  onboarding_profile_basics: "Profil bilgileri",
+  onboarding_bio: "Hakkında",
+  onboarding_bio_placeholder: "Kendiniz hakkında kısa bir cümle",
+  onboarding_location: "Konum",
+  onboarding_interests: "İlgi alanları",
+  onboarding_follow_people: "Birkaç kişiyi takip edin",
+  onboarding_skip: "Atla",
+  onboarding_finish: "Kurulumu tamamla",
+  interest_campus: "Kampüs",
+  interest_study: "Eğitim",
+  interest_sports: "Spor",
+  interest_music: "Müzik",
+  interest_food: "Yemek",
+  interest_gaming: "Oyun",
+  interest_events: "Etkinlikler",
+  interest_tech: "Teknoloji",
+  oauth_page_title: "Sosyal Girişi Tamamla",
+  oauth_finish_title: "LvL profilinizi tamamlayın.",
+  oauth_finish_desc: "Sosyal sağlayıcınız kimliğinizi onayladı. Hesabınız açılmadan önce LvL'nin kullanıcı adı, yaş kontrolü ve temel profil bilgilerine ihtiyacı var.",
+  oauth_social_login: "Sosyal giriş",
+  oauth_profile_ready: "Profil hazır",
+  oauth_step: "2 adımın 2.'si",
+  oauth_create_title: "LvL hesabınızı oluşturun",
+  oauth_create_desc: "Giriş başarılı. Hesabı oluşturmak için zorunlu LvL profil alanlarını tamamlayın.",
+  oauth_create_action: "Hesabı oluştur ve LvL'ye gir",
+  oauth_selected_avatar: "Seçilen varsayılan profil resmi",
+  reset_page_title: "Şifreyi Sıfırla",
+  forgot_page_title: "Şifremi Unuttum",
+  reset_hero_title: "Yeni bir şifre belirleyin.",
+  forgot_hero_title: "LvL hesabınıza geri dönün.",
+  reset_hero_desc: "En az 8 karakterden oluşan yeni bir şifre seçin.",
+  forgot_hero_desc: "Kullanıcı adınızı veya e-postanızı girin; hesap varsa sıfırlama bağlantısı gönderelim.",
+  reset_title: "Şifreyi sıfırla",
+  forgot_title: "Şifremi unuttum",
+  reset_new_password: "Yeni şifre",
+  reset_confirm_password: "Şifreyi doğrula",
+  reset_update_action: "Şifreyi güncelle",
+  reset_send_action: "Sıfırlama bağlantısı gönder",
+  reset_back_login: "Girişe dön",
+  social_back_profile: "Profile dön",
+  social_friends_desc: "Etkin 7 günlük beşlik veya mesaj serisi bulunan kişiler.",
+  social_connected_desc: "Bu profile bağlı kişiler.",
+  social_empty_title: "Henüz bağlantı yok",
+  social_empty_desc: "Kişiler LvL'de bağlantı kurdukça bu liste güncellenecek.",
+  social_day_streak: "günlük seri",
+  verification_no_notes: "Not eklenmemiş.",
+  verification_status_approved: "Onaylandı",
+  verification_status_rejected: "Reddedildi",
+  verification_status_pending: "Beklemede",
+  verification_cooldown: "Yeniden başvuru bekleme süresi etkin. Tekrar başvurabileceğiniz süre:",
+  verification_links_placeholder: "ör. https://example.com/kullanici, https://sitem.com",
+  guide_sections_aria: "LvL Rehberi bölümleri"
+  ,verification_login_required: "Doğrulama talebi göndermek için giriş yapın."
+  ,auth_login_action: "Giriş yap"
+  ,community_summary_aria: "Topluluk zaman tüneli sayıları"
+  ,community_shortcuts_aria: "Topluluk kısayolları"
+  ,community_timelines_aria: "Topluluk zaman tünelleri"
+  ,community_feeds_aria: "LvL topluluk akışları"
+  ,community_join_aria: "Katılabileceğiniz topluluklar"
+  ,brand_home_aria: "LvL ana sayfa"
+  ,timeline_aria: "Zaman tüneli"
+  ,timeline_pagination_aria: "Zaman tüneli sayfaları"
+  ,saved_drafts_aria: "Kaydedilmiş taslaklar"
+  ,post_share_aria: "Gönderiyi paylaş"
+  ,post_share_title: "Direkt mesajla paylaş"
+  ,post_bookmark_aria: "Gönderiyi yer imlerine ekle"
+  ,post_bookmark_title: "Yer imlerine ekle"
+  ,post_reply_tools_aria: "Yanıt medya araçları"
+  ,comment_reply_aria: "Yoruma yanıt ver"
+  ,comment_repost_aria: "Yorumu yeniden paylaş"
+  ,comment_like_aria: "Yorumu beğen"
+  ,sticker_aria: "Çıkartma"
+  ,profile_view_picture_aria: "Profil resmini görüntüle"
+  ,profile_high_five_aria: "Profile çak bir beşlik gönder"
+  ,profile_xp_aria: "Profil XP özeti"
+  ,profile_xp_progress_aria: "Sonraki seviyeye XP ilerlemesi"
+  ,profile_achievements_aria: "Profil başarıları"
+  ,profile_tabs_aria: "Profil sekmeleri"
+  ,profile_pagination_aria: "Profil gönderi sayfaları"
+  ,messages_back_people_aria: "Kişilere dön"
+  ,messages_cancel_upload_aria: "Yüklemeyi iptal et"
+  ,messages_add_attachment_aria: "Ek ekle"
+  ,messages_send_aria: "Mesaj gönder"
+  ,messages_close_new_aria: "Yeni konuşma panelini kapat"
+  ,guide_how_aria: "LvL nasıl çalışır"
+  ,guide_roadmap_aria: "LvL ödül yol haritası"
+  ,activity_recent_aria: "Son etkinlik"
+  ,home_reels_aria: "Ana sayfa klipleri"
+  ,home_media_aria: "Klip dışı medya"
+  ,cancel_btn: "İptal"
+  ,share_btn: "Paylaş"
+  ,profile_streak_days: "günlük seri"
+  ,profile_streak_friend_prefix: "Arkadaşlık serisi:"
+  ,composer_image_selected: "Görsel seçildi"
+  ,composer_saved_image: "Kaydedilmiş görsel eklendi"
+  ,draft_image_label: "Görsel taslağı"
+  ,draft_untitled_label: "Adsız taslak"
+  ,upload_failed: "Yükleme başarısız"
+  ,upload_error: "Yükleme hatası"
+  ,upload_wait: "Lütfen dosyanın yüklenmesinin tamamlanmasını bekleyin."
+  ,profile_preview_your_name: "Adınız"
+  ,profile_preview_username: "kullaniciadi"
+  ,home_unmute_aria: "Sesi aç"
+  ,home_mute_aria: "Sessize al"
+  ,reply_sticker_selected: "Çıkartma seçildi:"
+  ,reply_photo_selected: "Fotoğraf seçildi:"
+  ,reply_singular: "yanıt"
+  ,reply_plural: "yanıt"
+  ,reply_post_error: "Yanıt gönderilemedi."
+  ,birthday_future_error: "Doğum tarihi gelecekte olamaz."
+  ,birthday_min_age_error: "LvL'yi kullanmak için en az 14 yaşında olmalısınız."
+  ,birthday_realistic_error: "Lütfen geçerli bir doğum tarihi girin."
+  ,notif_open_profile: "Profili görüntüle"
+  ,notif_update: "bir güncelleme gönderdi"
+  ,notif_someone: "Birisi"
+  ,notif_just_now: "az önce"
+  ,message_send_error: "Mesaj gönderilemedi. Tekrar deneyin."
+  ,message_delete_error: "Mesaj silinemedi. Tekrar deneyin."
+  ,comment_post_error: "Yorum gönderilemedi. Tekrar deneyin."
+  ,settings_photo_size_error: "Profil fotoğrafları en fazla 5 MB olabilir."
+});
+
+Object.assign(TRANSLATIONS.en, {
+  error_404_page_title: "Page not found",
+  error_404_title: "This page doesn't exist",
+  error_404_desc: "The link may be incorrect, expired, or the page may have moved.",
+  error_back_home: "Back home",
+  setup_page_title: "Setup Health",
+  setup_kicker: "Project checks",
+  setup_title: "Setup Health",
+  setup_desc: "Quick checks for the app services, tables, storage, and PWA files.",
+  setup_ready: "Ready",
+  setup_needs_attention: "Needs attention",
+  flash_close: "Close message",
+  profile_official_account: "Official account",
+  streak_day_high_five: "day high-five streak",
+  streak_days_high_five: "day high-five streak",
+  guide_more_tabs_hint: "More sections"
+});
+
+Object.assign(TRANSLATIONS.tr, {
+  error_404_page_title: "Sayfa bulunamadı",
+  error_404_title: "Bu sayfa mevcut değil",
+  error_404_desc: "Bağlantı hatalı, süresi dolmuş veya sayfa taşınmış olabilir.",
+  error_back_home: "Ana sayfaya dön",
+  setup_page_title: "Kurulum Durumu",
+  setup_kicker: "Proje kontrolleri",
+  setup_title: "Kurulum Durumu",
+  setup_desc: "Uygulama servisleri, tablolar, depolama ve PWA dosyaları için hızlı kontroller.",
+  setup_ready: "Hazır",
+  setup_needs_attention: "Kontrol gerekli",
+  flash_close: "Mesajı kapat",
+  profile_official_account: "Resmî hesap",
+  streak_day_high_five: "günlük beşlik serisi",
+  streak_days_high_five: "günlük beşlik serisi",
+  guide_more_tabs_hint: "Diğer bölümler"
+});

@@ -65,7 +65,7 @@
           {% if notification.stack_count and notification.stack_count > 1 %}
             <span class="notification-stack">{{ notification.stack_count }} <span data-i18n="notif_total">total</span></span>
           {% endif %}
-          <span class="time">· {{ relative_time(notification.created_at) }}</span>
+          <span class="time">· <time datetime="{{ notification.created_at }}" data-relative-time>{{ relative_time(notification.created_at) }}</time></span>
         </div>
         
         {% if notification.post_id %}

@@ -568,15 +568,3 @@
   border: 1px solid var(--lvl-warning-border) !important;
   color: var(--lvl-warning) !important;
 }
-
-.app-toast::after {
-  content: '✕';
-  font-size: 9px;
-  margin-left: auto;
-  opacity: 0.6;
-  transition: opacity 0.2s;
-  padding-left: 8px;
-}
-.app-toast:hover::after {
-  opacity: 1;
-}

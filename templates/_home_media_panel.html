@@ -6,7 +6,7 @@
     </div>
     <a href="{{ url_for('index') }}" class="home-reel-see-all" data-i18n="see_home">See home →</a>
   </div>
-  <div class="home-media-list" aria-label="Non-reel media">
+  <div class="home-media-list" aria-label="Non-reel media" data-i18n-aria="home_media_aria">
     {% for post in home_media %}
       {% set media_author = post.user or {} %}
       {% set media_href = url_for('index') if post.is_demo else url_for('post', id=post.id) %}

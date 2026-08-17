@@ -2,16 +2,17 @@
 {% set active_page = "profile" %}
 {% set show_highlights = True %}
 {% set title = list_title %}
+{% set title_i18n = "profile_" ~ list_type %}
 
 {% block content %}
 <header class="page-header">
   <div class="header-content">
-    <a class="back-link" href="{{ url_for('profile', username=profile.username) }}">Back to @{{ profile.username }}</a>
-    <h1>{{ list_title }}</h1>
+    <a class="back-link" href="{{ url_for('profile', username=profile.username) }}"><span data-i18n="social_back_profile">Back to profile</span> @{{ profile.username }}</a>
+    <h1 data-i18n="profile_{{ list_type }}">{{ list_title }}</h1>
     {% if list_type == 'friends' %}
-      <p>People with an active 7-day high-five or message streak with {{ profile.display_name or profile.username }}.</p>
+      <p data-i18n="social_friends_desc">People with an active 7-day high-five or message streak.</p>
     {% else %}
-      <p>People connected to {{ profile.display_name or profile.username }}.</p>
+      <p data-i18n="social_connected_desc">People connected to this profile.</p>
     {% endif %}
   </div>
 </header>
@@ -19,8 +20,8 @@
 <section class="people-list-panel" aria-label="{{ list_title }}">
   {% if not users %}
     <div class="empty-state">
-      <h2>No {{ list_title|lower }} yet</h2>
-      <p>This list will update as people connect on LvL.</p>
+      <h2 data-i18n="social_empty_title">No connections yet</h2>
+      <p data-i18n="social_empty_desc">This list will update as people connect on LvL.</p>
     </div>
   {% else %}
     <div class="people-list-scroll">
@@ -28,12 +29,12 @@
         {% for user in users %}
           <article class="person-row">
             <a class="person-main" href="{{ url_for('profile', username=user.username) }}">
-              <img class="avatar" src="{{ user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar">
+              <img class="avatar" src="{{ user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" data-i18n-alt="avatar_alt">
               <span>
                 <strong>{{ user.display_name or user.username }}</strong>
                 <small>
                   @{{ user.username }} · LvL {{ user.level or 1 }}
-                  {% if list_type == 'friends' and user.streak_count %} · 🖐 {{ user.streak_count }} day streak{% endif %}
+                  {% if list_type == 'friends' and user.streak_count %} · 🖐 {{ user.streak_count }} <span data-i18n="social_day_streak">day streak</span>{% endif %}
                 </small>
               </span>
             </a>
@@ -41,7 +42,7 @@
               <form action="{{ url_for('toggle_follow') }}" method="post" class="ajax-action-form" data-action="follow">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="target_id" value="{{ user.id }}">
-                <button class="outline-button {% if user.is_following %}active{% endif %}" type="submit">{{ 'Unfollow' if user.is_following else 'Follow' }}</button>
+                <button class="outline-button {% if user.is_following %}active{% endif %}" type="submit">{% if user.is_following %}<span data-follow-label data-i18n="profile_unfollow">Unfollow</span>{% else %}<span data-follow-label data-i18n="profile_follow">Follow</span>{% endif %}</button>
               </form>
             {% endif %}
           </article>

@@ -22,22 +22,22 @@
       </a>
       {% set post_time = post.timeline_created_at or post.created_at %}
       {% if post_time %}
-        <span class="post-time" title="{{ post_time }}">· {{ relative_time(post_time) }}</span>
+        <span class="post-time" title="{{ post_time }}">· <time datetime="{{ post_time }}" data-relative-time>{{ relative_time(post_time) }}</time></span>
       {% endif %}
       {% if post.user.id != viewer.id and post.user_id != viewer.id %}
         <form action="{{ url_for('toggle_follow') }}" method="post" class="ajax-action-form inline-follow-form" data-action="follow">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="target_id" value="{{ post.user.id or post.user_id }}">
-          <button class="follow-chip {% if post.author_followed %}active{% endif %}" type="submit">{% if post.author_followed %}<span data-i18n="profile_unfollow">Unfollow</span>{% else %}<span data-i18n="profile_follow">Follow</span>{% endif %}</button>
+          <button class="follow-chip {% if post.author_followed %}active{% endif %}" type="submit">{% if post.author_followed %}<span data-follow-label data-i18n="profile_unfollow">Unfollow</span>{% else %}<span data-follow-label data-i18n="profile_follow">Follow</span>{% endif %}</button>
         </form>
       {% endif %}
       <div class="post-menu-wrap">
-        <button class="post-menu-toggle" type="button" data-post-menu-toggle aria-expanded="false" aria-label="Post options">...</button>
+        <button class="post-menu-toggle" type="button" data-post-menu-toggle aria-expanded="false" aria-label="Post options" data-i18n-aria="post_options">...</button>
         <div class="post-menu" data-post-menu hidden>
           <button type="button" data-copy-url="{{ url_for('post', id=post.id, _external=True) }}" data-i18n="post_copy_link">Copy link</button>
           <button type="button" onclick="window.location.href='{{ url_for('share_post', post_id=post.id) }}'" data-i18n="post_share_dm">Share via DM</button>
           {% if post.user.id == viewer.id or post.user_id == viewer.id %}
-            <button type="button" onclick="window.location.href='{{ url_for('edit_post', post_id=post.id) }}'">Edit post</button>
+            <button type="button" onclick="window.location.href='{{ url_for('edit_post', post_id=post.id) }}'" data-i18n="post_edit">Edit post</button>
             <form action="{{ url_for('delete_post') }}" method="post">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <input type="hidden" name="post_id" value="{{ post.id }}">
@@ -98,7 +98,7 @@
           <strong>{{ post.like_count }}</strong>
         </button>
       </form>
-      <a href="{{ url_for('share_post', post_id=post.id) }}" class="post-action-link" aria-label="Share post" title="Share via DM">
+      <a href="{{ url_for('share_post', post_id=post.id) }}" class="post-action-link" aria-label="Share post" data-i18n-aria="post_share_aria" title="Share via DM" data-i18n-title="post_share_title">
         <span class="post-action-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.03-.47-.09-.7l7.05-4.11A2.99 2.99 0 1 0 15 5c0 .24.04.47.09.7L8.04 9.81A3 3 0 1 0 8.04 14l7.12 4.16c-.04.2-.07.41-.07.62A2.91 2.91 0 1 0 18 16.08Z"/></svg>
         </span>
@@ -106,7 +106,7 @@
       <form action="{{ url_for('toggle_bookmark') }}" method="post" class="ajax-action-form" data-action="bookmark">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="post_id" value="{{ post.id }}">
-        <button type="submit" class="post-action-button {% if post.viewer_bookmarked %}active bookmark-active{% endif %}" aria-label="Bookmark post" title="Bookmark">
+        <button type="submit" class="post-action-button {% if post.viewer_bookmarked %}active bookmark-active{% endif %}" aria-label="Bookmark post" data-i18n-aria="post_bookmark_aria" title="Bookmark" data-i18n-title="post_bookmark_title">
           <span class="post-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1Zm1 2v12.55l5-2.86 5 2.86V5H7Z"/></svg></span>
         </button>
       </form>

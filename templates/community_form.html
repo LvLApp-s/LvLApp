@@ -1,11 +1,12 @@
 {% extends "layout.html" %}
 {% set active_page = "community" %}
 {% set show_highlights = True %}
+{% set title_i18n = "community_form_edit_title" if community else "community_form_create_title" %}
 
 {% block content %}
 <header class="page-header community-header">
   <div>
-    <h1 data-i18n="community_form_create_btn">{{ title }}</h1>
+    <h1 data-i18n="{{ 'community_form_edit_title' if community else 'community_form_create_title' }}">{{ title }}</h1>
     <p data-i18n="community_form_desc">Build a focused space for people, posts, images, and active threads.</p>
   </div>
 </header>

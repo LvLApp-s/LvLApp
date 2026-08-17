@@ -2,6 +2,7 @@
 {% set active_page = "level_guide" %}
 {% set show_highlights = True %}
 {% set title = "LvL Guide" %}
+{% set title_i18n = "nav_guide" %}
 
 {% block content %}
 <header class="page-header level-guide-header">
@@ -13,7 +14,7 @@
 
 {# ── Tab Navigation ── #}
 <div class="guide-tabs-wrapper">
-  <nav class="guide-tabs" role="tablist" aria-label="LvL Guide sections">
+  <nav class="guide-tabs" role="tablist" aria-label="LvL Guide sections" data-i18n-aria="guide_sections_aria">
     <button class="guide-tab active" role="tab" aria-selected="true" aria-controls="tab-guide" id="tab-btn-guide" data-tab="guide" data-i18n="guide_tab_guide">LvL Guide</button>
     <button class="guide-tab" role="tab" aria-selected="false" aria-controls="tab-contact" id="tab-btn-contact" data-tab="contact" data-i18n="guide_tab_contact">Contact</button>
     <button class="guide-tab" role="tab" aria-selected="false" aria-controls="tab-verification" id="tab-btn-verification" data-tab="verification" data-i18n="tab_verify_profile">Verify Profile</button>
@@ -37,7 +38,7 @@
     </div>
   </section>
 
-  <section class="level-guide-panel level-path-panel" aria-label="How LvL works">
+  <section class="level-guide-panel level-path-panel" aria-label="How LvL works" data-i18n-aria="guide_how_aria">
     <div class="section-heading">
       <h3 data-i18n="guide_how_title">How it works</h3>
       <p data-i18n="guide_how_desc">Three simple steps: interact, fill the bar, unlock a visible reward.</p>
@@ -100,7 +101,7 @@
       <h3 data-i18n="guide_roadmap_title">Reward Roadmap</h3>
       <p data-i18n="guide_roadmap_desc">This is the clean product table for what each reward changes visually.</p>
     </div>
-    <div class="reward-roadmap" role="table" aria-label="LvL reward roadmap">
+    <div class="reward-roadmap" role="table" aria-label="LvL reward roadmap" data-i18n-aria="guide_roadmap_aria">
       <div class="reward-roadmap-row reward-roadmap-head" role="row">
         <span role="columnheader" data-i18n="guide_lvl_col">LvL</span>
         <span role="columnheader" data-i18n="guide_reward_col">Reward</span>
@@ -176,11 +177,11 @@
         <div class="form-grid">
           <label class="form-group">
             <span data-i18n="contact_name">Full Name</span>
-            <input type="text" name="name" required placeholder="Full Name" value="{{ viewer.display_name if viewer else '' }}">
+            <input type="text" name="name" required placeholder="Full Name" data-i18n-placeholder="contact_name" value="{{ viewer.display_name if viewer else '' }}">
           </label>
           <label class="form-group">
             <span data-i18n="contact_email">Email Address</span>
-            <input type="email" name="email" required placeholder="Email Address" value="{{ viewer.email if viewer else '' }}">
+            <input type="email" name="email" required placeholder="Email Address" data-i18n-placeholder="contact_email" value="{{ viewer.email if viewer else '' }}">
           </label>
         </div>
 
@@ -231,29 +232,29 @@
     {# ── Verification status card ── #}
     {% if current_request %}
       <div class="guide-form-card form-card-compact form-card-spaced">
-        <h3>Request Status: 
+        <h3><span data-i18n="verification_status">Request Status</span>:
           <span class="admin-status-pill status-pill-lg {% if current_request.status == 'Approved' %}active{% elif current_request.status == 'Rejected' %}danger{% endif %}">
-            {{ current_request.status }}
+            {% if current_request.status == 'Approved' %}<span data-i18n="verification_status_approved">Approved</span>{% elif current_request.status == 'Rejected' %}<span data-i18n="verification_status_rejected">Rejected</span>{% else %}<span data-i18n="verification_status_pending">Pending</span>{% endif %}
           </span>
         </h3>
         <p style="margin-top: 10px; color: var(--text-secondary);">
-          Submitted on: {{ current_request.created_at[:16] if current_request.created_at else '' }}
+          <span data-i18n="verification_submitted">Submitted on</span>: {{ current_request.created_at[:16] if current_request.created_at else '' }}
         </p>
         {% if current_request.status == 'Rejected' %}
           <p style="margin-top: 10px; color: var(--lvl-danger-text-soft);">
-            <strong>Admin Notes:</strong> {{ current_request.admin_notes or 'No notes provided.' }}
+            <strong data-i18n="verification_admin_notes">Admin Notes:</strong> {% if current_request.admin_notes %}{{ current_request.admin_notes }}{% else %}<span data-i18n="verification_no_notes">No notes provided.</span>{% endif %}
           </p>
           {% if cooldown_active %}
             <div class="flash info" style="margin-top: 14px;">
-              Reapplication cooldown is active. You can apply again in: {{ cooldown_remaining }}.
+              <span data-i18n="verification_cooldown">Reapplication cooldown is active. You can apply again in:</span> {{ cooldown_remaining }}.
             </div>
           {% endif %}
         {% elif current_request.status == 'Approved' %}
-          <div class="flash success" style="margin-top: 14px;">
+          <div class="flash success" style="margin-top: 14px;" data-i18n="verification_approved">
             Congratulations! Your profile has been verified. The cyan badge is active on your profile card.
           </div>
         {% else %}
-          <p style="margin-top: 10px; color: var(--text-secondary);">
+          <p style="margin-top: 10px; color: var(--text-secondary);" data-i18n="verification_pending">
             Your request is under review. You will be notified once an admin takes action.
           </p>
         {% endif %}
@@ -277,7 +278,7 @@
 
             <label class="form-group">
               <span data-i18n="verification_links">Social Media or Official Website Links</span>
-              <input type="text" name="links" placeholder="e.g. https://twitter.com/username, https://mywebsite.com">
+              <input type="text" name="links" placeholder="e.g. https://example.com/username, https://mywebsite.com" data-i18n-placeholder="verification_links_placeholder">
             </label>
 
             <label class="form-group">
@@ -294,8 +295,8 @@
       {% else %}
         <div class="careers-no-positions">
           <span>🔒</span>
-          <p>Please log in to submit a verification request.</p>
-          <a href="{{ url_for('auth') }}" class="primary-button" style="margin-top: 12px; display: inline-block;">Log In</a>
+          <p data-i18n="verification_login_required">Please log in to submit a verification request.</p>
+          <a href="{{ url_for('auth') }}" class="primary-button" style="margin-top: 12px; display: inline-block;" data-i18n="auth_login_action">Log In</a>
         </div>
       {% endif %}
     {% endif %}
@@ -389,6 +390,15 @@
   border-bottom: 1px solid var(--lvl-border, rgba(255,255,255,0.08));
   padding: 0 20px;
 }
+.guide-tabs-wrapper::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  width: 0;
+  pointer-events: none;
+  background: linear-gradient(to left, var(--lvl-black, #000) 22%, transparent);
+}
 .guide-tabs {
   display: flex;
   gap: 4px;
@@ -475,6 +485,36 @@
 [dir="rtl"] .guide-tab { border-bottom: 2px solid transparent; }
 [dir="rtl"] .guide-tab.active { border-bottom-color: var(--lvl-cyan); }
 [dir="rtl"] .form-grid { direction: rtl; }
+
+@media (max-width: 900px) {
+  .guide-tabs-wrapper { padding-inline: 8px; overflow: hidden; }
+  .guide-tabs-wrapper::after {
+    width: 48px;
+    border-inline-end: 2px solid var(--lvl-cyan);
+  }
+  .guide-tabs {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+    scroll-snap-type: inline proximity;
+  }
+  .guide-tab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    scroll-snap-align: start;
+  }
+  .careers-position-header { align-items: flex-start; flex-wrap: wrap; }
+}
+
+@media (max-width: 599px) {
+  .guide-tabs-wrapper { top: 0; }
+  .guide-tab { min-height: 48px; padding: 12px 14px; }
+  .guide-form-card { padding: 18px; border-radius: 16px; }
+  .careers-position-card { padding: 16px; }
+  .guide-careers-form .form-grid,
+  .guide-contact-form .form-grid { grid-template-columns: minmax(0, 1fr); }
+}
 </style>
 
 <script>

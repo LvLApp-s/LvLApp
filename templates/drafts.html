@@ -1,25 +1,29 @@
 {% extends "layout.html" %}
 {% set active_page = "home" %}
 {% set title = "Drafts" %}
+{% set title_i18n = "drafts_title" %}
 {% block content %}
 <header class="page-header compact">
-  <div><h1>Drafts</h1><p>Finish an idea before publishing it.</p></div>
-  <a class="outline-button small" href="{{ url_for('index') }}">Back to feed</a>
+  <div><h1 data-i18n="drafts_title">Drafts</h1><p data-i18n="drafts_description">Finish an idea before publishing it.</p></div>
+  <a class="outline-button small" href="{{ url_for('index') }}" data-i18n="drafts_back_to_feed">Back to feed</a>
 </header>
 <section class="draft-list">
   {% for draft in drafts %}
     <article class="draft-card">
-      <div><p>{{ draft.content or 'Image post' }}</p><small>Last saved {{ relative_time(draft.updated_at or draft.created_at) }}</small></div>
+      <div>
+        <p>{% if draft.content %}{{ draft.content }}{% else %}<span data-i18n="draft_image_post">Image post</span>{% endif %}</p>
+        <small><span data-i18n="draft_last_saved">Last saved</span> <time datetime="{{ draft.updated_at or draft.created_at }}" data-relative-time>{{ relative_time(draft.updated_at or draft.created_at) }}</time></small>
+      </div>
       <div class="draft-actions">
-        <a class="outline-button small" href="{{ url_for('edit_post', post_id=draft.id) }}">Edit</a>
+        <a class="outline-button small" href="{{ url_for('edit_post', post_id=draft.id) }}" data-i18n="draft_edit">Edit</a>
         <form method="post" action="{{ url_for('delete_draft', post_id=draft.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button class="danger-button small" type="submit">Delete</button>
+          <button class="danger-button small" type="submit" data-i18n="draft_delete">Delete draft</button>
         </form>
       </div>
     </article>
   {% else %}
-    <div class="empty-state"><h2>No drafts yet</h2><p>Use “Save draft” in the home composer.</p></div>
+    <div class="empty-state"><h2 data-i18n="drafts_empty_title">No drafts yet</h2><p data-i18n="drafts_empty_desc">Use “Save draft” in the home composer.</p></div>
   {% endfor %}
 </section>
 {% endblock %}

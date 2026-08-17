@@ -2,46 +2,47 @@
 {% set active_page = "settings" %}
 {% set show_highlights = False %}
 {% set title = "Set up profile" %}
+{% set title_i18n = "onboarding_title" %}
 
 {% block content %}
 <section class="onboarding-shell">
   <header class="page-header compact">
     <div>
-      <h1>Make LvL feel like yours</h1>
-      <p>Add a few details and follow people so your feed is not empty.</p>
+      <h1 data-i18n="onboarding_title">Make LvL feel like yours</h1>
+      <p data-i18n="onboarding_desc">Add a few details and follow people so your feed is not empty.</p>
     </div>
   </header>
 
   <form class="premium-form onboarding-form" action="{{ url_for('onboarding') }}" method="post">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <section class="form-section">
-      <h3>Profile basics</h3>
+      <h3 data-i18n="onboarding_profile_basics">Profile basics</h3>
       <label class="form-group">
-        <span>Bio</span>
-        <textarea name="bio" maxlength="180" rows="3" placeholder="One short line about you">{{ viewer.bio }}</textarea>
+        <span data-i18n="onboarding_bio">Bio</span>
+        <textarea name="bio" maxlength="180" rows="3" placeholder="One short line about you" data-i18n-placeholder="onboarding_bio_placeholder">{{ viewer.bio }}</textarea>
       </label>
       <label class="form-group">
-        <span>Location</span>
-        <input name="location" maxlength="80" value="{{ viewer.location }}" placeholder="City, Country">
+        <span data-i18n="onboarding_location">Location</span>
+        <input name="location" maxlength="80" value="{{ viewer.location }}" placeholder="City, Country" data-i18n-placeholder="settings_location_placeholder">
       </label>
     </section>
 
     <section class="form-section">
-      <h3>Interests</h3>
+      <h3 data-i18n="onboarding_interests">Interests</h3>
       <div class="interest-grid">
         {% for item in ["Campus", "Study", "Sports", "Music", "Food", "Gaming", "Events", "Tech"] %}
-          <label><input type="checkbox" name="interests" value="{{ item }}"> <span>{{ item }}</span></label>
+          <label><input type="checkbox" name="interests" value="{{ item }}"> <span data-i18n="interest_{{ item|lower }}">{{ item }}</span></label>
         {% endfor %}
       </div>
     </section>
 
     <section class="form-section">
-      <h3>Follow a few people</h3>
+      <h3 data-i18n="onboarding_follow_people">Follow a few people</h3>
       <div class="follow-suggestion-grid">
         {% for user in suggested_users %}
           <label class="follow-suggestion-card">
             <input type="checkbox" name="follow_ids" value="{{ user.id }}">
-            <img class="avatar small-avatar" src="{{ user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar">
+            <img class="avatar small-avatar" src="{{ user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" data-i18n-alt="avatar_alt">
             <span>
               <strong>{{ user.display_name }}</strong>
               <small>@{{ user.username }}</small>
@@ -52,8 +53,8 @@
     </section>
 
     <div class="form-actions">
-      <a class="outline-button" href="{{ url_for('index') }}">Skip</a>
-      <button class="primary-button" type="submit">Finish setup</button>
+      <a class="outline-button" href="{{ url_for('index') }}" data-i18n="onboarding_skip">Skip</a>
+      <button class="primary-button" type="submit" data-i18n="onboarding_finish">Finish setup</button>
     </div>
   </form>
 </section>

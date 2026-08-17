@@ -2,14 +2,15 @@
 {% set active_page = "reels" %}
 {% set show_highlights = False %}
 {% set title = "Upload Clip" %}
+{% set title_i18n = "reel_upload_title" %}
 
 {% block content %}
 <section class="reel-upload-page">
   <header class="page-header compact">
     <div>
-      <span class="panel-kicker">Create video</span>
-      <h1>Upload Clip</h1>
-      <p>Upload a short vertical video for the Clips feed. Public clips can appear in For You, follower clips stay closer to your network, and community clips attach to a group.</p>
+      <span class="panel-kicker" data-i18n="reel_upload_kicker">Create video</span>
+      <h1 data-i18n="reel_upload_title">Upload Clip</h1>
+      <p data-i18n="reel_upload_desc">Upload a short vertical video for the Clips feed. Public clips can appear in For You, follower clips stay close to your network, and community clips attach to a group.</p>
     </div>
   </header>
 
@@ -19,8 +20,8 @@
     <div class="reel-upload-grid">
       <label class="reel-file-picker">
         <input type="file" name="video" accept="video/mp4,video/webm,video/quicktime,video/x-m4v" data-reel-video-input>
-        <span data-reel-file-label>Choose video</span>
-        <small>MP4, WebM, MOV, or M4V. Max {{ (max_video_bytes // 1024 // 1024) or 1 }} MB. Use short mobile clips for the cleanest feed fit.</small>
+        <span data-reel-file-label data-i18n="reel_choose_video">Choose video</span>
+        <small><span data-i18n="reel_file_hint">MP4, WebM, MOV, or M4V. Use short mobile clips for the cleanest feed fit.</span> <span data-i18n="reel_max_size_prefix">Maximum</span> {{ (max_video_bytes // 1024 // 1024) or 1 }} MB.</small>
       </label>
 
       <div class="reel-preview" data-reel-preview hidden>
@@ -29,46 +30,46 @@
     </div>
 
     <label class="form-field">
-      <span>Caption</span>
-      <textarea name="caption" maxlength="220" placeholder="Write a caption"></textarea>
-      <small><span data-reel-caption-count>220</span> characters left</small>
+      <span data-i18n="reel_caption">Caption</span>
+      <textarea name="caption" maxlength="220" placeholder="Write a caption" data-i18n-placeholder="reel_caption_placeholder"></textarea>
+      <small><span data-reel-caption-count>220</span> <span data-i18n="reel_characters_left">characters left</span></small>
     </label>
 
     <div class="reel-settings-grid">
       <label class="form-field">
-        <span>Visibility</span>
+        <span data-i18n="reel_visibility">Visibility</span>
         <select name="visibility" data-reel-visibility>
-          <option value="public">Public</option>
-          <option value="followers">Followers</option>
-          <option value="community">Community</option>
-          <option value="private">Private</option>
+          <option value="public" data-i18n-option="reel_visibility_public">Public</option>
+          <option value="followers" data-i18n-option="reel_visibility_followers">Followers</option>
+          <option value="community" data-i18n-option="reel_visibility_community">Community</option>
+          <option value="private" data-i18n-option="reel_visibility_private">Private</option>
         </select>
-        <small>Choose where the reel can be discovered after upload.</small>
+        <small data-i18n="reel_visibility_hint">Choose where the clip can be discovered after upload.</small>
       </label>
 
       <label class="form-field" data-reel-community-field hidden>
-        <span>Community</span>
+        <span data-i18n="nav_community">Community</span>
         <select name="community_id">
-          <option value="">Choose community</option>
+          <option value="" data-i18n-option="reel_choose_community">Choose community</option>
           {% for community in communities %}
             <option value="{{ community.id }}">{{ community.name }}</option>
           {% endfor %}
         </select>
-        <small>This is required only when Visibility is set to Community.</small>
+        <small data-i18n="reel_community_hint">Required only when Visibility is set to Community.</small>
       </label>
     </div>
 
-    <div class="reel-toggle-list" aria-label="Clip settings">
-      <label><input type="checkbox" name="allow_comments" checked> <span>Allow comments</span></label>
-      <label><input type="checkbox" name="allow_downloads"> <span>Allow downloads</span></label>
-      <label><input type="checkbox" name="autoplay_next" checked> <span>Autoplay next</span></label>
+    <div class="reel-toggle-list" aria-label="Clip settings" data-i18n-aria="reel_settings_aria">
+      <label><input type="checkbox" name="allow_comments" checked> <span data-i18n="reel_allow_comments">Allow comments</span></label>
+      <label><input type="checkbox" name="allow_downloads"> <span data-i18n="reel_allow_downloads">Allow downloads</span></label>
+      <label><input type="checkbox" name="autoplay_next" checked> <span data-i18n="reel_autoplay_next">Autoplay next</span></label>
     </div>
 
     <p class="reel-upload-message" data-reel-upload-message></p>
 
     <div class="composer-footer">
-      <a class="outline-button" href="{{ url_for('reels') }}">Cancel</a>
-      <button type="submit" class="post-submit-btn" data-reel-submit disabled>Upload reel</button>
+      <a class="outline-button" href="{{ url_for('reels') }}" data-i18n="cancel_btn">Cancel</a>
+      <button type="submit" class="post-submit-btn" data-reel-submit data-i18n="reel_upload_submit" disabled>Upload clip</button>
     </div>
   </form>
 </section>

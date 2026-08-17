@@ -3,21 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>{{ title }} - LvL</title>
+  <title data-i18n-document="{% if error_code == 404 %}error_404_page_title{% else %}error_500_title{% endif %}">{{ title }} - LvL</title>
   <link rel="stylesheet" href="{{ static_asset('css/styles.css') }}">
 </head>
 <body>
   <main class="empty-state app-error-state">
-    <h1 data-i18n="error_500_title">Something went wrong</h1>
-    <p data-i18n="error_500_desc">The app hit a problem while loading this page. Try again in a moment.</p>
-    <a class="primary-button" href="{{ url_for('index') }}" data-i18n="nav_home">Back home</a>
+    <img class="app-error-logo" src="{{ static_asset('assets/icon-192.png') }}" alt="LvL">
+    {% if error_code == 404 %}
+      <span class="panel-kicker" aria-hidden="true">404</span>
+      <h1 data-i18n="error_404_title">This page doesn't exist</h1>
+      <p data-i18n="error_404_desc">The link may be incorrect, expired, or the page may have moved.</p>
+    {% else %}
+      <h1 data-i18n="error_500_title">Something went wrong</h1>
+      <p data-i18n="error_500_desc">The app hit a problem while loading this page. Try again in a moment.</p>
+    {% endif %}
+    <a class="primary-button" href="{{ url_for('index') }}" data-i18n="error_back_home">Back home</a>
   </main>
   
   <script src="{{ static_asset('js/i18n.js') }}"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      window.LvLI18n.applyLanguage();
-    });
-  </script>
 </body>
 </html>

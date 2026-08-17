@@ -2,6 +2,7 @@
 {% set active_page = "settings" %}
 {% set show_highlights = True %}
 {% set title = "Edit Profile" %}
+{% set title_i18n = "settings_title" %}
 
 {% block content %}
 <div class="settings-container">
@@ -34,7 +35,7 @@
           <span data-i18n="settings_username">Username / Nickname</span>
           <div class="input-prefix-wrapper">
             <span class="input-prefix">@</span>
-            <input name="nickname" maxlength="24" pattern="[A-Za-z0-9_]{3,24}" minlength="3" title="3-24 letters, numbers, or underscores." value="{{ viewer.nickname or viewer.username }}" required>
+            <input name="nickname" maxlength="24" pattern="[A-Za-z0-9_]{3,24}" minlength="3" title="3-24 letters, numbers, or underscores." data-i18n-title="settings_username_hint" value="{{ viewer.nickname or viewer.username }}" required>
           </div>
           <small data-i18n="settings_username_hint">3-24 letters, numbers, or underscores. Usernames are saved lowercase.</small>
         </label>
@@ -105,10 +106,10 @@
             <img data-crop-image alt="Crop profile photo">
           </div>
           <label class="profile-crop-zoom">
-            <span>Crop and zoom</span>
+            <span data-i18n="settings_crop_title">Crop and zoom</span>
             <input type="range" min="1" max="3" step="0.01" value="1" data-crop-zoom>
           </label>
-          <p class="settings-helper-text">Drag the image to reposition it. The saved photo uses the square preview.</p>
+          <p class="settings-helper-text" data-i18n="settings_crop_description">Drag the image to reposition it. The saved photo uses the square preview.</p>
         </div>
         <label class="checkbox-row">
           <input type="checkbox" name="remove_profile_photo" value="1">
@@ -155,7 +156,7 @@
     <section class="form-section">
       <h3 data-i18n="settings_language_title">Language / Dil / اللغة</h3>
       <p class="settings-helper-text" data-i18n="settings_language_subtitle">Choose your preferred language. Saved locally on this device.</p>
-      <div class="lang-switcher" role="group" aria-label="Language selection">
+      <div class="lang-switcher" role="group" aria-label="Language selection" data-i18n-aria="settings_language_aria">
         <button type="button" class="outline-button small" data-lang-btn="en" onclick="LvLI18n.applyLanguage('en')" aria-pressed="false" id="lang-btn-en">
           🇬🇧 English
         </button>
@@ -233,6 +234,11 @@
     let dragging = false;
     let startX = 0;
     let startY = 0;
+    const translateSettingsUi = (key, fallback) => {
+      const lang = window.LvLI18n && typeof window.LvLI18n.getCurrentLang === 'function' ? window.LvLI18n.getCurrentLang() : 'en';
+      const dictionary = window.LvLI18n && window.LvLI18n.TRANSLATIONS ? window.LvLI18n.TRANSLATIONS[lang] : null;
+      return (dictionary && dictionary[key]) || fallback;
+    };
     const renderTransform = () => {
       image.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${zoom.value})`;
     };
@@ -240,7 +246,7 @@
       sourceFile = input.files && input.files[0];
       if (!sourceFile) { cropper.hidden = true; return; }
       if (sourceFile.size > 5 * 1024 * 1024) {
-        input.setCustomValidity('Profile photos must be 5 MB or smaller.');
+        input.setCustomValidity(translateSettingsUi('settings_photo_size_error', 'Profile photos must be 5 MB or smaller.'));
         input.reportValidity();
         input.value = '';
         sourceFile = null;

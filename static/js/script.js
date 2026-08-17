@@ -1,4 +1,43 @@
 document.addEventListener('DOMContentLoaded', () => {
+    function translateUi(key, fallback) {
+        const lang = window.LvLI18n ? window.LvLI18n.getCurrentLang() : 'en';
+        const dictionary = window.LvLI18n && window.LvLI18n.TRANSLATIONS
+            ? window.LvLI18n.TRANSLATIONS[lang]
+            : null;
+        return dictionary && dictionary[key] !== undefined ? dictionary[key] : fallback;
+    }
+
+    function setFollowButtonState(button, following) {
+        if (!button) return;
+        const key = following ? 'profile_unfollow' : 'profile_follow';
+        let label = button.querySelector('[data-follow-label]');
+        if (!label) {
+            label = document.createElement('span');
+            label.setAttribute('data-follow-label', '');
+            button.replaceChildren(label);
+        }
+        label.setAttribute('data-i18n', key);
+        label.textContent = translateUi(key, following ? 'Unfollow' : 'Follow');
+        button.classList.toggle('active', following);
+    }
+
+    function syncFollowControls(targetId, following) {
+        document.querySelectorAll('.ajax-action-form[data-action="follow"]').forEach((followForm) => {
+            const target = followForm.querySelector('input[name="target_id"]');
+            if (!target || String(target.value) !== String(targetId)) return;
+            setFollowButtonState(followForm.querySelector('button'), following);
+        });
+    }
+
+    document.querySelectorAll('.ajax-action-form[data-action="follow"] button').forEach((button) => {
+        setFollowButtonState(button, button.classList.contains('active'));
+    });
+    document.addEventListener('lvl:langchange', () => {
+        document.querySelectorAll('.ajax-action-form[data-action="follow"] button').forEach((button) => {
+            setFollowButtonState(button, button.classList.contains('active'));
+        });
+    });
+
     initFlashMessages();
     initXpToasts();
     initGenderPreview();
@@ -222,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 const file = imageInput.files[0];
-                if (imageLabel) imageLabel.textContent = file.name || 'Image selected';
+                if (imageLabel) imageLabel.textContent = file.name || translateUi('composer_image_selected', 'Image selected');
                 if (previewUrl) {
                     URL.revokeObjectURL(previewUrl);
                     previewUrl = null;
@@ -265,17 +304,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (imageInput) imageInput.value = '';
                 imagePreviewImg.src = draftImageUrl;
                 imagePreview.hidden = false;
-                if (imageLabel) imageLabel.textContent = 'Saved image attached';
+                if (imageLabel) imageLabel.textContent = translateUi('composer_saved_image', 'Saved image attached');
             };
 
             const renderDraftPicker = () => {
                 if (!draftPicker) return;
                 const selectedId = currentDraftId();
-                draftPicker.innerHTML = '<option value="">Drafts</option>';
+                draftPicker.innerHTML = `<option value="">${translateUi('drafts_title', 'Drafts')}</option>`;
                 drafts.forEach((draft) => {
                     const option = document.createElement('option');
                     option.value = String(draft.id);
-                    const label = (draft.content || '').trim() || (draft.image_url ? 'Image draft' : 'Untitled draft');
+                    const label = (draft.content || '').trim() || (draft.image_url
+                        ? translateUi('draft_image_label', 'Image draft')
+                        : translateUi('draft_untitled_label', 'Untitled draft'));
                     option.textContent = label.length > 40 ? `${label.slice(0, 40)}...` : label;
                     draftPicker.appendChild(option);
                 });
@@ -583,22 +624,22 @@ document.addEventListener('DOMContentLoaded', () => {
                                 progressBar.style.width = '100%';
                                 progressText.textContent = '100%';
                             } else {
-                                showAppToast(res.error || 'Upload failed');
+                                showAppToast(res.error || translateUi('upload_failed', 'Upload failed'));
                                 resetUploadPreview();
                             }
                         } catch (err) {
-                            showAppToast('Upload failed');
+                            showAppToast(translateUi('upload_failed', 'Upload failed'));
                             resetUploadPreview();
                         }
                     } else {
-                        showAppToast('Upload failed');
+                        showAppToast(translateUi('upload_failed', 'Upload failed'));
                         resetUploadPreview();
                     }
                     currentUploadXhr = null;
                 });
 
                 xhr.addEventListener('error', () => {
-                    showAppToast('Upload error');
+                    showAppToast(translateUi('upload_error', 'Upload error'));
                     resetUploadPreview();
                     currentUploadXhr = null;
                 });
@@ -652,7 +693,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Wait if upload is in progress
             if (currentUploadXhr) {
-                showAppToast('Please wait for the file to finish uploading.');
+                showAppToast(translateUi('upload_wait', 'Please wait for the file to finish uploading.'));
                 return;
             }
 
@@ -682,11 +723,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         const streakEl = document.querySelector('[data-chat-streak]');
                         if (streakEl) {
                             streakEl.textContent = `🖐 ${result.streak}`;
-                            streakEl.title = `${result.streak}-day high-five streak`;
+                            streakEl.dataset.streakCount = result.streak;
+                            const streakLabel = translateUi('streak_days_high_five', 'day high-five streak');
+                            streakEl.title = `${result.streak} ${streakLabel}`;
                             streakEl.classList.toggle('streak-badge-zero', result.streak === 0);
                         }
                         if (result.streak_xp > 0) {
-                            showXpToasts([{ points: result.streak_xp, label: `🖐 ${result.streak}-day high-five streak` }]);
+                            const streakLabel = translateUi('streak_days_high_five', 'day high-five streak');
+                            showXpToasts([{ points: result.streak_xp, label: `🖐 ${result.streak} ${streakLabel}` }]);
                         }
                     }
                 } else {
@@ -694,7 +738,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch (error) {
                 console.error('Error sending message:', error);
-                showAppToast('Message did not send. Try again.');
+                showAppToast(translateUi('message_send_error', 'Message did not send. Try again.'));
             } finally {
                 unlockSubmitForm(chatForm, submitBtn);
             }
@@ -843,7 +887,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 } catch (error) {
                     console.error('Delete message error:', error);
-                    showAppToast('Failed to delete message. Try again.');
+                    showAppToast(translateUi('message_delete_error', 'Failed to delete message. Try again.'));
                 }
                 return;
             }
@@ -961,14 +1005,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 manualSteps.hidden = false;
             }
             if (message) {
-                message.textContent = 'Install LvL from your browser menu when the native install button is not available.';
+                message.dataset.i18n = 'install_manual_fallback';
+                message.textContent = translateUi('install_manual_fallback', 'Install LvL from your browser menu when the native install button is not available.');
             }
             showPrompt();
         };
 
         if (isiOS) {
             if (message) {
-                message.textContent = 'Install LvL from Safari using Share, then Add to Home Screen.';
+                message.dataset.i18n = 'install_ios_desc';
+                message.textContent = translateUi('install_ios_desc', 'Install LvL from Safari using Share, then Add to Home Screen.');
             }
             if (iosSteps) {
                 iosSteps.hidden = false;
@@ -998,7 +1044,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 actionButton.hidden = false;
             }
             if (message) {
-                message.textContent = 'Put LvL on your home screen for a faster app-like experience.';
+                message.dataset.i18n = 'install_desc';
+                message.textContent = translateUi('install_desc', 'Put LvL on your home screen for a faster app-like experience.');
             }
             showPrompt();
         });
@@ -1126,14 +1173,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         btn.classList.toggle('active', result.bookmarked);
                         btn.classList.toggle('bookmark-active', result.bookmarked);
                     } else if (action === 'follow') {
-                        btn.classList.toggle('active', result.following);
-                        btn.textContent = result.following ? 'Unfollow' : 'Follow';
+                        syncFollowControls(formData.get('target_id'), Boolean(result.following));
                     } else if (action === 'mute') {
                         btn.classList.toggle('active', result.active);
-                        btn.textContent = result.active ? 'Muted' : 'Mute';
+                        const key = result.active ? 'profile_muted' : 'profile_mute';
+                        btn.setAttribute('data-i18n', key);
+                        btn.textContent = translateUi(key, result.active ? 'Muted' : 'Mute');
                     } else if (action === 'block') {
                         btn.classList.toggle('active', result.active);
-                        btn.textContent = result.active ? 'Unblock' : 'Block';
+                        const key = result.active ? 'profile_unblock' : 'profile_block';
+                        btn.setAttribute('data-i18n', key);
+                        btn.textContent = translateUi(key, result.active ? 'Unblock' : 'Block');
                     } else if (action === 'friend') {
                         btn.classList.toggle('active', !!result.status);
                         btn.textContent = result.label || 'Add friend';
@@ -1142,7 +1192,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!result.success && result.error) showAppToast(result.error);
             } catch (error) {
                 console.error('Error performing AJAX action:', error);
-                showAppToast('Action did not finish. Try again.');
+                showAppToast(translateUi('action_failed', 'Action did not finish. Try again.'));
                 return;
             } finally {
                 delete btn.dataset.pending;
@@ -1156,12 +1206,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const url = button.dataset.copyUrl;
             try {
                 await navigator.clipboard.writeText(url);
-                button.textContent = 'Copied';
+                button.setAttribute('data-i18n', 'copied_label');
+                button.textContent = translateUi('copied_label', 'Copied');
                 window.setTimeout(() => {
-                    button.textContent = 'Copy link';
+                    button.setAttribute('data-i18n', 'post_copy_link');
+                    button.textContent = translateUi('post_copy_link', 'Copy link');
                 }, 1400);
             } catch (error) {
-                window.prompt('Copy this link', url);
+                window.prompt(translateUi('copy_prompt', 'Copy this link'), url);
             }
         });
     });
@@ -1191,7 +1243,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const delForEveryone = t.delete_for_everyone || 'Delete for everyone';
             deleteForm = `
                 <div class="message-delete-dropdown">
-                    <button type="button" class="delete-trigger-btn" aria-label="Delete options">
+                    <button type="button" class="delete-trigger-btn" aria-label="${escapeHTML(t.message_delete_options || 'Delete options')}">
                         <svg viewBox="0 0 24 24" aria-hidden="true" width="15" height="15" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12ZM8 4h3l1-1h4l1 1h3v2H8V4Z"/></svg>
                     </button>
                     <div class="delete-dropdown-menu" hidden>
@@ -1209,7 +1261,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (message.shared_post) {
             const postAuthor = message.shared_post.user || {};
             bodyHtml = `
-                <div class="shared-post-label">Shared a post:</div>
+                <div class="shared-post-label" data-i18n="messages_shared_post">${escapeHTML(t.messages_shared_post || 'Shared a post:')}</div>
                 <div class="shared-post-card">
                     <a href="/post/${escapeHTML(String(message.shared_post.id))}" class="shared-post-link">
                         <div class="shared-post-author-row">
@@ -1225,7 +1277,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (message.shared_reel) {
             const reelAuthor = message.shared_reel.user || {};
             bodyHtml = `
-                <div class="shared-post-label">Shared a reel:</div>
+                <div class="shared-post-label" data-i18n="messages_shared_clip">${escapeHTML(t.messages_shared_clip || 'Shared a clip:')}</div>
                 <div class="shared-post-card" style="position: relative; overflow: hidden; border-radius: 8px; padding: 0;">
                     <a href="/reels#reel-${escapeHTML(String(message.shared_reel.id))}" class="shared-post-link" style="display: block; position: relative; padding: 0;">
                         <div class="shared-post-author-row" style="position: absolute; top: 12px; left: 12px; z-index: 2; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.8); margin: 0;">
@@ -1321,10 +1373,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const fileInput = form.querySelector('[data-profile-photo-input]');
 
         const update = () => {
-            const displayName = `${first.value || ''} ${last.value || ''}`.trim() || 'Your name';
+            const displayName = `${first.value || ''} ${last.value || ''}`.trim() || translateUi('profile_preview_your_name', 'Your name');
             name.textContent = displayName;
-            username.textContent = `@${nick.value || 'username'}`;
-            bio.textContent = bioInput.value || 'No bio yet.';
+            username.textContent = `@${nick.value || translateUi('profile_preview_username', 'username')}`;
+            bio.textContent = bioInput.value || translateUi('profile_no_bio', 'No bio yet.');
             preview.style.setProperty('--profile-preview-color', color.value || getThemeToken('--lvl-primary'));
         };
 
@@ -1409,16 +1461,27 @@ document.addEventListener('DOMContentLoaded', () => {
             if (flash.dataset.flashReady === '1') return;
             flash.dataset.flashReady = '1';
             flash.style.setProperty('--flash-index', index);
-            flash.setAttribute('tabindex', '0');
             flash.setAttribute('role', flash.classList.contains('error') ? 'alert' : 'status');
-            flash.addEventListener('click', () => dismissFlash(flash));
-            flash.addEventListener('keydown', (event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    dismissFlash(flash);
-                }
-            });
-            window.setTimeout(() => dismissFlash(flash), 4800 + index * 150);
+
+            const messageText = document.createElement('span');
+            messageText.className = 'flash-message-text';
+            while (flash.firstChild) messageText.appendChild(flash.firstChild);
+            flash.appendChild(messageText);
+
+            const closeButton = document.createElement('button');
+            closeButton.type = 'button';
+            closeButton.className = 'flash-close-button';
+            closeButton.textContent = '×';
+            closeButton.setAttribute('aria-label', translateUi('flash_close', 'Close message'));
+            closeButton.setAttribute('title', translateUi('flash_close', 'Close message'));
+            closeButton.dataset.i18nAria = 'flash_close';
+            closeButton.dataset.i18nTitle = 'flash_close';
+            closeButton.addEventListener('click', () => dismissFlash(flash));
+            flash.appendChild(closeButton);
+
+            if (!flash.classList.contains('error') && !flash.classList.contains('warning')) {
+                window.setTimeout(() => dismissFlash(flash), 8000 + index * 200);
+            }
         });
     }
 
@@ -1445,6 +1508,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 displayMessage = 'Action failed. Please try again.';
             }
         }
+        const originalDisplayMessage = displayMessage;
+        if (window.LvLI18n && typeof window.LvLI18n.translateServerMessage === 'function') {
+            displayMessage = window.LvLI18n.translateServerMessage(originalDisplayMessage, window.LvLI18n.getCurrentLang());
+        }
 
         const duplicate = Array.from(document.querySelectorAll('.app-toast')).find((flash) => (
             flash.textContent.trim().includes(displayMessage)
@@ -1458,6 +1525,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const flash = document.createElement('div');
         flash.className = `flash ${category} app-toast`;
+        flash.dataset.serverMessage = '';
+        flash.dataset.serverMessageOriginal = originalDisplayMessage;
         
         let icon = 'ℹ️';
         if (category === 'success') icon = '✅';
@@ -1483,19 +1552,19 @@ document.addEventListener('DOMContentLoaded', () => {
         let notificationFeedRefreshing = false;
 
         const notificationCopy = {
-            like: ['❤️', 'liked your post', 'Open post'],
-            reel_like: ['❤️', 'liked your reel', 'Open clip'],
-            repost: ['🔁', 'reposted your post', 'Open post'],
-            comment: ['💬', 'commented on your post', 'Open post'],
-            comment_reply: ['💬', 'replied to your comment', 'Open post'],
-            comment_like: ['❤️', 'liked your comment', 'Open post'],
-            comment_repost: ['🔁', 'reposted your comment', 'Open post'],
-            reel_comment: ['💬', 'commented on your reel', 'Open clip'],
-            follow: ['👤', 'followed you', 'View profile'],
-            friend_request: ['🤝', 'sent you a friend request', 'View profile'],
-            friend_accept: ['✓', 'accepted your friend request', 'View profile'],
-            message: ['✉️', 'sent you a message', 'Open message'],
-            high_five: ['🖐', 'high-fived you', 'View profile'],
+            like: ['❤️', 'notif_like', 'notif_open_post'],
+            reel_like: ['❤️', 'notif_reel_like', 'notif_open_clip'],
+            repost: ['🔁', 'notif_repost', 'notif_open_post'],
+            comment: ['💬', 'notif_comment', 'notif_open_post'],
+            comment_reply: ['💬', 'notif_comment_reply', 'notif_open_post'],
+            comment_like: ['❤️', 'notif_comment_like', 'notif_open_post'],
+            comment_repost: ['🔁', 'notif_comment_repost', 'notif_open_post'],
+            reel_comment: ['💬', 'notif_reel_comment', 'notif_open_clip'],
+            follow: ['👤', 'notif_follow', 'notif_open_profile'],
+            friend_request: ['🤝', 'notif_friend_request', 'notif_open_profile'],
+            friend_accept: ['✓', 'notif_friend_accept', 'notif_open_profile'],
+            message: ['✉️', 'notif_message', 'notif_open_message'],
+            high_five: ['🖐', 'notif_high_five', 'notif_open_profile'],
         };
 
         function parseEventId(value, fallback = null) {
@@ -1514,7 +1583,8 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll(`[data-live-badge="${name}"]`).forEach((badge) => {
                 badge.hidden = safeCount <= 0;
                 badge.textContent = formatCount(safeCount);
-                badge.setAttribute('aria-label', `${safeCount} unread ${name}`);
+                const unreadKey = name === 'messages' ? 'unread_messages' : (name === 'notifications' ? 'unread_notifications' : 'unread_more');
+                badge.setAttribute('aria-label', `${safeCount} ${translateUi(unreadKey, `unread ${name}`)}`);
             });
         };
 
@@ -1528,9 +1598,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const notificationTime = (value) => {
             const created = new Date(value);
-            if (Number.isNaN(created.getTime())) return 'just now';
+            if (Number.isNaN(created.getTime())) return translateUi('notif_just_now', 'just now');
             const seconds = Math.max(0, Math.floor((Date.now() - created.getTime()) / 1000));
-            if (seconds < 60) return 'just now';
+            if (seconds < 60) return translateUi('notif_just_now', 'just now');
             const minutes = Math.floor(seconds / 60);
             if (minutes < 60) return `${minutes}m`;
             const hours = Math.floor(minutes / 60);
@@ -1539,9 +1609,9 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const renderNotificationItem = (notification) => {
-            const info = notificationCopy[notification.type] || ['ℹ️', notification.type || 'sent an update', 'Open'];
+            const info = notificationCopy[notification.type] || ['ℹ️', 'notif_update', 'open_btn'];
             const actorUsername = notification.actor_username || '';
-            const actorName = notification.actor_summary || notification.actor_name || 'Someone';
+            const actorName = notification.actor_summary || notification.actor_name || translateUi('notif_someone', 'Someone');
             const actionUrl = notificationUrl(notification);
             const article = document.createElement('article');
             article.className = `notification-item ${notification.is_read ? '' : 'unread'} new-notification`.trim();
@@ -1553,10 +1623,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         <a href="${actorUsername ? `/profile/${encodeURIComponent(actorUsername)}` : '#'}" class="actor-link">
                             <strong>${escapeHTML(actorName)}</strong>
                         </a>
-                        <span class="notification-text">${escapeHTML(info[1])}</span>
+                        <span class="notification-text">${escapeHTML(translateUi(info[1], notification.type || 'sent an update'))}</span>
                         <span class="time">· ${escapeHTML(notificationTime(notification.created_at))}</span>
                     </div>
-                    ${actionUrl ? `<a href="${escapeHTML(actionUrl)}" class="notification-action">${escapeHTML(info[2])}</a>` : ''}
+                    ${actionUrl ? `<a href="${escapeHTML(actionUrl)}" class="notification-action">${escapeHTML(translateUi(info[2], 'Open'))}</a>` : ''}
                 </div>
             `;
             return article;
@@ -1805,9 +1875,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const updateMuteControl = (button, label, muted) => {
             if (!button) return;
-            if (label) label.textContent = muted ? 'Muted' : 'Sound on';
+            const labelKey = muted ? 'reel_muted' : 'reel_sound_on';
+            const ariaKey = muted ? 'reel_unmute_aria' : 'reel_mute_aria';
+            if (label) {
+                label.dataset.i18n = labelKey;
+                label.textContent = translateUi(labelKey, muted ? 'Muted' : 'Sound on');
+            }
             button.classList.toggle('active', !muted);
-            button.setAttribute('aria-label', muted ? 'Unmute clips' : 'Mute clips');
+            button.dataset.i18nAria = ariaKey;
+            button.setAttribute('aria-label', translateUi(ariaKey, muted ? 'Unmute clips' : 'Mute clips'));
         };
 
         const applySoundPreference = (card) => {
@@ -1835,7 +1911,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const video = card.querySelector('[data-reel-video]');
             const label = card.querySelector('[data-reel-play-icon]');
             if (!video || !label) return;
-            label.textContent = video.paused ? 'Play' : 'Pause';
+            const labelKey = video.paused ? 'reel_play' : 'reel_pause';
+            label.dataset.i18n = labelKey;
+            label.textContent = translateUi(labelKey, video.paused ? 'Play' : 'Pause');
             card.classList.toggle('is-paused', video.paused);
         };
 
@@ -2076,7 +2154,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             showXpToasts(result.xp_toasts || []);
                         } catch (error) {
                             console.error('Could not post reel comment:', error);
-                            showAppToast('Comment did not post. Try again.');
+                            showAppToast(translateUi('comment_post_error', 'Comment did not post. Try again.'));
                         } finally {
                             unlockSubmitForm(commentForm, submitBtn);
                         }
@@ -2106,7 +2184,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     showXpToasts(result.xp_toasts || []);
                 } catch (error) {
                     console.error('Could not like reel:', error);
-                    showAppToast('Action did not finish. Try again.');
+                    showAppToast(translateUi('action_failed', 'Action did not finish. Try again.'));
                 } finally {
                     if (btn) { delete btn.dataset.pending; btn.disabled = false; }
                 }
@@ -2155,27 +2233,27 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!listEl) return;
         const url = toggleBtn.dataset.commentsUrl;
         if (!url) {
-            listEl.innerHTML = '<p class="reel-comment-empty">Comments not available.</p>';
+            listEl.innerHTML = `<p class="reel-comment-empty">${escapeHTML(translateUi('reel_comments_unavailable', 'Comments are not available.'))}</p>`;
             return;
         }
-        listEl.innerHTML = '<p class="reel-comment-empty">Loading…</p>';
+        listEl.innerHTML = `<p class="reel-comment-empty">${escapeHTML(translateUi('reel_loading_comments', 'Loading comments…'))}</p>`;
         try {
             const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
             const result = await response.json();
             listEl.innerHTML = '';
             if (!result.success) {
-                listEl.innerHTML = `<p class="reel-comment-empty">${escapeHTML(result.error || 'Could not load comments.')}</p>`;
+                listEl.innerHTML = `<p class="reel-comment-empty">${escapeHTML(result.error || translateUi('reel_comments_load_error', 'Could not load comments.'))}</p>`;
                 return;
             }
             if (!result.comments || result.comments.length === 0) {
-                listEl.innerHTML = '<p class="reel-comment-empty">No comments yet. Be the first!</p>';
+                listEl.innerHTML = `<p class="reel-comment-empty">${escapeHTML(translateUi('reel_comments_empty', 'No comments yet. Be the first!'))}</p>`;
                 return;
             }
             result.comments.forEach((comment) => appendReelComment(panel, comment, false));
             listEl.scrollTop = listEl.scrollHeight;
         } catch (error) {
             console.error('Could not load reel comments:', error);
-            listEl.innerHTML = '<p class="reel-comment-empty">Could not load comments.</p>';
+            listEl.innerHTML = `<p class="reel-comment-empty">${escapeHTML(translateUi('reel_comments_load_error', 'Could not load comments.'))}</p>`;
         }
     }
 
@@ -2216,12 +2294,12 @@ document.addEventListener('DOMContentLoaded', () => {
             modal.className = 'avatar-modal';
             modal.setAttribute('role', 'dialog');
             modal.setAttribute('aria-modal', 'true');
-            modal.setAttribute('aria-label', 'Profile picture');
+            modal.setAttribute('aria-label', translateUi('profile_picture', 'Profile picture'));
             modal.innerHTML = `
-                <button class="avatar-modal-close" aria-label="Close">
+                <button class="avatar-modal-close" aria-label="${escapeHTML(translateUi('nav_close', 'Close'))}">
                     <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
                 </button>
-                <img src="${escapeHTML(img.src)}" alt="Profile picture">
+                <img src="${escapeHTML(img.src)}" alt="${escapeHTML(translateUi('profile_picture', 'Profile picture'))}">
             `;
             document.body.appendChild(modal);
             window.requestAnimationFrame(() => modal.classList.add('is-open'));
@@ -2268,8 +2346,10 @@ document.addEventListener('DOMContentLoaded', () => {
         let previewUrl = null;
         const defaultSubmitText = submit ? submit.textContent : '';
 
-        const setMessage = (text, isError = false) => {
+        const setMessage = (text, isError = false, i18nKey = '') => {
             if (!message) return;
+            if (i18nKey) message.dataset.i18n = i18nKey;
+            else delete message.dataset.i18n;
             message.textContent = text || '';
             message.classList.toggle('error', isError);
         };
@@ -2286,19 +2366,25 @@ document.addEventListener('DOMContentLoaded', () => {
             const file = input && input.files ? input.files[0] : null;
             if (!file) {
                 if (submit) submit.disabled = true;
-                if (label) label.textContent = 'Choose video';
+                if (label) {
+                    label.dataset.i18n = 'reel_choose_video';
+                    label.textContent = translateUi('reel_choose_video', 'Choose video');
+                }
                 setMessage('');
                 return;
             }
-            if (label) label.textContent = file.name || 'Video selected';
+            if (label) {
+                delete label.dataset.i18n;
+                label.textContent = file.name || translateUi('reel_video_selected', 'Video selected');
+            }
             if (maxBytes && file.size > maxBytes) {
                 if (submit) submit.disabled = true;
-                setMessage('This video is larger than the configured upload limit.', true);
+                setMessage(translateUi('reel_video_too_large', 'This video is larger than the configured upload limit.'), true, 'reel_video_too_large');
                 return;
             }
             if (file.type && !allowedTypes.has(file.type)) {
                 if (submit) submit.disabled = true;
-                setMessage('Choose an MP4, WebM, MOV, or M4V video.', true);
+                setMessage(translateUi('reel_video_type_error', 'Choose an MP4, WebM, MOV, or M4V video.'), true, 'reel_video_type_error');
                 return;
             }
             previewUrl = URL.createObjectURL(file);
@@ -2308,7 +2394,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (preview) preview.hidden = false;
             if (submit) submit.disabled = false;
-            setMessage('Ready to upload.');
+            setMessage(translateUi('reel_ready_upload', 'Ready to upload.'), false, 'reel_ready_upload');
         };
 
         if (input) input.addEventListener('change', validateVideo);
@@ -2522,7 +2608,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 muteBtn.addEventListener('click', () => {
                     vid.muted = !vid.muted;
                     muteBtn.classList.toggle('active', !vid.muted);
-                    muteBtn.setAttribute('aria-label', vid.muted ? 'Unmute' : 'Mute');
+                    const muteKey = vid.muted ? 'home_unmute_aria' : 'home_mute_aria';
+                    muteBtn.dataset.i18nAria = muteKey;
+                    muteBtn.setAttribute('aria-label', translateUi(muteKey, vid.muted ? 'Unmute' : 'Mute'));
                 });
             }
         });
@@ -2582,7 +2670,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (date > today) {
                     e.preventDefault();
-                    showAppToast('Birthday cannot be in the future.');
+                    showAppToast(translateUi('birthday_future_error', 'Birthday cannot be in the future.'));
                     return;
                 }
 
@@ -2594,13 +2682,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (age < 14) {
                     e.preventDefault();
-                    showAppToast('You must be at least 14 years old to use LvL.');
+                    showAppToast(translateUi('birthday_min_age_error', 'You must be at least 14 years old to use LvL.'));
                     return;
                 }
 
                 if (age > 120 || date.getFullYear() < 1900) {
                     e.preventDefault();
-                    showAppToast('Please enter a realistic birthday.');
+                    showAppToast(translateUi('birthday_realistic_error', 'Please enter a realistic birthday.'));
                     return;
                 }
             });
@@ -2618,6 +2706,15 @@ function initRichReplies() {
     const status = form.querySelector('[data-reply-media-status]');
     const commentsFeed = document.querySelector('[data-comments-feed]');
     const countLabel = document.querySelector('[data-reply-count]');
+    const translateReplyUi = (key, fallback) => {
+        const lang = window.LvLI18n && typeof window.LvLI18n.getCurrentLang === 'function'
+            ? window.LvLI18n.getCurrentLang()
+            : 'en';
+        const dictionary = window.LvLI18n && window.LvLI18n.TRANSLATIONS
+            ? window.LvLI18n.TRANSLATIONS[lang]
+            : null;
+        return (dictionary && dictionary[key]) || fallback;
+    };
 
     const toggle = (buttonSelector, panelSelector) => {
         const button = form.querySelector(buttonSelector);
@@ -2635,10 +2732,10 @@ function initRichReplies() {
     }));
     form.querySelectorAll('[data-select-sticker]').forEach((button) => button.addEventListener('click', () => {
         stickerInput.value = button.dataset.selectSticker;
-        status.textContent = `Sticker selected: ${button.dataset.selectSticker}`;
+        status.textContent = `${translateReplyUi('reply_sticker_selected', 'Sticker selected:')} ${button.dataset.selectSticker}`;
     }));
     if (imageInput) imageInput.addEventListener('change', () => {
-        status.textContent = imageInput.files[0] ? `Photo selected: ${imageInput.files[0].name}` : '';
+        status.textContent = imageInput.files[0] ? `${translateReplyUi('reply_photo_selected', 'Photo selected:')} ${imageInput.files[0].name}` : '';
     });
 
     document.addEventListener('click', (event) => {
@@ -2676,7 +2773,7 @@ function initRichReplies() {
                 if (count) count.textContent = result.count || '0';
             } catch (error) {
                 console.error(error);
-                showAppToast('Action failed.');
+                showAppToast(translateReplyUi('action_failed', 'Action failed.'));
             } finally {
                 delete button.dataset.pending;
                 button.disabled = false;
@@ -2695,7 +2792,7 @@ function initRichReplies() {
         try {
             const response = await fetch(form.action, { method: 'POST', body: data });
             const result = await response.json();
-            if (!result.success) { showAppToast(result.error || 'Reply could not be posted.'); return; }
+            if (!result.success) { showAppToast(result.error || translateReplyUi('reply_post_error', 'Reply could not be posted.')); return; }
             const wrapper = document.createElement('div');
             wrapper.innerHTML = result.html.trim();
             const card = wrapper.firstElementChild;
@@ -2703,7 +2800,7 @@ function initRichReplies() {
             commentsFeed.appendChild(card);
             bindInsertedActions(card);
             const total = commentsFeed.querySelectorAll('[data-comment-id]').length;
-            countLabel.textContent = `${total} ${total === 1 ? 'reply' : 'replies'}`;
+            countLabel.textContent = `${total} ${translateReplyUi(total === 1 ? 'reply_singular' : 'reply_plural', total === 1 ? 'reply' : 'replies')}`;
             form.reset();
             parentInput.value = '';
             status.textContent = '';
@@ -2711,7 +2808,7 @@ function initRichReplies() {
             card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         } catch (error) {
             console.error(error);
-            showAppToast('Reply could not be posted.');
+            showAppToast(translateReplyUi('reply_post_error', 'Reply could not be posted.'));
         } finally {
             delete submit.dataset.pending;
             submit.disabled = false;

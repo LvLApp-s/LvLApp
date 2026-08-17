@@ -7,7 +7,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <title>{{ title }} - LvL</title>
+  <title{% if title_i18n %} data-i18n-document="{{ title_i18n }}"{% endif %}>{{ title }} - LvL</title>
   <link rel="manifest" href="{{ static_asset('manifest.json') }}">
   <link rel="icon" href="{{ static_asset('assets/icon-192.png') }}" sizes="192x192" type="image/png">
   <link rel="icon" href="{{ static_asset('assets/icon-512.png') }}" sizes="512x512" type="image/png">
@@ -26,7 +26,7 @@
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
     {% for category, message in messages %}
-      <div class="flash {{ category }}" role="status">{{ message }}</div>
+      <div class="flash {{ category }}" role="status" data-server-message>{{ message }}</div>
     {% endfor %}
   {% endif %}
 {% endwith %}
@@ -36,51 +36,51 @@
   <div class="left-rail-wrapper">
     <aside class="left-rail menu-open">
       <div class="sidebar-top desktop-only">
-        <a class="brand brand-logo" href="{{ url_for('index') }}" aria-label="LvL home">
+        <a class="brand brand-logo" href="{{ url_for('index') }}" aria-label="LvL home" data-i18n-aria="brand_home_aria">
           <img src="{{ static_asset('assets/icon-192.png') }}" alt="" aria-hidden="true">
           <span class="brand-text">LvL</span>
         </a>
       </div>
-      <nav class="nav-list" aria-label="Primary">
-        <a class="{% if active_page == 'home' %}active{% endif %}" href="{{ url_for('index') }}" aria-label="Home" title="Home">
+      <nav class="nav-list" aria-label="Primary" data-i18n-aria="nav_primary_aria">
+        <a class="{% if active_page == 'home' %}active{% endif %}" href="{{ url_for('index') }}" aria-label="Home" title="Home" data-i18n-aria="nav_home" data-i18n-title="nav_home">
           <span class="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3V10.5Zm2 1V19h2v-6h10v6h2v-7.5l-7-5.83-7 5.83Z"/></svg>
           </span>
           <span class="nav-label" data-i18n="nav_home">Home</span>
         </a>
-        <a class="{% if active_page == 'reels' %}active{% endif %}" href="{{ url_for('reels') }}" aria-label="Clips" title="Clips">
+        <a class="{% if active_page == 'reels' %}active{% endif %}" href="{{ url_for('reels') }}" aria-label="Clips" title="Clips" data-i18n-aria="nav_clips" data-i18n-title="nav_clips">
           <span class="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M5 3.5h14A2.5 2.5 0 0 1 21.5 6v12a2.5 2.5 0 0 1-2.5 2.5H5A2.5 2.5 0 0 1 2.5 18V6A2.5 2.5 0 0 1 5 3.5Zm0 2A.5.5 0 0 0 4.5 6v12a.5.5 0 0 0 .5.5h14a.5.5 0 0 0 .5-.5V6a.5.5 0 0 0-.5-.5H5Zm4.5 3.1 6 3.4-6 3.4V8.6Z"/></svg>
           </span>
           <span class="nav-label" data-i18n="nav_clips">Clips</span>
         </a>
-        <a class="{% if active_page == 'community' %}active{% endif %}" href="{{ url_for('community') }}" aria-label="Community" title="Community">
+        <a class="{% if active_page == 'community' %}active{% endif %}" href="{{ url_for('community') }}" aria-label="Community" title="Community" data-i18n-aria="nav_community" data-i18n-title="nav_community">
           <span class="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M7.5 11a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Zm9 0a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7ZM2 20c.38-3.35 2.63-6 5.5-6s5.12 2.65 5.5 6H2Zm9.75 0c.24-1.86 1.06-3.48 2.25-4.6.72-.88 1.57-1.4 2.5-1.4 2.87 0 5.12 2.65 5.5 6H11.75Z"/></svg>
           </span>
           <span class="nav-label" data-i18n="nav_community">Community</span>
         </a>
-        <a class="{% if active_page == 'messages' %}active{% endif %}" href="{{ url_for('messages') }}" aria-label="Messages" title="Messages">
+        <a class="{% if active_page == 'messages' %}active{% endif %}" href="{{ url_for('messages') }}" aria-label="Messages" title="Messages" data-i18n-aria="nav_messages" data-i18n-title="nav_messages">
           <span class="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M4 4h16v12H7.8L4 19.35V4Zm2 2v8.93L7.04 14H18V6H6Z"/></svg>
           </span>
           <span class="nav-label" data-i18n="nav_messages">Messages</span>
           <span class="nav-badge" data-live-badge="messages" aria-label="{{ unread_message_count }} unread messages" {% if unread_message_count <= 0 %}hidden{% endif %}>{{ unread_message_count if unread_message_count < 100 else '99+' }}</span>
         </a>
-        <a class="{% if active_page == 'notifications' %}active{% endif %}" href="{{ url_for('notifications') }}" aria-label="Alerts" title="Alerts">
+        <a class="{% if active_page == 'notifications' %}active{% endif %}" href="{{ url_for('notifications') }}" aria-label="Alerts" title="Alerts" data-i18n-aria="nav_alerts" data-i18n-title="nav_alerts">
           <span class="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 22a2.75 2.75 0 0 0 2.58-1.8H9.42A2.75 2.75 0 0 0 12 22Zm7-6V11a7 7 0 1 0-14 0v5l-2 2v1h18v-1l-2-2Zm-2 .2.8.8H6.2l.8-.8V11a5 5 0 1 1 10 0v5.2Z"/></svg>
           </span>
           <span class="nav-label" data-i18n="nav_alerts">Alerts</span>
           <span class="nav-badge" data-live-badge="notifications" aria-label="{{ unread_notification_count }} unread notifications" {% if unread_notification_count <= 0 %}hidden{% endif %}>{{ unread_notification_count if unread_notification_count < 100 else '99+' }}</span>
         </a>
-        <a class="{% if active_page == 'level_guide' %}active{% endif %}" href="{{ url_for('level_guide') }}" aria-label="LvL Guide" title="LvL Guide">
+        <a class="{% if active_page == 'level_guide' %}active{% endif %}" href="{{ url_for('level_guide') }}" aria-label="LvL Guide" title="LvL Guide" data-i18n-aria="nav_guide" data-i18n-title="nav_guide">
           <span class="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M5 4h14v3h-2v13H7V7H5V4Zm4 3v11h6V7H9Zm1.25 2h3.5v2h-3.5V9Zm0 3h3.5v2h-3.5v-2Z"/></svg>
           </span>
           <span class="nav-label" data-i18n="nav_guide">LvL Guide</span>
         </a>
-        <a class="{% if active_page == 'settings' %}active{% endif %}" href="{{ url_for('settings') }}" aria-label="Settings" title="Settings">
+        <a class="{% if active_page == 'settings' %}active{% endif %}" href="{{ url_for('settings') }}" aria-label="Settings" title="Settings" data-i18n-aria="nav_settings" data-i18n-title="nav_settings">
           <span class="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M19.43 12.98c.04-.32.07-.65.07-.98s-.02-.66-.07-.98l2.11-1.65-2-3.46-2.49 1a7.22 7.22 0 0 0-1.69-.98L15 3h-4l-.36 2.93c-.6.23-1.17.56-1.69.98l-2.49-1-2 3.46 2.11 1.65c-.04.32-.07.65-.07.98s.02.66.07.98l-2.11 1.65 2 3.46 2.49-1c.52.4 1.09.74 1.69.98L11 21h4l.36-2.93c.6-.23 1.17-.56 1.69-.98l2.49 1 2-3.46-2.11-1.65ZM13 15.5A3.5 3.5 0 1 1 13 8a3.5 3.5 0 0 1 0 7.5Z"/></svg>
           </span>
@@ -100,25 +100,25 @@
   </div>
   <main class="timeline timeline-{{ active_page }}">
     <div class="mobile-header">
-      <a class="mobile-brand mobile-brand-logo-only" href="{{ url_for('index') }}" aria-label="Home">
+      <a class="mobile-brand mobile-brand-logo-only" href="{{ url_for('index') }}" aria-label="Home" data-i18n-aria="nav_home">
         <img src="{{ static_asset('assets/icon-192.png') }}" alt="LvL">
       </a>
       <form class="mobile-header-search" action="{{ url_for('search') }}" method="get" role="search">
-        <label class="sr-only" for="mobile-global-search-input">Search LvL</label>
+        <label class="sr-only" for="mobile-global-search-input" data-i18n="search_placeholder">Search LvL</label>
         <span aria-hidden="true">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M10.25 4a6.25 6.25 0 1 0 0 12.5 6.25 6.25 0 0 0 0-12.5ZM2 10.25a8.25 8.25 0 1 1 14.59 5.28l4.44 4.44-1.41 1.41-4.44-4.44A8.25 8.25 0 0 1 2 10.25Z"/></svg>
         </span>
         <input id="mobile-global-search-input" type="search" name="q" value="{{ request.args.get('q', '') }}" placeholder="Search" data-i18n-placeholder="search_placeholder">
       </form>
     </div>
-    <header class="app-topbar {% if active_page == 'home' %}topbar-search-only{% endif %}" aria-label="Page tools">
+    <header class="app-topbar {% if active_page == 'home' %}topbar-search-only{% endif %}" aria-label="Page tools" data-i18n-aria="nav_page_tools_aria">
       {% if active_page != 'home' %}
-        <button class="topbar-back-button" type="button" data-web-back aria-label="Go back" title="Back">
+        <button class="topbar-back-button" type="button" data-web-back aria-label="Go back" title="Back" data-i18n-aria="back" data-i18n-title="back">
           <svg viewBox="0 0 24 24" aria-hidden="true" width="22" height="22" fill="currentColor"><path d="M20 11v2H7.83l5.59 5.59L12 20 4 12l8-8 1.42 1.41L7.83 11H20Z"/></svg>
         </button>
       {% endif %}
       <form class="topbar-search" action="{{ url_for('search') }}" method="get" role="search">
-        <label class="sr-only" for="global-search-input">Search LvL</label>
+        <label class="sr-only" for="global-search-input" data-i18n="search_placeholder">Search LvL</label>
         <span aria-hidden="true">
           <svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M10.25 4a6.25 6.25 0 1 0 0 12.5 6.25 6.25 0 0 0 0-12.5ZM2 10.25a8.25 8.25 0 1 1 14.59 5.28l4.44 4.44-1.41 1.41-4.44-4.44A8.25 8.25 0 0 1 2 10.25Z"/></svg>
         </span>
@@ -139,34 +139,36 @@
          <h2 data-i18n="leaderboard_title">Leaderboard</h2>
          {% if highlights %}
 
-            <div class="custom-scrollbar highlight-scroll-wrap">
+            <div class="custom-scrollbar highlight-scroll-wrap leaderboard-list" role="list">
             {% for h in highlights %}
-              <div class="mini-profile community-highlight-row highlight-item-row">
-                <a href="{{ url_for('profile', username=h.username) }}" class="highlight-item-link">
-                  <img class="avatar small-avatar community-highlight-avatar highlight-item-avatar" src="{{ h.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" />
-                  <div class="community-highlight-row-body highlight-item-body">
-                    <strong class="highlight-item-name">
+              <article class="community-highlight-row highlight-item-row leaderboard-row" role="listitem">
+                <span class="leaderboard-rank" aria-label="Rank {{ loop.index }}">{{ loop.index }}</span>
+                <a href="{{ url_for('profile', username=h.username) }}" class="highlight-item-link leaderboard-person">
+                  <img class="avatar small-avatar community-highlight-avatar highlight-item-avatar leaderboard-avatar" src="{{ h.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="{{ h.display_name }}" loading="lazy" />
+                  <div class="community-highlight-row-body highlight-item-body leaderboard-identity">
+                    <strong class="highlight-item-name leaderboard-name">
                      {{ h.display_name }}
                       {% if h.username in ['ikasfood', 'lvl'] or h.is_profile_verified %}
-                       <svg title="Official Account" viewBox="0 0 24 24" width="1.1em" height="1.1em" style="vertical-align: -0.2em; filter: drop-shadow(0 1px 3px rgba(0, 240, 255, 0.3));"><path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.918-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.337 2.25c-.416-.165-.866-.25-1.336-.25-2.21 0-3.918 1.79-3.918 4 0 .495.084.965.238 1.4-1.273.65-2.148 2.02-2.148 3.6 0 1.46.758 2.75 1.875 3.45-.045.247-.074.5-.074.76 0 2.21 1.71 3.998 3.918 3.998.47 0 .92-.084 1.336-.25C9.182 21.585 10.49 22.5 12 22.5s2.816-.917 3.337-2.25c.416.165.866.25 1.336.25 2.21 0 3.918-1.79 3.918-4 0-.26-.028-.513-.074-.76 1.116-.7 1.875-1.99 1.875-3.45z" fill="var(--lvl-cyan)"/><path d="M10.153 16.52l-3.385-3.385 1.31-1.31 2.075 2.076 5.672-5.672 1.31 1.31-6.982 6.98z" fill="var(--lvl-white)"/></svg>
+                       <svg title="Official account" data-i18n-title="official_account" viewBox="0 0 24 24" width="1.1em" height="1.1em" aria-label="Official account" data-i18n-aria="official_account"><path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.918-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.337 2.25c-.416-.165-.866-.25-1.336-.25-2.21 0-3.918 1.79-3.918 4 0 .495.084.965.238 1.4-1.273.65-2.148 2.02-2.148 3.6 0 1.46.758 2.75 1.875 3.45-.045.247-.074.5-.074.76 0 2.21 1.71 3.998 3.918 3.998.47 0 .92-.084 1.336-.25C9.182 21.585 10.49 22.5 12 22.5s2.816-.917 3.337-2.25c.416.165.866.25 1.336.25 2.21 0 3.918-1.79 3.918-4 0-.26-.028-.513-.074-.76 1.116-.7 1.875-1.99 1.875-3.45z" fill="var(--lvl-cyan)"/><path d="M10.153 16.52l-3.385-3.385 1.31-1.31 2.075 2.076 5.672-5.672 1.31 1.31-6.982 6.98z" fill="var(--lvl-white)"/></svg>
                      {% endif %}
                    </strong>
-                    <div class="highlight-item-meta">
-                      <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; color: var(--text-secondary);">@{{ h.username }}</span>
-                      <span class="level-badge community-level-badge" style="--badge-color: {{ h.badge_color or theme_colors.muted }};" title="{{ level_title(h.level or 1) }}">LvL {{ h.level or 1 }}</span>
-                    </div>
+                    <span class="leaderboard-handle">@{{ h.username }}</span>
                   </div>
                 </a>
+                <div class="leaderboard-actions">
+                  {% set highlight_level_title = level_title(h.level or 1) %}
+                  <span class="level-badge community-level-badge" style="--badge-color: {{ h.badge_color or theme_colors.muted }};" title="{{ highlight_level_title }}" data-i18n-title="level_title_{{ highlight_level_title|lower|replace(' ', '_') }}">LvL {{ h.level or 1 }}</span>
                 {% if session.get('user_id') and session.get('user_id') != h.id %}
-                <form action="{{ url_for('toggle_follow') }}" method="post" class="ajax-action-form" data-action="follow" style="margin-left: auto; flex-shrink: 0;">
+                <form action="{{ url_for('toggle_follow') }}" method="post" class="ajax-action-form leaderboard-follow-form" data-action="follow">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <input type="hidden" name="target_id" value="{{ h.id }}">
                   <button class="follow-chip {% if h.is_following %}active{% endif %}" type="submit">
-                    {% if h.is_following %}<span data-i18n="profile_unfollow">Unfollow</span>{% else %}<span data-i18n="profile_follow">Follow</span>{% endif %}
+                    {% if h.is_following %}<span data-follow-label data-i18n="profile_unfollow">Unfollow</span>{% else %}<span data-follow-label data-i18n="profile_follow">Follow</span>{% endif %}
                   </button>
                 </form>
                 {% endif %}
-              </div>
+                </div>
+              </article>
             {% endfor %}
             </div>
           {% else %}
@@ -225,30 +227,30 @@
     {% endif %}
   </div>
 </div>
-<nav class="mobile-bottom-nav" aria-label="Mobile primary">
-  <a class="{% if active_page == 'home' %}active{% endif %}" href="{{ url_for('index') }}" aria-label="Home">
+<nav class="mobile-bottom-nav" aria-label="Mobile primary" data-i18n-aria="nav_mobile_primary_aria">
+  <a class="{% if active_page == 'home' %}active{% endif %}" href="{{ url_for('index') }}" aria-label="Home" data-i18n-aria="nav_home">
     <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3V10.5Zm2 1V19h2v-6h10v6h2v-7.5l-7-5.83-7 5.83Z"/></svg>
-    <span class="mobile-nav-label sr-only">Home</span>
+    <span class="mobile-nav-label sr-only" data-i18n="nav_home">Home</span>
   </a>
-  <a class="{% if active_page == 'community' %}active{% endif %}" href="{{ url_for('community') }}" aria-label="Community">
+  <a class="{% if active_page == 'community' %}active{% endif %}" href="{{ url_for('community') }}" aria-label="Community" data-i18n-aria="nav_community">
     <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M7.5 11a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Zm9 0a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7ZM2 20c.38-3.35 2.63-6 5.5-6s5.12 2.65 5.5 6H2Zm9.75 0c.24-1.86 1.06-3.48 2.25-4.6.72-.88 1.57-1.4 2.5-1.4 2.87 0 5.12 2.65 5.5 6H11.75Z"/></svg>
-    <span class="mobile-nav-label sr-only">Community</span>
+    <span class="mobile-nav-label sr-only" data-i18n="nav_community">Community</span>
   </a>
   {% set mobile_create_href = url_for('reel_upload') if active_page == 'reels' else url_for('index', compose=1) %}
   {% set mobile_create_label = 'Upload clip' if active_page == 'reels' else 'Create post' %}
-  <a class="mobile-compose-action {% if active_page == 'reels' %}mobile-reel-upload-action{% endif %}" href="{{ mobile_create_href }}" aria-label="{{ mobile_create_label }}">+</a>
-  <a class="{% if active_page == 'reels' %}active{% endif %}" href="{{ url_for('reels') }}" aria-label="Clips">
+  <a class="mobile-compose-action {% if active_page == 'reels' %}mobile-reel-upload-action{% endif %}" href="{{ mobile_create_href }}" aria-label="{{ mobile_create_label }}" data-i18n-aria="{{ 'reel_upload_clip' if active_page == 'reels' else 'mobile_create_post' }}">+</a>
+  <a class="{% if active_page == 'reels' %}active{% endif %}" href="{{ url_for('reels') }}" aria-label="Clips" data-i18n-aria="nav_clips">
     <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M5 3.5h14A2.5 2.5 0 0 1 21.5 6v12a2.5 2.5 0 0 1-2.5 2.5H5A2.5 2.5 0 0 1 2.5 18V6A2.5 2.5 0 0 1 5 3.5Zm0 2A.5.5 0 0 0 4.5 6v12a.5.5 0 0 0 .5.5h14a.5.5 0 0 0 .5-.5V6a.5.5 0 0 0-.5-.5H5Zm4.5 3.1 6 3.4-6 3.4V8.6Z"/></svg>
-    <span class="mobile-nav-label sr-only">Clips</span>
+    <span class="mobile-nav-label sr-only" data-i18n="nav_clips">Clips</span>
   </a>
-  <a class="{% if active_page in ['profile', 'settings', 'messages', 'notifications', 'level_guide'] %}active{% endif %}" href="#" aria-label="More" data-mobile-profile-trigger aria-haspopup="menu" aria-controls="mobile-account-menu">
+  <a class="{% if active_page in ['profile', 'settings', 'messages', 'notifications', 'level_guide'] %}active{% endif %}" href="#" aria-label="More" data-i18n-aria="nav_more" data-mobile-profile-trigger aria-haspopup="menu" aria-controls="mobile-account-menu">
     <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
     <span class="mobile-nav-label sr-only" data-i18n="nav_more">More</span>
     {% set total_unread = unread_message_count + unread_notification_count %}
     <span class="nav-badge mobile-notif-badge" data-live-badge="more" {% if total_unread <= 0 %}hidden{% endif %}>{{ total_unread if total_unread < 100 else '99+' }}</span>
   </a>
 </nav>
-<div class="mobile-account-menu" id="mobile-account-menu" data-mobile-account-menu hidden role="menu" aria-label="More options">
+<div class="mobile-account-menu" id="mobile-account-menu" data-mobile-account-menu hidden role="menu" aria-label="More options" data-i18n-aria="nav_more_options_aria">
   <a href="{{ url_for('profile', username=viewer.username) }}" role="menuitem">
     <span class="menu-item-icon">👤</span>
     <span data-i18n="nav_me">Me</span>

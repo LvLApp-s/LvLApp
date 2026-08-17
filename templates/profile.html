@@ -23,7 +23,7 @@
   <div class="profile-info-container">
     <div class="profile-top-row">
       <div>
-        <button class="profile-avatar-btn" type="button" data-profile-avatar-open aria-label="View profile picture" style="--avatar-frame-color: {{ profile.badge_color or theme_colors.muted }};">
+        <button class="profile-avatar-btn" type="button" data-profile-avatar-open aria-label="View profile picture" data-i18n-aria="profile_view_picture_aria" style="--avatar-frame-color: {{ profile.badge_color or theme_colors.muted }};">
           <img class="avatar profile-avatar-large" src="{{ profile.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" />
         </button>
       </div>
@@ -40,7 +40,7 @@
           {% else %}
           <form action="{{ url_for('high_five_profile', username=profile.username) }}" method="post" class="profile-high-five-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button class="profile-high-five-button" type="submit" aria-label="High-five {{ profile.display_name }}" title="High-five">
+            <button class="profile-high-five-button" type="submit" aria-label="High-five {{ profile.display_name }}" data-i18n-aria="profile_high_five_aria" title="High-five">
               <span aria-hidden="true">🖐</span>
             </button>
           </form>
@@ -48,7 +48,7 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="target_id" value="{{ profile.id }}">
             <button class="outline-button {% if is_following %}active{% endif %}" type="submit">
-              {% if is_following %}<span data-i18n="profile_unfollow">Unfollow</span>{% else %}<span data-i18n="profile_follow">Follow</span>{% endif %}
+              {% if is_following %}<span data-follow-label data-i18n="profile_unfollow">Unfollow</span>{% else %}<span data-follow-label data-i18n="profile_follow">Follow</span>{% endif %}
             </button>
           </form>
           <a class="outline-button" href="{{ url_for('messages', u=profile.username) }}" data-i18n="profile_message">Message</a>
@@ -116,20 +116,20 @@
         <span class="profile-streak-icon" aria-hidden="true">🖐</span>
         <div>
           {% if streak.is_friend %}
-            <strong>Friend streak active</strong>
-            <p>You are friends because your streak is {{ streak.count }} days. Keep it alive daily.</p>
+            <strong data-i18n="profile_streak_friend">Friend streak active</strong>
+            <p><span data-i18n="profile_streak_friend_prefix">You are friends because your streak is</span> {{ streak.count }} <span data-i18n="profile_streak_days">days.</span> <span data-i18n="profile_streak_keep">Keep it alive daily.</span></p>
           {% elif streak.count > 0 %}
-            <strong>{{ streak.count }} day high-five streak</strong>
-            <p>{{ streak.days_until_friend }} more daily interactions to become friends.</p>
+            <strong>{{ streak.count }} <span data-i18n="streak_days_high_five">day high-five streak</span></strong>
+            <p>{{ streak.days_until_friend }} <span data-i18n="profile_streak_days_left">more daily interactions to become friends.</span></p>
           {% else %}
-            <strong>Friendship starts with a streak</strong>
-            <p>High-five or trade messages daily for 7 days to become friends.</p>
+            <strong data-i18n="profile_streak_start">Friendship starts with a streak</strong>
+            <p data-i18n="profile_streak_hint">High-five or trade messages daily for 7 days to become friends.</p>
           {% endif %}
         </div>
       </div>
     {% endif %}
 
-    <section class="profile-xp-card" aria-label="Profile XP summary">
+    <section class="profile-xp-card" aria-label="Profile XP summary" data-i18n-aria="profile_xp_aria">
       <div class="profile-xp-main">
         <div>
           {% set ltitle = level_title(profile.level or 1) %}
@@ -142,7 +142,7 @@
           <span data-i18n="profile_total_xp">Total XP</span>
         </div>
       </div>
-      <div class="xp-progress-track" aria-label="XP progress to next level">
+      <div class="xp-progress-track" aria-label="XP progress to next level" data-i18n-aria="profile_xp_progress_aria">
         <span style="width: {{ profile_xp_progress }}%;"></span>
       </div>
       <div class="xp-score-row">
@@ -246,7 +246,7 @@
         border: 1px solid rgba(255,255,255,0.2);
       }
     </style>
-    <details class="premium-achievements-card" aria-label="Profile achievements">
+    <details class="premium-achievements-card" aria-label="Profile achievements" data-i18n-aria="profile_achievements_aria">
       <summary class="premium-achievements-heading-btn">
         <div class="premium-achievements-header-left">
           <div class="premium-achievements-icon-box">
@@ -283,7 +283,7 @@
     </details>
   </div>
 
-    <nav class="profile-tabs" aria-label="Profile tabs">
+    <nav class="profile-tabs" aria-label="Profile tabs" data-i18n-aria="profile_tabs_aria">
       <a href="{{ url_for('profile', username=profile.username, m='posts') }}" 
          class="{% if mode == 'posts' %}active{% endif %}"
          {% if mode == 'posts' %}aria-current="page"{% endif %} data-i18n="profile_posts">
@@ -323,12 +323,12 @@
     {% endfor %}
   {% endif %}
 </section>
-<nav class="pagination-controls" aria-label="Profile post pagination">
+<nav class="pagination-controls" aria-label="Profile post pagination" data-i18n-aria="profile_pagination_aria">
   {% if page > 1 %}
-    <a class="outline-button" href="{{ url_for('profile', username=profile.username, m=mode, page=page-1) }}">Previous</a>
+    <a class="outline-button" href="{{ url_for('profile', username=profile.username, m=mode, page=page-1) }}" data-i18n="previous_btn">Previous</a>
   {% endif %}
   {% if has_next %}
-    <a class="outline-button" href="{{ url_for('profile', username=profile.username, m=mode, page=page+1) }}">More</a>
+    <a class="outline-button" href="{{ url_for('profile', username=profile.username, m=mode, page=page+1) }}" data-i18n="more_btn">More</a>
   {% endif %}
 </nav>
 {% endblock %}

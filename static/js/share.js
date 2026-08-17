@@ -1,5 +1,18 @@
 
 document.addEventListener('DOMContentLoaded', () => {
+  function translate(key, fallback) {
+    if (window.LvLI18n && typeof window.LvLI18n.t === 'function') {
+      return window.LvLI18n.t(key, fallback);
+    }
+    const lang = window.LvLI18n && typeof window.LvLI18n.getCurrentLang === 'function'
+      ? window.LvLI18n.getCurrentLang()
+      : 'en';
+    const dictionary = window.LvLI18n && window.LvLI18n.TRANSLATIONS
+      ? window.LvLI18n.TRANSLATIONS[lang]
+      : null;
+    return (dictionary && dictionary[key]) || fallback;
+  }
+
   function renderFriends(list, friends, clipId) {
     if (friends && friends.length > 0) {
       list.innerHTML = friends.map(f => `
@@ -8,11 +21,11 @@ document.addEventListener('DOMContentLoaded', () => {
             <img src="${f.profile_photo_url || '/static/assets/default-male-avatar.svg'}" class="avatar small-avatar" alt="">
             <span><strong>${f.display_name}</strong><br><small>@${f.username}</small></span>
           </div>
-          <button type="button" class="share-send-btn" data-share-send="${f.id}" data-clip-id="${clipId}">${window.LvLI18n && window.LvLI18n.TRANSLATIONS ? window.LvLI18n.TRANSLATIONS[window.LvLI18n.getCurrentLang()]['reel_share_send'] || 'Send' : 'Send'}</button>
+          <button type="button" class="share-send-btn" data-share-send="${f.id}" data-clip-id="${clipId}">${translate('reel_share_send', 'Send')}</button>
         </div>
       `).join('');
     } else {
-      list.innerHTML = '<p class="loading-friends">No users found.</p>';
+      list.innerHTML = `<p class="loading-friends">${translate('reel_share_no_users', 'No users found.')}</p>`;
     }
   }
 
@@ -30,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
       searchTimeout = setTimeout(async () => {
         if (!q) {
           try {
-            list.innerHTML = '<p class="loading-friends">Loading...</p>';
+            list.innerHTML = `<p class="loading-friends">${translate('reel_share_loading_friends', 'Loading friends…')}</p>`;
             const res = await fetch('/api/share/friends');
             const data = await res.json();
             renderFriends(list, data.friends, clipId);
@@ -38,13 +51,13 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
         
-        list.innerHTML = '<p class="loading-friends">Searching...</p>';
+        list.innerHTML = `<p class="loading-friends">${translate('reel_share_searching', 'Searching…')}</p>`;
         try {
           const res = await fetch('/api/share/search?q=' + encodeURIComponent(q));
           const data = await res.json();
           renderFriends(list, data.friends, clipId);
         } catch (err) {
-          list.innerHTML = '<p class="loading-friends">Error searching.</p>';
+          list.innerHTML = `<p class="loading-friends">${translate('reel_share_search_error', 'Could not search users.')}</p>`;
         }
       }, 300);
     }
@@ -69,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
             renderFriends(list, data.friends, clipId);
           } catch (err) {
-            list.innerHTML = '<p class="loading-friends">Error loading friends.</p>';
+            list.innerHTML = `<p class="loading-friends">${translate('reel_share_load_error', 'Could not load friends.')}</p>`;
           }
         }
       }

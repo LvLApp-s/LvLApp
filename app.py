@@ -183,7 +183,7 @@ ATTACHMENT_CONTENT_TYPES = {
     'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'txt': 'text/plain',
 }
-ASSET_VERSION = "103"
+ASSET_VERSION = "110"
 HOME_REEL_PREVIEW_LIMIT = 12
 HOME_MEDIA_PREVIEW_LIMIT = 12
 
@@ -334,6 +334,10 @@ def handle_exception(e):
         return e
     app.logger.exception("Unhandled application error")
     return render_template('error.html', title="Something went wrong"), 500
+
+@app.errorhandler(404)
+def handle_not_found(_error):
+    return render_template('error.html', title="Page not found", error_code=404), 404
 
 def get_csrf_token():
     token = session.get('csrf_token')

@@ -7,7 +7,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <title>Login - LvL</title>
+  <title data-i18n-document="auth_login_page_title">Login - LvL</title>
   <link rel="manifest" href="{{ static_asset('manifest.json') }}">
   <link rel="icon" href="{{ static_asset('assets/icon-192.png') }}" sizes="192x192" type="image/png">
   <link rel="icon" href="{{ static_asset('assets/icon-512.png') }}" sizes="512x512" type="image/png">
@@ -17,7 +17,7 @@
   <script src="{{ static_asset('js/i18n.js') }}"></script>
   <script src="{{ static_asset('js/script.js') }}" defer></script>
 </head>
-<body>
+<body class="auth-page">
 
 {% include "_install_prompt.html" %}
 
@@ -30,19 +30,24 @@
     <p data-i18n="auth_desc">Earn XP as you post, comment, like, and meet people. Build your profile rank, unlock stronger badges, and make every interaction count.</p>
     <div class="auth-metrics">
       <span>XP</span>
-      <span>Ranks</span>
-      <span>Badges</span>
+      <span data-i18n="auth_ranks">Ranks</span>
+      <span data-i18n="auth_badges">Badges</span>
     </div>
   </section>
   <section class="auth-panel">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
-          <div class="flash {{ category }}" role="status">{{ message }}</div>
+          <div class="flash {{ category }}" role="status" data-server-message>{{ message }}</div>
         {% endfor %}
       {% endif %}
     {% endwith %}
-    
+
+    <div class="auth-language-switcher" role="group" aria-label="Language selection" data-i18n-aria="settings_language_aria">
+      <button type="button" data-lang-btn="tr" onclick="LvLI18n.applyLanguage('tr')" aria-pressed="false">TR · Türkçe</button>
+      <button type="button" data-lang-btn="en" onclick="LvLI18n.applyLanguage('en')" aria-pressed="false">EN · English</button>
+    </div>
+
     <div class="auth-tabs" role="tablist">
       <button class="active" type="button" data-auth-tab="login" data-i18n="auth_login_tab">Login</button>
       <button type="button" data-auth-tab="register" data-i18n="auth_register_tab">Register</button>
@@ -98,7 +103,7 @@
       </label>
       <label>
         <span data-i18n="auth_nickname">Nickname</span>
-        <input name="nickname" pattern="[A-Za-z0-9_]{3,24}" minlength="3" maxlength="24" title="3-24 letters, numbers, or underscores." autocomplete="username" required>
+        <input name="nickname" pattern="[A-Za-z0-9_]{3,24}" minlength="3" maxlength="24" title="3-24 letters, numbers, or underscores." data-i18n-title="settings_username_hint" autocomplete="username" required>
       </label>
       <label>
         <span data-i18n="auth_email">Email</span>
@@ -118,11 +123,11 @@
         <div class="gender-options">
           <label class="gender-option male-option">
             <input type="radio" name="gender" value="Male" data-avatar-url="{{ url_for('static', filename='assets/default-male-avatar.svg') }}" data-theme-color="{{ theme_colors.primary }}" required>
-            <span data-i18n="auth_male"><b aria-hidden="true">♂</b> Male</span>
+            <span><b aria-hidden="true">♂</b> <span data-i18n="auth_male">Male</span></span>
           </label>
           <label class="gender-option female-option">
             <input type="radio" name="gender" value="Female" data-avatar-url="{{ url_for('static', filename='assets/default-female-avatar.svg') }}" data-theme-color="{{ theme_colors.female }}" required>
-            <span data-i18n="auth_female"><b aria-hidden="true">♀</b> Female</span>
+            <span><b aria-hidden="true">♀</b> <span data-i18n="auth_female">Female</span></span>
           </label>
         </div>
         <div class="gender-preview" data-gender-preview hidden>

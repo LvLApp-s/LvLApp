@@ -2,13 +2,14 @@
 {% set active_page = "settings" %}
 {% set show_highlights = False %}
 {% set title = "Setup Health" %}
+{% set title_i18n = "setup_page_title" %}
 
 {% block content %}
 <header class="page-header compact">
   <div>
-    <span class="panel-kicker">Project checks</span>
-    <h1>Setup Health</h1>
-    <p>Quick checks for the app services, tables, storage, and PWA files.</p>
+    <span class="panel-kicker" data-i18n="setup_kicker">Project checks</span>
+    <h1 data-i18n="setup_title">Setup Health</h1>
+    <p data-i18n="setup_desc">Quick checks for the app services, tables, storage, and PWA files.</p>
   </div>
 </header>
 
@@ -16,10 +17,10 @@
   {% for check in checks %}
     <article class="empty-state setup-health-card">
       <div>
-        <h2>{{ check.label }}</h2>
-        <p>{{ check.detail }}</p>
+        <h2 data-server-message>{{ check.label }}</h2>
+        <p data-server-message>{{ check.detail }}</p>
       </div>
-      <span class="level-badge setup-health-status">{{ "Ready" if check.status == "ready" else "Needs attention" }}</span>
+      <span class="level-badge setup-health-status" data-i18n="{{ 'setup_ready' if check.status == 'ready' else 'setup_needs_attention' }}">{{ "Ready" if check.status == "ready" else "Needs attention" }}</span>
     </article>
   {% endfor %}
 </section>

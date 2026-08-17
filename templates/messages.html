@@ -312,7 +312,7 @@
             <p class="last-message">{{ conv.last_message }}</p>
           </div>
           {% if conv.streak_count > 0 %}
-          <span class="streak-badge high-five-streak" title="{{ conv.streak_count }}-day high-five streak">🖐 {{ conv.streak_count }}</span>
+          <span class="streak-badge high-five-streak" title="{{ conv.streak_count }}-day high-five streak" data-high-five-streak-title data-streak-count="{{ conv.streak_count }}">🖐 {{ conv.streak_count }}</span>
           {% endif %}
         </a>
       {% endfor %}
@@ -322,7 +322,7 @@
   {% if target_user %}
     <main class="chat-window">
       <header class="chat-header" style="--chat-color: {{ display_profile_color(target_user) }}">
-        <a href="{{ url_for('messages') }}" class="chat-back-link" aria-label="Back to people">
+        <a href="{{ url_for('messages') }}" class="chat-back-link" aria-label="Back to people" data-i18n-aria="messages_back_people_aria">
           <svg viewBox="0 0 24 24" aria-hidden="true" width="22" height="22" fill="currentColor"><path d="M20 11v2H7.83l5.59 5.59L12 20 4 12l8-8 1.42 1.41L7.83 11H20Z"/></svg>
         </a>
         <a href="{{ url_for('profile', username=target_user.username) }}" class="chat-user-info">
@@ -334,7 +334,7 @@
         </a>
         {% set target_streak_count = target_user.streak_count|default(0)|int %}
         {% if target_streak_count > 0 %}
-        <span class="streak-badge streak-badge-header high-five-streak" data-chat-streak title="{{ target_streak_count }}-day high-five streak with {{ target_user.display_name }}">🖐 {{ target_streak_count }}</span>
+        <span class="streak-badge streak-badge-header high-five-streak" data-chat-streak data-high-five-streak-title data-streak-count="{{ target_streak_count }}" data-streak-name="{{ target_user.display_name }}" title="{{ target_streak_count }}-day high-five streak with {{ target_user.display_name }}">🖐 {{ target_streak_count }}</span>
         {% else %}
         <span class="streak-badge streak-badge-header streak-badge-zero high-five-streak" data-chat-streak title="Message or high-five daily to build a streak!">🖐 0</span>
         {% endif %}
@@ -351,7 +351,7 @@
         {% endif %}
 
         {% if has_older_messages %}
-          <button type="button" class="load-older-messages" data-load-older-messages>Load older messages</button>
+          <button type="button" class="load-older-messages" data-load-older-messages data-i18n="messages_load_older">Load older messages</button>
         {% endif %}
 
         {% for msg in messages_list %}
@@ -360,7 +360,7 @@
               {% if msg.deleted_for_everyone %}
                  <span data-i18n="message_deleted">This message was deleted</span>
               {% elif msg.shared_post %}
-                 <div class="shared-post-label">Shared a post:</div>
+                 <div class="shared-post-label" data-i18n="messages_shared_post">Shared a post:</div>
                  <div class="shared-post-card">
                    <a href="{{ url_for('post', id=msg.shared_post.id) }}" class="shared-post-link">
                      <div class="shared-post-author-row">
@@ -375,7 +375,7 @@
                    </a>
                  </div>
               {% elif msg.shared_reel %}
-                 <div class="shared-post-label">Shared a reel:</div>
+                 <div class="shared-post-label" data-i18n="messages_shared_clip">Shared a clip:</div>
                  <div class="shared-post-card shared-reel-card">
                     <a href="{{ url_for('reels') }}#reel-{{ msg.shared_reel.id }}" class="shared-post-link shared-reel-link">
                       <div class="shared-post-author-row" style="position: absolute; top: 12px; left: 12px; z-index: 2; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.8); margin: 0;">
@@ -413,7 +413,7 @@
               <span class="message-time">{{ msg.created_at[11:16] }}</span>
               {% if not msg.deleted_for_everyone and msg.sender_id == viewer.id %}
               <div class="message-delete-dropdown">
-                <button type="button" class="delete-trigger-btn" aria-label="Delete options">
+                <button type="button" class="delete-trigger-btn" aria-label="Delete options" data-i18n-aria="message_delete_options">
                   <svg viewBox="0 0 24 24" aria-hidden="true" width="15" height="15" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12ZM8 4h3l1-1h4l1 1h3v2H8V4Z"/></svg>
                 </button>
                 <div class="delete-dropdown-menu" hidden>
@@ -443,7 +443,7 @@
             <div class="upload-progress-bar" id="upload-progress-bar"></div>
             <span class="upload-progress-text" id="upload-progress-text">0%</span>
           </div>
-          <button type="button" class="cancel-upload-btn" id="cancel-upload-btn" aria-label="Cancel upload">✕</button>
+          <button type="button" class="cancel-upload-btn" id="cancel-upload-btn" aria-label="Cancel upload" data-i18n-aria="messages_cancel_upload_aria">✕</button>
         </div>
 
         <form action="{{ url_for('send_message') }}" method="post" class="chat-input-form" id="chat-input-form" autocomplete="off">
@@ -456,10 +456,10 @@
           <input type="hidden" name="attachment_type" id="hidden-attachment-type">
 
           <div class="chat-input-wrapper">
-            <button type="button" class="attachment-btn" id="attachment-trigger-btn" aria-label="Add attachment" {% if chat_safety_state.interaction_blocked %}disabled{% endif %}>+</button>
+            <button type="button" class="attachment-btn" id="attachment-trigger-btn" aria-label="Add attachment" data-i18n-aria="messages_add_attachment_aria" {% if chat_safety_state.interaction_blocked %}disabled{% endif %}>+</button>
             <input type="file" id="chat-file-input" style="display: none;" accept="image/*,video/*,audio/*,application/*,text/*">
             <textarea name="content" id="message-text-input" placeholder="Start a new message" data-i18n-placeholder="start_message_placeholder" required maxlength="1000" rows="1" {% if chat_safety_state.interaction_blocked %}disabled{% endif %}></textarea>
-            <button type="submit" class="send-btn" aria-label="Send message" {% if chat_safety_state.interaction_blocked %}disabled{% endif %}>
+            <button type="submit" class="send-btn" aria-label="Send message" data-i18n-aria="messages_send_aria" {% if chat_safety_state.interaction_blocked %}disabled{% endif %}>
               <svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20" fill="currentColor"><g><path d="M2.504 21.866l.526-2.108C3.04 19.719 4 15.823 4 12s-.96-7.719-.97-7.757l-.526-2.109L22.247 12 2.504 21.866zM5.981 13c-.072 1.962-.34 3.833-.583 5.183L17.584 12 5.398 5.817c.243 1.35.511 3.221.583 5.183H12v2H5.981z"></path></g></svg>
             </button>
           </div>
@@ -546,7 +546,7 @@
         <span class="panel-kicker" data-i18n="nav_messages">Messages</span>
         <h3 id="new-chat-title" data-i18n="messages_start_new">Start a new conversation</h3>
       </div>
-      <button type="button" class="new-chat-close" aria-label="Close new conversation panel" data-new-chat-close>x</button>
+      <button type="button" class="new-chat-close" aria-label="Close new conversation panel" data-i18n-aria="messages_close_new_aria" data-new-chat-close>x</button>
     </header>
     <div class="new-chat-search-wrap">
       <input type="search" class="new-chat-search-input" data-new-chat-search placeholder="Search users..." data-i18n-placeholder="search_users">

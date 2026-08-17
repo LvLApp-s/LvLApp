@@ -2,6 +2,7 @@
 {% set active_page = "search" %}
 {% set show_highlights = True %}
 {% set title = "Search" %}
+{% set title_i18n = "search_title" %}
 
 {% block content %}
 <div class="search-page-container">
@@ -14,20 +15,20 @@
       </form>
     </div>
     <div class="segmented search-tabs">
-      <a class="{% if tab == 'top' %}active{% endif %}" href="{{ url_for('search', q=query, f='top') }}">Top</a>
-      <a class="{% if tab == 'latest' %}active{% endif %}" href="{{ url_for('search', q=query, f='latest') }}">Latest</a>
-      <a class="{% if tab == 'people' %}active{% endif %}" href="{{ url_for('search', q=query, f='people') }}">People</a>
+      <a class="{% if tab == 'top' %}active{% endif %}" href="{{ url_for('search', q=query, f='top') }}" data-i18n="search_top">Top</a>
+      <a class="{% if tab == 'latest' %}active{% endif %}" href="{{ url_for('search', q=query, f='latest') }}" data-i18n="search_latest">Latest</a>
+      <a class="{% if tab == 'people' %}active{% endif %}" href="{{ url_for('search', q=query, f='people') }}" data-i18n="search_people">People</a>
     </div>
   </header>
 
   {% if query == '' %}
     <div class="search-empty-state">
-      <h2>Search for anything</h2>
-      <p>Find people, posts, and more on LvL.</p>
+      <h2 data-i18n="search_anything_title">Search for anything</h2>
+      <p data-i18n="search_anything_desc">Find people, posts, and more on LvL.</p>
     </div>
     {% if suggested_users %}
       <section class="search-discovery">
-        <h3>People to discover</h3>
+        <h3 data-i18n="search_discover_people">People to discover</h3>
         {% for user in suggested_users %}
           <div class="user-result-card">
             <a href="{{ url_for('profile', username=user.username) }}">
@@ -43,11 +44,11 @@
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <input type="hidden" name="target_id" value="{{ user.id }}">
                   <button class="outline-button {% if user.is_following %}active{% endif %}" type="submit">
-                    {{ 'Unfollow' if user.is_following else 'Follow' }}
+                    {% if user.is_following %}<span data-follow-label data-i18n="profile_unfollow">Unfollow</span>{% else %}<span data-follow-label data-i18n="profile_follow">Follow</span>{% endif %}
                   </button>
                 </form>
               </div>
-              <p class="user-result-bio">{{ user.bio or 'New to LvL.' }}</p>
+              {% if user.bio %}<p class="user-result-bio">{{ user.bio }}</p>{% else %}<p class="user-result-bio" data-i18n="search_new_to_lvl">New to LvL.</p>{% endif %}
             </div>
           </div>
         {% endfor %}
@@ -56,7 +57,7 @@
     
     {% if recent_posts %}
       <section class="search-discovery feed">
-        <h3>Recent posts</h3>
+        <h3 data-i18n="search_recent_posts">Recent posts</h3>
         {% for post in recent_posts %}
           {% include "_post_card.html" %}
         {% endfor %}
@@ -68,7 +69,7 @@
         <div class="people-results">
           {% if not users %}
             <div class="empty-state">
-              <p>No results for "{{ query }}"</p>
+              <p><span data-i18n="search_no_results_for">No results for</span> “{{ query }}”</p>
             </div>
           {% endif %}
           {% for user in users %}
@@ -87,7 +88,7 @@
                       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <input type="hidden" name="target_id" value="{{ user.id }}">
                       <button class="outline-button {% if user.is_following %}active{% endif %}" type="submit">
-                        {{ 'Unfollow' if user.is_following else 'Follow' }}
+                        {% if user.is_following %}<span data-follow-label data-i18n="profile_unfollow">Unfollow</span>{% else %}<span data-follow-label data-i18n="profile_follow">Follow</span>{% endif %}
                       </button>
                     </form>
                   {% endif %}
@@ -99,17 +100,17 @@
         </div>
         <nav class="pagination-controls" aria-label="People search pagination">
           {% if page > 1 %}
-            <a class="outline-button" href="{{ url_for('search', q=query, f=tab, page=page-1) }}">Previous</a>
+            <a class="outline-button" href="{{ url_for('search', q=query, f=tab, page=page-1) }}" data-i18n="previous_btn">Previous</a>
           {% endif %}
           {% if has_next %}
-            <a class="outline-button" href="{{ url_for('search', q=query, f=tab, page=page+1) }}">More people</a>
+            <a class="outline-button" href="{{ url_for('search', q=query, f=tab, page=page+1) }}" data-i18n="search_more_people">More people</a>
           {% endif %}
         </nav>
       {% else %}
         <div class="post-results feed">
           {% if not posts %}
             <div class="empty-state">
-              <p>No results for "{{ query }}"</p>
+              <p><span data-i18n="search_no_results_for">No results for</span> “{{ query }}”</p>
             </div>
           {% endif %}
           {% for post in posts %}
@@ -118,10 +119,10 @@
         </div>
         <nav class="pagination-controls" aria-label="Search pagination">
           {% if page > 1 %}
-            <a class="outline-button" href="{{ url_for('search', q=query, f=tab, page=page-1) }}">Previous</a>
+            <a class="outline-button" href="{{ url_for('search', q=query, f=tab, page=page-1) }}" data-i18n="previous_btn">Previous</a>
           {% endif %}
           {% if has_next %}
-            <a class="outline-button" href="{{ url_for('search', q=query, f=tab, page=page+1) }}">More results</a>
+            <a class="outline-button" href="{{ url_for('search', q=query, f=tab, page=page+1) }}" data-i18n="search_more_results">More results</a>
           {% endif %}
         </nav>
       {% endif %}

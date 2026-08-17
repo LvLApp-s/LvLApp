@@ -4,8 +4,8 @@
 {% block content %}
 <header class="page-header compact">
   <div>
-    <h1>Share via DM</h1>
-    <p>Select a person to send this post to.</p>
+    <h1 data-i18n="share_dm_title">Share via DM</h1>
+    <p data-i18n="share_dm_description">Select a person to send this post to.</p>
   </div>
 </header>
 
@@ -13,7 +13,7 @@
   <div class="user-selection-list panel user-selection-panel">
     {% if not users %}
       <div class="empty-state">
-        <p>No users found to share with.</p>
+        <p data-i18n="share_dm_empty">No users found to share with.</p>
       </div>
     {% endif %}
     {% for u in users %}
@@ -26,7 +26,7 @@
             <strong>{{ u.display_name }}</strong>
             <span>@{{ u.username }}</span>
           </div>
-          <span class="select-arrow">Send</span>
+          <span class="select-arrow" data-i18n="share_send_action">Send</span>
         </button>
       </form>
     {% endfor %}

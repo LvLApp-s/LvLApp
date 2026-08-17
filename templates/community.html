@@ -2,6 +2,7 @@
 {% set active_page = "community" %}
 {% set show_trends = True %}
 {% set title = "Community" %}
+{% set title_i18n = "nav_community" %}
 
 {% block content %}
 <header class="page-header community-header community-timeline-header">
@@ -12,14 +13,54 @@
   <a class="primary-button compact-action" href="{{ url_for('create_community') }}" data-i18n="community_create_group">Create group</a>
 </header>
 
+<section class="community-highlights panel community-mobile-leaderboard" aria-labelledby="mobile-leaderboard-title">
+  <h2 id="mobile-leaderboard-title" data-i18n="leaderboard_title">Leaderboard</h2>
+  {% if highlights %}
+    <div class="custom-scrollbar leaderboard-list" role="list">
+      {% for h in highlights %}
+        <article class="community-highlight-row leaderboard-row" role="listitem">
+          <span class="leaderboard-rank" aria-label="Rank {{ loop.index }}">{{ loop.index }}</span>
+          <a href="{{ url_for('profile', username=h.username) }}" class="leaderboard-person">
+            <img class="avatar leaderboard-avatar" src="{{ h.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="{{ h.display_name }}" loading="lazy">
+            <span class="leaderboard-identity">
+              <strong class="leaderboard-name">
+                {{ h.display_name }}
+                {% if h.username in ['ikasfood', 'lvl'] or h.is_profile_verified %}
+                  <svg title="Official account" data-i18n-title="official_account" viewBox="0 0 24 24" width="1.1em" height="1.1em" aria-label="Official account" data-i18n-aria="official_account"><path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.918-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.337 2.25c-.416-.165-.866-.25-1.336-.25-2.21 0-3.918 1.79-3.918 4 0 .495.084.965.238 1.4-1.273.65-2.148 2.02-2.148 3.6 0 1.46.758 2.75 1.875 3.45-.045.247-.074.5-.074.76 0 2.21 1.71 3.998 3.918 3.998.47 0 .92-.084 1.336-.25C9.182 21.585 10.49 22.5 12 22.5s2.816-.917 3.337-2.25c.416.165.866.25 1.336.25 2.21 0 3.918-1.79 3.918-4 0-.26-.028-.513-.074-.76 1.116-.7 1.875-1.99 1.875-3.45z" fill="var(--lvl-cyan)"/><path d="M10.153 16.52l-3.385-3.385 1.31-1.31 2.075 2.076 5.672-5.672 1.31 1.31-6.982 6.98z" fill="var(--lvl-white)"/></svg>
+                {% endif %}
+              </strong>
+              <span class="leaderboard-handle">@{{ h.username }}</span>
+            </span>
+          </a>
+          <div class="leaderboard-actions">
+            {% set mobile_level_title = level_title(h.level or 1) %}
+            <span class="level-badge community-level-badge" style="--badge-color: {{ h.badge_color or theme_colors.muted }};" title="{{ mobile_level_title }}" data-i18n-title="level_title_{{ mobile_level_title|lower|replace(' ', '_') }}">LvL {{ h.level or 1 }}</span>
+            {% if session.get('user_id') and session.get('user_id') != h.id %}
+              <form action="{{ url_for('toggle_follow') }}" method="post" class="ajax-action-form leaderboard-follow-form" data-action="follow">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="target_id" value="{{ h.id }}">
+                <button class="follow-chip {% if h.is_following %}active{% endif %}" type="submit">
+                  {% if h.is_following %}<span data-follow-label data-i18n="profile_unfollow">Unfollow</span>{% else %}<span data-follow-label data-i18n="profile_follow">Follow</span>{% endif %}
+                </button>
+              </form>
+            {% endif %}
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="community-highlight-empty" data-i18n="leaderboard_empty">No community members yet.</p>
+  {% endif %}
+</section>
+
 <section class="community-page community-hub" data-community-hub data-active-tab="{{ active_tab }}">
   <section class="community-hub-hero">
     <div>
       <span class="panel-kicker" data-i18n="timeline_hub">Timeline hub</span>
       <h2 data-i18n="timeline_hub_title">Choose whose posts shape your LvL</h2>
-      <p><span>{{ metrics.users }}</span> <span data-i18n="community_members_label">members</span>, <span>{{ metrics.posts }}</span> <span data-i18n="community_posts_label">posts</span>, <span data-i18n="community_and_label">and</span> <span>{{ metrics.communities }}</span> <span data-i18n="community_groups_label">communities are feeding these timelines.</span></p>
+      <p><span>{{ metrics.users }}</span> <span data-i18n="community_members_label">members</span>, <span>{{ metrics.posts }}</span> <span data-i18n="community_posts_label">posts</span> <span data-i18n="community_and_label">and</span> <span>{{ metrics.communities }}</span> <span data-i18n="community_groups_label">communities are feeding these timelines.</span></p>
     </div>
-    <div class="community-timeline-summary" aria-label="Community timeline counts">
+    <div class="community-timeline-summary" aria-label="Community timeline counts" data-i18n-aria="community_summary_aria">
       {% for tab in community_tabs %}
         <article>
           <span {% if tab.key == 'followers' %}data-i18n="profile_followers"{% elif tab.key == 'following' %}data-i18n="feed_following"{% elif tab.key == 'community' %}data-i18n="nav_community"{% endif %}>{{ tab.label }}</span>
@@ -29,7 +70,7 @@
     </div>
   </section>
 
-  <section class="community-lens-strip" aria-label="Community shortcuts">
+  <section class="community-lens-strip" aria-label="Community shortcuts" data-i18n-aria="community_shortcuts_aria">
     <a class="community-lens-card" href="{{ url_for('profile', username=viewer.username, m='posts') }}">
       <span aria-hidden="true">↺</span>
       <strong data-i18n="community_lens_history">History</strong>
@@ -52,7 +93,7 @@
     </a>
   </section>
 
-  <nav class="community-timeline-tabs" aria-label="Community timelines">
+  <nav class="community-timeline-tabs" aria-label="Community timelines" data-i18n-aria="community_timelines_aria">
     {% for tab in community_tabs %}
       <a id="community-tab-{{ tab.key }}"
          class="{% if active_tab == tab.key %}active{% endif %}"
@@ -65,7 +106,7 @@
     {% endfor %}
   </nav>
 
-  <section class="community-timeline-shell" aria-label="LvL community feeds">
+  <section class="community-timeline-shell" aria-label="LvL community feeds" data-i18n-aria="community_feeds_aria">
     <div class="community-timeline-track" data-community-track>
       {% for tab in community_tabs %}
         {% set posts = timeline_feeds.get(tab.key, []) %}
@@ -111,7 +152,7 @@
     </div>
   </section>
 
-  <section class="community-space-strip" aria-label="Communities to join">
+  <section class="community-space-strip" aria-label="Communities to join" data-i18n-aria="community_join_aria">
     <div class="section-heading">
       <div>
         <span class="panel-kicker" data-i18n="community_spaces_kicker">Spaces</span>

@@ -1,6 +1,7 @@
 {% extends "layout.html" %}
 {% set active_page = "verification" %}
 {% set title = "Verification Request" %}
+{% set title_i18n = "verification_title" %}
 
 {% block content %}
 <div class="settings-container">
@@ -18,7 +19,7 @@
       {% endif %}
 
       {% if error %}
-        <div class="flash error">{{ error }}</div>
+        <div class="flash error" data-server-message>{{ error }}</div>
       {% endif %}
 
       {# ── Verification status card ── #}
@@ -26,7 +27,7 @@
         <div class="guide-form-card form-card-compact form-card-spaced">
           <h3><span data-i18n="verification_status">Request Status</span>: 
             <span class="admin-status-pill status-pill-lg {% if current_request.status == 'Approved' %}active{% elif current_request.status == 'Rejected' %}danger{% endif %}">
-              {{ current_request.status }}
+              {% if current_request.status == 'Approved' %}<span data-i18n="verification_status_approved">Approved</span>{% elif current_request.status == 'Rejected' %}<span data-i18n="verification_status_rejected">Rejected</span>{% else %}<span data-i18n="verification_status_pending">Pending</span>{% endif %}
             </span>
           </h3>
           <p style="margin-top: 10px; color: var(--text-secondary);">
@@ -34,11 +35,11 @@
           </p>
           {% if current_request.status == 'Rejected' %}
             <p style="margin-top: 10px; color: var(--lvl-danger-text-soft);">
-              <strong data-i18n="verification_admin_notes">Admin Notes:</strong> {{ current_request.admin_notes or 'No notes provided.' }}
+              <strong data-i18n="verification_admin_notes">Admin Notes:</strong> {% if current_request.admin_notes %}{{ current_request.admin_notes }}{% else %}<span data-i18n="verification_no_notes">No notes provided.</span>{% endif %}
             </p>
             {% if cooldown_active %}
               <div class="flash info" style="margin-top: 14px;">
-                Reapplication cooldown is active. You can apply again in: {{ cooldown_remaining }}.
+                <span data-i18n="verification_cooldown">Reapplication cooldown is active. You can apply again in:</span> {{ cooldown_remaining }}.
               </div>
             {% endif %}
           {% elif current_request.status == 'Approved' %}
@@ -56,8 +57,8 @@
       {# ── Form to request verification ── #}
       {% if not current_request or current_request.status == 'Rejected' and not cooldown_active %}
         <div class="guide-form-card form-card-compact">
-          <h3>Submit Verification Request</h3>
-          <p style="color: var(--text-secondary); margin-bottom: 20px;">Please provide proof of identity, such as links to official websites or document uploads, and state why your account should be verified.</p>
+          <h3 data-i18n="verification_submit_title">Submit Verification Request</h3>
+          <p style="color: var(--text-secondary); margin-bottom: 20px;" data-i18n="verification_submit_desc">Please provide proof of identity, such as links to official websites or document uploads, and state why your account should be verified.</p>
           
           <form class="premium-form" action="{{ url_for('request_verification') }}" method="post" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -69,7 +70,7 @@
 
             <label class="form-group">
               <span data-i18n="verification_links">Social Media or Official Website Links</span>
-              <input type="text" name="links" placeholder="e.g. https://twitter.com/username, https://mywebsite.com">
+              <input type="text" name="links" placeholder="e.g. https://example.com/username, https://mywebsite.com" data-i18n-placeholder="verification_links_placeholder">
             </label>
 
             <label class="form-group">

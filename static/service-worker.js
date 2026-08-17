@@ -1,4 +1,4 @@
-const ASSET_VERSION = '103';
+const ASSET_VERSION = '110';
 const STATIC_CACHE = `lvl-static-v${ASSET_VERSION}`;
 const STATIC_ASSETS = [
   `/static/css/styles.css?v=${ASSET_VERSION}`,
@@ -31,6 +31,8 @@ const STATIC_ASSETS = [
   `/static/css/sections/activity.css?v=${ASSET_VERSION}`,
   `/static/css/sections/streaks.css?v=${ASSET_VERSION}`,
   `/static/js/script.js?v=${ASSET_VERSION}`,
+  `/static/js/i18n.js?v=${ASSET_VERSION}`,
+  `/static/js/share.js?v=${ASSET_VERSION}`,
   `/static/manifest.json?v=${ASSET_VERSION}`,
   `/static/assets/default-male-avatar.svg?v=${ASSET_VERSION}`,
   `/static/assets/default-female-avatar.svg?v=${ASSET_VERSION}`,

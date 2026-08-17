@@ -7,13 +7,14 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <title>Finish Social Login - LvL</title>
+  <title data-i18n-document="oauth_page_title">Finish Social Login - LvL</title>
   <link rel="manifest" href="{{ static_asset('manifest.json') }}">
   <link rel="icon" href="{{ static_asset('assets/icon-192.png') }}" sizes="192x192" type="image/png">
   <link rel="icon" href="{{ static_asset('assets/icon-512.png') }}" sizes="512x512" type="image/png">
   <link rel="apple-touch-icon" href="{{ static_asset('assets/icon-192.png') }}">
   <link rel="stylesheet" href="{{ static_asset('css/styles.css') }}">
   <link rel="stylesheet" href="{{ static_asset('css/gender.css') }}">
+  <script src="{{ static_asset('js/i18n.js') }}"></script>
   <script src="{{ static_asset('js/script.js') }}" defer></script>
 </head>
 <body>
@@ -31,27 +32,27 @@
     <div class="brand-lockup">
       <span class="brand-mark large">LvL</span>
     </div>
-    <h1>Finish your LvL profile.</h1>
-    <p>{{ provider_label.value }} approved your identity. LvL still needs your nickname, age check, and profile basics before the account opens.</p>
+    <h1 data-i18n="oauth_finish_title">Finish your LvL profile.</h1>
+    <p data-i18n="oauth_finish_desc">Your social provider approved your identity. LvL still needs your nickname, age check, and profile basics before the account opens.</p>
     <div class="auth-metrics">
-      <span>Social login</span>
+      <span data-i18n="oauth_social_login">Social login</span>
       <span>14+</span>
-      <span>Profile ready</span>
+      <span data-i18n="oauth_profile_ready">Profile ready</span>
     </div>
   </section>
   <section class="auth-panel">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
-          <div class="flash {{ category }}" role="status">{{ message }}</div>
+          <div class="flash {{ category }}" role="status" data-server-message>{{ message }}</div>
         {% endfor %}
       {% endif %}
     {% endwith %}
 
     <div class="oauth-step-header">
-      <span>Step 2 of 2</span>
-      <h2>Create your LvL account</h2>
-      <p>Google sign-in worked. Complete these required LvL profile fields to add the account to the database.</p>
+      <span data-i18n="oauth_step">Step 2 of 2</span>
+      <h2 data-i18n="oauth_create_title">Create your LvL account</h2>
+      <p data-i18n="oauth_create_desc">Sign-in worked. Complete these required LvL profile fields to create the account.</p>
     </div>
 
     <div class="oauth-summary">
@@ -67,44 +68,44 @@
     <form class="auth-form active oauth-onboarding-form" action="{{ url_for('oauth_onboarding') }}" method="post">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label>
-        First name
+        <span data-i18n="auth_first_name">First name</span>
         <input name="first_name" maxlength="60" autocomplete="given-name" value="{{ profile.first_name or '' }}" required>
       </label>
       <label>
-        Last name
+        <span data-i18n="auth_last_name">Last name</span>
         <input name="last_name" maxlength="60" autocomplete="family-name" value="{{ profile.last_name or '' }}" required>
       </label>
       <label>
-        Nickname
+        <span data-i18n="auth_nickname">Nickname</span>
         <input name="nickname" pattern="[A-Za-z0-9_]{3,24}" autocomplete="username" value="{{ suggested_nickname or '' }}" required>
       </label>
       <label>
-        Email
+        <span data-i18n="auth_email">Email</span>
         <input type="email" name="email" autocomplete="email" value="{{ profile.email or '' }}" required>
       </label>
       <label>
-        Birthday
+        <span data-i18n="auth_birthday">Birthday</span>
         {% set limits = birthday_limits() %}
         <input type="date" name="birthday" min="{{ limits.min.isoformat() }}" max="{{ limits.max.isoformat() }}" autocomplete="bday" required>
       </label>
       <fieldset class="gender-field">
-        <legend>Gender</legend>
+        <legend data-i18n="auth_gender">Gender</legend>
         <div class="gender-options">
           <label class="gender-option male-option">
             <input type="radio" name="gender" value="Male" data-avatar-url="{{ url_for('static', filename='assets/default-male-avatar.svg') }}" data-theme-color="{{ theme_colors.primary }}" required>
-            <span><b aria-hidden="true">♂</b> Male</span>
+            <span><b aria-hidden="true">♂</b> <span data-i18n="auth_male">Male</span></span>
           </label>
           <label class="gender-option female-option">
             <input type="radio" name="gender" value="Female" data-avatar-url="{{ url_for('static', filename='assets/default-female-avatar.svg') }}" data-theme-color="{{ theme_colors.female }}" required>
-            <span><b aria-hidden="true">♀</b> Female</span>
+            <span><b aria-hidden="true">♀</b> <span data-i18n="auth_female">Female</span></span>
           </label>
         </div>
         <div class="gender-preview" data-gender-preview hidden>
-          <img data-gender-avatar src="" alt="Selected default avatar">
+          <img data-gender-avatar src="" alt="Selected default avatar" data-i18n-alt="oauth_selected_avatar">
           <span data-gender-swatch aria-hidden="true"></span>
         </div>
       </fieldset>
-      <button type="submit">Create account and enter LvL</button>
+      <button type="submit" data-i18n="oauth_create_action">Create account and enter LvL</button>
     </form>
   </section>
 </main>

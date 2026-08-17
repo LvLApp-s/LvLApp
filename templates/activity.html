@@ -12,7 +12,7 @@
   </div>
 </header>
 
-<section class="activity-panel panel" aria-label="Recent activity">
+<section class="activity-panel panel" aria-label="Recent activity" data-i18n-aria="activity_recent_aria">
   {% if not activity_items %}
     <div class="empty-state compact-empty">
       <h2 data-i18n="activity_empty_title">Nothing here yet</h2>
@@ -42,7 +42,7 @@
           {% endif %}
         </span>
         {% if item.created_at %}
-          <time datetime="{{ item.created_at }}">{{ relative_time(item.created_at) }}</time>
+          <time datetime="{{ item.created_at }}" data-relative-time>{{ relative_time(item.created_at) }}</time>
         {% endif %}
     {% if item.url %}
       </a>
