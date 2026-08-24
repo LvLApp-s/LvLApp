@@ -1102,11 +1102,11 @@ Object.assign(TRANSLATIONS.en, {
   ,home_media_aria: "Non-clip media"
   ,cancel_btn: "Cancel"
   ,share_btn: "Share"
-  profile_streak_days: "day streak",
-  profile_streak_friend_prefix: "Friend streak with",
-  profile_replies: "Replies",
-  pprogress_unlocked: "✓ Unlocked",
-  pprogress_locked: "Locked",
+  ,profile_streak_days: "day streak"
+  ,profile_streak_friend_prefix: "Friend streak with"
+  ,profile_replies: "Replies"
+  ,pprogress_unlocked: "✓ Unlocked"
+  ,pprogress_locked: "Locked"
   ,composer_image_selected: "Image selected"
   ,composer_saved_image: "Saved image attached"
   ,draft_image_label: "Image draft"
