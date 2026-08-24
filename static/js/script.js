@@ -69,6 +69,46 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => xpBadge.remove(), 850);
     }
 
+    function applyLikeFeedbackAndStyle(btn, liked, count) {
+        if (!btn) return;
+        btn.classList.toggle('active', !!liked);
+        btn.classList.toggle('like-active', !!liked);
+        // Set color on SVG and all paths directly (Mobile WebKit fix)
+        const svg = btn.querySelector('svg');
+        const path = svg ? svg.querySelector('path') : null;
+        const likeColor = '#f43f5e';
+        if (svg) {
+            svg.setAttribute('fill', liked ? likeColor : 'none');
+            svg.setAttribute('stroke', liked ? likeColor : 'currentColor');
+            svg.style.fill = liked ? likeColor : 'none';
+            svg.style.stroke = liked ? likeColor : 'currentColor';
+        }
+        if (path) {
+            path.setAttribute('fill', liked ? likeColor : 'none');
+            path.setAttribute('stroke', liked ? likeColor : 'currentColor');
+            path.style.fill = liked ? likeColor : 'none';
+            path.style.stroke = liked ? likeColor : 'currentColor';
+        }
+        // Update count display
+        if (count !== undefined) {
+            const countEl = btn.querySelector('strong') || btn.closest('form')?.querySelector('[data-reel-like-count]');
+            if (countEl) countEl.textContent = count || '0';
+        }
+        // Trigger heart-pop animation via DOM reflow (Mobile WebKit fix)
+        const iconEl = btn.querySelector('.post-action-icon') || svg;
+        if (iconEl && liked) {
+            iconEl.style.webkitAnimation = 'none';
+            iconEl.style.animation = 'none';
+            void iconEl.offsetWidth; // Force reflow
+            iconEl.style.webkitAnimation = 'lvl-heart-pop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+            iconEl.style.animation = 'lvl-heart-pop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+        }
+        // Particle burst + XP badge (both mobile and desktop)
+        if (liked) {
+            triggerLvlInteractionFeedback(btn, '+1 XP');
+        }
+    }
+
     document.addEventListener('click', (e) => {
         const likeBtn = e.target.closest('.lvl-action-like, .reel-action-like');
         if (likeBtn) {
