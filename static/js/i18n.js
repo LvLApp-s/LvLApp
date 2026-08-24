@@ -1105,6 +1105,8 @@ Object.assign(TRANSLATIONS.en, {
   profile_streak_days: "day streak",
   profile_streak_friend_prefix: "Friend streak with",
   profile_replies: "Replies",
+  pprogress_unlocked: "✓ Unlocked",
+  pprogress_locked: "Locked",
   ,composer_image_selected: "Image selected"
   ,composer_saved_image: "Saved image attached"
   ,draft_image_label: "Image draft"
@@ -1142,6 +1144,8 @@ Object.assign(TRANSLATIONS.tr, {
   no_bio: "Henüz biyografi yok.",
   profile_posts: "Gönderiler",
   profile_replies: "Yanıtlar",
+  pprogress_unlocked: "✓ Açıldı",
+  pprogress_locked: "Kilitli",
   profile_likes: "Beğeniler",
   profile_streak_hint: "Arkadaş olmak için 7 gün boyunca her gün beşlik çakın veya mesajlaşın.",
   notif_reel_like: "klibinizi beğendi",
