@@ -287,13 +287,13 @@
 .reel-actions {
   position: absolute;
   right: 10px;
-  bottom: 14px;
+  bottom: 12px;
   z-index: 4;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  width: 48px;
+  gap: 5px;
+  width: 44px;
 }
 
 .reel-actions form {
@@ -303,14 +303,15 @@
 .reel-action-button,
 .reel-actions button,
 .reel-actions a {
-  width: 42px;
-  min-height: 42px;
+  width: 40px;
+  min-height: 40px;
+  height: 40px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  padding: 2px;
+  gap: 1px;
+  padding: 0;
   border: none !important;
   border-radius: 0 !important;
   background: transparent !important;
@@ -323,7 +324,7 @@
   -webkit-backdrop-filter: none !important;
   cursor: pointer;
   transition: transform 0.18s ease, color 0.18s ease;
-  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.7));
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.85));
 }
 
 .reel-action-button:hover {
@@ -336,6 +337,20 @@
   transform: scale(0.92);
 }
 
+/* Sound / Mute toggle active state -> YELLOW (#facc15) */
+.reel-action-button.reel-action-mute.active,
+.reel-action-mute.active {
+  color: #facc15 !important;
+  background: transparent !important;
+  border: none !important;
+}
+.reel-action-button.reel-action-mute.active svg,
+.reel-action-mute.active svg {
+  stroke: #facc15 !important;
+  filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.85));
+}
+
+/* Heart / Like active state -> PINK/RED (#f43f5e) */
 .reel-action-button.reel-action-like.active {
   color: #f43f5e !important;
   background: transparent !important;
@@ -350,15 +365,16 @@
   animation: lvl-heart-pop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.reel-action-button.active {
+.reel-action-button.active:not(.reel-action-mute) {
   color: #f43f5e;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
 }
 
-.reel-action-button.danger {
-  color: #ef4444;
+.reel-action-button.danger,
+.reel-actions form button.danger {
+  color: #ef4444 !important;
 }
 
 .reel-action-button:disabled {
