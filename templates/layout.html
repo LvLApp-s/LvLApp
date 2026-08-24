@@ -135,47 +135,43 @@
     {% if show_highlights or (home_reels is defined and home_reels) or (home_media is defined and home_media) %}
     <aside class="right-rail">
       {% if show_highlights %}
-       <div class="community-highlights panel">
+       <div class="community-highlights panel lb-panel">
          <h2 data-i18n="leaderboard_title">Leaderboard</h2>
          {% if highlights %}
-
-            <div class="custom-scrollbar highlight-scroll-wrap leaderboard-list" role="list">
-            {% for h in highlights %}
-              <article class="community-highlight-row highlight-item-row leaderboard-row" role="listitem">
-                <span class="leaderboard-rank" aria-label="Rank {{ loop.index }}">{{ loop.index }}</span>
-                <a href="{{ url_for('profile', username=h.username) }}" class="highlight-item-link leaderboard-person">
-                  <img class="avatar small-avatar community-highlight-avatar highlight-item-avatar leaderboard-avatar" src="{{ h.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="{{ h.display_name }}" loading="lazy" />
-                  <div class="community-highlight-row-body highlight-item-body leaderboard-identity">
-                    <strong class="highlight-item-name leaderboard-name">
+           <div class="lb-list custom-scrollbar" role="list">
+           {% for h in highlights %}
+             <article class="lb-row" role="listitem">
+               <a href="{{ url_for('profile', username=h.username) }}" class="lb-person">
+                 <img class="lb-avatar" src="{{ h.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="{{ h.display_name }}" loading="lazy">
+                 <div class="lb-identity">
+                   <strong class="lb-name">
                      {{ h.display_name }}
-                      {% if h.username in ['ikasfood', 'lvl'] or h.is_profile_verified %}
-                       <svg title="Official account" data-i18n-title="official_account" viewBox="0 0 24 24" width="1.1em" height="1.1em" aria-label="Official account" data-i18n-aria="official_account"><path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.918-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.337 2.25c-.416-.165-.866-.25-1.336-.25-2.21 0-3.918 1.79-3.918 4 0 .495.084.965.238 1.4-1.273.65-2.148 2.02-2.148 3.6 0 1.46.758 2.75 1.875 3.45-.045.247-.074.5-.074.76 0 2.21 1.71 3.998 3.918 3.998.47 0 .92-.084 1.336-.25C9.182 21.585 10.49 22.5 12 22.5s2.816-.917 3.337-2.25c.416.165.866.25 1.336.25 2.21 0 3.918-1.79 3.918-4 0-.26-.028-.513-.074-.76 1.116-.7 1.875-1.99 1.875-3.45z" fill="var(--lvl-cyan)"/><path d="M10.153 16.52l-3.385-3.385 1.31-1.31 2.075 2.076 5.672-5.672 1.31 1.31-6.982 6.98z" fill="var(--lvl-white)"/></svg>
+                     {% if h.username in ['ikasfood', 'lvl'] or h.is_profile_verified %}
+                       <svg title="Official account" viewBox="0 0 24 24" width="13" height="13" aria-label="Official account"><path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.918-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.337 2.25c-.416-.165-.866-.25-1.336-.25-2.21 0-3.918 1.79-3.918 4 0 .495.084.965.238 1.4-1.273.65-2.148 2.02-2.148 3.6 0 1.46.758 2.75 1.875 3.45-.045.247-.074.5-.074.76 0 2.21 1.71 3.998 3.918 3.998.47 0 .92-.084 1.336-.25C9.182 21.585 10.49 22.5 12 22.5s2.816-.917 3.337-2.25c.416.165.866.25 1.336.25 2.21 0 3.918-1.79 3.918-4 0-.26-.028-.513-.074-.76 1.116-.7 1.875-1.99 1.875-3.45z" fill="var(--lvl-cyan)"/><path d="M10.153 16.52l-3.385-3.385 1.31-1.31 2.075 2.076 5.672-5.672 1.31 1.31-6.982 6.98z" fill="var(--lvl-white)"/></svg>
                      {% endif %}
                    </strong>
-                    <span class="leaderboard-handle">@{{ h.username }}</span>
-                  </div>
-                </a>
-                <div class="leaderboard-actions">
-                  {% set highlight_level_title = level_title(h.level or 1) %}
-                  <span class="level-badge community-level-badge" style="--badge-color: {{ h.badge_color or theme_colors.muted }};" title="{{ highlight_level_title }}" data-i18n-title="level_title_{{ highlight_level_title|lower|replace(' ', '_') }}">LvL {{ h.level or 1 }}</span>
-                {% if session.get('user_id') and session.get('user_id') != h.id %}
-                <form action="{{ url_for('toggle_follow') }}" method="post" class="ajax-action-form leaderboard-follow-form" data-action="follow">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <input type="hidden" name="target_id" value="{{ h.id }}">
-                  <button class="follow-chip {% if h.is_following %}active{% endif %}" type="submit">
-                    {% if h.is_following %}<span data-follow-label data-i18n="profile_unfollow">Unfollow</span>{% else %}<span data-follow-label data-i18n="profile_follow">Follow</span>{% endif %}
-                  </button>
-                </form>
-                {% endif %}
-                </div>
-              </article>
-            {% endfor %}
-            </div>
-          {% else %}
-            <p class="community-highlight-empty" data-i18n="leaderboard_empty">No community members yet.</p>
-          {% endif %}
-        </div>
-       {% endif %}
+                   <span class="lb-handle">@{{ h.username }}</span>
+                   {% set highlight_level_title = level_title(h.level or 1) %}
+                   <span class="lb-level-badge" style="--badge-color: {{ h.badge_color or theme_colors.muted }};">Lvl {{ h.level or 1 }}</span>
+                 </div>
+               </a>
+               {% if session.get('user_id') and session.get('user_id') != h.id %}
+               <form action="{{ url_for('toggle_follow') }}" method="post" class="ajax-action-form lb-follow-form" data-action="follow">
+                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                 <input type="hidden" name="target_id" value="{{ h.id }}">
+                 <button class="lb-follow-btn {% if h.is_following %}active{% endif %}" type="submit">
+                   {% if h.is_following %}<span data-follow-label data-i18n="profile_unfollow">Unfollow</span>{% else %}<span data-follow-label data-i18n="profile_follow">Follow</span>{% endif %}
+                 </button>
+               </form>
+               {% endif %}
+             </article>
+           {% endfor %}
+           </div>
+         {% else %}
+           <p class="community-highlight-empty" data-i18n="leaderboard_empty">No community members yet.</p>
+         {% endif %}
+       </div>
+      {% endif %}
        {% if show_trends and trending_posts %}
          <div class="community-trends panel">
            <h2 data-i18n="trending_title">Trending Posts</h2>

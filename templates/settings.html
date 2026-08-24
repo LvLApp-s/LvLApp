@@ -1,15 +1,15 @@
 {% extends "layout.html" %}
 {% set active_page = "settings" %}
 {% set show_highlights = True %}
-{% set title = "Edit Profile" %}
+{% set title = "Profile Settings" %}
 {% set title_i18n = "settings_title" %}
 
 {% block content %}
 <div class="settings-container">
-  <header class="page-header">
+  <header class="page-header settings-page-header">
     <div class="header-content">
-      <h1 data-i18n="settings_title">Edit profile</h1>
-      <p data-i18n="settings_subtitle">Update how your account appears to others on LvL.</p>
+      <h1 data-i18n="settings_title">Profile Settings</h1>
+      <p class="settings-helper-text" data-i18n="settings_subtitle">Manage your public profile, preferences and account settings.</p>
     </div>
   </header>
 
@@ -17,286 +17,368 @@
     <form class="premium-form" action="{{ url_for('settings') }}" method="post" enctype="multipart/form-data">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="action" value="update_profile">
-      
-      <div class="form-section">
-        <h3 data-i18n="settings_public_info">Public Information</h3>
-        <div class="form-grid">
-          <label class="form-group">
-            <span data-i18n="settings_first_name">First Name</span>
-            <input name="first_name" maxlength="60" value="{{ viewer.first_name }}" placeholder="e.g. John" required>
-          </label>
-          <label class="form-group">
-            <span data-i18n="settings_last_name">Last Name</span>
-            <input name="last_name" maxlength="60" value="{{ viewer.last_name }}" placeholder="e.g. Doe" required>
+
+      <!-- ── Profile Card ── -->
+      <div class="settings-card profile-identity-card">
+        <div class="profile-identity-avatar-wrap">
+          <img class="avatar profile-identity-avatar" src="{{ viewer.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Profile photo">
+          <label class="profile-identity-edit-badge" title="Edit Photo">
+            <input type="file" name="profile_photo" accept="image/png,image/jpeg,image/gif,image/webp" data-profile-photo-input style="display:none">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </label>
         </div>
-        
-        <label class="form-group">
-          <span data-i18n="settings_username">Username / Nickname</span>
-          <div class="input-prefix-wrapper">
-            <span class="input-prefix">@</span>
-            <input name="nickname" maxlength="24" pattern="[A-Za-z0-9_]{3,24}" minlength="3" title="3-24 letters, numbers, or underscores." data-i18n-title="settings_username_hint" value="{{ viewer.nickname or viewer.username }}" required>
-          </div>
-          <small data-i18n="settings_username_hint">3-24 letters, numbers, or underscores. Usernames are saved lowercase.</small>
-        </label>
-
-        <label class="form-group">
-          <span data-i18n="settings_bio">Bio</span>
-          <textarea name="bio" maxlength="180" rows="3" placeholder="Tell us about yourself..." data-i18n-placeholder="settings_bio_placeholder">{{ viewer.bio }}</textarea>
-          <div class="char-counter">0 / 180</div>
-        </label>
+        <div class="profile-identity-info">
+          <strong class="profile-identity-name">{{ viewer.display_name }}{% if viewer.is_profile_verified %} <svg viewBox="0 0 24 24" width="16" height="16" style="vertical-align:middle"><path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.918-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.337 2.25c-.416-.165-.866-.25-1.336-.25-2.21 0-3.918 1.79-3.918 4 0 .495.084.965.238 1.4-1.273.65-2.148 2.02-2.148 3.6 0 1.46.758 2.75 1.875 3.45-.045.247-.074.5-.074.76 0 2.21 1.71 3.998 3.918 3.998.47 0 .92-.084 1.336-.25C9.182 21.585 10.49 22.5 12 22.5s2.816-.917 3.337-2.25c.416.165.866.25 1.336.25 2.21 0 3.918-1.79 3.918-4 0-.26-.028-.513-.074-.76 1.116-.7 1.875-1.99 1.875-3.45z" fill="var(--lvl-cyan)"/><path d="M10.153 16.52l-3.385-3.385 1.31-1.31 2.075 2.076 5.672-5.672 1.31 1.31-6.982 6.98z" fill="var(--lvl-white)"/></svg>{% endif %}</strong>
+          <span class="profile-identity-username">@{{ viewer.username }}</span>
+          <span class="profile-identity-bio">{{ viewer.bio or 'No bio yet.' }}</span>
+          <label class="outline-button small profile-identity-photo-btn" style="cursor:pointer; display:inline-flex; align-items:center; gap:6px; margin-top:8px; width:fit-content;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            <span data-i18n="settings_edit_photo">Edit Photo</span>
+            <input type="file" name="profile_photo_btn" accept="image/png,image/jpeg,image/gif,image/webp" style="display:none" tabindex="-1">
+          </label>
+        </div>
       </div>
 
-      <div class="form-section">
-        <h3 data-i18n="settings_details">Details</h3>
-        <div class="form-grid">
-          <label class="form-group">
-            <span data-i18n="settings_location">Location</span>
-            <input name="location" maxlength="80" value="{{ viewer.location }}" placeholder="City, Country" data-i18n-placeholder="settings_location_placeholder">
-          </label>
-          <label class="form-group">
-            <span data-i18n="settings_website">Website</span>
-            <input type="url" name="website" maxlength="255" value="{{ viewer.website }}" placeholder="https://yourwebsite.com">
-          </label>
+
+      <!-- ── Information ── -->
+      <div class="settings-card">
+        <div class="settings-card-header">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <div>
+            <h3 data-i18n="settings_public_info">Information</h3>
+            <p class="settings-helper-text" data-i18n="settings_public_info_sub">Update your public information.</p>
+          </div>
         </div>
-        
-        <div class="form-grid">
-          <fieldset class="gender-field form-group">
-            <legend data-i18n="settings_gender">Gender</legend>
-            <div class="gender-options">
-              <label class="gender-option male-option">
-                <input type="radio" name="gender" value="Male" data-avatar-url="{{ url_for('static', filename='assets/default-male-avatar.svg') }}" data-theme-color="{{ theme_colors.primary }}" {% if viewer.gender == 'Male' %}checked{% endif %} required>
-                <span><b aria-hidden="true">♂</b> <span data-i18n="auth_male">Male</span></span>
+        <div class="settings-card-body">
+          <div class="form-grid">
+            <label class="form-group">
+              <span data-i18n="settings_first_name">First Name</span>
+              <input name="first_name" maxlength="60" value="{{ viewer.first_name }}" placeholder="e.g. John" required>
+            </label>
+            <label class="form-group">
+              <span data-i18n="settings_last_name">Last Name</span>
+              <input name="last_name" maxlength="60" value="{{ viewer.last_name }}" placeholder="e.g. Doe" required>
+            </label>
+          </div>
+
+          <div class="form-grid">
+            <label class="form-group">
+              <span data-i18n="settings_username">Username</span>
+              <div class="input-prefix-wrapper">
+                <span class="input-prefix">@</span>
+                <input name="nickname" maxlength="24" pattern="[A-Za-z0-9_]{3,24}" minlength="3" title="3-24 letters, numbers, or underscores." data-i18n-title="settings_username_hint" value="{{ viewer.nickname or viewer.username }}" required>
+              </div>
+            </label>
+            <label class="form-group">
+              <span data-i18n="settings_bio">Bio</span>
+              <textarea name="bio" maxlength="180" rows="3" placeholder="Tell us about yourself..." data-i18n-placeholder="settings_bio_placeholder">{{ viewer.bio }}</textarea>
+              <div class="char-counter">0 / 180</div>
+            </label>
+          </div>
+
+          <div class="form-grid">
+            <label class="form-group">
+              <span data-i18n="settings_location">Location</span>
+              <div class="input-icon-wrapper">
+                <svg class="input-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <input name="location" maxlength="80" value="{{ viewer.location }}" placeholder="City, Country" data-i18n-placeholder="settings_location_placeholder" class="has-icon">
+              </div>
+            </label>
+            <label class="form-group">
+              <span data-i18n="settings_website">Website</span>
+              <div class="input-icon-wrapper">
+                <svg class="input-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                <input type="url" name="website" maxlength="255" value="{{ viewer.website }}" placeholder="https://yourwebsite.com" class="has-icon">
+              </div>
+            </label>
+          </div>
+
+          <div class="form-grid">
+            <label class="form-group">
+              <span data-i18n="settings_birthday">Birthday</span>
+              {% set limits = birthday_limits() %}
+              <div class="input-icon-wrapper">
+                <svg class="input-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <input type="date" name="birthday" value="{{ viewer.birthday }}" min="{{ limits.min.isoformat() }}" max="{{ limits.max.isoformat() }}" autocomplete="bday" class="has-icon">
+              </div>
+            </label>
+            <label class="form-group">
+              <span data-i18n="settings_gender">Gender</span>
+              <div class="gender-select-wrapper">
+                <svg class="input-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M12 12v8m-4-4h8"/></svg>
+                <select name="gender" class="gender-select has-icon">
+                  <option value="Male" {% if viewer.gender == 'Male' %}selected{% endif %} data-i18n="auth_male">Male</option>
+                  <option value="Female" {% if viewer.gender == 'Female' %}selected{% endif %} data-i18n="auth_female">Female</option>
+                </select>
+                <svg class="select-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Appearance ── -->
+      <div class="settings-card">
+        <div class="settings-card-header">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M19.07 19.07l-1.41-1.41M12 2v2M12 20v2"/></svg>
+          <div>
+            <h3 data-i18n="settings_appearance">Appearance</h3>
+            <p class="settings-helper-text" data-i18n="settings_appearance_sub">Customize how your profile looks.</p>
+          </div>
+        </div>
+        <div class="settings-card-body">
+          <div class="appearance-layout">
+            <div class="appearance-left">
+              <label class="form-group">
+                <span data-i18n="settings_photo">Profile Photo</span>
+                <label class="upload-dropzone" for="profile-photo-main">
+                  <input id="profile-photo-main" type="file" name="profile_photo" accept="image/png,image/jpeg,image/gif,image/webp" data-profile-photo-input style="display:none">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+                  <span data-i18n="settings_upload_photo">Upload Photo</span>
+                  <small>JPG, PNG or GIF. Up to 5MB.</small>
+                </label>
+                <label class="checkbox-row" style="margin-top:8px;">
+                  <input type="checkbox" name="remove_profile_photo" value="1">
+                  <span data-i18n="settings_remove_photo">Remove current photo</span>
+                </label>
               </label>
-              <label class="gender-option female-option">
-                <input type="radio" name="gender" value="Female" data-avatar-url="{{ url_for('static', filename='assets/default-female-avatar.svg') }}" data-theme-color="{{ theme_colors.female }}" {% if viewer.gender == 'Female' %}checked{% endif %} required>
-                <span><b aria-hidden="true">♀</b> <span data-i18n="auth_female">Female</span></span>
+
+              <div class="profile-cropper" data-profile-cropper hidden>
+                <div class="profile-crop-stage">
+                  <img data-crop-image alt="Crop profile photo">
+                </div>
+                <label class="profile-crop-zoom">
+                  <span data-i18n="settings_crop_title">Crop and zoom</span>
+                  <input type="range" min="1" max="3" step="0.01" value="1" data-crop-zoom>
+                </label>
+              </div>
+
+              {% set profile_color_is_unlocked = profile_color_unlocked(viewer.level or 1) %}
+              <label class="form-group" style="margin-top:16px;">
+                <span data-i18n="settings_banner_color">Profile Banner Color</span>
+                <div class="color-picker-wrapper">
+                  <input type="color" name="profile_pic" value="{{ display_profile_color(viewer) }}" {% if not profile_color_is_unlocked %}disabled{% endif %}>
+                  <input type="text" class="hex-value" value="{{ display_profile_color(viewer) }}" maxlength="7" {% if not profile_color_is_unlocked %}disabled{% endif %}>
+                </div>
+                {% if profile_color_is_unlocked %}
+                  <small data-i18n="settings_banner_hint">Profile colors unlock at LvL 20 and beyond.</small>
+                {% else %}
+                  <small data-i18n="settings_banner_locked_hint">Profile colors unlock at LvL {{ profile_color_unlock_level }}. Until then, accounts stay black and white so reward colors stay meaningful.</small>
+                {% endif %}
               </label>
+              {% if not profile_color_is_unlocked %}
+                <div class="profile-color-lock-note">
+                  <span data-i18n="settings_banner_earn_xp">Earn XP by posting, commenting, liking, and joining conversations.</span>
+                  <a href="{{ url_for('level_guide') }}" data-i18n="settings_banner_see_table">See the LvL reward table.</a>
+                </div>
+              {% endif %}
             </div>
-            <div class="gender-preview" data-gender-preview hidden>
-              <img data-gender-avatar src="" alt="Selected default avatar">
-              <span data-gender-swatch aria-hidden="true"></span>
+
+            <div class="appearance-right">
+              <span class="form-group-label" data-i18n="settings_preview">Preview</span>
+              <div class="profile-preview-card" data-profile-preview>
+                <div class="profile-preview-banner"></div>
+                <img class="avatar profile-preview-avatar" src="{{ viewer.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Profile preview">
+                <strong data-preview-name>{{ viewer.display_name }}</strong>
+                <span data-preview-username>@{{ viewer.username }}</span>
+                <p data-preview-bio>{{ viewer.bio or 'No bio yet.' }}</p>
+              </div>
             </div>
-          </fieldset>
-          <label class="form-group">
-            <span data-i18n="settings_birthday">Birthday</span>
-            {% set limits = birthday_limits() %}
-            <input type="date" name="birthday" value="{{ viewer.birthday }}" min="{{ limits.min.isoformat() }}" max="{{ limits.max.isoformat() }}" autocomplete="bday">
-          </label>
-        </div>
-      </div>
-
-      <div class="form-section">
-        <h3 data-i18n="settings_appearance">Appearance</h3>
-        {% set profile_color_is_unlocked = profile_color_unlocked(viewer.level or 1) %}
-        <div class="profile-preview-card" data-profile-preview>
-          <div class="profile-preview-banner"></div>
-          <img class="avatar profile-preview-avatar" src="{{ viewer.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Profile preview">
-          <strong data-preview-name>{{ viewer.display_name }}</strong>
-          <span data-preview-username>@{{ viewer.username }}</span>
-          <p data-preview-bio>{{ viewer.bio or 'No bio yet.' }}</p>
-        </div>
-        <label class="form-group">
-          <span data-i18n="settings_photo">Profile Photo</span>
-          <input type="file" name="profile_photo" accept="image/png,image/jpeg,image/gif,image/webp" data-profile-photo-input>
-          <small data-i18n="settings_photo_hint">Upload JPG, PNG, GIF, or WebP up to 5 MB.</small>
-        </label>
-        <div class="profile-cropper" data-profile-cropper hidden>
-          <div class="profile-crop-stage">
-            <img data-crop-image alt="Crop profile photo">
           </div>
-          <label class="profile-crop-zoom">
-            <span data-i18n="settings_crop_title">Crop and zoom</span>
-            <input type="range" min="1" max="3" step="0.01" value="1" data-crop-zoom>
-          </label>
-          <p class="settings-helper-text" data-i18n="settings_crop_description">Drag the image to reposition it. The saved photo uses the square preview.</p>
         </div>
-        <label class="checkbox-row">
-          <input type="checkbox" name="remove_profile_photo" value="1">
-          <span data-i18n="settings_remove_photo">Remove current photo and use the default avatar</span>
-        </label>
-        <label class="form-group">
-          <span data-i18n="settings_banner_color">Profile banner color</span>
-          <div class="color-picker-wrapper">
-            <input type="color" name="profile_pic" value="{{ display_profile_color(viewer) }}" {% if not profile_color_is_unlocked %}disabled{% endif %}>
-            <input type="text" class="hex-value" value="{{ display_profile_color(viewer) }}" maxlength="7" {% if not profile_color_is_unlocked %}disabled{% endif %}>
+      </div>
+
+      <!-- ── Preferences ── -->
+      <div class="settings-card">
+        <div class="settings-card-header">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+          <div>
+            <h3 data-i18n="settings_preferences">Preferences</h3>
+            <p class="settings-helper-text" data-i18n="settings_prefs_sub">Control how you experience LvL.</p>
           </div>
-          {% if profile_color_is_unlocked %}
-            <small data-i18n="settings_banner_hint">Changes the banner on your profile and the color used for your chat header.</small>
-          {% else %}
-            <small data-i18n="settings_banner_locked_hint">Profile colors unlock at LvL {{ profile_color_unlock_level }}. Until then, accounts stay black and white so reward colors stay meaningful.</small>
-          {% endif %}
-        </label>
-        {% if not profile_color_is_unlocked %}
-          <p class="profile-color-lock-note">
-            <span data-i18n="settings_banner_earn_xp">Earn XP by posting, commenting, liking, and joining conversations.</span>
-            <a href="{{ url_for('level_guide') }}" data-i18n="settings_banner_see_table">See the LvL reward table.</a>
-          </p>
-        {% endif %}
+        </div>
+        <div class="settings-card-body">
+          <div class="pref-toggle-row">
+            <div class="pref-toggle-info">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <div>
+                <strong data-i18n="settings_autoplay_next">Autoplay clips</strong>
+                <small data-i18n="settings_autoplay_desc">Automatically play the next clip.</small>
+              </div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="autoplay-next-reels-checkbox">
+              <span class="toggle-knob"></span>
+            </label>
+          </div>
+          <div class="pref-toggle-row">
+            <div class="pref-toggle-info">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              <div>
+                <strong data-i18n="settings_notif_sounds">Enable notification sounds</strong>
+                <small data-i18n="settings_notif_desc">Play sounds for alerts and notifications.</small>
+              </div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="notification-sounds-checkbox" checked>
+              <span class="toggle-knob"></span>
+            </label>
+          </div>
+        </div>
       </div>
 
-      <div class="form-section">
-        <h3 data-i18n="settings_preferences">Preferences</h3>
-        <label class="checkbox-row">
-          <input type="checkbox" id="autoplay-next-reels-checkbox">
-          <span data-i18n="settings_autoplay_next">Autoplay next Clip automatically</span>
-        </label>
-        <label class="checkbox-row" style="margin-top: 12px;">
-          <input type="checkbox" id="notification-sounds-checkbox" checked>
-          <span data-i18n="settings_notif_sounds">Enable notification sounds</span>
-        </label>
-      </div>
-
+      <!-- ── Save / Cancel ── -->
       <div class="form-actions">
         <a href="{{ url_for('profile', username=viewer.username) }}" class="outline-button" data-i18n="settings_cancel">Cancel</a>
         <button type="submit" class="primary-button" data-i18n="settings_save">Save Changes</button>
       </div>
     </form>
 
-    <section class="form-section">
-      <h3 data-i18n="settings_language_title">Language / Dil / اللغة</h3>
-      <p class="settings-helper-text" data-i18n="settings_language_subtitle">Choose your preferred language. Saved locally on this device.</p>
-      <div class="lang-switcher" role="group" aria-label="Language selection" data-i18n-aria="settings_language_aria">
-        <button type="button" class="outline-button small" data-lang-btn="en" onclick="LvLI18n.applyLanguage('en')" aria-pressed="false" id="lang-btn-en">
-          🇬🇧 English
-        </button>
-        <button type="button" class="outline-button small" data-lang-btn="tr" onclick="LvLI18n.applyLanguage('tr')" aria-pressed="false" id="lang-btn-tr">
-          🇹🇷 Türkçe
-        </button>
-        <button type="button" class="outline-button small" data-lang-btn="ar" onclick="LvLI18n.applyLanguage('ar')" aria-pressed="false" id="lang-btn-ar">
-          🇸🇦 العربية
-        </button>
+    <!-- ── Language ── -->
+    <section class="settings-card" style="margin-top: 24px;">
+      <div class="settings-card-header">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        <div>
+          <h3 data-i18n="settings_language_title">Language</h3>
+          <p class="settings-helper-text" data-i18n="settings_language_subtitle">Choose your preferred language.</p>
+        </div>
+      </div>
+      <div class="settings-card-body">
+        <div class="lang-switcher" role="group" aria-label="Language selection" data-i18n-aria="settings_language_aria">
+          <button type="button" class="lang-btn" data-lang-btn="en" onclick="LvLI18n.applyLanguage('en')" aria-pressed="false" id="lang-btn-en">English</button>
+          <button type="button" class="lang-btn" data-lang-btn="tr" onclick="LvLI18n.applyLanguage('tr')" aria-pressed="false" id="lang-btn-tr">Türkçe</button>
+          <button type="button" class="lang-btn" data-lang-btn="ar" onclick="LvLI18n.applyLanguage('ar')" aria-pressed="false" id="lang-btn-ar">العربية</button>
+        </div>
       </div>
     </section>
 
-    <style>
-    .lang-switcher {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 10px;
-    }
-    </style>
-
-    <section class="form-section">
-      <h3 data-i18n="settings_project_setup">Project setup</h3>
-      <p class="settings-helper-text" data-i18n="settings_project_hint">Check database tables, storage, Clips, service worker, and PWA files when the app looks stale or uploads do not appear.</p>
-      <a class="outline-button small" href="{{ url_for('setup_health') }}" data-i18n="settings_open_health">Open Setup Health</a>
+    <!-- ── Project Setup ── -->
+    <section class="settings-card settings-card-inline" style="margin-top: 16px;">
+      <div class="settings-card-header" style="flex:1;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        <div>
+          <h3 data-i18n="settings_project_setup">Project Setup</h3>
+          <p class="settings-helper-text" data-i18n="settings_project_hint">Check database tables, storage, clips, service worker, and PWA files.</p>
+        </div>
+      </div>
+      <a class="outline-button small setup-run-btn" href="{{ url_for('setup_health') }}" data-i18n="settings_open_health">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Run System Check
+      </a>
     </section>
 
-    <section class="form-section danger-zone">
-      <div>
-        <h3 data-i18n="settings_delete_title">Delete account</h3>
-        <p data-i18n="settings_delete_desc">This permanently removes your account and the content connected to it. This action cannot be undone.</p>
+    <!-- ── Danger Zone ── -->
+    <section class="settings-card danger-zone" style="margin-top: 16px;">
+      <div class="settings-card-header">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--lvl-danger)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div>
+          <h3 data-i18n="settings_delete_title">Danger Zone</h3>
+          <p data-i18n="settings_delete_desc">This action is permanent and cannot be undone.</p>
+        </div>
       </div>
       <form action="{{ url_for('delete_account') }}" method="post" class="danger-zone-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <label class="form-group">
-          <span data-i18n="settings_current_password">Current password</span>
-          <input type="password" name="current_password" autocomplete="current-password" required>
-        </label>
-        <label class="form-group">
-          <span><span data-i18n="settings_delete_prefix">Type</span> @{{ viewer.username }} <span data-i18n="settings_delete_suffix">to confirm</span></span>
-          <input name="confirm_username" pattern="{{ viewer.username }}" autocomplete="off" required>
-        </label>
-        <button type="submit" class="danger-button" data-i18n="settings_delete_btn">Delete account</button>
+        <div class="form-grid">
+          <label class="form-group">
+            <span data-i18n="settings_current_password">Current Password</span>
+            <div class="input-password-wrapper">
+              <input type="password" name="current_password" id="danger-password" autocomplete="current-password" required>
+              <button type="button" class="password-toggle-btn" onclick="toggleDangerPassword()" aria-label="Toggle password visibility">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+          </label>
+          <label class="form-group">
+            <span><span data-i18n="settings_delete_prefix">Type</span> @{{ viewer.username }} <span data-i18n="settings_delete_suffix">to confirm</span></span>
+            <input name="confirm_username" pattern="{{ viewer.username }}" autocomplete="off" placeholder="@{{ viewer.username }}" required>
+          </label>
+        </div>
+        <button type="submit" class="danger-button" data-i18n="settings_delete_btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          Delete Account
+        </button>
       </form>
     </section>
   </div>
 </div>
 
 <script>
+  function toggleDangerPassword() {
+    const input = document.getElementById('danger-password');
+    input.type = input.type === 'password' ? 'text' : 'password';
+  }
+
   // Sync color picker with text input
   const colorPicker = document.querySelector('input[type="color"]');
   const hexInput = document.querySelector('.hex-value');
   if (colorPicker && hexInput) {
-    colorPicker.addEventListener('input', (e) => {
-      hexInput.value = e.target.value.toUpperCase();
-    });
+    colorPicker.addEventListener('input', (e) => { hexInput.value = e.target.value.toUpperCase(); });
     hexInput.addEventListener('input', (e) => {
-      if (/^#[0-9A-F]{6}$/i.test(e.target.value)) {
-        colorPicker.value = e.target.value;
-      }
+      if (/^#[0-9A-F]{6}$/i.test(e.target.value)) colorPicker.value = e.target.value;
     });
   }
 
   (() => {
-    const input = document.querySelector('[data-profile-photo-input]');
+    const inputs = document.querySelectorAll('[data-profile-photo-input]');
     const cropper = document.querySelector('[data-profile-cropper]');
     const image = document.querySelector('[data-crop-image]');
     const zoom = document.querySelector('[data-crop-zoom]');
-    const preview = document.querySelector('.profile-preview-avatar');
-    if (!input || !cropper || !image || !zoom) return;
+    const previews = document.querySelectorAll('.profile-preview-avatar, .profile-identity-avatar');
+    if (!cropper || !image || !zoom) return;
     let sourceFile = null;
     let objectUrl = '';
-    let offsetX = 0;
-    let offsetY = 0;
-    let dragging = false;
-    let startX = 0;
-    let startY = 0;
-    const translateSettingsUi = (key, fallback) => {
-      const lang = window.LvLI18n && typeof window.LvLI18n.getCurrentLang === 'function' ? window.LvLI18n.getCurrentLang() : 'en';
-      const dictionary = window.LvLI18n && window.LvLI18n.TRANSLATIONS ? window.LvLI18n.TRANSLATIONS[lang] : null;
-      return (dictionary && dictionary[key]) || fallback;
-    };
-    const renderTransform = () => {
-      image.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${zoom.value})`;
-    };
-    input.addEventListener('change', () => {
-      sourceFile = input.files && input.files[0];
-      if (!sourceFile) { cropper.hidden = true; return; }
-      if (sourceFile.size > 5 * 1024 * 1024) {
-        input.setCustomValidity(translateSettingsUi('settings_photo_size_error', 'Profile photos must be 5 MB or smaller.'));
-        input.reportValidity();
-        input.value = '';
-        sourceFile = null;
-        cropper.hidden = true;
-        return;
-      }
-      input.setCustomValidity('');
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-      objectUrl = URL.createObjectURL(sourceFile);
-      image.src = objectUrl;
-      if (preview) preview.src = objectUrl;
-      offsetX = 0; offsetY = 0; zoom.value = '1';
-      renderTransform();
-      cropper.hidden = false;
-    });
-    zoom.addEventListener('input', renderTransform);
-    image.addEventListener('pointerdown', (event) => {
-      dragging = true;
-      startX = event.clientX - offsetX;
-      startY = event.clientY - offsetY;
-      image.setPointerCapture(event.pointerId);
-    });
-    image.addEventListener('pointermove', (event) => {
-      if (!dragging) return;
-      offsetX = event.clientX - startX;
-      offsetY = event.clientY - startY;
-      renderTransform();
-    });
-    image.addEventListener('pointerup', () => { dragging = false; });
-    input.closest('form').addEventListener('submit', (event) => {
-      if (!sourceFile || !image.naturalWidth || !window.DataTransfer) return;
-      event.preventDefault();
-      const canvas = document.createElement('canvas');
-      canvas.width = 640; canvas.height = 640;
-      const context = canvas.getContext('2d');
-      if (!context) return;
-      const scale = Math.max(640 / image.naturalWidth, 640 / image.naturalHeight) * Number(zoom.value);
-      const width = image.naturalWidth * scale;
-      const height = image.naturalHeight * scale;
-      const ratio = 640 / 240;
-      context.drawImage(image, (640 - width) / 2 + offsetX * ratio, (640 - height) / 2 + offsetY * ratio, width, height);
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const transfer = new DataTransfer();
-          transfer.items.add(new File([blob], 'profile-photo.webp', { type: 'image/webp' }));
-          input.files = transfer.files;
+    let offsetX = 0, offsetY = 0, dragging = false, startX = 0, startY = 0;
+    const renderTransform = () => { image.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${zoom.value})`; };
+
+    inputs.forEach(input => {
+      input.addEventListener('change', () => {
+        sourceFile = input.files && input.files[0];
+        if (!sourceFile) { cropper.hidden = true; return; }
+        if (sourceFile.size > 5 * 1024 * 1024) {
+          input.setCustomValidity('Profile photos must be 5 MB or smaller.');
+          input.reportValidity();
+          input.value = ''; sourceFile = null; cropper.hidden = true; return;
         }
-        event.target.submit();
-      }, 'image/webp', 0.9);
+        input.setCustomValidity('');
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+        objectUrl = URL.createObjectURL(sourceFile);
+        image.src = objectUrl;
+        previews.forEach(p => { p.src = objectUrl; });
+        offsetX = 0; offsetY = 0; zoom.value = '1';
+        renderTransform();
+        cropper.hidden = false;
+      });
     });
+
+    zoom.addEventListener('input', renderTransform);
+    image.addEventListener('pointerdown', (e) => { dragging = true; startX = e.clientX - offsetX; startY = e.clientY - offsetY; image.setPointerCapture(e.pointerId); });
+    image.addEventListener('pointermove', (e) => { if (!dragging) return; offsetX = e.clientX - startX; offsetY = e.clientY - startY; renderTransform(); });
+    image.addEventListener('pointerup', () => { dragging = false; });
+
+    const form = document.querySelector('[data-profile-photo-input]')?.closest('form');
+    if (form) {
+      form.addEventListener('submit', (event) => {
+        if (!sourceFile || !image.naturalWidth || !window.DataTransfer) return;
+        event.preventDefault();
+        const canvas = document.createElement('canvas');
+        canvas.width = 640; canvas.height = 640;
+        const context = canvas.getContext('2d');
+        if (!context) return;
+        const scale = Math.max(640 / image.naturalWidth, 640 / image.naturalHeight) * Number(zoom.value);
+        const width = image.naturalWidth * scale;
+        const height = image.naturalHeight * scale;
+        const ratio = 640 / 240;
+        context.drawImage(image, (640 - width) / 2 + offsetX * ratio, (640 - height) / 2 + offsetY * ratio, width, height);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const transfer = new DataTransfer();
+            transfer.items.add(new File([blob], 'profile-photo.webp', { type: 'image/webp' }));
+            inputs.forEach(inp => { try { inp.files = transfer.files; } catch(e){} });
+          }
+          event.target.submit();
+        }, 'image/webp', 0.9);
+      });
+    }
   })();
 </script>
 {% endblock %}
