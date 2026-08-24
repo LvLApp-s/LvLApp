@@ -38,74 +38,112 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    /* --- Spawn burst/shockwave/badge on document.body to avoid overflow:hidden clipping --- */
+    function spawnBodyEffect(btn, className, durationMs) {
+        if (!btn) return null;
+        const rect = btn.getBoundingClientRect();
+        const el = document.createElement('span');
+        el.className = className;
+        el.style.cssText = [
+            'position:fixed',
+            `left:${rect.left + rect.width / 2}px`,
+            `top:${rect.top + rect.height / 2}px`,
+            'transform:translate(-50%,-50%)',
+            'pointer-events:none',
+            'z-index:99999'
+        ].join(';');
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), durationMs || 800);
+        return el;
+    }
+
     function triggerTwitterHeartBurst(btn) {
         if (!btn) return;
         const colors = ['#f43f5e', '#ec4899', '#d946ef', '#8b5cf6', '#3b82f6', '#06b6d4', '#10b981', '#f59e0b'];
+        const rect = btn.getBoundingClientRect();
         const burstContainer = document.createElement('span');
         burstContainer.className = 'lvl-x-burst-container';
+        burstContainer.style.cssText = [
+            'position:fixed',
+            `left:${rect.left + rect.width / 2}px`,
+            `top:${rect.top + rect.height / 2}px`,
+            'transform:translate(-50%,-50%)',
+            'pointer-events:none',
+            'z-index:99999',
+            'width:1px',
+            'height:1px'
+        ].join(';');
         for (let i = 0; i < 8; i++) {
             const dot = document.createElement('span');
             dot.className = `lvl-x-dot lvl-x-dot-${i}`;
             dot.style.setProperty('--dot-color', colors[i]);
             burstContainer.appendChild(dot);
         }
-        btn.appendChild(burstContainer);
-        setTimeout(() => burstContainer.remove(), 600);
+        document.body.appendChild(burstContainer);
+        setTimeout(() => burstContainer.remove(), 650);
     }
 
     function triggerLvlInteractionFeedback(btn, labelText) {
         if (!btn) return;
-        const ring = document.createElement('span');
-        ring.className = 'lvl-shockwave-ring';
-        btn.appendChild(ring);
-        setTimeout(() => ring.remove(), 600);
-
+        /* Shockwave ring */
+        spawnBodyEffect(btn, 'lvl-shockwave-ring', 600);
+        /* Heart particle burst */
         triggerTwitterHeartBurst(btn);
-
+        /* +XP floating badge */
+        const rect = btn.getBoundingClientRect();
         const xpBadge = document.createElement('span');
         xpBadge.className = 'lvl-xp-particle';
         xpBadge.textContent = labelText || '+XP';
-        btn.appendChild(xpBadge);
-        setTimeout(() => xpBadge.remove(), 850);
+        xpBadge.style.cssText = [
+            'position:fixed',
+            `left:${rect.left + rect.width / 2}px`,
+            `top:${rect.top - 4}px`,
+            'transform:translate(-50%,0)',
+            'pointer-events:none',
+            'z-index:99999'
+        ].join(';');
+        document.body.appendChild(xpBadge);
+        setTimeout(() => xpBadge.remove(), 900);
     }
 
     function applyLikeFeedbackAndStyle(btn, liked, count) {
         if (!btn) return;
         btn.classList.toggle('active', !!liked);
         btn.classList.toggle('like-active', !!liked);
-        // Set color on SVG and all paths directly (Mobile WebKit fix)
+        /* Set color directly on SVG + path attributes (Mobile WebKit does not always respect CSS class changes) */
         const svg = btn.querySelector('svg');
-        const path = svg ? svg.querySelector('path') : null;
+        const paths = svg ? svg.querySelectorAll('path,circle,polygon,polyline') : [];
         const likeColor = '#f43f5e';
         if (svg) {
             svg.setAttribute('fill', liked ? likeColor : 'none');
             svg.setAttribute('stroke', liked ? likeColor : 'currentColor');
-            svg.style.fill = liked ? likeColor : 'none';
-            svg.style.stroke = liked ? likeColor : 'currentColor';
+            svg.style.cssText += `;fill:${liked ? likeColor : 'none'};stroke:${liked ? likeColor : 'currentColor'};color:${liked ? likeColor : ''}`;
         }
-        if (path) {
-            path.setAttribute('fill', liked ? likeColor : 'none');
-            path.setAttribute('stroke', liked ? likeColor : 'currentColor');
-            path.style.fill = liked ? likeColor : 'none';
-            path.style.stroke = liked ? likeColor : 'currentColor';
-        }
-        // Update count display
+        paths.forEach(p => {
+            p.setAttribute('fill', liked ? likeColor : 'none');
+            p.setAttribute('stroke', liked ? likeColor : 'currentColor');
+            p.style.cssText += `;fill:${liked ? likeColor : 'none'};stroke:${liked ? likeColor : 'currentColor'}`;
+        });
+        /* Update count */
         if (count !== undefined) {
             const countEl = btn.querySelector('strong') || btn.closest('form')?.querySelector('[data-reel-like-count]');
             if (countEl) countEl.textContent = count || '0';
         }
-        // Trigger heart-pop animation via DOM reflow (Mobile WebKit fix)
-        const iconEl = btn.querySelector('.post-action-icon') || svg;
-        if (iconEl && liked) {
-            iconEl.style.webkitAnimation = 'none';
-            iconEl.style.animation = 'none';
-            void iconEl.offsetWidth; // Force reflow
-            iconEl.style.webkitAnimation = 'lvl-heart-pop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-            iconEl.style.animation = 'lvl-heart-pop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-        }
-        // Particle burst + XP badge (both mobile and desktop)
+        /* Heart-pop animation via requestAnimationFrame (guarantees one rendered frame before applying) */
         if (liked) {
-            triggerLvlInteractionFeedback(btn, '+1 XP');
+            const iconEl = btn.querySelector('.post-action-icon, .reel-action-icon') || svg;
+            if (iconEl) {
+                iconEl.style.webkitAnimation = 'none';
+                iconEl.style.animation = 'none';
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        iconEl.style.webkitAnimation = 'lvl-heart-pop 0.45s cubic-bezier(0.175,0.885,0.32,1.275) both';
+                        iconEl.style.animation        = 'lvl-heart-pop 0.45s cubic-bezier(0.175,0.885,0.32,1.275) both';
+                    });
+                });
+            }
+            /* Run effects AFTER re-enable so iOS Safari is not blocked */
+            setTimeout(() => triggerLvlInteractionFeedback(btn, '❤ +1'), 10);
         }
     }
 
@@ -1261,7 +1299,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const btn = form.querySelector('button');
             if (!btn || btn.dataset.pending === '1') return;
             btn.dataset.pending = '1';
-            btn.disabled = true;
+            /* NOTE: Do NOT set btn.disabled – iOS Safari blocks CSS animations on disabled elements */
 
             const countTarget = btn.querySelector('strong');
             const formData = new FormData(form);
@@ -1313,7 +1351,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             } finally {
                 delete btn.dataset.pending;
-                btn.disabled = false;
             }
         });
     });
@@ -2307,7 +2344,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     event.preventDefault();
                     const btn = form.querySelector('button');
                     if (btn && btn.dataset.pending === '1') return;
-                    if (btn) { btn.dataset.pending = '1'; btn.disabled = true; }
+                    if (btn) { btn.dataset.pending = '1'; /* No disabled – iOS Safari blocks CSS animations on disabled elements */ }
                     const formData = new FormData(form);
                     formData.append('ajax', '1');
                     try {
@@ -2323,7 +2360,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         console.error('Could not like reel:', error);
                         if (typeof showAppToast === 'function') showAppToast(translateUiLocal('action_failed', 'Action did not finish. Try again.'));
                     } finally {
-                        if (btn) { delete btn.dataset.pending; btn.disabled = false; }
+                        if (btn) { delete btn.dataset.pending; }
                     }
                 });
             });

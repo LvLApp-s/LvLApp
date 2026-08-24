@@ -776,10 +776,8 @@
 
 /* Floating +XP particle badge spawned on click */
 .lvl-xp-particle {
-  position: absolute;
-  top: -20px;
-  left: 50%;
-  transform: translateX(-50%);
+  /* JS sets position:fixed and left/top via inline style */
+  position: fixed;
   pointer-events: none;
   font-size: 11px;
   font-weight: 800;
@@ -790,9 +788,9 @@
   color: #ffffff;
   box-shadow: 0 2px 10px rgba(244, 63, 94, 0.4);
   white-space: nowrap;
-  animation: lvl-xp-ascend 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  -webkit-animation: lvl-xp-ascend 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  z-index: 10;
+  -webkit-animation: lvl-xp-ascend 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: lvl-xp-ascend 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  z-index: 99999;
 }
 
 @-webkit-keyframes lvl-xp-ascend {
@@ -810,13 +808,16 @@
 
 /* Expanding Shockwave Ring on button tap */
 .lvl-shockwave-ring {
-  position: absolute;
-  inset: -6px;
+  /* JS sets position:fixed and left/top via inline style */
+  position: fixed;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  border: 1.5px solid currentColor;
+  border: 2px solid #f43f5e;
   pointer-events: none;
   -webkit-animation: lvl-shockwave-expand 0.55s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
   animation: lvl-shockwave-expand 0.55s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+  z-index: 99999;
 }
 
 @-webkit-keyframes lvl-shockwave-expand {
