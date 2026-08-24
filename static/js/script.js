@@ -1239,33 +1239,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     showXpToasts(result.xp_toasts || []);
                     const action = form.dataset.action;
                     if (action === 'like') {
-                        btn.classList.toggle('active', result.liked);
-                        btn.classList.toggle('like-active', result.liked);
-                        const svg = btn.querySelector('svg');
-                        const path = svg ? svg.querySelector('path') : null;
-                        if (svg) {
-                            svg.setAttribute('fill', result.liked ? '#f43f5e' : 'none');
-                            svg.setAttribute('stroke', result.liked ? '#f43f5e' : 'currentColor');
-                            svg.style.fill = result.liked ? '#f43f5e' : 'none';
-                            svg.style.stroke = result.liked ? '#f43f5e' : 'currentColor';
-                        }
-                        if (path) {
-                            path.setAttribute('fill', result.liked ? '#f43f5e' : 'none');
-                            path.setAttribute('stroke', result.liked ? '#f43f5e' : 'currentColor');
-                            path.style.fill = result.liked ? '#f43f5e' : 'none';
-                            path.style.stroke = result.liked ? '#f43f5e' : 'currentColor';
-                        }
-                        const iconEl = btn.querySelector('.post-action-icon') || svg;
-                        if (iconEl && result.liked) {
-                            iconEl.style.animation = 'none';
-                            void iconEl.offsetWidth;
-                            iconEl.style.animation = 'lvl-heart-pop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-                        }
-                        if (countTarget) countTarget.textContent = result.count || '0';
-                        if (result.liked) {
-                            if (typeof createLikeBurst === 'function') createLikeBurst(btn);
-                            triggerLvlInteractionFeedback(btn, '+1 XP');
-                        }
+                        applyLikeFeedbackAndStyle(btn, result.liked, result.count);
                     } else if (action === 'repost') {
                         btn.classList.toggle('active', result.reposted);
                         btn.classList.toggle('repost-active', result.reposted);
@@ -2303,34 +2277,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (typeof showAppToast === 'function') showAppToast(result.error || 'Could not like reel.');
                             return;
                         }
-                        if (btn) {
-                            btn.classList.toggle('active', result.liked);
-                            btn.classList.toggle('like-active', result.liked);
-                            const svg = btn.querySelector('svg');
-                            const path = svg ? svg.querySelector('path') : null;
-                            if (svg) {
-                                svg.setAttribute('fill', result.liked ? '#f43f5e' : 'none');
-                                svg.setAttribute('stroke', result.liked ? '#f43f5e' : 'currentColor');
-                                svg.style.fill = result.liked ? '#f43f5e' : 'none';
-                                svg.style.stroke = result.liked ? '#f43f5e' : 'currentColor';
-                            }
-                            if (path) {
-                                path.setAttribute('fill', result.liked ? '#f43f5e' : 'none');
-                                path.setAttribute('stroke', result.liked ? '#f43f5e' : 'currentColor');
-                                path.style.fill = result.liked ? '#f43f5e' : 'none';
-                                path.style.stroke = result.liked ? '#f43f5e' : 'currentColor';
-                            }
-                            if (svg && result.liked) {
-                                svg.style.animation = 'none';
-                                void svg.offsetWidth;
-                                svg.style.animation = 'lvl-heart-pop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-                            }
-                            if (result.liked && typeof createLikeBurst === 'function') {
-                                createLikeBurst(btn);
-                            }
-                        }
-                        const count = form.querySelector('[data-reel-like-count]');
-                        if (count) count.textContent = result.count || '0';
+                        applyLikeFeedbackAndStyle(btn, result.liked, result.count);
                         if (typeof showXpToasts === 'function') showXpToasts(result.xp_toasts || []);
                     } catch (error) {
                         console.error('Could not like reel:', error);
@@ -2915,8 +2862,7 @@ function initRichReplies() {
                 if (!result.success) { showAppToast(result.error || 'Action failed.'); return; }
                 const count = button.querySelector('strong');
                 if (actionForm.dataset.action === 'like') {
-                    button.classList.toggle('active', result.liked);
-                    button.classList.toggle('like-active', result.liked);
+                    applyLikeFeedbackAndStyle(button, result.liked, result.count);
                 }
                 if (actionForm.dataset.action === 'repost') {
                     button.classList.toggle('active', result.reposted);

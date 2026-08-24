@@ -835,14 +835,23 @@
   transform: translate(-50%, -50%) scale(0);
 }
 
-.lvl-x-dot-0 { animation: lvl-x-pop-0 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; }
-.lvl-x-dot-1 { animation: lvl-x-pop-1 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; }
-.lvl-x-dot-2 { animation: lvl-x-pop-2 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; }
-.lvl-x-dot-3 { animation: lvl-x-pop-3 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; }
-.lvl-x-dot-4 { animation: lvl-x-pop-4 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; }
-.lvl-x-dot-5 { animation: lvl-x-pop-5 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; }
-.lvl-x-dot-6 { animation: lvl-x-pop-6 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; }
-.lvl-x-dot-7 { animation: lvl-x-pop-7 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; }
+.lvl-x-dot-0 { -webkit-animation: lvl-x-pop-0 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; animation: lvl-x-pop-0 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; }
+.lvl-x-dot-1 { -webkit-animation: lvl-x-pop-1 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; animation: lvl-x-pop-1 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; }
+.lvl-x-dot-2 { -webkit-animation: lvl-x-pop-2 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; animation: lvl-x-pop-2 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; }
+.lvl-x-dot-3 { -webkit-animation: lvl-x-pop-3 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; animation: lvl-x-pop-3 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; }
+.lvl-x-dot-4 { -webkit-animation: lvl-x-pop-4 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; animation: lvl-x-pop-4 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; }
+.lvl-x-dot-5 { -webkit-animation: lvl-x-pop-5 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; animation: lvl-x-pop-5 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; }
+.lvl-x-dot-6 { -webkit-animation: lvl-x-pop-6 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; animation: lvl-x-pop-6 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; }
+.lvl-x-dot-7 { -webkit-animation: lvl-x-pop-7 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; animation: lvl-x-pop-7 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; }
+
+@-webkit-keyframes lvl-x-pop-0 { 0% { opacity: 1; -webkit-transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; -webkit-transform: translate(-50%, -24px) scale(0); } }
+@-webkit-keyframes lvl-x-pop-1 { 0% { opacity: 1; -webkit-transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; -webkit-transform: translate(16px, -16px) scale(0); } }
+@-webkit-keyframes lvl-x-pop-2 { 0% { opacity: 1; -webkit-transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; -webkit-transform: translate(24px, -50%) scale(0); } }
+@-webkit-keyframes lvl-x-pop-3 { 0% { opacity: 1; -webkit-transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; -webkit-transform: translate(16px, 16px) scale(0); } }
+@-webkit-keyframes lvl-x-pop-4 { 0% { opacity: 1; -webkit-transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; -webkit-transform: translate(-50%, 24px) scale(0); } }
+@-webkit-keyframes lvl-x-pop-5 { 0% { opacity: 1; -webkit-transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; -webkit-transform: translate(-16px, 16px) scale(0); } }
+@-webkit-keyframes lvl-x-pop-6 { 0% { opacity: 1; -webkit-transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; -webkit-transform: translate(-24px, -50%) scale(0); } }
+@-webkit-keyframes lvl-x-pop-7 { 0% { opacity: 1; -webkit-transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; -webkit-transform: translate(-16px, -16px) scale(0); } }
 
 @keyframes lvl-x-pop-0 { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -24px) scale(0); } }
 @keyframes lvl-x-pop-1 { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(16px, -16px) scale(0); } }
