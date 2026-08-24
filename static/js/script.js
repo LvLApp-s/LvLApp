@@ -1242,8 +1242,24 @@ document.addEventListener('DOMContentLoaded', () => {
                         btn.classList.toggle('active', result.liked);
                         btn.classList.toggle('like-active', result.liked);
                         const svg = btn.querySelector('svg');
+                        const path = svg ? svg.querySelector('path') : null;
                         if (svg) {
-                            svg.setAttribute('fill', result.liked ? 'currentColor' : 'none');
+                            svg.setAttribute('fill', result.liked ? '#f43f5e' : 'none');
+                            svg.setAttribute('stroke', result.liked ? '#f43f5e' : 'currentColor');
+                            svg.style.fill = result.liked ? '#f43f5e' : 'none';
+                            svg.style.stroke = result.liked ? '#f43f5e' : 'currentColor';
+                        }
+                        if (path) {
+                            path.setAttribute('fill', result.liked ? '#f43f5e' : 'none');
+                            path.setAttribute('stroke', result.liked ? '#f43f5e' : 'currentColor');
+                            path.style.fill = result.liked ? '#f43f5e' : 'none';
+                            path.style.stroke = result.liked ? '#f43f5e' : 'currentColor';
+                        }
+                        const iconEl = btn.querySelector('.post-action-icon') || svg;
+                        if (iconEl && result.liked) {
+                            iconEl.style.animation = 'none';
+                            void iconEl.offsetWidth;
+                            iconEl.style.animation = 'lvl-heart-pop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
                         }
                         if (countTarget) countTarget.textContent = result.count || '0';
                         if (result.liked) {
@@ -2291,8 +2307,23 @@ document.addEventListener('DOMContentLoaded', () => {
                             btn.classList.toggle('active', result.liked);
                             btn.classList.toggle('like-active', result.liked);
                             const svg = btn.querySelector('svg');
+                            const path = svg ? svg.querySelector('path') : null;
                             if (svg) {
-                                svg.setAttribute('fill', result.liked ? 'currentColor' : 'none');
+                                svg.setAttribute('fill', result.liked ? '#f43f5e' : 'none');
+                                svg.setAttribute('stroke', result.liked ? '#f43f5e' : 'currentColor');
+                                svg.style.fill = result.liked ? '#f43f5e' : 'none';
+                                svg.style.stroke = result.liked ? '#f43f5e' : 'currentColor';
+                            }
+                            if (path) {
+                                path.setAttribute('fill', result.liked ? '#f43f5e' : 'none');
+                                path.setAttribute('stroke', result.liked ? '#f43f5e' : 'currentColor');
+                                path.style.fill = result.liked ? '#f43f5e' : 'none';
+                                path.style.stroke = result.liked ? '#f43f5e' : 'currentColor';
+                            }
+                            if (svg && result.liked) {
+                                svg.style.animation = 'none';
+                                void svg.offsetWidth;
+                                svg.style.animation = 'lvl-heart-pop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
                             }
                             if (result.liked && typeof createLikeBurst === 'function') {
                                 createLikeBurst(btn);

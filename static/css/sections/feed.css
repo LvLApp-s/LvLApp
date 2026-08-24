@@ -658,14 +658,19 @@
 
 .post-action-button.like-active .post-action-icon,
 .lvl-action-like.active .post-action-icon {
+  -webkit-animation: lvl-heart-pop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   animation: lvl-heart-pop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  -webkit-transform-origin: center;
+  transform-origin: center;
 }
 
 .post-action-button.like-active .post-action-icon svg,
-.lvl-action-like.active .post-action-icon svg {
-  fill: #f43f5e;
-  stroke: #f43f5e;
-  filter: drop-shadow(0 0 6px rgba(244, 63, 94, 0.6));
+.post-action-button.like-active .post-action-icon svg path,
+.lvl-action-like.active .post-action-icon svg,
+.lvl-action-like.active .post-action-icon svg path {
+  fill: #f43f5e !important;
+  stroke: #f43f5e !important;
+  filter: drop-shadow(0 0 6px rgba(244, 63, 94, 0.6)) !important;
 }
 
 /* ── Repost (Vibrant Emerald) ── */

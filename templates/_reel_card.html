@@ -1,5 +1,48 @@
 {% set author = reel.author or reel.user or {} %}
 {% set is_demo = reel.is_demo %}
+<style>
+  .reel-actions,
+  .reel-actions *,
+  .reel-actions form,
+  .reel-actions button,
+  .reel-actions a,
+  .reel-action-button {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    outline: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+  }
+  .reel-action-button.reel-action-mute.active,
+  .reel-action-mute.active {
+    color: #facc15 !important;
+  }
+  .reel-action-button.reel-action-mute.active svg,
+  .reel-action-button.reel-action-mute.active svg path,
+  .reel-action-button.reel-action-mute.active svg polygon,
+  .reel-action-mute.active svg,
+  .reel-action-mute.active svg path,
+  .reel-action-mute.active svg polygon {
+    stroke: #facc15 !important;
+    color: #facc15 !important;
+    filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.85)) !important;
+  }
+  .reel-action-button.reel-action-like.active,
+  .reel-action-like.active {
+    color: #f43f5e !important;
+  }
+  .reel-action-button.reel-action-like.active svg,
+  .reel-action-button.reel-action-like.active svg path,
+  .reel-action-like.active svg,
+  .reel-action-like.active svg path {
+    fill: #f43f5e !important;
+    stroke: #f43f5e !important;
+    filter: drop-shadow(0 0 8px rgba(244, 63, 94, 0.85)) !important;
+  }
+</style>
 <article class="reel-card {% if is_demo %}is-demo{% endif %}"
          data-reel-card
          data-reel-id="{{ reel.id }}"
