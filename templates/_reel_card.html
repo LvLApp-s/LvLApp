@@ -58,19 +58,19 @@
       </div>
     </div>
     <aside class="reel-actions" aria-label="Clip actions" data-i18n-aria="reel_actions_aria">
-      <button class="reel-action-button" type="button" data-reel-mute aria-label="Toggle sound" data-i18n-aria="reel_toggle_sound">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+      <button class="reel-action-button reel-action-mute" type="button" data-reel-mute aria-label="Toggle sound" data-i18n-aria="reel_toggle_sound">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
         <span data-reel-mute-icon class="sr-only" data-i18n="reel_muted">Muted</span>
       </button>
       {% if not is_demo %}
         <form action="{{ url_for('toggle_reel_like', reel_id=reel.id) }}" method="post" class="reel-like-form" data-reel-like-form>
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button class="reel-action-button {% if reel.viewer_liked %}active{% endif %}" type="submit" aria-label="Like clip" data-i18n-aria="reel_like_aria">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+          <button class="reel-action-button reel-action-like {% if reel.viewer_liked %}active{% endif %}" type="submit" aria-label="Like clip" data-i18n-aria="reel_like_aria">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="{% if reel.viewer_liked %}currentColor{% else %}none{% endif %}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
             <strong data-reel-like-count>{{ reel.like_count }}</strong>
           </button>
         </form>
-        <button class="reel-action-button" type="button"
+        <button class="reel-action-button reel-action-comment" type="button"
                 data-reel-comment-toggle
                 {% if not reel.is_demo %}
                 data-comments-url="{{ url_for('api_reel_comments', reel_id=reel.id) }}"
@@ -78,32 +78,32 @@
                 data-csrf="{{ csrf_token() }}"
                 {% endif %}
                 aria-label="View comments" data-i18n-aria="reel_view_comments">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           <strong data-reel-comment-count>{{ reel.comment_count }}</strong>
         </button>
-        <button class="reel-action-button share-action-button" type="button" data-share-modal-trigger aria-label="Share clip with friends" data-i18n-aria="reel_share_aria">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        <button class="reel-action-button share-action-button reel-action-share" type="button" data-share-modal-trigger aria-label="Share clip with friends" data-i18n-aria="reel_share_aria">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         </button>
         {% if reel.allow_downloads %}
-          <a class="reel-action-button" href="{{ reel.video_url }}" download aria-label="Download clip" data-i18n-aria="reel_download_aria">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+          <a class="reel-action-button reel-action-download" href="{{ reel.video_url }}" download aria-label="Download clip" data-i18n-aria="reel_download_aria">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           </a>
         {% endif %}
         {% if reel.is_owner %}
           <form action="{{ url_for('delete_reel', reel_id=reel.id) }}" method="post">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="reel-action-button danger" type="submit" aria-label="Delete clip" data-i18n-aria="reel_delete_aria">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
             </button>
           </form>
         {% endif %}
       {% else %}
         <button class="reel-action-button" type="button" disabled>
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
           <strong>0</strong>
         </button>
         <button class="reel-action-button" type="button" disabled>
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           <strong>0</strong>
         </button>
       {% endif %}

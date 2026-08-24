@@ -66,9 +66,8 @@
 .post-action-link:focus-visible,
 .post-action-button:hover,
 .post-action-button:focus-visible {
-  border-color: var(--lvl-white-14);
-  background: var(--hover-bg);
-  color: var(--text-primary);
+  border-color: transparent !important;
+  background: transparent !important;
   text-decoration: none;
 }
 

@@ -38,6 +38,60 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    function triggerTwitterHeartBurst(btn) {
+        if (!btn) return;
+        const colors = ['#f43f5e', '#ec4899', '#d946ef', '#8b5cf6', '#3b82f6', '#06b6d4', '#10b981', '#f59e0b'];
+        const burstContainer = document.createElement('span');
+        burstContainer.className = 'lvl-x-burst-container';
+        for (let i = 0; i < 8; i++) {
+            const dot = document.createElement('span');
+            dot.className = `lvl-x-dot lvl-x-dot-${i}`;
+            dot.style.setProperty('--dot-color', colors[i]);
+            burstContainer.appendChild(dot);
+        }
+        btn.appendChild(burstContainer);
+        setTimeout(() => burstContainer.remove(), 600);
+    }
+
+    function triggerLvlInteractionFeedback(btn, labelText) {
+        if (!btn) return;
+        const ring = document.createElement('span');
+        ring.className = 'lvl-shockwave-ring';
+        btn.appendChild(ring);
+        setTimeout(() => ring.remove(), 600);
+
+        triggerTwitterHeartBurst(btn);
+
+        const xpBadge = document.createElement('span');
+        xpBadge.className = 'lvl-xp-particle';
+        xpBadge.textContent = labelText || '+XP';
+        btn.appendChild(xpBadge);
+        setTimeout(() => xpBadge.remove(), 850);
+    }
+
+    document.addEventListener('click', (e) => {
+        const likeBtn = e.target.closest('.lvl-action-like, .reel-action-like');
+        if (likeBtn) {
+            triggerTwitterHeartBurst(likeBtn);
+        }
+    });
+
+    function triggerClipDoubleTapBurst(frameContainer) {
+        if (!frameContainer) return;
+        const burst = document.createElement('div');
+        burst.className = 'lvl-clip-doubletap-burst';
+        burst.innerHTML = `
+            <div class="lvl-clip-doubletap-icon">
+                <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+            </div>
+            <span class="lvl-clip-doubletap-label">+1 XP</span>
+        `;
+        frameContainer.appendChild(burst);
+        setTimeout(() => burst.remove(), 900);
+    }
+
     initFlashMessages();
     initXpToasts();
     initGenderPreview();
@@ -54,10 +108,30 @@ document.addEventListener('DOMContentLoaded', () => {
     initCommunityTimeline();
     initReelsFeed();
     initReelUploadPreview();
+    initPublicProgress();
     initPreferencesSettings();
     initRichReplies();
     initProgressiveMedia();
     initAjaxDeletePosts();
+
+    function initPublicProgress() {
+        const toggle = document.getElementById('pprogress-toggle');
+        const body = document.getElementById('pprogress-body');
+        if (!toggle || !body) return;
+
+        toggle.addEventListener('click', () => {
+            const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+            toggle.setAttribute('aria-expanded', isExpanded ? 'false' : 'true');
+            body.classList.toggle('is-collapsed', isExpanded);
+        });
+
+        toggle.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggle.click();
+            }
+        });
+    }
 
     const SoundEffects = {
         audioCtx: null,
@@ -1168,13 +1242,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         btn.classList.toggle('active', result.liked);
                         btn.classList.toggle('like-active', result.liked);
                         if (countTarget) countTarget.textContent = result.count || '0';
+                        if (result.liked) triggerLvlInteractionFeedback(btn, '+1 XP');
                     } else if (action === 'repost') {
                         btn.classList.toggle('active', result.reposted);
                         btn.classList.toggle('repost-active', result.reposted);
                         if (countTarget) countTarget.textContent = result.count || '0';
+                        if (result.reposted) triggerLvlInteractionFeedback(btn, 'BOOST!');
                     } else if (action === 'bookmark') {
                         btn.classList.toggle('active', result.bookmarked);
                         btn.classList.toggle('bookmark-active', result.bookmarked);
+                        if (result.bookmarked) triggerLvlInteractionFeedback(btn, 'VAULTED!');
                     } else if (action === 'follow') {
                         syncFollowControls(formData.get('target_id'), Boolean(result.following));
                     } else if (action === 'mute') {
@@ -1853,384 +1930,404 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function initReelsFeed() {
-        const feed = document.querySelector('[data-reels-feed]');
-        if (!feed) return;
+        const feeds = document.querySelectorAll('[data-reels-feed]');
+        if (!feeds.length) return;
 
-        const cards = Array.from(feed.querySelectorAll('[data-reel-card]'));
-        const viewed = new Set();
-        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        const soundPreferenceKey = 'lvlReelsSoundOn';
-        let soundOn = false;
-        let activeCard = null;
-        const minAutoplayLoops = 2;
+        feeds.forEach((feed) => {
+            const cards = Array.from(feed.querySelectorAll('[data-reel-card]'));
+            if (!cards.length) return;
 
-        try {
-            soundOn = window.sessionStorage.getItem(soundPreferenceKey) === '1';
-        } catch (error) {
-            soundOn = false;
-        }
+            const viewed = new Set();
+            const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            const soundPreferenceKey = 'lvlReelsSoundOn';
+            let soundOn = false;
+            let activeCard = null;
 
-        const saveSoundPreference = () => {
             try {
-                window.sessionStorage.setItem(soundPreferenceKey, soundOn ? '1' : '0');
+                soundOn = window.sessionStorage.getItem(soundPreferenceKey) === '1';
             } catch (error) {
-                // Session storage can be unavailable in private or restricted contexts.
+                soundOn = false;
             }
-        };
 
-        const updateMuteControl = (button, label, muted) => {
-            if (!button) return;
-            const labelKey = muted ? 'reel_muted' : 'reel_sound_on';
-            const ariaKey = muted ? 'reel_unmute_aria' : 'reel_mute_aria';
-            if (label) {
-                label.dataset.i18n = labelKey;
-                label.textContent = translateUi(labelKey, muted ? 'Muted' : 'Sound on');
-            }
-            button.classList.toggle('active', !muted);
-            button.dataset.i18nAria = ariaKey;
-            button.setAttribute('aria-label', translateUi(ariaKey, muted ? 'Unmute clips' : 'Mute clips'));
-        };
-
-        const applySoundPreference = (card) => {
-            const video = card.querySelector('[data-reel-video]');
-            const muteButton = card.querySelector('[data-reel-mute]');
-            const muteLabel = card.querySelector('[data-reel-mute-icon]');
-            if (!video) return;
-            video.muted = !soundOn;
-            updateMuteControl(muteButton, muteLabel, video.muted);
-        };
-
-        const applySoundPreferenceToAll = () => {
-            cards.forEach(applySoundPreference);
-        };
-
-        const commentsAreOpen = () => document.body.classList.contains('reel-comments-open');
-
-        const pauseCard = (card) => {
-            const video = card.querySelector('[data-reel-video]');
-            if (video && !video.paused) video.pause();
-            card.classList.remove('active');
-        };
-
-        const updatePlayIcon = (card) => {
-            const video = card.querySelector('[data-reel-video]');
-            const label = card.querySelector('[data-reel-play-icon]');
-            if (!video || !label) return;
-            const labelKey = video.paused ? 'reel_play' : 'reel_pause';
-            label.dataset.i18n = labelKey;
-            label.textContent = translateUi(labelKey, video.paused ? 'Play' : 'Pause');
-            card.classList.toggle('is-paused', video.paused);
-        };
-
-        const markViewed = async (card) => {
-            const reelId = card.dataset.reelId;
-            const viewUrl = card.dataset.viewUrl;
-            if (!reelId || !viewUrl || viewed.has(reelId)) return;
-            viewed.add(reelId);
-            const token = card.querySelector('input[name="csrf_token"]');
-            const formData = new FormData();
-            formData.append('ajax', '1');
-            if (token) formData.append('csrf_token', token.value);
-            try {
-                await fetch(viewUrl, { method: 'POST', body: formData, headers: { 'Accept': 'application/json' } });
-            } catch (error) {
-                console.error('Could not record reel view:', error);
-            }
-        };
-
-        const retryActivePlay = (card, video) => {
-            window.setTimeout(() => {
-                if (commentsAreOpen() || card !== activeCard || !video || !video.paused || video.readyState < 2) return;
-                video.play().catch(() => {
-                    card.classList.add('is-paused');
-                    updatePlayIcon(card);
-                });
-            }, 250);
-        };
-
-        const activateCard = (card) => {
-            if (!card || activeCard === card) return;
-            cards.forEach((item) => {
-                if (item !== card) pauseCard(item);
-            });
-            card.dataset.completedLoops = card.dataset.completedLoops || '0';
-            activeCard = card;
-            card.classList.add('active');
-            const video = card.querySelector('[data-reel-video]');
-            if (!video) return;
-            video.currentTime = 0;
-            applySoundPreference(card);
-            if (video.paused) {
-                const playPromise = video.play();
-                if (playPromise && typeof playPromise.catch === 'function') {
-                    playPromise.catch(() => {
-                        card.classList.add('is-paused');
-                        updatePlayIcon(card);
-                        retryActivePlay(card, video);
-                    });
-                }
-            }
-            retryActivePlay(card, video);
-            updatePlayIcon(card);
-            markViewed(card);
-        };
-
-        const scrollToCard = (card) => {
-            if (!card) return;
-            card.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' });
-        };
-
-        const goToOffset = (offset) => {
-            if (!activeCard) {
-                scrollToCard(cards[0]);
-                return;
-            }
-            const index = cards.indexOf(activeCard);
-            const next = cards[Math.max(0, Math.min(cards.length - 1, index + offset))];
-            scrollToCard(next);
-        };
-
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach((entry) => {
-                if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-                    activateCard(entry.target);
-                } else if (!entry.isIntersecting) {
-                    pauseCard(entry.target);
-                }
-            });
-        }, { root: feed, threshold: [0.5] });
-
-        cards.forEach((card) => {
-            observer.observe(card);
-            const video = card.querySelector('[data-reel-video]');
-            const playButton = card.querySelector('[data-reel-play]');
-            const muteButton = card.querySelector('[data-reel-mute]');
-            const muteLabel = card.querySelector('[data-reel-mute-icon]');
-
-            const togglePlay = () => {
-                if (!video) return;
-                if (video.paused) {
-                    video.play().catch(() => {});
-                } else {
-                    video.pause();
-                }
-                window.setTimeout(() => updatePlayIcon(card), 0);
+            const saveSoundPreference = () => {
+                try {
+                    window.sessionStorage.setItem(soundPreferenceKey, soundOn ? '1' : '0');
+                } catch (error) {}
             };
 
-            if (video) {
-                const adjustAspectRatio = () => {
-                    const aspect = video.videoWidth / video.videoHeight;
-                    const frame = card.querySelector('.reel-video-frame');
-                    if (frame && aspect) {
-                        if (aspect > 1.2) {
-                            frame.style.aspectRatio = '16 / 9';
-                            frame.style.width = 'min(560px, 100%)';
-                        } else if (aspect < 0.8) {
-                            frame.style.aspectRatio = '9 / 16';
-                            frame.style.width = 'min(calc(var(--max-reel-height) * 9 / 16), 420px, 100%)';
-                        } else {
-                            frame.style.aspectRatio = '1 / 1';
-                            frame.style.width = 'min(480px, 100%)';
-                        }
-                    }
-                };
+            const translateUiLocal = (key, fallback) => {
+                if (typeof translateUi === 'function') return translateUi(key, fallback);
+                return fallback;
+            };
 
-                if (video.readyState >= 1) {
-                    adjustAspectRatio();
-                } else {
-                    video.addEventListener('loadedmetadata', adjustAspectRatio);
+            const updateMuteControl = (button, label, muted) => {
+                if (!button) return;
+                const labelKey = muted ? 'reel_muted' : 'reel_sound_on';
+                const ariaKey = muted ? 'reel_unmute_aria' : 'reel_mute_aria';
+                if (label) {
+                    label.dataset.i18n = labelKey;
+                    label.textContent = translateUiLocal(labelKey, muted ? 'Muted' : 'Sound on');
                 }
+                button.classList.toggle('active', !muted);
+                button.dataset.i18nAria = ariaKey;
+                button.setAttribute('aria-label', translateUiLocal(ariaKey, muted ? 'Unmute clips' : 'Mute clips'));
+            };
 
-                video.addEventListener('click', togglePlay);
-                video.addEventListener('play', () => updatePlayIcon(card));
-                video.addEventListener('pause', () => updatePlayIcon(card));
-                video.addEventListener('canplay', () => {
-                    if (commentsAreOpen() || card !== activeCard || !video.paused) return;
+            const applySoundPreference = (card) => {
+                const video = card.querySelector('[data-reel-video]');
+                const muteButton = card.querySelector('[data-reel-mute]');
+                const muteLabel = card.querySelector('[data-reel-mute-icon]');
+                if (!video) return;
+                video.muted = !soundOn;
+                updateMuteControl(muteButton, muteLabel, video.muted);
+            };
+
+            const applySoundPreferenceToAll = () => cards.forEach(applySoundPreference);
+
+            const commentsAreOpen = () => document.body.classList.contains('reel-comments-open');
+
+            const updatePlayIcon = (card) => {
+                const video = card.querySelector('[data-reel-video]');
+                const label = card.querySelector('[data-reel-play-icon]');
+                if (!video || !label) return;
+                const labelKey = video.paused ? 'reel_play' : 'reel_pause';
+                label.dataset.i18n = labelKey;
+                label.textContent = translateUiLocal(labelKey, video.paused ? 'Play' : 'Pause');
+                card.classList.toggle('is-paused', video.paused);
+            };
+
+            const pauseCard = (card) => {
+                const video = card.querySelector('[data-reel-video]');
+                if (video && !video.paused) video.pause();
+                card.classList.remove('active');
+                updatePlayIcon(card);
+            };
+
+            const markViewed = async (card) => {
+                const reelId = card.dataset.reelId;
+                const viewUrl = card.dataset.viewUrl;
+                if (!reelId || !viewUrl || viewed.has(reelId)) return;
+                viewed.add(reelId);
+                const token = card.querySelector('input[name="csrf_token"]');
+                const formData = new FormData();
+                formData.append('ajax', '1');
+                if (token) formData.append('csrf_token', token.value);
+                try {
+                    await fetch(viewUrl, { method: 'POST', body: formData, headers: { 'Accept': 'application/json' } });
+                } catch (e) {}
+            };
+
+            const retryActivePlay = (card, video) => {
+                window.setTimeout(() => {
+                    if (commentsAreOpen() || card !== activeCard || !video || !video.paused || video.readyState < 2) return;
                     video.play().catch(() => {
                         card.classList.add('is-paused');
                         updatePlayIcon(card);
-                        retryActivePlay(card, video);
                     });
-                });
-                video.addEventListener('ended', () => {
-                    const autoplaySetting = window.localStorage.getItem('autoplay_next_reels') !== 'false';
-                    if (!autoplaySetting) {
-                        video.pause();
-                        card.classList.add('is-paused');
-                        updatePlayIcon(card);
-                        return;
-                    }
+                }, 400);
+            };
 
-                    card.dataset.completedLoops = '0';
-                    const index = cards.indexOf(card);
-                    if (index < cards.length - 1) {
-                        const nextCard = cards[index + 1];
-                        nextCard.dataset.completedLoops = '0';
-                        scrollToCard(nextCard);
-                        window.setTimeout(() => {
-                            if (!commentsAreOpen()) activateCard(nextCard);
-                        }, reducedMotion ? 0 : 450);
+            const activateCard = (card) => {
+                if (!card || activeCard === card) return;
+                cards.forEach((item) => { if (item !== card) pauseCard(item); });
+                activeCard = card;
+                card.classList.add('active');
+                const video = card.querySelector('[data-reel-video]');
+                if (!video) return;
+                applySoundPreference(card);
+                // load if preload=none
+                if (video.readyState === 0) {
+                    video.load();
+                }
+                if (video.paused) {
+                    const pp = video.play();
+                    if (pp && typeof pp.catch === 'function') {
+                        pp.catch(() => {
+                            card.classList.add('is-paused');
+                            updatePlayIcon(card);
+                            retryActivePlay(card, video);
+                        });
+                    }
+                }
+                updatePlayIcon(card);
+                markViewed(card);
+            };
+
+            const scrollToCard = (card) => {
+                if (!card) return;
+                card.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' });
+            };
+
+            const goToOffset = (offset) => {
+                if (!activeCard) { scrollToCard(cards[0]); return; }
+                const index = cards.indexOf(activeCard);
+                const next = cards[Math.max(0, Math.min(cards.length - 1, index + offset))];
+                scrollToCard(next);
+            };
+
+            // For the main reels page use the feed container as scroll root; for profile use viewport
+            const isMainReelsFeed = feed.classList.contains('reels-feed');
+            const observerRoot = isMainReelsFeed ? feed : null;
+            const observerThreshold = isMainReelsFeed ? 0.5 : 0.3;
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting && entry.intersectionRatio >= observerThreshold) {
+                        activateCard(entry.target);
+                    } else if (!entry.isIntersecting) {
+                        pauseCard(entry.target);
+                    }
+                });
+            }, { root: observerRoot, threshold: [observerThreshold] });
+
+            cards.forEach((card) => {
+                observer.observe(card);
+                const video = card.querySelector('[data-reel-video]');
+                const playButton = card.querySelector('[data-reel-play]');
+                const muteButton = card.querySelector('[data-reel-mute]');
+                const muteLabel = card.querySelector('[data-reel-mute-icon]');
+
+                const togglePlay = () => {
+                    if (!video) return;
+                    if (video.readyState === 0) video.load();
+                    if (video.paused) {
+                        video.play().catch(() => {});
                     } else {
-                        const note = document.querySelector('[data-reels-end]');
-                        if (note && !commentsAreOpen()) {
-                            note.hidden = false;
-                            window.setTimeout(() => { note.hidden = true; }, 1800);
-                        }
                         video.pause();
-                        card.classList.add('is-paused');
-                        updatePlayIcon(card);
                     }
-                });
-            }
-
-            if (playButton) playButton.addEventListener('click', togglePlay);
-            if (video) applySoundPreference(card);
-            if (muteButton && video) {
-                muteButton.addEventListener('click', () => {
-                    soundOn = video.muted;
-                    saveSoundPreference();
-                    applySoundPreferenceToAll();
-                });
-            }
-
-            // Comment panel toggle
-            const commentToggle = card.querySelector('[data-reel-comment-toggle]');
-            const commentPanel = card.querySelector('[data-reel-comment-panel]');
-            const commentClose = card.querySelector('[data-reel-comment-close]');
-
-            if (commentToggle && commentPanel) {
-                let commentsLoaded = false;
-
-                const openPanel = async () => {
-                    commentPanel.classList.add('is-open');
-                    document.body.classList.add('reel-comments-open');
-                    if (!commentsLoaded) {
-                        commentsLoaded = true;
-                        await loadReelComments(card, commentPanel, commentToggle);
-                    }
+                    window.setTimeout(() => updatePlayIcon(card), 0);
                 };
 
-                const closePanel = () => {
-                    commentPanel.classList.remove('is-open');
-                    document.body.classList.remove('reel-comments-open');
-                };
-
-                commentToggle.addEventListener('click', () => {
-                    if (commentPanel.classList.contains('is-open')) {
-                        closePanel();
-                    } else {
-                        openPanel();
-                    }
-                });
-
-                if (commentClose) commentClose.addEventListener('click', closePanel);
-
-                // Comment form inside panel
-                const commentForm = commentPanel.querySelector('[data-reel-comment-form]');
-                if (commentForm) {
-                    commentForm.addEventListener('submit', async (event) => {
-                        event.preventDefault();
-                        const input = commentForm.querySelector('input[name="comment"]');
-                        const submitBtn = commentForm.querySelector('button[type="submit"]');
-                        if (!input || !input.value.trim()) return;
-                        if (commentForm.dataset.submitting === '1') return;
-                        lockSubmitForm(commentForm, submitBtn);
-                        const formData = new FormData(commentForm);
-                        formData.append('ajax', '1');
-                        try {
-                            const response = await fetch(commentForm.action, {
-                                method: 'POST',
-                                body: formData,
-                                headers: { 'Accept': 'application/json' }
-                            });
-                            const result = await response.json();
-                            if (!result.success) {
-                                showAppToast(result.error || 'Could not post comment.');
-                                return;
+                if (video) {
+                    const adjustAspectRatio = () => {
+                        const aspect = video.videoWidth / video.videoHeight;
+                        const frame = card.querySelector('.reel-video-frame');
+                        if (frame && aspect) {
+                            if (aspect > 1.2) {
+                                frame.style.aspectRatio = '16 / 9';
+                                frame.style.width = 'min(560px, 100%)';
+                            } else if (aspect < 0.8) {
+                                frame.style.aspectRatio = '9 / 16';
+                                frame.style.width = 'min(calc(var(--max-reel-height) * 9 / 16), 420px, 100%)';
+                            } else {
+                                frame.style.aspectRatio = '1 / 1';
+                                frame.style.width = 'min(480px, 100%)';
                             }
-                            const countEl = card.querySelector('[data-reel-comment-count]');
-                            if (countEl) countEl.textContent = result.count || '0';
-                            const commentData = result.comment || {};
-                            commentData._viewerName = commentForm.dataset.viewerName;
-                            commentData._viewerUsername = commentForm.dataset.viewerUsername;
-                            commentData._viewerAvatar = commentForm.dataset.viewerAvatar;
-                            appendReelComment(commentPanel, commentData, true);
-                            input.value = '';
-                            showXpToasts(result.xp_toasts || []);
-                        } catch (error) {
-                            console.error('Could not post reel comment:', error);
-                            showAppToast(translateUi('comment_post_error', 'Comment did not post. Try again.'));
-                        } finally {
-                            unlockSubmitForm(commentForm, submitBtn);
+                        }
+                    };
+
+                    if (video.readyState >= 1) {
+                        adjustAspectRatio();
+                    } else {
+                        video.addEventListener('loadedmetadata', adjustAspectRatio);
+                    }
+
+                    let lastTapTime = 0;
+                    let singleTapTimer = null;
+                    video.addEventListener('click', (e) => {
+                        const currentTime = Date.now();
+                        const tapLength = currentTime - lastTapTime;
+                        if (tapLength < 300 && tapLength > 0) {
+                            clearTimeout(singleTapTimer);
+                            const frame = card.querySelector('.reel-video-frame');
+                            if (typeof triggerClipDoubleTapBurst === 'function') triggerClipDoubleTapBurst(frame);
+                            const likeForm = card.querySelector('[data-reel-like-form]');
+                            if (likeForm) {
+                                const likeBtn = likeForm.querySelector('button');
+                                if (likeBtn) likeBtn.click();
+                            }
+                            lastTapTime = 0;
+                        } else {
+                            lastTapTime = currentTime;
+                            singleTapTimer = setTimeout(() => { togglePlay(); }, 300);
+                        }
+                    });
+
+                    video.addEventListener('play', () => updatePlayIcon(card));
+                    video.addEventListener('pause', () => updatePlayIcon(card));
+                    video.addEventListener('canplay', () => {
+                        if (commentsAreOpen() || card !== activeCard || !video.paused) return;
+                        video.play().catch(() => {
+                            card.classList.add('is-paused');
+                            updatePlayIcon(card);
+                            retryActivePlay(card, video);
+                        });
+                    });
+                    video.addEventListener('ended', () => {
+                        const autoplaySetting = window.localStorage.getItem('autoplay_next_reels') !== 'false';
+                        if (!autoplaySetting) {
+                            video.pause();
+                            card.classList.add('is-paused');
+                            updatePlayIcon(card);
+                            return;
+                        }
+                        const index = cards.indexOf(card);
+                        if (index < cards.length - 1) {
+                            const nextCard = cards[index + 1];
+                            scrollToCard(nextCard);
+                            window.setTimeout(() => {
+                                if (!commentsAreOpen()) activateCard(nextCard);
+                            }, reducedMotion ? 0 : 450);
+                        } else {
+                            const note = document.querySelector('[data-reels-end]');
+                            if (note && !commentsAreOpen()) {
+                                note.hidden = false;
+                                window.setTimeout(() => { note.hidden = true; }, 1800);
+                            }
+                            video.pause();
+                            card.classList.add('is-paused');
+                            updatePlayIcon(card);
                         }
                     });
                 }
-            }
-        });
 
-        feed.querySelectorAll('[data-reel-like-form]').forEach((form) => {
-            form.addEventListener('submit', async (event) => {
-                event.preventDefault();
-                const btn = form.querySelector('button');
-                if (btn && btn.dataset.pending === '1') return;
-                if (btn) { btn.dataset.pending = '1'; btn.disabled = true; }
-                const formData = new FormData(form);
-                formData.append('ajax', '1');
-                try {
-                    const response = await fetch(form.action, { method: 'POST', body: formData, headers: { 'Accept': 'application/json' } });
-                    const result = await response.json();
-                    if (!result.success) {
-                        showAppToast(result.error || 'Could not like reel.');
-                        return;
+                if (playButton) playButton.addEventListener('click', togglePlay);
+                if (video) applySoundPreference(card);
+                if (muteButton && video) {
+                    muteButton.addEventListener('click', () => {
+                        soundOn = video.muted;
+                        saveSoundPreference();
+                        applySoundPreferenceToAll();
+                    });
+                }
+
+                // Comment panel toggle
+                const commentToggle = card.querySelector('[data-reel-comment-toggle]');
+                const commentPanel = card.querySelector('[data-reel-comment-panel]');
+                const commentClose = card.querySelector('[data-reel-comment-close]');
+
+                if (commentToggle && commentPanel) {
+                    let commentsLoaded = false;
+
+                    const openPanel = async () => {
+                        commentPanel.classList.add('is-open');
+                        document.body.classList.add('reel-comments-open');
+                        if (!commentsLoaded) {
+                            commentsLoaded = true;
+                            await loadReelComments(card, commentPanel, commentToggle);
+                        }
+                    };
+
+                    const closePanel = () => {
+                        commentPanel.classList.remove('is-open');
+                        document.body.classList.remove('reel-comments-open');
+                    };
+
+                    commentToggle.addEventListener('click', () => {
+                        if (commentPanel.classList.contains('is-open')) {
+                            closePanel();
+                        } else {
+                            openPanel();
+                        }
+                    });
+
+                    if (commentClose) commentClose.addEventListener('click', closePanel);
+
+                    const commentForm = commentPanel.querySelector('[data-reel-comment-form]');
+                    if (commentForm) {
+                        commentForm.addEventListener('submit', async (event) => {
+                            event.preventDefault();
+                            const input = commentForm.querySelector('input[name="comment"]');
+                            const submitBtn = commentForm.querySelector('button[type="submit"]');
+                            if (!input || !input.value.trim()) return;
+                            if (commentForm.dataset.submitting === '1') return;
+                            if (typeof lockSubmitForm === 'function') lockSubmitForm(commentForm, submitBtn);
+                            const formData = new FormData(commentForm);
+                            formData.append('ajax', '1');
+                            try {
+                                const response = await fetch(commentForm.action, {
+                                    method: 'POST',
+                                    body: formData,
+                                    headers: { 'Accept': 'application/json' }
+                                });
+                                const result = await response.json();
+                                if (!result.success) {
+                                    if (typeof showAppToast === 'function') showAppToast(result.error || 'Could not post comment.');
+                                    return;
+                                }
+                                const countEl = card.querySelector('[data-reel-comment-count]');
+                                if (countEl) countEl.textContent = result.count || '0';
+                                const commentData = result.comment || {};
+                                commentData._viewerName = commentForm.dataset.viewerName;
+                                commentData._viewerUsername = commentForm.dataset.viewerUsername;
+                                commentData._viewerAvatar = commentForm.dataset.viewerAvatar;
+                                appendReelComment(commentPanel, commentData, true);
+                                input.value = '';
+                                if (typeof showXpToasts === 'function') showXpToasts(result.xp_toasts || []);
+                            } catch (error) {
+                                console.error('Could not post reel comment:', error);
+                                if (typeof showAppToast === 'function') showAppToast(translateUiLocal('comment_post_error', 'Comment did not post. Try again.'));
+                            } finally {
+                                if (typeof unlockSubmitForm === 'function') unlockSubmitForm(commentForm, submitBtn);
+                            }
+                        });
                     }
-                    if (btn) btn.classList.toggle('active', result.liked);
-                    const count = form.querySelector('[data-reel-like-count]');
-                    if (count) count.textContent = result.count || '0';
-                    showXpToasts(result.xp_toasts || []);
-                } catch (error) {
-                    console.error('Could not like reel:', error);
-                    showAppToast(translateUi('action_failed', 'Action did not finish. Try again.'));
-                } finally {
-                    if (btn) { delete btn.dataset.pending; btn.disabled = false; }
                 }
             });
-        });
 
-        document.addEventListener('keydown', (event) => {
-            if (!document.querySelector('[data-reels-feed]')) return;
-            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
-            if (event.key === 'ArrowDown' || event.key === 'PageDown') {
-                event.preventDefault();
-                goToOffset(1);
-            } else if (event.key === 'ArrowUp' || event.key === 'PageUp') {
-                event.preventDefault();
-                goToOffset(-1);
-            } else if (event.key === ' ') {
-                event.preventDefault();
-                const button = activeCard ? activeCard.querySelector('[data-reel-play]') : null;
-                if (button) button.click();
-            } else if (event.key.toLowerCase() === 'm') {
-                const button = activeCard ? activeCard.querySelector('[data-reel-mute]') : null;
-                if (button) button.click();
-            }
-        });
-
-        window.requestAnimationFrame(() => {
-            let targetCard = cards[0];
-            if (window.location.hash) {
-                try {
-                    const hashId = window.location.hash.substring(1);
-                    const hashCard = feed.querySelector('#' + hashId) || feed.querySelector('[data-reel-id="' + hashId.replace('reel-', '') + '"]');
-                    if (hashCard) {
-                        targetCard = hashCard.closest('[data-reel-card]') || hashCard;
+            feed.querySelectorAll('[data-reel-like-form]').forEach((form) => {
+                form.addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    const btn = form.querySelector('button');
+                    if (btn && btn.dataset.pending === '1') return;
+                    if (btn) { btn.dataset.pending = '1'; btn.disabled = true; }
+                    const formData = new FormData(form);
+                    formData.append('ajax', '1');
+                    try {
+                        const response = await fetch(form.action, { method: 'POST', body: formData, headers: { 'Accept': 'application/json' } });
+                        const result = await response.json();
+                        if (!result.success) {
+                            if (typeof showAppToast === 'function') showAppToast(result.error || 'Could not like reel.');
+                            return;
+                        }
+                        if (btn) btn.classList.toggle('active', result.liked);
+                        const count = form.querySelector('[data-reel-like-count]');
+                        if (count) count.textContent = result.count || '0';
+                        if (typeof showXpToasts === 'function') showXpToasts(result.xp_toasts || []);
+                    } catch (error) {
+                        console.error('Could not like reel:', error);
+                        if (typeof showAppToast === 'function') showAppToast(translateUiLocal('action_failed', 'Action did not finish. Try again.'));
+                    } finally {
+                        if (btn) { delete btn.dataset.pending; btn.disabled = false; }
                     }
-                } catch (e) {}
+                });
+            });
+
+            // Keyboard navigation (only for main reels feed)
+            if (isMainReelsFeed) {
+                document.addEventListener('keydown', (event) => {
+                    if (!document.querySelector('[data-reels-feed]')) return;
+                    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+                    if (event.key === 'ArrowDown' || event.key === 'PageDown') {
+                        event.preventDefault();
+                        goToOffset(1);
+                    } else if (event.key === 'ArrowUp' || event.key === 'PageUp') {
+                        event.preventDefault();
+                        goToOffset(-1);
+                    } else if (event.key === ' ') {
+                        event.preventDefault();
+                        const button = activeCard ? activeCard.querySelector('[data-reel-play]') : null;
+                        if (button) button.click();
+                    } else if (event.key.toLowerCase() === 'm') {
+                        const button = activeCard ? activeCard.querySelector('[data-reel-mute]') : null;
+                        if (button) button.click();
+                    }
+                });
             }
-            if (targetCard && targetCard !== cards[0]) {
-                scrollToCard(targetCard);
-            }
-            activateCard(targetCard);
-        });
+
+            // Auto-activate first card in viewport
+            window.requestAnimationFrame(() => {
+                let targetCard = cards[0];
+                if (isMainReelsFeed && window.location.hash) {
+                    try {
+                        const hashId = window.location.hash.substring(1);
+                        const hashCard = feed.querySelector('#' + hashId) || feed.querySelector('[data-reel-id="' + hashId.replace('reel-', '') + '"]');
+                        if (hashCard) targetCard = hashCard.closest('[data-reel-card]') || hashCard;
+                    } catch (e) {}
+                }
+                activateCard(targetCard);
+            });
+        }); // end feeds.forEach
     }
 
     async function loadReelComments(card, panel, toggleBtn) {

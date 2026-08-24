@@ -576,3 +576,269 @@
   align-items: center;
   margin-bottom: 12px;
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   LvL Interaction System – Unique Micro-Interactions, Feedback & Icons
+   ────────────────────────────────────────────────────────────────────────── */
+
+.post-actions[data-lvl-actions] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 480px;
+  margin-top: 12px;
+  gap: 6px;
+  position: relative;
+}
+
+.post-action-button,
+.post-action-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 8px;
+  border-radius: 0;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--text-secondary, #94a3b8);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.18s ease, transform 0.18s ease;
+  overflow: visible;
+}
+
+.post-action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.post-action-icon svg {
+  display: block;
+  transition: stroke 0.2s ease, fill 0.2s ease, filter 0.2s ease;
+}
+
+/* ── Like / Heart (Rose Pink Glow) ── */
+.lvl-action-like:hover {
+  color: #f43f5e;
+}
+
+.lvl-action-like:hover .post-action-icon {
+  transform: scale(1.22) rotate(4deg);
+}
+
+.post-action-button.like-active,
+.lvl-action-like.active {
+  color: #f43f5e !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.post-action-button.like-active .post-action-icon,
+.lvl-action-like.active .post-action-icon {
+  animation: lvl-heart-pop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.post-action-button.like-active .post-action-icon svg,
+.lvl-action-like.active .post-action-icon svg {
+  fill: #f43f5e;
+  stroke: #f43f5e;
+  filter: drop-shadow(0 0 6px rgba(244, 63, 94, 0.6));
+}
+
+/* ── Repost (Vibrant Emerald) ── */
+.lvl-action-repost:hover {
+  color: #10b981;
+}
+
+.lvl-action-repost:hover .post-action-icon {
+  transform: scale(1.2) rotate(15deg);
+}
+
+.post-action-button.repost-active,
+.lvl-action-repost.active {
+  color: #10b981 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.post-action-button.repost-active .post-action-icon,
+.lvl-action-repost.active .post-action-icon {
+  animation: lvl-repost-spin 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.post-action-button.repost-active .post-action-icon svg,
+.lvl-action-repost.active .post-action-icon svg {
+  stroke: #10b981;
+  filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.6));
+}
+
+/* ── Vault / Bookmark (Warm Amber Gold) ── */
+.lvl-action-vault:hover {
+  color: #f59e0b;
+}
+
+.lvl-action-vault:hover .post-action-icon {
+  transform: scale(1.2);
+}
+
+.post-action-button.bookmark-active,
+.lvl-action-vault.active {
+  color: #f59e0b !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.post-action-button.bookmark-active .post-action-icon,
+.lvl-action-vault.active .post-action-icon {
+  animation: lvl-bookmark-pop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.post-action-button.bookmark-active .post-action-icon svg,
+.lvl-action-vault.active .post-action-icon svg {
+  fill: #f59e0b;
+  stroke: #f59e0b;
+  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.6));
+}
+
+/* ── Reply / Comment (Electric Blue) ── */
+.lvl-action-reply:hover {
+  color: #3b82f6;
+}
+
+.lvl-action-reply:hover .post-action-icon {
+  transform: scale(1.2) rotate(-6deg);
+}
+
+/* ── Share (Deep Cyan) ── */
+.lvl-action-share:hover {
+  color: #06b6d4;
+}
+
+.lvl-action-share:hover .post-action-icon {
+  transform: scale(1.2) rotate(10deg);
+}
+
+/* ── Keyframe Animations ── */
+@keyframes lvl-heart-pop {
+  0% { transform: scale(0.4) rotate(-12deg); }
+  45% { transform: scale(1.38) rotate(8deg); }
+  75% { transform: scale(0.92) rotate(-2deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+@keyframes lvl-repost-spin {
+  0% { transform: rotate(0deg) scale(0.6); }
+  65% { transform: rotate(180deg) scale(1.35); }
+  100% { transform: rotate(180deg) scale(1); }
+}
+
+@keyframes lvl-bookmark-pop {
+  0% { transform: scale(0.5); }
+  50% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+
+/* Floating +XP particle badge spawned on click */
+.lvl-xp-particle {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #f43f5e, #ff6b81);
+  color: #ffffff;
+  box-shadow: 0 2px 10px rgba(244, 63, 94, 0.4);
+  white-space: nowrap;
+  animation: lvl-xp-ascend 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  z-index: 10;
+}
+
+@keyframes lvl-xp-ascend {
+  0% { opacity: 0; transform: translate(-50%, 6px) scale(0.6); }
+  25% { opacity: 1; transform: translate(-50%, -10px) scale(1.15); }
+  70% { opacity: 1; transform: translate(-50%, -24px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -36px) scale(0.8); }
+}
+
+/* Expanding Shockwave Ring on button tap */
+.lvl-shockwave-ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  pointer-events: none;
+  animation: lvl-shockwave-expand 0.55s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+}
+
+@keyframes lvl-shockwave-expand {
+  0% { opacity: 0.9; transform: scale(0.5); }
+  100% { opacity: 0; transform: scale(1.7); }
+}
+
+/* X (Twitter) 8-Particle Ring Burst */
+.lvl-x-burst-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.lvl-x-dot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: var(--dot-color, #f43f5e);
+  box-shadow: 0 0 6px var(--dot-color, #f43f5e);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0);
+}
+
+.lvl-x-dot-0 { animation: lvl-x-pop-0 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; }
+.lvl-x-dot-1 { animation: lvl-x-pop-1 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; }
+.lvl-x-dot-2 { animation: lvl-x-pop-2 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; }
+.lvl-x-dot-3 { animation: lvl-x-pop-3 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; }
+.lvl-x-dot-4 { animation: lvl-x-pop-4 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; }
+.lvl-x-dot-5 { animation: lvl-x-pop-5 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; }
+.lvl-x-dot-6 { animation: lvl-x-pop-6 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; }
+.lvl-x-dot-7 { animation: lvl-x-pop-7 0.55s cubic-bezier(0.12, 0.8, 0.32, 1) forwards; }
+
+@keyframes lvl-x-pop-0 { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -24px) scale(0); } }
+@keyframes lvl-x-pop-1 { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(16px, -16px) scale(0); } }
+@keyframes lvl-x-pop-2 { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(24px, -50%) scale(0); } }
+@keyframes lvl-x-pop-3 { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(16px, 16px) scale(0); } }
+@keyframes lvl-x-pop-4 { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, 24px) scale(0); } }
+@keyframes lvl-x-pop-5 { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-16px, 16px) scale(0); } }
+@keyframes lvl-x-pop-6 { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-24px, -50%) scale(0); } }
+@keyframes lvl-x-pop-7 { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-16px, -16px) scale(0); } }
+@keyframes lvl-sparkle-bottom {
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, 16px) scale(0.2); }
+}
+@keyframes lvl-sparkle-left {
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-22px, -50%) scale(0.2); }
+}

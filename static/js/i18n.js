@@ -1102,8 +1102,9 @@ Object.assign(TRANSLATIONS.en, {
   ,home_media_aria: "Non-clip media"
   ,cancel_btn: "Cancel"
   ,share_btn: "Share"
-  ,profile_streak_days: "day streak"
-  ,profile_streak_friend_prefix: "Friend streak with"
+  profile_streak_days: "day streak",
+  profile_streak_friend_prefix: "Friend streak with",
+  profile_replies: "Replies",
   ,composer_image_selected: "Image selected"
   ,composer_saved_image: "Saved image attached"
   ,draft_image_label: "Image draft"
@@ -1139,6 +1140,9 @@ Object.assign(TRANSLATIONS.tr, {
   settings_language_title: "Dil",
   profile_no_bio: "Henüz biyografi yok.",
   no_bio: "Henüz biyografi yok.",
+  profile_posts: "Gönderiler",
+  profile_replies: "Yanıtlar",
+  profile_likes: "Beğeniler",
   profile_streak_hint: "Arkadaş olmak için 7 gün boyunca her gün beşlik çakın veya mesajlaşın.",
   notif_reel_like: "klibinizi beğendi",
   notif_reel_comment: "klibinize yorum yaptı",

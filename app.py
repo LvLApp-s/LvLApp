@@ -2378,6 +2378,18 @@ def get_reel_by_id(reel_id, viewer_id=None):
         return None
     return enrich_reels(visible, viewer_id)[0]
 
+def get_user_reels(profile_user_id, viewer_id, limit=POSTS_PER_PAGE, page=1):
+    try:
+        offset = (page - 1) * limit
+        select_query = '*, user:users!reels_user_id_fkey(*), community:communities!reels_community_id_fkey(*)'
+        res = supabase.table('reels').select(select_query).eq('user_id', profile_user_id).is_('deleted_at', 'null').order('created_at', desc=True).range(offset, offset + limit - 1).execute()
+        rows = res.data if res and res.data else []
+        visible = visible_reel_filter(rows, viewer_id)
+        return enrich_reels(visible, viewer_id)
+    except Exception as e:
+        print(f"Error fetching user reels: {e}", flush=True)
+        return []
+
 def get_reel_upload_communities(viewer_id):
     communities = {}
     try:
@@ -5596,21 +5608,39 @@ def profile(username):
                 'comments': comments_count.count if comments_count else 0
             }
 
+            reels = []
             select_query = '*, user:users!posts_user_id_fkey(*), likes(count), comments(count), reposts(count)'
             if mode == 'liked':
                 likes_res = supabase.table('likes').select('post_id').eq('user_id', profile_user['id']).execute()
-                liked_post_ids = [l['post_id'] for l in likes_res.data] if likes_res.data else []
+                liked_post_ids = [l['post_id'] for l in likes_res.data] if (likes_res and likes_res.data) else []
                 if liked_post_ids:
                     offset = (page - 1) * POSTS_PER_PAGE
                     posts_res = execute_published_posts(lambda: supabase.table('posts').select(select_query).in_('id', liked_post_ids).is_('deleted_at', 'null').order('created_at', desc=True).range(offset, offset + POSTS_PER_PAGE - 1))
-                    posts = visible_post_filter(posts_res.data if posts_res and posts_res.data else [], viewer['id'])
+                    raw_posts = posts_res.data if posts_res and posts_res.data else []
+                    posts = enrich_posts(visible_post_filter(raw_posts, viewer['id']), viewer['id'])
+                else:
+                    posts = []
+            elif mode == 'clips':
+                reels = get_user_reels(profile_user['id'], viewer['id'], limit=POSTS_PER_PAGE, page=page)
+                if not reels:
+                    offset = (page - 1) * POSTS_PER_PAGE
+                    posts_res = execute_published_posts(lambda: supabase.table('posts').select(select_query).eq('user_id', profile_user['id']).not_.is_('image_url', 'null').is_('deleted_at', 'null').order('created_at', desc=True).range(offset, offset + POSTS_PER_PAGE - 1))
+                    raw_posts = posts_res.data if posts_res and posts_res.data else []
+                    posts = enrich_posts(visible_post_filter(raw_posts, viewer['id']), viewer['id'])
+                else:
+                    posts = []
+            elif mode == 'replies':
+                comments_res = supabase.table('comments').select('post_id').eq('user_id', profile_user['id']).execute()
+                commented_post_ids = list(set([c['post_id'] for c in comments_res.data if c.get('post_id')])) if (comments_res and comments_res.data) else []
+                if commented_post_ids:
+                    offset = (page - 1) * POSTS_PER_PAGE
+                    posts_res = execute_published_posts(lambda: supabase.table('posts').select(select_query).in_('id', commented_post_ids).is_('deleted_at', 'null').order('created_at', desc=True).range(offset, offset + POSTS_PER_PAGE - 1))
+                    raw_posts = posts_res.data if posts_res and posts_res.data else []
+                    posts = enrich_posts(visible_post_filter(raw_posts, viewer['id']), viewer['id'])
                 else:
                     posts = []
             else:
                 posts = get_profile_posts(profile_user, viewer['id'], page=page)
-
-        if mode == 'liked':
-            posts = enrich_posts(posts, viewer['id'])
 
         raw_level = profile_user.get('level')
         level = max(1, int(raw_level) if raw_level is not None else 1)
@@ -5641,6 +5671,7 @@ def profile(username):
                            safety_state=safety_state,
                            stats=stats,
                            posts=posts,
+                           reels=reels,
                            mode=mode,
                            page=page,
                            has_next=len(posts) == POSTS_PER_PAGE,

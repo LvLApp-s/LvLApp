@@ -110,6 +110,40 @@
       <a href="{{ url_for('profile_social_list', username=profile.username, list_type='friends') }}"><strong>{{ stats.friends }}</strong> <span data-i18n="profile_friends">Friends</span></a>
     </div>
 
+    {% if achievements %}
+    <div class="pprogress-inline" id="pprogress-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="pprogress-body">
+      <div class="pprogress-inline-header">
+        <div class="pprogress-inline-left">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <span class="pprogress-inline-kicker">PUBLIC PROGRESS</span>
+          <span class="pprogress-inline-label">Achievements</span>
+        </div>
+        <div class="pprogress-inline-right">
+          <span class="pprogress-inline-count">{{ achievement_summary.unlocked }}/{{ achievement_summary.total }}</span>
+          <svg class="pprogress-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+      <div class="pprogress-body is-collapsed" id="pprogress-body">
+        <div class="pprogress-grid">
+          {% for ach in achievements %}
+            <article class="pprogress-card {% if ach.unlocked %}is-unlocked{% else %}is-locked{% endif %}">
+              <div class="pprogress-card-top">
+                <span class="pprogress-status">{% if ach.unlocked %}✓ Unlocked{% else %}Locked{% endif %}</span>
+                <span class="pprogress-pct">{{ ach.progress|round(0)|int }}%</span>
+              </div>
+              <strong class="pprogress-name" data-i18n="achievement_{{ ach.id }}_name">{{ ach.name }}</strong>
+              <p class="pprogress-desc" data-i18n="achievement_{{ ach.id }}_desc">{{ ach.description }}</p>
+              <div class="pprogress-bar-track" aria-hidden="true">
+                <div class="pprogress-bar-fill" style="width: {{ ach.progress }}%;"></div>
+              </div>
+              <small class="pprogress-label">{{ ach.progress_label }}</small>
+            </article>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
     {% if not is_own_profile %}
       {% set streak = streak_status|default({'count': 0, 'is_friend': false, 'days_until_friend': 7}) %}
       <div class="profile-streak-card {% if streak.is_friend %}is-friend{% endif %}">
@@ -129,159 +163,44 @@
       </div>
     {% endif %}
 
-    <section class="profile-xp-card" aria-label="Profile XP summary" data-i18n-aria="profile_xp_aria">
-      <div class="profile-xp-main">
-        <div>
-          {% set ltitle = level_title(profile.level or 1) %}
-          {% set ltitle_key = ltitle|lower|replace(' ', '_') %}
-          <span class="xp-kicker" data-i18n="level_title_{{ ltitle_key }}">{{ ltitle }}</span>
-          <strong>LvL {{ profile.level }}</strong>
-        </div>
-        <div class="profile-xp-total">
-          <strong>{{ profile.total_xp }}</strong>
-          <span data-i18n="profile_total_xp">Total XP</span>
-        </div>
-      </div>
-      <div class="xp-progress-track" aria-label="XP progress to next level" data-i18n-aria="profile_xp_progress_aria">
-        <span style="width: {{ profile_xp_progress }}%;"></span>
-      </div>
-      <div class="xp-score-row">
-        <span>{{ profile_xp_current }} / {{ profile_xp_span }} <span data-i18n="profile_xp_this_level">XP this level</span></span>
-        <strong>{{ profile_xp_needed }} <span data-i18n="profile_xp_to_lvl">XP to LvL</span> {{ profile.level + 1 }}</strong>
-      </div>
-      <div class="next-reward-callout">
-        <span data-i18n="profile_next_reward">Next reward</span>
-        <strong>LvL {{ next_level_reward.level }} · <span data-i18n="reward_lvl_{{ next_level_reward.level }}_label">{{ next_level_reward.label }}</span></strong>
-        <p data-i18n="reward_lvl_{{ next_level_reward.level }}_desc">{{ next_level_reward.description }}</p>
-      </div>
-      <a class="level-guide-link" href="{{ url_for('level_guide') }}" data-i18n="profile_open_guide">Open LvL Guide</a>
-    </section>
-
     <style>
-      .premium-achievements-card {
-        margin-top: 24px;
-        background: rgba(255, 255, 255, 0.02);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 20px;
-        padding: 0;
-        overflow: hidden;
-        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
-      }
-      .premium-achievements-card:hover {
-        border-color: rgba(0, 240, 255, 0.25);
-        box-shadow: 0 12px 40px rgba(0, 240, 255, 0.08), inset 0 0 20px rgba(0, 240, 255, 0.03);
-      }
-      .premium-achievements-card summary::-webkit-details-marker { display: none; }
-      .premium-achievements-card[open] .achievement-caret { transform: rotate(180deg); color: var(--lvl-cyan) !important; }
-      .premium-achievements-card[open] .premium-achievements-heading-btn {
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        background: rgba(255, 255, 255, 0.015);
-      }
-      .premium-achievements-heading-btn {
-        cursor: pointer;
-        list-style: none;
-        outline: none;
-        padding: 20px 24px;
+      .profile-tabs {
         display: flex;
-        justify-content: space-between;
-        align-items: center;
-        transition: background 0.3s ease;
+        border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+        margin-top: 16px;
       }
-      .premium-achievements-heading-btn:hover {
-        background: rgba(255, 255, 255, 0.03);
-      }
-      .premium-achievements-toggle {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
-        padding: 8px 18px;
-        border-radius: 30px;
-        border: 1px solid rgba(255,255,255,0.1);
-        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-      }
-      .premium-achievements-heading-btn:hover .premium-achievements-toggle {
-        background: linear-gradient(135deg, rgba(0,240,255,0.15), rgba(0,240,255,0.05));
-        border-color: rgba(0,240,255,0.3);
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(0,240,255,0.15);
-      }
-      .premium-achievements-toggle strong {
-        font-size: 15px;
-        color: var(--text-primary);
+      .profile-tabs a {
+        flex: 1;
+        text-align: center;
+        padding: 14px 16px;
+        color: var(--text-secondary, #94a3b8);
         font-weight: 700;
-        letter-spacing: 0.5px;
-        transition: color 0.3s ease;
+        font-size: 15px;
+        text-decoration: none;
+        position: relative;
+        transition: color 0.2s ease, background-color 0.2s ease;
       }
-      .premium-achievements-heading-btn:hover .premium-achievements-toggle strong {
-        color: var(--lvl-cyan);
+      .profile-tabs a:hover {
+        background-color: var(--hover-bg, rgba(255, 255, 255, 0.03));
+        color: var(--text-primary, #ffffff);
       }
-      .achievement-grid-wrapper {
-        padding: 24px;
-        background: rgba(0, 0, 0, 0.15);
+      .profile-tabs a.active {
+        color: var(--text-primary, #ffffff);
+        font-weight: 800;
       }
-      .profile-display-name {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-      }
-      .premium-achievements-header-left {
-        display: flex;
-        align-items: center;
-        gap: 18px;
-        pointer-events: none;
-      }
-      .premium-achievements-icon-box {
-        width: 52px;
-        height: 52px;
-        border-radius: 14px;
-        background: linear-gradient(135deg, var(--lvl-cyan), var(--lvl-deep-blue));
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 8px 24px rgba(0,240,255,0.3);
-        border: 1px solid rgba(255,255,255,0.2);
+      .profile-tabs a.active::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 56px;
+        height: 4px;
+        border-radius: 4px;
+        background-color: var(--accent-color, #00f0ff);
+        box-shadow: 0 0 10px var(--accent-color, #00f0ff);
       }
     </style>
-    <details class="premium-achievements-card" aria-label="Profile achievements" data-i18n-aria="profile_achievements_aria">
-      <summary class="premium-achievements-heading-btn">
-        <div class="premium-achievements-header-left">
-          <div class="premium-achievements-icon-box">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));"><path d="M12 15l-3.5 2 1-4.5-3-3 4.5-.5L12 5l1 4.5 4.5.5-3 3 1 4.5-3.5-2z"></path></svg>
-          </div>
-          <div>
-            <span class="xp-kicker" style="font-size: 10px; color: var(--lvl-cyan); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 800; display: block; margin-bottom: 4px; text-shadow: 0 0 8px rgba(0,240,255,0.4);" data-i18n="profile_public_progress">Public progress</span>
-            <h2 style="margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.3px; color: #fff;" data-i18n="guide_achievements_title">Achievements</h2>
-          </div>
-        </div>
-        <div class="premium-achievements-toggle">
-          <strong>{{ achievement_summary.unlocked }} / {{ achievement_summary.total }}</strong>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="achievement-caret" style="transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); color: rgba(255,255,255,0.6);"><polyline points="6 9 12 15 18 9"></polyline></svg>
-        </div>
-      </summary>
-      <div class="achievement-grid-wrapper">
-        <div class="achievement-grid" style="margin-top: 0;">
-          {% for achievement in achievements %}
-            <article class="achievement-card {% if achievement.unlocked %}unlocked{% else %}locked{% endif %}">
-              <div class="achievement-topline">
-                <span data-i18n="{% if achievement.unlocked %}profile_unlocked{% else %}profile_locked{% endif %}">{{ 'Unlocked' if achievement.unlocked else 'Locked' }}</span>
-                <b>{{ achievement.progress|round(0)|int }}%</b>
-              </div>
-              <strong data-i18n="achievement_{{ achievement.id }}_name">{{ achievement.name }}</strong>
-              <p data-i18n="achievement_{{ achievement.id }}_desc">{{ achievement.description }}</p>
-              <div class="achievement-progress-track" aria-label="{{ achievement.name }} progress">
-                <i style="width: {{ achievement.progress }}%;"></i>
-              </div>
-              <small>{{ achievement.progress_label }}</small>
-            </article>
-          {% endfor %}
-        </div>
-      </div>
-    </details>
-  </div>
 
     <nav class="profile-tabs" aria-label="Profile tabs" data-i18n-aria="profile_tabs_aria">
       <a href="{{ url_for('profile', username=profile.username, m='posts') }}" 
@@ -291,7 +210,7 @@
       </a>
       <a href="{{ url_for('profile', username=profile.username, m='replies') }}"
          class="{% if mode == 'replies' %}active{% endif %}"
-         {% if mode == 'replies' %}aria-current="page"{% endif %} data-i18n="community_lens_history_desc">
+         {% if mode == 'replies' %}aria-current="page"{% endif %} data-i18n="profile_replies">
         Replies
       </a>
       <a href="{{ url_for('profile', username=profile.username, m='clips') }}"
@@ -308,14 +227,27 @@
   </section>
 
 <section class="feed">
-  {% if not posts %}
+  {% if mode == 'clips' and reels %}
+    <div class="profile-reels-feed" data-reels-feed style="display: flex; flex-direction: column; gap: 24px; align-items: center; width: 100%; padding: 16px 0;">
+      {% for reel in reels %}
+        {% include "_reel_card.html" %}
+      {% endfor %}
+    </div>
+  {% elif not posts and not reels %}
     <div class="empty-state">
-      <h2 {% if mode == 'liked' %}data-i18n="profile_no_liked_posts"{% else %}data-i18n="profile_no_posts"{% endif %}>
-        {{ 'No liked posts' if mode == 'liked' else 'No posts' }}
-      </h2>
-      <p {% if mode == 'liked' %}data-i18n="profile_no_liked_posts_desc"{% else %}data-i18n="profile_no_posts_desc"{% endif %}>
-        {{ "This user hasn't liked any posts yet." if mode == 'liked' else 'This profile has not posted yet.' }}
-      </p>
+      {% if mode == 'liked' %}
+        <h2 data-i18n="profile_no_liked_posts">No liked posts</h2>
+        <p data-i18n="profile_no_liked_posts_desc">This user hasn't liked any posts yet.</p>
+      {% elif mode == 'clips' %}
+        <h2>No clips yet</h2>
+        <p>This profile has not uploaded any clips yet.</p>
+      {% elif mode == 'replies' %}
+        <h2>No replies yet</h2>
+        <p>This profile has not replied to any posts yet.</p>
+      {% else %}
+        <h2 data-i18n="profile_no_posts">No posts</h2>
+        <p data-i18n="profile_no_posts_desc">This profile has not posted yet.</p>
+      {% endif %}
     </div>
   {% else %}
     {% for post in posts %}
