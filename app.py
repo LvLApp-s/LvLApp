@@ -6462,10 +6462,39 @@ def post(id):
         hidden_commenter_ids = blocked_user_ids_for_viewer(viewer['id'], [comment.get('user_id') for comment in comments], include_mutes=False)
         comments = [comment for comment in comments if comment.get('user_id') not in hidden_commenter_ids]
 
-        return render_template('post.html', viewer=viewer, post=post_data, comments=comments)
+        return render_template('post.html', viewer=viewer, post=post_data, comments=comments,
+                               highlights=get_community_highlights())
     except Exception as e:
         flash(handle_db_error(e), "error")
         return redirect(url_for('index'))
+
+
+@app.route('/api/gif-search')
+def api_gif_search():
+    """Proxy Tenor GIF search – free tier, no key required for basic usage."""
+    q = request.args.get('q', '').strip()
+    limit = min(int(request.args.get('limit', 20)), 50)
+    try:
+        import urllib.request as _req
+        import urllib.parse as _parse
+        import json as _json
+        # Tenor v2 anonymous endpoint (CLIENTKEY is optional for basic use)
+        tenor_key = os.environ.get('TENOR_API_KEY', 'LIVDSRZULELA')  # public demo key
+        if q and q != 'trending':
+            url = (f'https://tenor.googleapis.com/v2/search'
+                   f'?q={_parse.quote(q)}&key={tenor_key}'
+                   f'&limit={limit}&media_filter=gif,tinygif,mediumgif&contentfilter=medium')
+        else:
+            url = (f'https://tenor.googleapis.com/v2/featured'
+                   f'?key={tenor_key}&limit={limit}'
+                   f'&media_filter=gif,tinygif,mediumgif&contentfilter=medium')
+        with _req.urlopen(url, timeout=6) as resp:
+            data = _json.loads(resp.read())
+        return jsonify({'results': data.get('results', [])})
+    except Exception as e:
+        app.logger.warning(f'[GIF] Tenor fetch failed: {e}')
+        return jsonify({'results': []}), 200
+
 
 @app.route('/api/share/friends')
 def api_share_friends():

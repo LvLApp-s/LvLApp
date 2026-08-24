@@ -2824,7 +2824,7 @@ function initRichReplies() {
             submit.disabled = false;
         }
     });
-    // ── GIF Picker (Giphy) ───────────────────────────────────────────────────
+    // ── GIF Picker (Tenor via backend proxy) ─────────────────────────────────
     const gifField = form.querySelector('[data-gif-field]');
     const gifToggle = form.querySelector('[data-gif-toggle]');
     if (gifField && gifToggle) {
@@ -2835,11 +2835,6 @@ function initRichReplies() {
         const gifPreviewImg = gifField.querySelector('[data-gif-preview-img]');
         const gifClear = gifField.querySelector('[data-gif-clear]');
         const gifUrlInput = form.querySelector('input[name="gif_url"]');
-        // For demonstration, use a fallback if not provided via meta tag or env.
-        const metaKey = document.querySelector('meta[name="giphy-api-key"]')?.content;
-        // DO NOT HARDCODE production keys here.
-        const GIPHY_KEY = metaKey || 'YOUR_GIPHY_API_KEY';
-        const GIPHY_BASE = 'https://api.giphy.com/v1/gifs';
 
         const t = (key, fb) => translateReplyUi(key, fb);
 
@@ -2850,12 +2845,12 @@ function initRichReplies() {
                 return;
             }
             gifs.forEach((gif) => {
-                // Thumbnail for the grid (small & fast), full URL for the post
-                const thumbUrl = gif.images?.fixed_width_small?.url
-                    || gif.images?.fixed_width?.url
-                    || gif.images?.downsized?.url || '';
-                const fullUrl = gif.images?.original?.url
-                    || gif.images?.downsized_large?.url
+                // Tenor format: gif.media_formats.tinygif.url for thumb, gif.media_formats.gif.url for full
+                const thumbUrl = gif.media_formats?.tinygif?.url
+                    || gif.media_formats?.mediumgif?.url
+                    || gif.media_formats?.gif?.url || '';
+                const fullUrl = gif.media_formats?.gif?.url
+                    || gif.media_formats?.mediumgif?.url
                     || thumbUrl;
                 if (!thumbUrl) return;
                 const img = document.createElement('img');
@@ -2869,11 +2864,9 @@ function initRichReplies() {
                     gifSelectedPreview.hidden = false;
                     gifResults.hidden = true;
                     gifSearch.value = gif.title || '';
-                    
                     // Explicitly enable the submit button so users can post just a GIF
                     const submitBtn = form.querySelector('button[type="submit"]');
                     if (submitBtn) submitBtn.disabled = false;
-                    
                     textarea.dispatchEvent(new Event('input', { bubbles: true }));
                 });
                 gifResults.appendChild(img);
@@ -2884,12 +2877,12 @@ function initRichReplies() {
             gifResults.textContent = t('gif_loading', 'Loading…');
             gifResults.hidden = false;
             try {
-                const endpoint = query
-                    ? `${GIPHY_BASE}/search?api_key=${GIPHY_KEY}&q=${encodeURIComponent(query)}&limit=20&rating=g&lang=en`
-                    : `${GIPHY_BASE}/trending?api_key=${GIPHY_KEY}&limit=20&rating=g`;
-                const resp = await fetch(endpoint);
+                const url = query
+                    ? `/api/gif-search?q=${encodeURIComponent(query)}`
+                    : `/api/gif-search?q=trending`;
+                const resp = await fetch(url);
                 const json = await resp.json();
-                renderGifResults(json.data || []);
+                renderGifResults(json.results || []);
             } catch {
                 gifResults.textContent = t('gif_no_results', 'No GIFs found');
             }
