@@ -6211,7 +6211,7 @@ def notifications():
         flash(handle_db_error(e), "error")
         formatted = []
 
-    return render_template('notifications.html', viewer=viewer, notifications=formatted)
+    return render_template('notifications.html', viewer=viewer, notifications=formatted, highlights=get_community_highlights())
 
 @app.route('/community')
 def community():
