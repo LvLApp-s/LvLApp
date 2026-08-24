@@ -592,7 +592,18 @@
 }
 
 .post-action-button,
-.post-action-link {
+.post-action-link,
+.post-action-button:hover,
+.post-action-link:hover,
+.post-action-button:focus,
+.post-action-link:focus,
+.post-action-button:active,
+.post-action-link:active,
+.post-action-button.active,
+.post-action-link.active,
+.post-action-button.like-active,
+.post-action-button.repost-active,
+.post-action-button.bookmark-active {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -600,10 +611,12 @@
   gap: 6px;
   min-height: 32px;
   padding: 4px 8px;
-  border-radius: 0;
+  border-radius: 0 !important;
   border: none !important;
   background: transparent !important;
   box-shadow: none !important;
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent !important;
   color: var(--text-secondary, #94a3b8);
   font-family: inherit;
   font-size: 13px;

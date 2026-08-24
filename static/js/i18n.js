@@ -1107,6 +1107,8 @@ Object.assign(TRANSLATIONS.en, {
   ,profile_replies: "Replies"
   ,pprogress_unlocked: "✓ Unlocked"
   ,pprogress_locked: "Locked"
+  ,pprogress_kicker: "PUBLIC PROGRESS"
+  ,pprogress_title: "Achievements"
   ,composer_image_selected: "Image selected"
   ,composer_saved_image: "Saved image attached"
   ,draft_image_label: "Image draft"
@@ -1146,6 +1148,8 @@ Object.assign(TRANSLATIONS.tr, {
   profile_replies: "Yanıtlar",
   pprogress_unlocked: "✓ Açıldı",
   pprogress_locked: "Kilitli",
+  pprogress_kicker: "GENEL İLERLEME",
+  pprogress_title: "Başarımlar",
   profile_likes: "Beğeniler",
   profile_streak_hint: "Arkadaş olmak için 7 gün boyunca her gün beşlik çakın veya mesajlaşın.",
   notif_reel_like: "klibinizi beğendi",

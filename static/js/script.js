@@ -1241,8 +1241,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (action === 'like') {
                         btn.classList.toggle('active', result.liked);
                         btn.classList.toggle('like-active', result.liked);
+                        const svg = btn.querySelector('svg');
+                        if (svg) {
+                            svg.setAttribute('fill', result.liked ? 'currentColor' : 'none');
+                        }
                         if (countTarget) countTarget.textContent = result.count || '0';
-                        if (result.liked) triggerLvlInteractionFeedback(btn, '+1 XP');
+                        if (result.liked) {
+                            if (typeof createLikeBurst === 'function') createLikeBurst(btn);
+                            triggerLvlInteractionFeedback(btn, '+1 XP');
+                        }
                     } else if (action === 'repost') {
                         btn.classList.toggle('active', result.reposted);
                         btn.classList.toggle('repost-active', result.reposted);
@@ -2280,7 +2287,17 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (typeof showAppToast === 'function') showAppToast(result.error || 'Could not like reel.');
                             return;
                         }
-                        if (btn) btn.classList.toggle('active', result.liked);
+                        if (btn) {
+                            btn.classList.toggle('active', result.liked);
+                            btn.classList.toggle('like-active', result.liked);
+                            const svg = btn.querySelector('svg');
+                            if (svg) {
+                                svg.setAttribute('fill', result.liked ? 'currentColor' : 'none');
+                            }
+                            if (result.liked && typeof createLikeBurst === 'function') {
+                                createLikeBurst(btn);
+                            }
+                        }
                         const count = form.querySelector('[data-reel-like-count]');
                         if (count) count.textContent = result.count || '0';
                         if (typeof showXpToasts === 'function') showXpToasts(result.xp_toasts || []);

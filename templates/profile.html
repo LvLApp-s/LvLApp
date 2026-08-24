@@ -115,8 +115,8 @@
       <div class="pprogress-inline-header">
         <div class="pprogress-inline-left">
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-          <span class="pprogress-inline-kicker">PUBLIC PROGRESS</span>
-          <span class="pprogress-inline-label">Achievements</span>
+          <span class="pprogress-inline-kicker" data-i18n="pprogress_kicker">GENEL İLERLEME</span>
+          <span class="pprogress-inline-label" data-i18n="pprogress_title">Başarımlar</span>
         </div>
         <div class="pprogress-inline-right">
           <span class="pprogress-inline-count">{{ achievement_summary.unlocked }}/{{ achievement_summary.total }}</span>
@@ -313,18 +313,23 @@
       }
       .profile-tabs {
         display: flex;
+        align-items: center;
+        justify-content: space-around;
         border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
         margin-top: 16px;
+        width: 100%;
+        box-sizing: border-box;
       }
       .profile-tabs a {
         flex: 1;
         text-align: center;
-        padding: 14px 16px;
+        padding: 12px 6px;
         color: var(--text-secondary, #94a3b8);
         font-weight: 700;
-        font-size: 15px;
+        font-size: 14px;
         text-decoration: none;
         position: relative;
+        white-space: nowrap;
         transition: color 0.2s ease, background-color 0.2s ease;
       }
       .profile-tabs a:hover {
@@ -341,11 +346,20 @@
         bottom: 0;
         left: 50%;
         transform: translateX(-50%);
-        width: 56px;
-        height: 4px;
+        width: 44px;
+        height: 3px;
         border-radius: 4px;
         background-color: var(--accent-color, #00f0ff);
         box-shadow: 0 0 10px var(--accent-color, #00f0ff);
+      }
+      @media (max-width: 440px) {
+        .profile-tabs a {
+          font-size: 13px;
+          padding: 10px 2px;
+        }
+        .profile-tabs a.active::after {
+          width: 32px;
+        }
       }
 
       /* ── Profile Clips Mobile Layout Fix ── */
@@ -375,6 +389,14 @@
         overflow: hidden !important;
       }
 
+      .profile-reels-feed .reel-actions,
+      .profile-reels-feed .reel-actions * {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+      }
+
       .profile-reels-feed .reel-actions {
         position: absolute !important;
         bottom: 8px !important;
@@ -395,10 +417,6 @@
         height: 36px !important;
         font-size: 10px !important;
         padding: 0 !important;
-        border: none !important;
-        border-radius: 0 !important;
-        background: transparent !important;
-        box-shadow: none !important;
         color: #ffffff !important;
         filter: drop-shadow(0 2px 5px rgba(0,0,0,0.85)) !important;
       }
@@ -408,22 +426,22 @@
       <a href="{{ url_for('profile', username=profile.username, m='posts') }}" 
          class="{% if mode == 'posts' %}active{% endif %}"
          {% if mode == 'posts' %}aria-current="page"{% endif %} data-i18n="profile_posts">
-        Posts
+        Gönderiler
       </a>
       <a href="{{ url_for('profile', username=profile.username, m='replies') }}"
          class="{% if mode == 'replies' %}active{% endif %}"
          {% if mode == 'replies' %}aria-current="page"{% endif %} data-i18n="profile_replies">
-        Replies
+        Yanıtlar
       </a>
       <a href="{{ url_for('profile', username=profile.username, m='clips') }}"
          class="{% if mode == 'clips' %}active{% endif %}"
          {% if mode == 'clips' %}aria-current="page"{% endif %} data-i18n="nav_clips">
-        Clips
+        Klipler
       </a>
       <a href="{{ url_for('profile', username=profile.username, m='liked') }}"
          class="{% if mode == 'liked' %}active{% endif %}"
          {% if mode == 'liked' %}aria-current="page"{% endif %} data-i18n="profile_likes">
-        Likes
+        Beğeniler
       </a>
     </nav>
   </section>
