@@ -185,7 +185,7 @@ ATTACHMENT_CONTENT_TYPES = {
     'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'txt': 'text/plain',
 }
-ASSET_VERSION = "134"
+ASSET_VERSION = "135"
 HOME_REEL_PREVIEW_LIMIT = 12
 HOME_MEDIA_PREVIEW_LIMIT = 12
 
