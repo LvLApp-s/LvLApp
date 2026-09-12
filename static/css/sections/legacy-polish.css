@@ -1991,6 +1991,18 @@ button {
   justify-content: space-between;
   padding: 10px 14px;
   user-select: none;
+  width: 100%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+.pprogress-inline-header:hover {
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .pprogress-inline-left {
@@ -2042,7 +2054,9 @@ button {
   flex-shrink: 0;
 }
 
-.pprogress-inline[aria-expanded="true"] .pprogress-chevron {
+.pprogress-inline[aria-expanded="true"] .pprogress-chevron,
+.pprogress-inline.is-expanded .pprogress-chevron,
+.pprogress-inline-header[aria-expanded="true"] .pprogress-chevron {
   transform: rotate(180deg);
 }
 

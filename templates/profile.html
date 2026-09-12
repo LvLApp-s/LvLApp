@@ -111,8 +111,8 @@
     </div>
 
     {% if achievements %}
-    <div class="pprogress-inline" id="pprogress-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="pprogress-body" onclick="var b=document.getElementById('pprogress-body');if(b){var e=this.getAttribute('aria-expanded')==='true';this.setAttribute('aria-expanded',!e);b.classList.toggle('is-collapsed',e);}">
-      <div class="pprogress-inline-header">
+    <div class="pprogress-inline" id="pprogress-inline" aria-expanded="false">
+      <button type="button" class="pprogress-inline-header" id="pprogress-toggle" aria-expanded="false" aria-controls="pprogress-body">
         <div class="pprogress-inline-left">
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
           <span class="pprogress-inline-kicker" data-i18n="pprogress_kicker">GENEL İLERLEME</span>
@@ -122,7 +122,7 @@
           <span class="pprogress-inline-count">{{ achievement_summary.unlocked }}/{{ achievement_summary.total }}</span>
           <svg class="pprogress-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
-      </div>
+      </button>
       <div class="pprogress-body is-collapsed" id="pprogress-body">
         <div class="pprogress-grid">
           {% for ach in achievements %}
@@ -167,11 +167,10 @@
       /* ── Public Progress Inline ── */
       .pprogress-inline {
         margin: 12px 0 4px;
-        border-radius: 12px;
+        border-radius: var(--radius-lg, 12px);
         border: 1px solid rgba(255,255,255,0.08);
         background: rgba(255,255,255,0.03);
         overflow: hidden;
-        cursor: pointer;
         transition: border-color 0.2s ease;
       }
       .pprogress-inline:hover { border-color: rgba(0,240,255,0.18); }
@@ -182,6 +181,17 @@
         padding: 10px 14px;
         user-select: none;
         gap: 8px;
+        width: 100%;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: inherit;
+        color: inherit;
+        text-align: left;
+      }
+      .pprogress-inline-header:hover {
+        background: rgba(255, 255, 255, 0.02);
       }
       .pprogress-inline-left {
         display: flex;
@@ -190,20 +200,21 @@
         min-width: 0;
         flex: 1;
       }
-      .pprogress-inline-left svg { flex-shrink: 0; color: #00f0ff; }
+      .pprogress-inline-left svg { flex-shrink: 0; color: var(--lvl-cyan, #00f0ff); }
       .pprogress-inline-kicker {
         font-size: 9px;
         font-weight: 800;
         letter-spacing: 1.2px;
         text-transform: uppercase;
-        color: rgba(0,240,255,0.65);
+        color: var(--lvl-cyan, #00f0ff);
+        opacity: 0.75;
         white-space: nowrap;
         flex-shrink: 0;
       }
       .pprogress-inline-label {
         font-size: 13px;
         font-weight: 700;
-        color: #fff;
+        color: var(--text-primary, #ffffff);
         white-space: nowrap;
       }
       .pprogress-inline-right {
@@ -215,26 +226,35 @@
       .pprogress-inline-count {
         font-size: 12px;
         font-weight: 700;
-        color: #00f0ff;
+        color: var(--lvl-cyan, #00f0ff);
         background: rgba(0,240,255,0.08);
         border: 1px solid rgba(0,240,255,0.2);
         padding: 2px 9px;
-        border-radius: 20px;
+        border-radius: var(--radius-pill, 20px);
         white-space: nowrap;
       }
       .pprogress-chevron {
-        color: #94a3b8;
+        color: var(--text-secondary, #94a3b8);
         transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
         flex-shrink: 0;
       }
-      .pprogress-inline[aria-expanded="true"] .pprogress-chevron { transform: rotate(180deg); }
+      .pprogress-inline[aria-expanded="true"] .pprogress-chevron,
+      .pprogress-inline.is-expanded .pprogress-chevron,
+      .pprogress-inline-header[aria-expanded="true"] .pprogress-chevron {
+        transform: rotate(180deg);
+      }
       .pprogress-body {
         overflow: hidden;
         transition: max-height 0.38s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease;
         max-height: 3000px;
         opacity: 1;
       }
-      .pprogress-body.is-collapsed { max-height: 0 !important; opacity: 0; pointer-events: none; }
+      .pprogress-body.is-collapsed {
+        max-height: 0 !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        visibility: hidden !important;
+      }
       .pprogress-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
@@ -242,7 +262,7 @@
         padding: 4px 10px 12px;
       }
       .pprogress-card {
-        border-radius: 10px;
+        border-radius: var(--radius-md, 10px);
         padding: 11px 12px;
         border: 1px solid rgba(255,255,255,0.07);
         background: rgba(255,255,255,0.025);
@@ -267,36 +287,36 @@
         text-transform: uppercase;
         color: rgba(100,116,139,0.85);
       }
-      .pprogress-card.is-unlocked .pprogress-status { color: #10b981; }
+      .pprogress-card.is-unlocked .pprogress-status { color: var(--lvl-success, #00ba7c); }
       .pprogress-pct {
         font-size: 11px;
         font-weight: 700;
-        color: #94a3b8;
+        color: var(--text-secondary, #94a3b8);
         white-space: nowrap;
       }
-      .pprogress-card.is-unlocked .pprogress-pct { color: #10b981; }
+      .pprogress-card.is-unlocked .pprogress-pct { color: var(--lvl-success, #00ba7c); }
       .pprogress-name {
         font-size: 12.5px;
         font-weight: 700;
-        color: #fff;
+        color: var(--text-primary, #ffffff);
         line-height: 1.3;
       }
       .pprogress-desc {
         font-size: 11px;
-        color: #94a3b8;
+        color: var(--text-secondary, #94a3b8);
         margin: 0;
         line-height: 1.4;
       }
       .pprogress-bar-track {
         height: 4px;
-        border-radius: 4px;
+        border-radius: var(--radius-pill, 4px);
         background: rgba(255,255,255,0.07);
         overflow: hidden;
         margin-top: 2px;
       }
       .pprogress-bar-fill {
         height: 100%;
-        border-radius: 4px;
+        border-radius: var(--radius-pill, 4px);
         background: linear-gradient(90deg, #3b82f6, #818cf8);
         transition: width 0.6s ease;
       }
@@ -311,29 +331,40 @@
       @media (max-width: 400px) {
         .pprogress-grid { grid-template-columns: 1fr; gap: 6px; }
       }
+
+      /* ── Scrollable Twitter-Style Profile Tabs ── */
       .profile-tabs {
         display: flex;
         align-items: center;
-        justify-content: space-around;
         border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
         margin-top: 16px;
         width: 100%;
         box-sizing: border-box;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        scroll-behavior: smooth;
+      }
+      .profile-tabs::-webkit-scrollbar {
+        display: none;
       }
       .profile-tabs a {
-        flex: 1;
+        flex: 1 0 auto;
         text-align: center;
-        padding: 12px 6px;
+        padding: 13px 18px;
         color: var(--text-secondary, #94a3b8);
         font-weight: 700;
         font-size: 14px;
         text-decoration: none;
         position: relative;
         white-space: nowrap;
+        user-select: none;
         transition: color 0.2s ease, background-color 0.2s ease;
       }
       .profile-tabs a:hover {
-        background-color: var(--hover-bg, rgba(255, 255, 255, 0.03));
+        background-color: var(--hover-bg, rgba(255, 255, 255, 0.04));
         color: var(--text-primary, #ffffff);
       }
       .profile-tabs a.active {
@@ -344,21 +375,27 @@
         content: '';
         position: absolute;
         bottom: 0;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 44px;
+        left: 14px;
+        right: 14px;
         height: 3px;
-        border-radius: 4px;
-        background-color: var(--accent-color, #00f0ff);
-        box-shadow: 0 0 10px var(--accent-color, #00f0ff);
+        border-radius: var(--radius-pill, 4px);
+        background-color: var(--accent-color, var(--lvl-cyan, #00f0ff));
+        box-shadow: 0 0 10px var(--accent-color, var(--lvl-cyan, #00f0ff));
       }
-      @media (max-width: 440px) {
+      @media (max-width: 640px) {
+        .profile-tabs {
+          justify-content: flex-start;
+          padding: 0 4px;
+          gap: 2px;
+        }
         .profile-tabs a {
-          font-size: 13px;
-          padding: 10px 2px;
+          flex: 0 0 auto;
+          font-size: 14px;
+          padding: 12px 16px;
         }
         .profile-tabs a.active::after {
-          width: 32px;
+          left: 12px;
+          right: 12px;
         }
       }
 

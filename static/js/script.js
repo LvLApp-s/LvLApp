@@ -187,6 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initReelsFeed();
     initReelUploadPreview();
     initPublicProgress();
+    initProfileTabs();
     initPreferencesSettings();
     initRichReplies();
     initProgressiveMedia();
@@ -195,20 +196,52 @@ document.addEventListener('DOMContentLoaded', () => {
     function initPublicProgress() {
         const toggle = document.getElementById('pprogress-toggle');
         const body = document.getElementById('pprogress-body');
+        const container = document.getElementById('pprogress-inline') || (toggle ? toggle.closest('.pprogress-inline') : null);
         if (!toggle || !body) return;
 
-        toggle.addEventListener('click', () => {
-            const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
-            toggle.setAttribute('aria-expanded', isExpanded ? 'false' : 'true');
-            body.classList.toggle('is-collapsed', isExpanded);
-        });
+        if (toggle.dataset.pprogressInit === 'true') return;
+        toggle.dataset.pprogressInit = 'true';
 
+        const doToggle = (e) => {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+            const next = !isExpanded;
+            toggle.setAttribute('aria-expanded', String(next));
+            if (container) {
+                container.setAttribute('aria-expanded', String(next));
+                container.classList.toggle('is-expanded', next);
+            }
+            body.classList.toggle('is-collapsed', !next);
+        };
+
+        toggle.addEventListener('click', doToggle);
         toggle.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                toggle.click();
+                doToggle(e);
             }
         });
+
+        body.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
+
+    function initProfileTabs() {
+        const tabsNav = document.querySelector('.profile-tabs');
+        if (!tabsNav) return;
+        const activeTab = tabsNav.querySelector('a.active');
+        if (activeTab) {
+            requestAnimationFrame(() => {
+                const navRect = tabsNav.getBoundingClientRect();
+                const tabRect = activeTab.getBoundingClientRect();
+                if (tabRect.left < navRect.left || tabRect.right > navRect.right) {
+                    activeTab.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+                }
+            });
+        }
     }
 
     const SoundEffects = {
