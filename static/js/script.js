@@ -1287,39 +1287,90 @@ document.addEventListener('DOMContentLoaded', () => {
         window.addEventListener('resize', syncSidebarMode);
     }
 
-    const mobileProfileTrigger = document.querySelector('[data-mobile-profile-trigger]');
-    const mobileAccountMenu = document.querySelector('[data-mobile-account-menu]');
-    if (mobileProfileTrigger && mobileAccountMenu) {
-        const closeAccountMenu = () => {
-            mobileAccountMenu.hidden = true;
-            mobileProfileTrigger.setAttribute('aria-expanded', 'false');
+    // Mobile Twitter/X-Style Drawer Controller
+    const mobileDrawer = document.querySelector('[data-mobile-drawer]');
+    const mobileBackdrop = document.querySelector('[data-mobile-drawer-backdrop]');
+    const mobileDrawerTriggers = document.querySelectorAll('[data-mobile-drawer-trigger]');
+    const mobileDrawerClose = document.querySelector('[data-mobile-drawer-close]');
+
+    if (mobileDrawer && mobileBackdrop) {
+        let isDrawerOpen = false;
+
+        const openDrawer = () => {
+            if (isDrawerOpen) return;
+            isDrawerOpen = true;
+            mobileBackdrop.hidden = false;
+            mobileDrawer.hidden = false;
+            document.body.style.overflow = 'hidden';
+            requestAnimationFrame(() => {
+                mobileBackdrop.classList.add('is-open');
+                mobileDrawer.classList.add('is-open');
+            });
+            mobileDrawerTriggers.forEach(t => t.setAttribute('aria-expanded', 'true'));
         };
 
-        const openAccountMenu = () => {
-            mobileAccountMenu.hidden = false;
-            mobileProfileTrigger.setAttribute('aria-expanded', 'true');
+        const closeDrawer = () => {
+            if (!isDrawerOpen) return;
+            isDrawerOpen = false;
+            mobileBackdrop.classList.remove('is-open');
+            mobileDrawer.classList.remove('is-open');
+            document.body.style.overflow = '';
+            mobileDrawerTriggers.forEach(t => t.setAttribute('aria-expanded', 'false'));
+            setTimeout(() => {
+                if (!isDrawerOpen) {
+                    mobileBackdrop.hidden = true;
+                    mobileDrawer.hidden = true;
+                }
+            }, 300);
         };
 
-        mobileProfileTrigger.addEventListener('click', (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            if (mobileAccountMenu.hidden) {
-                openAccountMenu();
-            } else {
-                closeAccountMenu();
+        mobileDrawerTriggers.forEach(trigger => {
+            trigger.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (isDrawerOpen) {
+                    closeDrawer();
+                } else {
+                    openDrawer();
+                }
+            });
+        });
+
+        if (mobileDrawerClose) {
+            mobileDrawerClose.addEventListener('click', (e) => {
+                e.preventDefault();
+                closeDrawer();
+            });
+        }
+
+        mobileBackdrop.addEventListener('click', closeDrawer);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && isDrawerOpen) {
+                closeDrawer();
             }
         });
 
-        document.addEventListener('click', (event) => {
-            if (mobileAccountMenu.hidden) return;
-            if (mobileAccountMenu.contains(event.target) || mobileProfileTrigger.contains(event.target)) return;
-            closeAccountMenu();
-        });
+        // Touch Swipe-to-Close gesture for Mobile Drawer
+        let touchStartX = 0;
+        let touchCurrentX = 0;
 
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') {
-                closeAccountMenu();
+        mobileDrawer.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchCurrentX = touchStartX;
+        }, { passive: true });
+
+        mobileDrawer.addEventListener('touchmove', (e) => {
+            touchCurrentX = e.touches[0].clientX;
+        }, { passive: true });
+
+        mobileDrawer.addEventListener('touchend', () => {
+            // If swiped left by more than 45px, close drawer
+            if (touchStartX - touchCurrentX > 45) {
+                closeDrawer();
             }
+            touchStartX = 0;
+            touchCurrentX = 0;
         });
     }
 

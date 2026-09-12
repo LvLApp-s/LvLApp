@@ -106,6 +106,13 @@
   </div>
   <main class="timeline timeline-{{ active_page }}">
     <div class="mobile-header">
+      <button type="button" class="mobile-drawer-trigger" id="mobile-drawer-trigger" aria-label="Open menu" aria-controls="mobile-drawer" data-mobile-drawer-trigger>
+        <img class="avatar small-avatar mobile-header-avatar" src="{{ viewer.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="{{ viewer.display_name }}" />
+        {% set total_unread = unread_message_count + unread_notification_count %}
+        {% if total_unread > 0 %}
+          <span class="mobile-header-unread-dot" aria-hidden="true"></span>
+        {% endif %}
+      </button>
       <a class="mobile-brand mobile-brand-logo-only" href="{{ url_for('index') }}" aria-label="Home" data-i18n-aria="nav_home">
         <img src="{{ static_asset('assets/icon-192.png') }}" alt="LvL">
       </a>
@@ -245,67 +252,131 @@
     <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M5 3.5h14A2.5 2.5 0 0 1 21.5 6v12a2.5 2.5 0 0 1-2.5 2.5H5A2.5 2.5 0 0 1 2.5 18V6A2.5 2.5 0 0 1 5 3.5Zm0 2A.5.5 0 0 0 4.5 6v12a.5.5 0 0 0 .5.5h14a.5.5 0 0 0 .5-.5V6a.5.5 0 0 0-.5-.5H5Zm4.5 3.1 6 3.4-6 3.4V8.6Z"/></svg>
     <span class="mobile-nav-label sr-only" data-i18n="nav_clips">Clips</span>
   </a>
-  <a class="{% if active_page in ['profile', 'settings', 'messages', 'notifications', 'level_guide'] %}active{% endif %}" href="#" aria-label="More" data-i18n-aria="nav_more" data-mobile-profile-trigger aria-haspopup="menu" aria-controls="mobile-account-menu">
+  <a class="{% if active_page in ['profile', 'settings', 'messages', 'notifications', 'level_guide'] %}active{% endif %}" href="#" aria-label="More" data-i18n-aria="nav_more" data-mobile-drawer-trigger aria-haspopup="dialog" aria-controls="mobile-drawer">
     <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
     <span class="mobile-nav-label sr-only" data-i18n="nav_more">More</span>
     {% set total_unread = unread_message_count + unread_notification_count %}
     <span class="nav-badge mobile-notif-badge" data-live-badge="more" {% if total_unread <= 0 %}hidden{% endif %}>{{ total_unread if total_unread < 100 else '99+' }}</span>
   </a>
 </nav>
-<div class="mobile-account-menu" id="mobile-account-menu" data-mobile-account-menu hidden role="menu" aria-label="More options" data-i18n-aria="nav_more_options_aria">
-  <a href="{{ url_for('profile', username=viewer.username) }}" role="menuitem">
-    <span class="menu-item-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-    </span>
-    <span data-i18n="nav_me">Me</span>
-  </a>
-  <a href="{{ url_for('messages') }}" role="menuitem">
-    <div class="mobile-menu-badge-container">
-      <span class="mobile-menu-item-left">
-        <span class="menu-item-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-        </span>
-        <span data-i18n="nav_messages">Messages</span>
-      </span>
-      <span class="nav-badge mobile-menu-badge" data-live-badge="messages" {% if unread_message_count <= 0 %}hidden{% endif %}>{{ unread_message_count }}</span>
+
+<!-- Twitter / X Style Mobile Slide-Over Drawer -->
+<div class="mobile-drawer-backdrop" id="mobile-drawer-backdrop" data-mobile-drawer-backdrop hidden></div>
+<aside class="mobile-drawer" id="mobile-drawer" data-mobile-drawer role="dialog" aria-modal="true" aria-label="Menu" data-i18n-aria="nav_more_options_aria" hidden>
+  <div class="mobile-drawer-header">
+    <div class="drawer-user-row">
+      <a class="drawer-user-avatar-link" href="{{ url_for('profile', username=viewer.username) }}">
+        <img class="avatar drawer-avatar" src="{{ viewer.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="{{ viewer.display_name }}" />
+      </a>
+      <button type="button" class="drawer-close-btn" id="mobile-drawer-close" data-mobile-drawer-close aria-label="Close menu">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
     </div>
-  </a>
-  <a href="{{ url_for('notifications') }}" role="menuitem">
-    <div class="mobile-menu-badge-container">
-      <span class="mobile-menu-item-left">
-        <span class="menu-item-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        </span>
-        <span data-i18n="nav_alerts">Alerts</span>
+    
+    <a class="drawer-user-meta" href="{{ url_for('profile', username=viewer.username) }}">
+      <div class="drawer-name-row">
+        <strong class="drawer-display-name">{{ viewer.display_name }}</strong>
+        {% if viewer.level %}
+          <span class="drawer-level-badge">LvL {{ viewer.level }}</span>
+        {% endif %}
+      </div>
+      <span class="drawer-username">@{{ viewer.username }}</span>
+    </a>
+  </div>
+
+  <nav class="mobile-drawer-nav">
+    <a class="drawer-nav-item {% if active_page == 'profile' %}active{% endif %}" href="{{ url_for('profile', username=viewer.username) }}">
+      <span class="drawer-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
       </span>
-      <span class="nav-badge mobile-menu-badge" data-live-badge="notifications" {% if unread_notification_count <= 0 %}hidden{% endif %}>{{ unread_notification_count }}</span>
-    </div>
-  </a>
-  <a href="{{ url_for('bookmarks') }}" role="menuitem">
-    <span class="menu-item-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-    </span>
-    <span data-i18n="nav_bookmarks">Bookmarks</span>
-  </a>
-  <a href="{{ url_for('level_guide') }}" role="menuitem">
-    <span class="menu-item-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-    </span>
-    <span data-i18n="nav_guide">LvL Guide</span>
-  </a>
-  <a href="{{ url_for('settings') }}" role="menuitem">
-    <span class="menu-item-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-    </span>
-    <span data-i18n="nav_settings">Settings</span>
-  </a>
-  <hr class="menu-divider">
-  <a href="{{ url_for('logout') }}" role="menuitem">
-    <span class="menu-item-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-    </span>
-    <span data-i18n="mobile_logout">Log out</span>
-  </a>
+      <span class="drawer-nav-text" data-i18n="nav_profile">Profil</span>
+    </a>
+
+    <a class="drawer-nav-item {% if active_page == 'messages' %}active{% endif %}" href="{{ url_for('messages') }}">
+      <span class="drawer-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+          <polyline points="22,6 12,13 2,6"></polyline>
+        </svg>
+      </span>
+      <span class="drawer-nav-text" data-i18n="nav_messages">Mesajlar</span>
+      <span class="nav-badge drawer-badge" data-live-badge="messages" {% if unread_message_count <= 0 %}hidden{% endif %}>{{ unread_message_count }}</span>
+    </a>
+
+    <a class="drawer-nav-item {% if active_page == 'notifications' %}active{% endif %}" href="{{ url_for('notifications') }}">
+      <span class="drawer-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+      </span>
+      <span class="drawer-nav-text" data-i18n="nav_alerts">Bildirimler</span>
+      <span class="nav-badge drawer-badge" data-live-badge="notifications" {% if unread_notification_count <= 0 %}hidden{% endif %}>{{ unread_notification_count }}</span>
+    </a>
+
+    <a class="drawer-nav-item {% if active_page == 'bookmarks' %}active{% endif %}" href="{{ url_for('bookmarks') }}">
+      <span class="drawer-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+        </svg>
+      </span>
+      <span class="drawer-nav-text" data-i18n="nav_bookmarks">Kaydedilenler</span>
+    </a>
+
+    <a class="drawer-nav-item {% if active_page == 'community' %}active{% endif %}" href="{{ url_for('community') }}">
+      <span class="drawer-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+      </span>
+      <span class="drawer-nav-text" data-i18n="nav_community">Topluluklar</span>
+    </a>
+
+    <a class="drawer-nav-item {% if active_page == 'level_guide' %}active{% endif %}" href="{{ url_for('level_guide') }}">
+      <span class="drawer-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+        </svg>
+      </span>
+      <span class="drawer-nav-text" data-i18n="nav_guide">LvL Rehberi</span>
+    </a>
+
+    <div class="drawer-divider"></div>
+
+    <a class="drawer-nav-item {% if active_page == 'settings' %}active{% endif %}" href="{{ url_for('settings') }}">
+      <span class="drawer-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </span>
+      <span class="drawer-nav-text" data-i18n="nav_settings">Ayarlar ve Gizlilik</span>
+    </a>
+  </nav>
+
+  <div class="mobile-drawer-footer">
+    <a class="drawer-logout-btn" href="{{ url_for('logout') }}" data-i18n="nav_logout">
+      <span class="drawer-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+      </span>
+      <span>Çıkış Yap</span>
+    </a>
+  </div>
+</aside>
 </div>
 <style>
 .mobile-account-menu hr.menu-divider {

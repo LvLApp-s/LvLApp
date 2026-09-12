@@ -66,12 +66,11 @@
   }
 
   .mobile-header {
-    display: grid;
-    grid-template-columns: 40px minmax(0, 1fr) auto;
+    display: flex;
     align-items: center;
-    gap: 8px;
-    min-height: 64px;
-    padding: 10px 12px;
+    gap: 10px;
+    min-height: 58px;
+    padding: 8px 12px;
   }
 
   .mobile-header-search {
@@ -421,9 +420,8 @@
 
 @media (max-width: 390px) {
   .mobile-header {
-    grid-template-columns: 34px 38px minmax(0, 1fr) auto;
-    gap: 6px;
-    padding-inline: 8px;
+    gap: 8px;
+    padding-inline: 10px;
   }
 
   .mobile-brand-logo-only,
