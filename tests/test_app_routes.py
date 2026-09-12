@@ -2657,18 +2657,18 @@ class AppRouteTests(unittest.TestCase):
         self.assertNotIn('class="mobile-header-actions"', html)
         self.assertNotIn('class="nav-label sr-only"', html)
         self.assertIn('class="mobile-nav-label sr-only"', html)
-        self.assertIn('data-mobile-profile-trigger', html)
-        self.assertIn('data-mobile-account-menu', html)
-        self.assertIn('data-i18n="mobile_logout"', html)
+        self.assertIn('data-mobile-drawer-trigger', html)
+        self.assertIn('data-mobile-drawer', html)
+        self.assertIn('data-i18n="nav_logout"', html)
         mobile_nav_only = html.split('<nav class="mobile-bottom-nav"', 1)[1].split('</nav>', 1)[0]
-        self.assertNotIn('href="/messages"', mobile_nav_only)
+        self.assertIn('href="/messages"', mobile_nav_only)
         self.assertNotIn('href="/notifications"', mobile_nav_only)
         mobile_order = [
             mobile_nav_only.index('aria-label="Home"'),
             mobile_nav_only.index('aria-label="Community"'),
             mobile_nav_only.index('aria-label="Create post"'),
             mobile_nav_only.index('aria-label="Clips"'),
-            mobile_nav_only.index('aria-label="More"'),
+            mobile_nav_only.index('aria-label="Messages"'),
         ]
         self.assertEqual(sorted(mobile_order), mobile_order)
 
