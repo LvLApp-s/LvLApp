@@ -107,7 +107,7 @@
   <main class="timeline timeline-{{ active_page }}">
     <div class="mobile-header">
       <button type="button" class="mobile-drawer-trigger" id="mobile-drawer-trigger" aria-label="Open menu" aria-controls="mobile-drawer" data-mobile-drawer-trigger>
-        <img class="avatar small-avatar mobile-header-avatar" src="{{ viewer.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="{{ viewer.display_name }}" />
+        <img class="mobile-header-avatar" src="{{ viewer.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="{{ viewer.display_name }}" />
         {% set total_unread = unread_message_count + unread_notification_count %}
         {% if total_unread > 0 %}
           <span class="mobile-header-unread-dot" aria-hidden="true"></span>
@@ -266,7 +266,7 @@
   <div class="mobile-drawer-header">
     <div class="drawer-user-row">
       <a class="drawer-user-avatar-link" href="{{ url_for('profile', username=viewer.username) }}">
-        <img class="avatar drawer-avatar" src="{{ viewer.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="{{ viewer.display_name }}" />
+        <img class="drawer-avatar" src="{{ viewer.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="{{ viewer.display_name }}" />
       </a>
       <button type="button" class="drawer-close-btn" id="mobile-drawer-close" data-mobile-drawer-close aria-label="Close menu">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
