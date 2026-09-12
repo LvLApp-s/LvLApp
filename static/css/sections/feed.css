@@ -235,6 +235,28 @@
   margin-bottom: 4px;
 }
 
+.post-community-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--community-color, var(--lvl-cyan));
+  background: color-mix(in srgb, var(--community-color, var(--lvl-cyan)) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--community-color, var(--lvl-cyan)) 35%, transparent);
+  border-radius: 20px;
+  padding: 2px 9px 2px 6px;
+  margin-bottom: 6px;
+  text-decoration: none;
+  transition: background 0.18s, border-color 0.18s;
+  width: fit-content;
+}
+.post-community-badge:hover {
+  background: color-mix(in srgb, var(--community-color, var(--lvl-cyan)) 22%, transparent);
+  text-decoration: none;
+}
+
 .profile-gender {
   font-weight: 700;
 }

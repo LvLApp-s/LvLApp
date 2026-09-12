@@ -555,16 +555,10 @@
     overflow-y: auto;
   }
 
-  .share-modal-overlay {
-    position: fixed;
-    inset: 0;
-    padding-top: max(12px, env(safe-area-inset-top));
-    padding-inline: 8px;
-  }
-
-  .share-modal-content {
-    padding: 16px;
-    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  /* Share modal stays inside reel-video-frame as bottom sheet on all viewports */
+  .reel-video-frame .share-modal-overlay {
+    position: absolute !important;
+    inset: auto 0 0 0 !important;
   }
 
   .reel-card {

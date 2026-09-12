@@ -443,15 +443,51 @@
          {% if mode == 'liked' %}aria-current="page"{% endif %} data-i18n="profile_likes">
         Beğeniler
       </a>
+      {% if is_own_profile %}
+      <a href="{{ url_for('profile', username=profile.username, m='saved') }}"
+         class="{% if mode == 'saved' %}active{% endif %}"
+         {% if mode == 'saved' %}aria-current="page"{% endif %} data-i18n="nav_bookmarks">
+        Kaydedilenler
+      </a>
+      {% endif %}
     </nav>
   </section>
 
+  {% if mode == 'saved' %}
+  <div class="segmented profile-saved-subtabs" aria-label="Saved sub-navigation">
+    <a class="{% if saved_sub != 'clips' %}active{% endif %}" href="{{ url_for('profile', username=profile.username, m='saved', sub='posts') }}">
+      <span data-i18n="bookmarks_tab_posts">Gönderiler</span>
+    </a>
+    <a class="{% if saved_sub == 'clips' %}active{% endif %}" href="{{ url_for('profile', username=profile.username, m='saved', sub='clips') }}">
+      <span data-i18n="bookmarks_tab_clips">Klipler</span>
+    </a>
+  </div>
+  {% endif %}
+
 <section class="feed">
   {% if mode == 'clips' and reels %}
-    <div class="profile-reels-feed" data-reels-feed style="display: flex; flex-direction: column; gap: 24px; align-items: center; width: 100%; padding: 16px 0;">
+    <div class="profile-reels-feed" data-reels-feed>
       {% for reel in reels %}
         {% include "_reel_card.html" %}
       {% endfor %}
+    </div>
+  {% elif mode == 'saved' and saved_sub == 'clips' %}
+    {% if reels %}
+      <div class="profile-reels-feed" data-reels-feed>
+        {% for reel in reels %}
+          {% include "_reel_card.html" %}
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <h2 data-i18n="bookmarks_empty_clips">Kaydedilen klip yok</h2>
+        <p data-i18n="bookmarks_empty_clips_desc">Kliplerde beğendiğin videoları kaydet butonuna basarak burada saklayabilirsin.</p>
+      </div>
+    {% endif %}
+  {% elif mode == 'saved' and not posts %}
+    <div class="empty-state">
+      <h2 data-i18n="profile_no_saved_posts">Kaydedilen gönderi yok</h2>
+      <p data-i18n="profile_no_saved_posts_desc">Henüz hiçbir gönderiyi kaydetmedin.</p>
     </div>
   {% elif not posts and not reels %}
     <div class="empty-state">
@@ -477,10 +513,10 @@
 </section>
 <nav class="pagination-controls" aria-label="Profile post pagination" data-i18n-aria="profile_pagination_aria">
   {% if page > 1 %}
-    <a class="outline-button" href="{{ url_for('profile', username=profile.username, m=mode, page=page-1) }}" data-i18n="previous_btn">Previous</a>
+    <a class="outline-button" href="{{ url_for('profile', username=profile.username, m=mode, sub=saved_sub, page=page-1) }}" data-i18n="previous_btn">Previous</a>
   {% endif %}
   {% if has_next %}
-    <a class="outline-button" href="{{ url_for('profile', username=profile.username, m=mode, page=page+1) }}" data-i18n="more_btn">More</a>
+    <a class="outline-button" href="{{ url_for('profile', username=profile.username, m=mode, sub=saved_sub, page=page+1) }}" data-i18n="more_btn">More</a>
   {% endif %}
 </nav>
 {% endblock %}

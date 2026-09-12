@@ -1,10 +1,27 @@
 /* Messages and chat UI */
 /* Messages Interface */
+.timeline-messages {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+.timeline-messages .app-topbar {
+  flex-shrink: 0 !important;
+  height: 53px !important;
+}
+
 .messages-container {
-  display: flex;
-  height: calc(100vh - 1px);
-  width: 100%;
-  overflow: hidden;
+  display: flex !important;
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  width: 100% !important;
+  overflow: hidden !important;
 }
 
 .conversations-sidebar {
@@ -174,13 +191,30 @@
 }
 
 .messages-feed {
-  flex: 1;
-  min-height: 0; /* prevent flex item from overflowing and hiding chat-footer */
-  overflow-y: auto;
-  padding: 18px clamp(14px, 3vw, 34px);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  padding: 16px 20px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.messages-feed::-webkit-scrollbar,
+.conversations-list::-webkit-scrollbar,
+.chat-window::-webkit-scrollbar,
+.messages-container::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
+.conversations-list {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
 .load-older-messages {
@@ -232,73 +266,174 @@
 }
 
 .message-bubble-wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  width: fit-content;
-  max-width: min(74%, 540px);
-  margin-bottom: 6px;
+  display: flex !important;
+  flex-direction: column !important;
+  width: fit-content !important;
+  max-width: min(75%, 480px) !important;
+  margin-bottom: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  flex-shrink: 0 !important;
+  position: relative !important;
+}
+
+.message-bubble-wrapper:has(.shared-reel-card),
+.message-bubble-wrapper:has(.shared-post-card) {
+  margin-bottom: 0 !important;
 }
 
 .message-bubble-wrapper.own {
-  align-self: flex-end;
-  align-items: flex-end;
+  align-self: flex-end !important;
+  align-items: flex-end !important;
+  margin-left: auto !important;
+}
+
+.message-bubble-wrapper:not(.own) {
+  align-self: flex-start !important;
+  align-items: flex-start !important;
+  margin-right: auto !important;
 }
 
 .message-bubble {
-  display: inline-block;
-  width: auto;
-  height: auto;
-  min-width: 0;
-  min-height: 0;
-  max-width: 100%;
-  aspect-ratio: auto;
-  padding: 9px 15px;
-  border-radius: var(--radius-2xl);
-  font-size: 16px;
-  line-height: 1.35;
-  word-break: break-word;
-  box-shadow: 0 8px 22px var(--lvl-black-34), inset 0 1px 0 var(--lvl-white-08);
+  display: block !important;
+  width: fit-content !important;
+  max-width: 100% !important;
+  height: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  aspect-ratio: auto !important;
+  padding: 8px 14px !important;
+  border-radius: 18px !important;
+  font-size: 14.5px !important;
+  line-height: 1.45 !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  white-space: normal !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
+  box-sizing: border-box !important;
 }
 
-.own .message-bubble {
-  background: linear-gradient(135deg, var(--accent-color), color-mix(in srgb, var(--accent-color) 78%, var(--lvl-white) 22%));
-  color: var(--lvl-text-inverse);
-  border-bottom-right-radius: var(--radius-sm);
+.message-bubble.deleted-message {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 0.45) !important;
+  font-style: italic !important;
+  padding: 8px 14px !important;
+  font-size: 13.5px !important;
+  border-radius: 14px !important;
 }
 
-.message-bubble-wrapper:not(.own) .message-bubble {
-  background: linear-gradient(180deg, var(--lvl-surface-9), var(--lvl-surface-5));
-  color: var(--text-primary);
-  border-bottom-left-radius: var(--radius-sm);
+.own .message-bubble:not(.deleted-message) {
+  background: #0084ff !important;
+  background: linear-gradient(135deg, #0084ff, #0066ee) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-bottom-right-radius: 4px;
 }
 
-.message-time {
-  font-size: 11px;
-  color: var(--text-secondary);
-  margin-top: 4px;
-  padding: 0 4px;
+.own .message-bubble .message-text-content,
+.own .message-bubble div,
+.own .message-bubble p,
+.own .message-bubble span {
+  color: inherit !important;
 }
 
-.own .message-time {
-  text-align: right;
+.own .message-bubble a {
+  color: #ffffff !important;
+  text-decoration: underline !important;
+}
+
+.message-bubble-wrapper:not(.own) .message-bubble:not(.deleted-message) {
+  background: #252538 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #f0f2f5 !important;
+  border-bottom-left-radius: 4px;
+}
+
+.message-bubble-wrapper:not(.own) .message-bubble .message-text-content,
+.message-bubble-wrapper:not(.own) .message-bubble div,
+.message-bubble-wrapper:not(.own) .message-bubble p,
+.message-bubble-wrapper:not(.own) .message-bubble span {
+  color: inherit !important;
+}
+
+.message-bubble-wrapper:not(.own) .message-bubble a {
+  color: #38bdf8 !important;
+  text-decoration: underline !important;
+}
+
+.message-bubble .message-text-content {
+  display: inline-block !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  color: inherit !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+
+/* ── Instagram DM-style reel card ── */
+.shared-reel-card {
+  position: relative !important;
+  overflow: hidden !important;
+  border-radius: 14px !important;
+  width: 175px !important;
+  height: 235px !important;
+  max-width: 175px !important;
+  max-height: 235px !important;
+  background: #000 !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45) !important;
+  flex-shrink: 0 !important;
+  display: block !important;
+  margin: 0 !important;
+}
+
+.shared-reel-link {
+  display: block !important;
+  position: relative !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  text-decoration: none !important;
+}
+
+.shared-reel-video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  display: block !important;
 }
 
 .message-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 4px;
-  padding: 0 4px;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin-top: 4px !important;
+  margin-bottom: 0 !important;
+  padding: 0 4px !important;
+  min-height: 14px !important;
+  line-height: 14px !important;
+}
+
+.shared-reel-card + .message-meta,
+.shared-post-card + .message-meta {
+  margin-top: 6px !important;
+  margin-bottom: 0 !important;
 }
 
 .own .message-meta {
-  justify-content: flex-end;
+  justify-content: flex-end !important;
 }
 
-.message-meta .message-time {
-  margin-top: 0;
-  padding: 0;
+.message-time {
+  font-size: 11px !important;
+  color: rgba(255, 255, 255, 0.45) !important;
+  line-height: 14px !important;
+  display: inline-block !important;
+}
+
+.own .message-time {
+  text-align: right !important;
 }
 
 .message-delete-form {
@@ -490,12 +625,23 @@
     flex-basis: auto !important;
     justify-self: stretch;
     border-right: 0;
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
   }
 
   .messages-container {
     width: 100%;
     max-width: none;
     margin: 0;
+    display: flex !important;
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
   }
 }
 

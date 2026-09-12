@@ -256,6 +256,12 @@ a:hover {
   transition: width 0.2s cubic-bezier(0, 0, 0.2, 1);
   overflow-y: auto;
   overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.left-rail::-webkit-scrollbar {
+  display: none;
 }
 
 .left-rail:not(.menu-open) {

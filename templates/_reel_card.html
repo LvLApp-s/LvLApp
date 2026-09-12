@@ -2,10 +2,11 @@
 {% set is_demo = reel.is_demo %}
 <style>
   .reel-actions,
-  .reel-actions *,
-  .reel-actions form,
-  .reel-actions button,
-  .reel-actions a,
+  .reel-actions > form,
+  .reel-actions > button,
+  .reel-actions > form > button,
+  .reel-actions > div > button,
+  .reel-actions > a,
   .reel-action-button {
     background: transparent !important;
     border: none !important;
@@ -16,31 +17,250 @@
     -webkit-backdrop-filter: none !important;
     -webkit-tap-highlight-color: transparent !important;
   }
+  .reel-actions .reel-more-menu {
+    width: max-content !important;
+    min-width: 175px !important;
+    background: rgba(18, 18, 28, 0.96) !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75) !important;
+    backdrop-filter: blur(24px) !important;
+    -webkit-backdrop-filter: blur(24px) !important;
+    padding: 6px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 3px !important;
+  }
+  .reel-actions .reel-more-menu[hidden],
+  .reel-more-menu[hidden] {
+    display: none !important;
+  }
+  .reel-actions .reel-more-item {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 38px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 10px !important;
+    padding: 8px 12px !important;
+    border-radius: 9px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+    text-decoration: none !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
+  }
+  .reel-actions .reel-more-item svg {
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px !important;
+    flex-shrink: 0 !important;
+    display: block !important;
+    margin: 0 !important;
+  }
+  .reel-actions .reel-more-item span {
+    display: inline-block !important;
+    white-space: nowrap !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    line-height: 1 !important;
+  }
+  .reel-actions .reel-more-item:hover {
+    background: rgba(255, 255, 255, 0.12) !important;
+    color: #ffffff !important;
+  }
+  .reel-actions .reel-more-item.danger {
+    color: #fb7185 !important;
+  }
+  .reel-actions .reel-more-item.danger:hover {
+    background: rgba(244, 63, 94, 0.2) !important;
+    color: #ff4965 !important;
+  }
+  /* ─── Glamorous Active & Interaction Animations ─── */
+  .reel-action-button {
+    transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.22s ease !important;
+  }
+  .reel-action-button:hover {
+    transform: scale(1.18) !important;
+  }
+  .reel-action-button:active {
+    transform: scale(0.92) !important;
+  }
+
+  /* 1. Mute / Sound toggle */
   .reel-action-button.reel-action-mute.active,
   .reel-action-mute.active {
     color: #facc15 !important;
   }
   .reel-action-button.reel-action-mute.active svg,
-  .reel-action-button.reel-action-mute.active svg path,
-  .reel-action-button.reel-action-mute.active svg polygon,
-  .reel-action-mute.active svg,
-  .reel-action-mute.active svg path,
-  .reel-action-mute.active svg polygon {
+  .reel-action-mute.active svg {
     stroke: #facc15 !important;
     color: #facc15 !important;
-    filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.85)) !important;
+    animation: reelSoundWave 1.4s ease-in-out infinite alternate !important;
+    filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.95)) drop-shadow(0 0 20px rgba(250, 204, 21, 0.5)) !important;
   }
+  @keyframes reelSoundWave {
+    0%   { transform: scale(1) rotate(0deg); }
+    30%  { transform: scale(1.12) rotate(-4deg); }
+    70%  { transform: scale(1.06) rotate(4deg); }
+    100% { transform: scale(1.14) rotate(0deg); }
+  }
+
+  /* 2. Like button */
   .reel-action-button.reel-action-like.active,
   .reel-action-like.active {
     color: #f43f5e !important;
   }
   .reel-action-button.reel-action-like.active svg,
-  .reel-action-button.reel-action-like.active svg path,
-  .reel-action-like.active svg,
-  .reel-action-like.active svg path {
+  .reel-action-like.active svg {
     fill: #f43f5e !important;
     stroke: #f43f5e !important;
-    filter: drop-shadow(0 0 8px rgba(244, 63, 94, 0.85)) !important;
+    animation: reelHeartBeat 1.6s cubic-bezier(0.25, 1, 0.5, 1) infinite !important;
+    filter: drop-shadow(0 0 12px rgba(244, 63, 94, 0.95)) drop-shadow(0 0 22px rgba(244, 63, 94, 0.6)) !important;
+  }
+  @keyframes reelHeartBeat {
+    0%   { transform: scale(1); }
+    15%  { transform: scale(1.22); filter: drop-shadow(0 0 16px rgba(244, 63, 94, 1)) drop-shadow(0 0 26px rgba(244, 63, 94, 0.8)); }
+    30%  { transform: scale(1.08); }
+    45%  { transform: scale(1.18); filter: drop-shadow(0 0 14px rgba(244, 63, 94, 0.95)); }
+    60%  { transform: scale(1.04); }
+    100% { transform: scale(1); }
+  }
+
+  /* 3. Comment button */
+  .reel-action-button.reel-action-comment:hover svg {
+    filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.9)) !important;
+    color: #38bdf8 !important;
+  }
+  body.reel-comments-open .reel-action-button.reel-action-comment svg {
+    color: #38bdf8 !important;
+    stroke: #38bdf8 !important;
+    animation: reelCommentBounce 1.5s ease-in-out infinite alternate !important;
+    filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.95)) drop-shadow(0 0 20px rgba(56, 189, 248, 0.5)) !important;
+  }
+  @keyframes reelCommentBounce {
+    0%   { transform: scale(1) translateY(0); }
+    50%  { transform: scale(1.15) translateY(-3px); }
+    0%   { transform: scale(1) translateY(0); }
+    50%  { transform: scale(1.15) translateY(-3px); }
+    100% { transform: scale(1.08) translateY(-1px); }
+  }
+
+  /* 4. Bookmark button */
+  .reel-action-button.reel-action-bookmark:hover svg {
+    transform: scale(1.22) translateY(-2px) !important;
+    color: #fbbf24 !important;
+    stroke: #fbbf24 !important;
+    filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.95)) drop-shadow(0 0 22px rgba(251, 191, 36, 0.5)) !important;
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease !important;
+  }
+  .reel-action-button.reel-action-bookmark.active,
+  .reel-action-button.reel-action-bookmark.bookmark-active {
+    color: #f59e0b !important;
+  }
+  .reel-action-button.reel-action-bookmark.active svg,
+  .reel-action-button.reel-action-bookmark.bookmark-active svg {
+    fill: #f59e0b !important;
+    stroke: #f59e0b !important;
+    animation: reelBookmarkPop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.95)) drop-shadow(0 0 22px rgba(245, 158, 11, 0.6)) !important;
+  }
+  @keyframes reelBookmarkPop {
+    0%   { transform: scale(0.8); }
+    50%  { transform: scale(1.35) translateY(-3px); }
+    100% { transform: scale(1) translateY(0); }
+  }
+
+  /* 5. Share button */
+  .reel-action-button.reel-action-share:hover svg {
+    transform: scale(1.2) translate(2px, -2px) rotate(-10deg) !important;
+    color: #c084fc !important;
+    stroke: #c084fc !important;
+    filter: drop-shadow(0 0 12px rgba(192, 132, 252, 0.9)) drop-shadow(0 0 20px rgba(192, 132, 252, 0.5)) !important;
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease !important;
+  }
+
+  /* 6. 3-dots More options button */
+  .reel-action-button.reel-action-more:hover svg,
+  .reel-more-dropdown.is-open .reel-action-button.reel-action-more svg {
+    transform: scale(1.2) rotate(90deg) !important;
+    color: #60a5fa !important;
+    filter: drop-shadow(0 0 10px rgba(96, 165, 250, 0.9)) drop-shadow(0 0 18px rgba(96, 165, 250, 0.5)) !important;
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease !important;
+  }
+
+  /* 6. Views Pill Shimmer */
+  .reel-views-pill {
+    position: relative !important;
+    overflow: hidden !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+  }
+  .reel-views-pill:hover {
+    transform: scale(1.06) !important;
+    box-shadow: 0 4px 18px rgba(56, 189, 248, 0.35) !important;
+  }
+  .reel-views-pill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transform: translateX(-100%);
+    animation: reelShimmer 3s infinite;
+  }
+  @keyframes reelShimmer {
+    0%, 35% { transform: translateX(-100%); }
+    65%, 100% { transform: translateX(100%); }
+  }
+  .reel-views-pill svg {
+    animation: eyeGlow 3.5s infinite ease-in-out !important;
+  }
+  @keyframes eyeGlow {
+    0%, 80%, 100% { transform: scale(1); filter: none; }
+    88% { transform: scale(1.25); filter: drop-shadow(0 0 6px #38bdf8); }
+    94% { transform: scale(0.95); }
+  }
+
+  /* 7. 3-dots Menu Item Micro-Animations */
+  .reel-actions .reel-more-item {
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease !important;
+  }
+  .reel-actions .reel-more-item:hover {
+    transform: translateX(-4px) scale(1.02) !important;
+    background: rgba(255, 255, 255, 0.14) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
+  }
+  .reel-actions .reel-more-item[download]:hover svg {
+    animation: downloadDrop 0.6s ease infinite alternate !important;
+    color: #38bdf8 !important;
+    stroke: #38bdf8 !important;
+  }
+  @keyframes downloadDrop {
+    from { transform: translateY(0); }
+    to   { transform: translateY(3px); }
+  }
+  .reel-actions .reel-more-item[data-reel-copy-link]:hover svg {
+    animation: copyRotate 0.5s ease !important;
+    color: #34d399 !important;
+    stroke: #34d399 !important;
+  }
+  @keyframes copyRotate {
+    0%   { transform: rotate(0deg) scale(1); }
+    50%  { transform: rotate(-16deg) scale(1.25); }
+    100% { transform: rotate(0deg) scale(1.1); }
+  }
+  .reel-actions .reel-more-item.danger:hover svg {
+    animation: trashWiggle 0.4s ease infinite alternate !important;
+    stroke: #ff4965 !important;
+  }
+  @keyframes trashWiggle {
+    0%   { transform: rotate(-8deg) scale(1.15); }
+    100% { transform: rotate(8deg) scale(1.15); }
   }
 </style>
 <article class="reel-card {% if is_demo %}is-demo{% endif %}"
@@ -79,6 +299,10 @@
           {% if author.level %}
             <span class="reel-level-badge" style="--badge-color: {{ author.badge_color or theme_colors.muted }};" title="{{ level_title(author.level or 1) }}">LvL {{ author.level or 1 }}</span>
           {% endif %}
+          <span class="reel-views-pill" title="Görüntülenme">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span data-reel-view-count-badge>{{ reel.view_count or 0 }}</span>
+          </span>
           {% if is_demo %}
             <em data-i18n="reel_demo">Demo</em>
           {% endif %}
@@ -124,22 +348,41 @@
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           <strong data-reel-comment-count>{{ reel.comment_count }}</strong>
         </button>
+        <form action="{{ url_for('toggle_reel_bookmark', reel_id=reel.id) }}" method="post" class="reel-bookmark-form" data-reel-bookmark-form>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="reel-action-button reel-action-bookmark {% if reel.viewer_bookmarked %}active bookmark-active{% endif %}" type="submit" aria-label="Bookmark clip" data-i18n-aria="post_bookmark_aria" title="Kaydet" data-i18n-title="post_bookmark_title">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="{% if reel.viewer_bookmarked %}currentColor{% else %}none{% endif %}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          </button>
+        </form>
         <button class="reel-action-button share-action-button reel-action-share" type="button" data-share-modal-trigger aria-label="Share clip with friends" data-i18n-aria="reel_share_aria">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         </button>
-        {% if reel.allow_downloads %}
-          <a class="reel-action-button reel-action-download" href="{{ reel.video_url }}" download aria-label="Download clip" data-i18n-aria="reel_download_aria">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          </a>
-        {% endif %}
-        {% if reel.is_owner %}
-          <form action="{{ url_for('delete_reel', reel_id=reel.id) }}" method="post">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button class="reel-action-button danger" type="submit" aria-label="Delete clip" data-i18n-aria="reel_delete_aria">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        <div class="reel-more-dropdown" data-reel-more-dropdown>
+          <button class="reel-action-button reel-action-more" type="button" data-reel-more-toggle aria-label="More options" data-i18n-aria="nav_more">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="12" r="2"/></svg>
+          </button>
+          <div class="reel-more-menu" data-reel-more-menu hidden>
+            {% if reel.allow_downloads %}
+              <a class="reel-more-item" href="{{ reel.video_url }}" download>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span data-i18n="reel_download">İndir</span>
+              </a>
+            {% endif %}
+            <button class="reel-more-item" type="button" data-reel-copy-link data-link="{{ url_for('reels', _external=True) }}#reel-{{ reel.id }}">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              <span data-i18n="copy_link">Bağlantıyı Kopyala</span>
             </button>
-          </form>
-        {% endif %}
+            {% if reel.is_owner %}
+              <form action="{{ url_for('delete_reel', reel_id=reel.id) }}" method="post" onsubmit="return confirm('Bu klibi silmek istediğinizden emin misiniz?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="reel-more-item danger" type="submit">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                  <span data-i18n="reel_delete">Sil</span>
+                </button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
       {% else %}
         <button class="reel-action-button" type="button" disabled>
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
@@ -148,6 +391,9 @@
         <button class="reel-action-button" type="button" disabled>
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           <strong>0</strong>
+        </button>
+        <button class="reel-action-button" type="button" disabled>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
         </button>
       {% endif %}
     </aside>
@@ -165,27 +411,27 @@
         </div>
       </div>
     </div>
-  </div>
-  {% if not is_demo %}
-  <div class="reel-comment-panel" data-reel-comment-panel aria-label="Clip comments" data-i18n-aria="reel_comments_aria">
-    <div class="reel-comment-panel-header">
-      <strong data-i18n="reel_comments">Comments</strong>
-      <button class="reel-comment-panel-close" type="button" data-reel-comment-close aria-label="Close comments" data-i18n-aria="reel_close_comments">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-      </button>
+    {% if not is_demo %}
+    <div class="reel-comment-panel" data-reel-comment-panel aria-label="Clip comments" data-i18n-aria="reel_comments_aria">
+      <div class="reel-comment-panel-header">
+        <strong data-i18n="reel_comments">Comments</strong>
+        <button class="reel-comment-panel-close" type="button" data-reel-comment-close aria-label="Close comments" data-i18n-aria="reel_close_comments">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </div>
+      <div class="reel-comment-list" data-reel-comment-list>
+        <p class="reel-comment-empty" data-i18n="reel_loading_comments">Loading comments…</p>
+      </div>
+      <form class="reel-comment-submit-form" data-reel-comment-form
+            action="{{ url_for('add_reel_comment', reel_id=reel.id) }}" method="post"
+            data-viewer-name="{{ viewer.display_name }}"
+            data-viewer-username="{{ viewer.username }}"
+            data-viewer-avatar="{{ viewer.profile_photo_url or '' }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input class="reel-comment-input" type="text" name="comment" maxlength="280" placeholder="Add a comment…" data-i18n-placeholder="reel_comment_placeholder" autocomplete="off">
+        <button class="reel-comment-post-btn" type="submit" data-i18n="reel_comment_post">Post</button>
+      </form>
     </div>
-    <div class="reel-comment-list" data-reel-comment-list>
-      <p class="reel-comment-empty" data-i18n="reel_loading_comments">Loading comments…</p>
-    </div>
-    <form class="reel-comment-submit-form" data-reel-comment-form
-          action="{{ url_for('add_reel_comment', reel_id=reel.id) }}" method="post"
-          data-viewer-name="{{ viewer.display_name }}"
-          data-viewer-username="{{ viewer.username }}"
-          data-viewer-avatar="{{ viewer.profile_photo_url or '' }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <input class="reel-comment-input" type="text" name="comment" maxlength="280" placeholder="Add a comment…" data-i18n-placeholder="reel_comment_placeholder" autocomplete="off">
-      <button class="reel-comment-post-btn" type="submit" data-i18n="reel_comment_post">Post</button>
-    </form>
+    {% endif %}
   </div>
-  {% endif %}
 </article>

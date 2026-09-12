@@ -54,21 +54,7 @@
 </section>
 
 <section class="community-page community-hub" data-community-hub data-active-tab="{{ active_tab }}">
-  <section class="community-hub-hero">
-    <div>
-      <span class="panel-kicker" data-i18n="timeline_hub">Timeline hub</span>
-      <h2 data-i18n="timeline_hub_title">Choose whose posts shape your LvL</h2>
-      <p><span>{{ metrics.users }}</span> <span data-i18n="community_members_label">members</span>, <span>{{ metrics.posts }}</span> <span data-i18n="community_posts_label">posts</span> <span data-i18n="community_and_label">and</span> <span>{{ metrics.communities }}</span> <span data-i18n="community_groups_label">communities are feeding these timelines.</span></p>
-    </div>
-    <div class="community-timeline-summary" aria-label="Community timeline counts" data-i18n-aria="community_summary_aria">
-      {% for tab in community_tabs %}
-        <article>
-          <span {% if tab.key == 'followers' %}data-i18n="profile_followers"{% elif tab.key == 'following' %}data-i18n="feed_following"{% elif tab.key == 'community' %}data-i18n="nav_community"{% endif %}>{{ tab.label }}</span>
-          <strong>{{ timeline_counts.get(tab.key, 0) }}</strong>
-        </article>
-      {% endfor %}
-    </div>
-  </section>
+
 
   <section class="community-lens-strip" aria-label="Community shortcuts" data-i18n-aria="community_shortcuts_aria">
     <a class="community-lens-card" href="{{ url_for('profile', username=viewer.username, m='posts') }}">

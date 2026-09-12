@@ -55,7 +55,8 @@ const TRANSLATIONS = {
       error_500_desc: "The app hit a problem while loading this page. Try again in a moment.",
 
     /* Navigation */
-    nav_home:"Home",nav_clips:"Clips",nav_community:"Community",nav_guide:"LvL Guide",nav_settings:"Settings",nav_post:"Post",nav_logout:"Log out",nav_messages:"Messages",nav_alerts:"Alerts",nav_me:"Me",nav_more:"More",
+    nav_home:"Home",nav_clips:"Clips",nav_community:"Community",nav_guide:"LvL Guide",nav_settings:"Settings",nav_post:"Post",nav_logout:"Log out",nav_messages:"Messages",nav_alerts:"Alerts",nav_bookmarks:"Bookmarks",nav_me:"Me",nav_more:"More",
+    bookmarks_title:"Bookmarks",bookmarks_desc:"All the posts and clips you saved for later.",bookmarks_tab_posts:"Posts",bookmarks_tab_clips:"Clips",bookmarks_empty_posts:"No saved posts",bookmarks_empty_posts_desc:"Save interesting posts you see on your feed to find them here.",bookmarks_empty_clips:"No saved clips",bookmarks_empty_clips_desc:"Save clips you love while browsing to watch them here.",profile_no_saved_posts:"No saved posts",profile_no_saved_posts_desc:"You haven't bookmarked any posts yet.",
     /* Messages */
     delete_for_me:"Delete for me",delete_for_everyone:"Delete for everyone",message_deleted:"This message was deleted",
     messages_new:"New Message",messages_search:"Search conversations",messages_empty:"No conversations yet.",messages_start:"Start a conversation",
@@ -235,7 +236,8 @@ const TRANSLATIONS = {
       error_500_desc: "Uygulama bu sayfayı yüklerken bir sorunla karşılaştı. Birazdan tekrar dene.",
 
     /* Navigasyon */
-    nav_home:"Ana Sayfa",nav_clips:"Klipler",nav_community:"Topluluk",nav_guide:"LvL Rehberi",nav_settings:"Ayarlar",nav_post:"Paylaş",nav_logout:"Çıkış yap",nav_messages:"Mesajlar",nav_alerts:"Bildirimler",nav_me:"Ben",nav_more:"Daha Fazla",
+    nav_home:"Ana Sayfa",nav_clips:"Klipler",nav_community:"Topluluk",nav_guide:"LvL Rehberi",nav_settings:"Ayarlar",nav_post:"Paylaş",nav_logout:"Çıkış yap",nav_messages:"Mesajlar",nav_alerts:"Bildirimler",nav_bookmarks:"Kaydedilenler",nav_me:"Ben",nav_more:"Daha Fazla",
+    bookmarks_title:"Kaydedilenler",bookmarks_desc:"Daha sonra tekrar göz atmak için kaydettiğin tüm gönderiler ve klipler.",bookmarks_tab_posts:"Gönderiler",bookmarks_tab_clips:"Klipler",bookmarks_empty_posts:"Kaydedilen gönderi yok",bookmarks_empty_posts_desc:"Akışta gördüğün ilginç paylaşımları yer imlerine ekleyerek burada saklayabilirsin.",bookmarks_empty_clips:"Kaydedilen klip yok",bookmarks_empty_clips_desc:"Kliplerde beğendiğin videoları kaydet butonuna basarak burada saklayabilirsin.",profile_no_saved_posts:"Kaydedilen gönderi yok",profile_no_saved_posts_desc:"Henüz hiçbir gönderiyi yer imlerine eklemediniz.",
     /* Mesajlar */
     delete_for_me:"Benden sil",delete_for_everyone:"Herkes için sil",message_deleted:"Bu mesaj silindi",
     messages_new:"Yeni Mesaj",messages_search:"Konuşma ara",messages_empty:"Henüz konuşma yok.",messages_start:"Konuşma başlat",
@@ -415,7 +417,8 @@ const TRANSLATIONS = {
       error_500_desc: "واجه التطبيق مشكلة أثناء تحميل هذه الصفحة. حاول مرة أخرى بعد لحظات.",
 
     /* التنقل */
-    nav_home:"الرئيسية",nav_clips:"مقاطع",nav_community:"المجتمع",nav_guide:"دليل LvL",nav_settings:"الإعدادات",nav_post:"نشر",nav_logout:"تسجيل الخروج",nav_messages:"الرسائل",nav_alerts:"التنبيهات",nav_me:"أنا",nav_more:"المزيد",
+    nav_home:"الرئيسية",nav_clips:"مقاطع",nav_community:"المجتمع",nav_guide:"دليل LvL",nav_settings:"الإعدادات",nav_post:"نشر",nav_logout:"تسجيل الخروج",nav_messages:"الرسائل",nav_alerts:"التنبيهات",nav_bookmarks:"العناصر المحفوظة",nav_me:"أنا",nav_more:"المزيد",
+    bookmarks_title:"العناصر المحفوظة",bookmarks_desc:"جميع المنشورات والمقاطع التي حفظتها لاحقاً.",bookmarks_tab_posts:"المنشورات",bookmarks_tab_clips:"المقاطع",bookmarks_empty_posts:"لا توجد منشورات محفوظة",bookmarks_empty_posts_desc:"احفظ المنشورات التي تعجبك لتجدها هنا.",bookmarks_empty_clips:"لا توجد مقاطع محفوظة",bookmarks_empty_clips_desc:"احفظ المقاطع التي تعجبك لتشاهدها هنا.",profile_no_saved_posts:"لا توجد منشورات محفوظة",profile_no_saved_posts_desc:"لم تقم بحفظ أي منشورات بعد.",
     /* الرسائل */
     delete_for_me:"حذف لدي",delete_for_everyone:"حذف للجميع",message_deleted:"تم حذف هذه الرسالة",
     messages_new:"رسالة جديدة",messages_search:"بحث في المحادثات",messages_empty:"لا توجد محادثات بعد.",messages_start:"ابدأ محادثة",

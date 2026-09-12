@@ -1,4 +1,6 @@
 import os
+import json
+import threading
 import re
 import secrets
 import uuid
@@ -183,7 +185,7 @@ ATTACHMENT_CONTENT_TYPES = {
     'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'txt': 'text/plain',
 }
-ASSET_VERSION = "114"
+ASSET_VERSION = "130"
 HOME_REEL_PREVIEW_LIMIT = 12
 HOME_MEDIA_PREVIEW_LIMIT = 12
 
@@ -1595,6 +1597,29 @@ def enrich_posts(posts, viewer_id):
         p['viewer_reposted'] = p['id'] in viewer_reposted_ids
         p['viewer_bookmarked'] = p['id'] in viewer_bookmarked_ids
         p['author_followed'] = author_id in followed_author_ids
+        # Only fill community if not already set by get_community_timeline_posts
+        if 'community' not in p:
+            p['community'] = None
+
+    # Attach community info to posts that belong to a community (for badge display everywhere)
+    try:
+        posts_without_community = [p for p in posts if not p.get('community')]
+        if posts_without_community:
+            ids_to_check = [p['id'] for p in posts_without_community]
+            cp_res = supabase.table('community_posts').select('post_id, community_id').in_('post_id', ids_to_check).execute()
+            cp_links = cp_res.data if cp_res and cp_res.data else []
+            community_id_by_post = {row['post_id']: row['community_id'] for row in cp_links}
+            community_ids = list(set(community_id_by_post.values()))
+            communities_by_id = {}
+            if community_ids:
+                comm_res = supabase.table('communities').select('id,name,slug,accent_color').in_('id', community_ids).execute()
+                communities_by_id = {c['id']: c for c in (comm_res.data or [])}
+            for p in posts_without_community:
+                cid = community_id_by_post.get(p['id'])
+                p['community'] = communities_by_id.get(cid) if cid else None
+    except Exception:
+        pass
+
     return posts
 
 def mark_following_state(users, viewer_id):
@@ -2289,6 +2314,87 @@ def visible_reel_filter(reels, viewer_id):
                 visible.append(reel)
     return visible
 
+REEL_BOOKMARKS_FILE = os.path.join(os.path.dirname(__file__), 'data', 'reel_bookmarks.json')
+_reel_bookmarks_lock = threading.Lock()
+
+def _load_local_reel_bookmarks():
+    try:
+        if os.path.exists(REEL_BOOKMARKS_FILE):
+            with open(REEL_BOOKMARKS_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return {}
+
+def _save_local_reel_bookmarks(data):
+    try:
+        os.makedirs(os.path.dirname(REEL_BOOKMARKS_FILE), exist_ok=True)
+        with open(REEL_BOOKMARKS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"Error saving local reel bookmarks: {e}", flush=True)
+
+def get_viewer_bookmarked_reel_ids(viewer_id, reel_ids):
+    if not viewer_id or not reel_ids:
+        return set()
+    try:
+        res = supabase.table('reel_bookmarks').select('reel_id').eq('user_id', viewer_id).in_('reel_id', reel_ids).execute()
+        return {row['reel_id'] for row in res.data or []}
+    except Exception:
+        with _reel_bookmarks_lock:
+            data = _load_local_reel_bookmarks()
+            user_saved = set(data.get(str(viewer_id), []))
+            return user_saved.intersection(set(reel_ids))
+
+def get_all_bookmarked_reel_ids(viewer_id):
+    if not viewer_id:
+        return []
+    try:
+        res = supabase.table('reel_bookmarks').select('reel_id').eq('user_id', viewer_id).order('created_at', desc=True).execute()
+        return [row['reel_id'] for row in res.data or []]
+    except Exception:
+        with _reel_bookmarks_lock:
+            data = _load_local_reel_bookmarks()
+            return data.get(str(viewer_id), [])
+
+def toggle_reel_bookmark_record(viewer_id, reel_id):
+    try:
+        existing = supabase.table('reel_bookmarks').select('reel_id').eq('user_id', viewer_id).eq('reel_id', reel_id).execute()
+        if existing.data:
+            supabase.table('reel_bookmarks').delete().eq('user_id', viewer_id).eq('reel_id', reel_id).execute()
+            with _reel_bookmarks_lock:
+                data = _load_local_reel_bookmarks()
+                str_uid = str(viewer_id)
+                if str_uid in data and reel_id in data[str_uid]:
+                    data[str_uid].remove(reel_id)
+                    _save_local_reel_bookmarks(data)
+            return False
+        else:
+            supabase.table('reel_bookmarks').insert({'user_id': viewer_id, 'reel_id': reel_id}).execute()
+            with _reel_bookmarks_lock:
+                data = _load_local_reel_bookmarks()
+                str_uid = str(viewer_id)
+                if str_uid not in data:
+                    data[str_uid] = []
+                if reel_id not in data[str_uid]:
+                    data[str_uid].insert(0, reel_id)
+                    _save_local_reel_bookmarks(data)
+            return True
+    except Exception:
+        with _reel_bookmarks_lock:
+            data = _load_local_reel_bookmarks()
+            str_uid = str(viewer_id)
+            if str_uid not in data:
+                data[str_uid] = []
+            if reel_id in data[str_uid]:
+                data[str_uid].remove(reel_id)
+                _save_local_reel_bookmarks(data)
+                return False
+            else:
+                data[str_uid].insert(0, reel_id)
+                _save_local_reel_bookmarks(data)
+                return True
+
 def enrich_reels(reels, viewer_id):
     if not reels:
         return []
@@ -2297,6 +2403,7 @@ def enrich_reels(reels, viewer_id):
     reel_ids = [row['id'] for row in reels if isinstance(row.get('id'), int)]
     author_ids = {row.get('user_id') for row in reels if row.get('user_id') and row.get('user_id') != viewer_id}
     viewer_liked_ids = set()
+    viewer_bookmarked_reel_ids = set()
     like_counts = {}
     comment_counts = {}
     followed_author_ids = set()
@@ -2316,6 +2423,9 @@ def enrich_reels(reels, viewer_id):
         except Exception:
             viewer_liked_ids = set()
 
+        if viewer_id:
+            viewer_bookmarked_reel_ids = get_viewer_bookmarked_reel_ids(viewer_id, reel_ids)
+
         try:
             comments_res = supabase.table('reel_comments').select('reel_id').in_('reel_id', reel_ids).is_('deleted_at', 'null').execute()
             for row in comments_res.data or []:
@@ -2323,6 +2433,15 @@ def enrich_reels(reels, viewer_id):
                 comment_counts[reel_id] = comment_counts.get(reel_id, 0) + 1
         except Exception:
             comment_counts = {}
+
+        view_counts = {}
+        try:
+            views_res = supabase.table('reel_views').select('reel_id').in_('reel_id', reel_ids).execute()
+            for row in views_res.data or []:
+                reel_id = row.get('reel_id')
+                view_counts[reel_id] = view_counts.get(reel_id, 0) + 1
+        except Exception:
+            view_counts = {}
 
     if author_ids:
         try:
@@ -2337,7 +2456,11 @@ def enrich_reels(reels, viewer_id):
         reel['user'] = author
         reel['like_count'] = like_counts.get(reel.get('id'), nested_count(reel.get('reel_likes')))
         reel['comment_count'] = comment_counts.get(reel.get('id'), nested_count(reel.get('reel_comments')))
+        raw_views = parse_int(reel.get('view_count')) or 0
+        counted_views = view_counts.get(reel.get('id'), 0) if reel_ids else 0
+        reel['view_count'] = max(raw_views, counted_views)
         reel['viewer_liked'] = reel.get('id') in viewer_liked_ids
+        reel['viewer_bookmarked'] = reel.get('id') in viewer_bookmarked_reel_ids
         reel['is_owner'] = reel.get('user_id') == viewer_id
         reel['author_followed'] = reel.get('user_id') in followed_author_ids
         reel['is_demo'] = False
@@ -2983,6 +3106,36 @@ def toggle_reel_like(reel_id):
         return jsonify({'success': True, 'liked': liked, 'count': count, 'xp_toasts': []})
     except Exception as exc:
         return jsonify({'success': False, 'error': handle_db_error(exc)}), 400
+
+@app.route('/toggle_reel_bookmark/<int:reel_id>', methods=['POST'])
+def toggle_reel_bookmark(reel_id):
+    viewer = get_current_user()
+    if not viewer:
+        if request.form.get('ajax') == '1':
+            return jsonify({'success': False, 'error': 'Authentication required.'}), 401
+        return redirect(url_for('auth'))
+
+    try:
+        reel = get_reel_by_id(reel_id, viewer['id'])
+        if not reel or reel.get('is_demo'):
+            if request.form.get('ajax') == '1':
+                return jsonify({'success': False, 'error': 'Reel not found.'}), 404
+            flash("Reel not found.", "error")
+            return redirect(safe_redirect_url())
+        if interaction_blocked(viewer['id'], reel.get('user_id')):
+            if request.form.get('ajax') == '1':
+                return jsonify({'success': False, 'error': 'You cannot interact with this user.'}), 403
+            flash("You cannot interact with this user.", "error")
+            return redirect(safe_redirect_url())
+        bookmarked = toggle_reel_bookmark_record(viewer['id'], reel_id)
+        if request.form.get('ajax') == '1':
+            return jsonify({'success': True, 'bookmarked': bookmarked})
+        return redirect(safe_redirect_url())
+    except Exception as exc:
+        if request.form.get('ajax') == '1':
+            return jsonify({'success': False, 'error': handle_db_error(exc)}), 400
+        flash(handle_db_error(exc), 'error')
+        return redirect(safe_redirect_url())
 
 @app.route('/reels/<int:reel_id>/comment', methods=['POST'])
 def add_reel_comment(reel_id):
@@ -3904,6 +4057,63 @@ def toggle_bookmark():
     if request.form.get('ajax') == '1':
         return jsonify({'success': True, 'bookmarked': bookmarked})
     return redirect(safe_redirect_url())
+
+@app.route('/bookmarks')
+def bookmarks():
+    viewer = get_current_user()
+    if not viewer:
+        return redirect(url_for('auth'))
+
+    tab = request.args.get('tab', 'posts')
+    page = parse_int(request.args.get('page')) or 1
+    limit = POSTS_PER_PAGE
+
+    posts = []
+    reels = []
+    has_next = False
+
+    if tab == 'clips':
+        saved_reel_ids = get_all_bookmarked_reel_ids(viewer['id'])
+        if saved_reel_ids:
+            offset = (page - 1) * limit
+            page_reel_ids = saved_reel_ids[offset:offset + limit]
+            if page_reel_ids:
+                try:
+                    select_query = '*, user:users!reels_user_id_fkey(*), community:communities!reels_community_id_fkey(*)'
+                    res = supabase.table('reels').select(select_query).in_('id', page_reel_ids).eq('status', 'active').is_('deleted_at', 'null').execute()
+                    raw_reels = res.data or []
+                    order_map = {rid: i for i, rid in enumerate(page_reel_ids)}
+                    raw_reels.sort(key=lambda r: order_map.get(r.get('id'), 9999))
+                    reels = enrich_reels(raw_reels, viewer['id'])
+                except Exception as exc:
+                    app.logger.error("Error fetching bookmarked reels: %s", exc)
+                    reels = []
+            has_next = len(saved_reel_ids) > (offset + limit)
+    else:
+        try:
+            b_res = supabase.table('bookmarks').select('post_id').eq('user_id', viewer['id']).order('created_at', desc=True).execute()
+            saved_post_ids = [b['post_id'] for b in b_res.data] if (b_res and b_res.data) else []
+            if saved_post_ids:
+                offset = (page - 1) * limit
+                posts_res = execute_published_posts(lambda: supabase.table('posts').select(POST_SELECT_QUERY).in_('id', saved_post_ids).is_('deleted_at', 'null').range(offset, offset + limit - 1))
+                raw_posts = posts_res.data if posts_res and posts_res.data else []
+                order_map = {pid: i for i, pid in enumerate(saved_post_ids)}
+                raw_posts.sort(key=lambda p: order_map.get(p.get('id'), 9999))
+                posts = enrich_posts(visible_post_filter(raw_posts, viewer['id']), viewer['id'])
+                has_next = len(saved_post_ids) > (offset + limit)
+        except Exception as exc:
+            app.logger.error("Error fetching bookmarked posts: %s", exc)
+            posts = []
+
+    return render_template('bookmarks.html',
+                           viewer=viewer,
+                           active_page='bookmarks',
+                           tab=tab,
+                           posts=posts,
+                           reels=reels,
+                           page=page,
+                           has_next=has_next,
+                           title_i18n="bookmarks_title")
 
 @app.route('/community/<slug>/post', methods=['POST'])
 def create_community_post(slug):
@@ -5639,6 +5849,49 @@ def profile(username):
                     posts = enrich_posts(visible_post_filter(raw_posts, viewer['id']), viewer['id'])
                 else:
                     posts = []
+            elif mode == 'saved':
+                if not is_own_profile:
+                    return redirect(url_for('profile', username=profile_user['username'], m='posts'))
+                saved_sub = request.args.get('sub', 'posts')
+                if saved_sub == 'clips':
+                    saved_reel_ids = get_all_bookmarked_reel_ids(viewer['id'])
+                    if saved_reel_ids:
+                        offset = (page - 1) * POSTS_PER_PAGE
+                        page_reel_ids = saved_reel_ids[offset:offset + POSTS_PER_PAGE]
+                        if page_reel_ids:
+                            try:
+                                select_query_reels = '*, user:users!reels_user_id_fkey(*), community:communities!reels_community_id_fkey(*)'
+                                res = supabase.table('reels').select(select_query_reels).in_('id', page_reel_ids).eq('status', 'active').is_('deleted_at', 'null').execute()
+                                raw_reels = res.data or []
+                                order_map = {rid: i for i, rid in enumerate(page_reel_ids)}
+                                raw_reels.sort(key=lambda r: order_map.get(r.get('id'), 9999))
+                                reels = enrich_reels(raw_reels, viewer['id'])
+                            except Exception as exc:
+                                app.logger.error("Error loading saved reels in profile: %s", exc)
+                                reels = []
+                        has_next = len(saved_reel_ids) > (offset + POSTS_PER_PAGE)
+                    else:
+                        reels = []
+                    posts = []
+                else:
+                    saved_sub = 'posts'
+                    try:
+                        b_res = supabase.table('bookmarks').select('post_id').eq('user_id', viewer['id']).order('created_at', desc=True).execute()
+                        saved_post_ids = [b['post_id'] for b in b_res.data] if (b_res and b_res.data) else []
+                        if saved_post_ids:
+                            offset = (page - 1) * POSTS_PER_PAGE
+                            posts_res = execute_published_posts(lambda: supabase.table('posts').select(POST_SELECT_QUERY).in_('id', saved_post_ids).is_('deleted_at', 'null').range(offset, offset + POSTS_PER_PAGE - 1))
+                            raw_posts = posts_res.data if posts_res and posts_res.data else []
+                            order_map = {pid: i for i, pid in enumerate(saved_post_ids)}
+                            raw_posts.sort(key=lambda p: order_map.get(p.get('id'), 9999))
+                            posts = enrich_posts(visible_post_filter(raw_posts, viewer['id']), viewer['id'])
+                            has_next = len(saved_post_ids) > (offset + POSTS_PER_PAGE)
+                        else:
+                            posts = []
+                    except Exception as exc:
+                        app.logger.error("Error loading saved posts in profile: %s", exc)
+                        posts = []
+                    reels = []
             else:
                 posts = get_profile_posts(profile_user, viewer['id'], page=page)
 
@@ -5660,6 +5913,8 @@ def profile(username):
         flash(handle_db_error(e), "error")
         return redirect(url_for('index'))
 
+    profile_has_next = has_next if mode == 'saved' else (len(posts) == POSTS_PER_PAGE if mode != 'clips' else len(reels) == POSTS_PER_PAGE)
+
     return render_template('profile.html',
                            viewer=viewer,
                            profile=profile_user,
@@ -5673,8 +5928,9 @@ def profile(username):
                            posts=posts,
                            reels=reels,
                            mode=mode,
+                           saved_sub=locals().get('saved_sub', 'posts'),
                            page=page,
-                           has_next=len(posts) == POSTS_PER_PAGE,
+                           has_next=profile_has_next,
                            highlights=highlights,
                            profile_banner=profile_banner,
                            profile_banner_class=profile_banner['class'],
@@ -5939,6 +6195,8 @@ def messages():
             pass
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         flash(handle_db_error(e), "error")
         conversations = []
         all_users = []
@@ -6260,6 +6518,11 @@ def create_community():
             existing = supabase.table('communities').select('id').eq('slug', slug).execute()
             if existing and existing.data:
                 flash("That community URL is already taken.", "error")
+                return redirect(url_for('create_community'))
+
+            existing_name = supabase.table('communities').select('id').ilike('name', name).execute()
+            if existing_name and existing_name.data:
+                flash("A community with that name already exists. Please choose a unique name.", "error")
                 return redirect(url_for('create_community'))
 
             res = supabase.table('communities').insert({

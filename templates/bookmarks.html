@@ -1,0 +1,61 @@
+{% extends "layout.html" %}
+{% set active_page = "bookmarks" %}
+{% set show_highlights = True %}
+{% set title = "Kaydedilenler" %}
+{% set title_i18n = "bookmarks_title" %}
+
+{% block content %}
+<header class="page-header bookmarks-header">
+  <div class="header-top bookmarks-header-top">
+    <h1 data-i18n="bookmarks_title">Kaydedilenler</h1>
+    <p data-i18n="bookmarks_desc">Daha sonra tekrar göz atmak için kaydettiğin tüm gönderiler ve klipler.</p>
+  </div>
+  <div class="segmented feed-tabs bookmarks-tabs">
+    <a class="{% if tab == 'posts' %}active{% endif %}" href="{{ url_for('bookmarks', tab='posts') }}">
+      <span data-i18n="bookmarks_tab_posts">Gönderiler</span>
+    </a>
+    <a class="{% if tab == 'clips' %}active{% endif %}" href="{{ url_for('bookmarks', tab='clips') }}">
+      <span data-i18n="bookmarks_tab_clips">Klipler</span>
+    </a>
+  </div>
+</header>
+
+<section class="feed bookmarks-feed">
+  {% if tab == 'clips' %}
+    {% if reels %}
+      <div class="profile-reels-feed bookmarks-reels-feed" data-reels-feed>
+        {% for reel in reels %}
+          {% include "_reel_card.html" %}
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <h2 data-i18n="bookmarks_empty_clips">Kaydedilen klip yok</h2>
+        <p data-i18n="bookmarks_empty_clips_desc">Kliplerde beğendiğin videoları kaydet butonuna basarak burada saklayabilirsin.</p>
+      </div>
+    {% endif %}
+  {% else %}
+    {% if posts %}
+      {% for post in posts %}
+        {% include "_post_card.html" %}
+      {% endfor %}
+    {% else %}
+      <div class="empty-state">
+        <h2 data-i18n="bookmarks_empty_posts">Kaydedilen gönderi yok</h2>
+        <p data-i18n="bookmarks_empty_posts_desc">Akışta gördüğün ilginç paylaşımları yer imlerine ekleyerek burada saklayabilirsin.</p>
+      </div>
+    {% endif %}
+  {% endif %}
+</section>
+
+{% if has_next or page > 1 %}
+<nav class="pagination-controls" aria-label="Bookmarks pagination">
+  {% if page > 1 %}
+    <a class="outline-button" href="{{ url_for('bookmarks', tab=tab, page=page-1) }}" data-i18n="previous_btn">Önceki</a>
+  {% endif %}
+  {% if has_next %}
+    <a class="outline-button" href="{{ url_for('bookmarks', tab=tab, page=page+1) }}" data-i18n="more_btn">Daha Fazla</a>
+  {% endif %}
+</nav>
+{% endif %}
+{% endblock %}

@@ -72,7 +72,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const clipId = card.dataset.clipId || card.dataset.reelId;
       const modal = card.querySelector('[data-share-modal]');
       if (modal) {
+        // If comments are open, close them
+        const commentPanel = card.querySelector('[data-reel-comment-panel]');
+        if (commentPanel) {
+          commentPanel.classList.remove('is-open');
+          document.body.classList.remove('reel-comments-open');
+        }
         modal.removeAttribute('hidden');
+        modal.classList.add('is-open');
         
         // Fetch friends if not already loaded
         const list = modal.querySelector('[data-share-friends-list]');
@@ -89,11 +96,31 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
+    function hideShareModal(modal) {
+      if (!modal) return;
+      modal.classList.remove('is-open');
+      window.setTimeout(() => {
+        if (!modal.classList.contains('is-open')) {
+          modal.setAttribute('hidden', '');
+        }
+      }, 280);
+    }
+
     const closeBtn = e.target.closest('[data-close-share]');
     if (closeBtn) {
       const modal = closeBtn.closest('[data-share-modal]');
-      if (modal) modal.setAttribute('hidden', '');
+      hideShareModal(modal);
       return;
+    }
+    
+    if (e.target.matches('[data-share-modal]')) {
+      hideShareModal(e.target);
+      return;
+    }
+
+    // Dismiss if click is outside modal and outside trigger
+    if (!e.target.closest('[data-share-modal]') && !e.target.closest('[data-share-modal-trigger]')) {
+      document.querySelectorAll('[data-share-modal].is-open').forEach(hideShareModal);
     }
     
     const sendBtn = e.target.closest('[data-share-send]');

@@ -1382,6 +1382,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const wrapper = document.createElement('div');
         wrapper.className = `message-bubble-wrapper ${own ? 'own' : ''}`;
         wrapper.dataset.messageId = String(message.id || '');
+        
+
 
         const time = new Date(message.created_at);
         const timeStr = Number.isNaN(time.getTime())
@@ -1391,27 +1393,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const lang = window.LvLI18n ? window.LvLI18n.getCurrentLang() : 'en';
         const t = (window.LvLI18n && window.LvLI18n.TRANSLATIONS && window.LvLI18n.TRANSLATIONS[lang]) || {};
 
-        let deleteForm = '';
-        if (own && message.id && !message.deleted_for_everyone) {
-            const delForMe = t.delete_for_me || 'Delete for me';
-            const delForEveryone = t.delete_for_everyone || 'Delete for everyone';
-            deleteForm = `
-                <div class="message-delete-dropdown">
-                    <button type="button" class="delete-trigger-btn" aria-label="${escapeHTML(t.message_delete_options || 'Delete options')}">
-                        <svg viewBox="0 0 24 24" aria-hidden="true" width="15" height="15" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12ZM8 4h3l1-1h4l1 1h3v2H8V4Z"/></svg>
-                    </button>
-                    <div class="delete-dropdown-menu" hidden>
-                        <button type="button" class="delete-menu-item" data-delete-type="me" data-message-id="${escapeHTML(String(message.id))}" data-i18n="delete_for_me">${escapeHTML(delForMe)}</button>
-                        <button type="button" class="delete-menu-item" data-delete-type="everyone" data-message-id="${escapeHTML(String(message.id))}" data-i18n="delete_for_everyone">${escapeHTML(delForEveryone)}</button>
-                    </div>
-                </div>
-            `;
-        }
-
         let bodyHtml = '';
         if (message.deleted_for_everyone) {
             const msgDeletedText = t.message_deleted || 'This message was deleted';
-            bodyHtml = `<span class="deleted-message" data-i18n="message_deleted">${escapeHTML(msgDeletedText)}</span>`;
+            bodyHtml = `<span class="deleted-message" data-i18n="message_deleted" style="font-style: italic;">${escapeHTML(msgDeletedText)}</span>`;
         } else if (message.shared_post) {
             const postAuthor = message.shared_post.user || {};
             bodyHtml = `
@@ -1456,7 +1441,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     attachmentHtml = `
                         <div class="message-attachment">
-                            <a href="${escapeHTML(message.attachment_url)}" download class="attachment-download-link">
+                            <a href="${escapeHTML(message.attachment_url)}" download class="attachment-download-link" style="color: #ffffff;">
                                 <span class="attachment-icon">📁</span>
                                 <span class="attachment-name-text">${escapeHTML(message.attachment_name || 'attachment')}</span>
                             </a>
@@ -1468,19 +1453,19 @@ document.addEventListener('DOMContentLoaded', () => {
             let textHtml = '';
             if (message.content) {
                 let contentEscaped = escapeHTML(message.content).replace(/\n/g, '<br>');
-                contentEscaped = contentEscaped.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank">$1</a>');
-                textHtml = `<div class="message-text-content">${contentEscaped}</div>`;
+                contentEscaped = contentEscaped.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" style="color: inherit; text-decoration: underline;">$1</a>');
+                textHtml = `<span class="message-text-content">${contentEscaped}</span>`;
             }
 
             bodyHtml = `${attachmentHtml}${textHtml}`;
         }
 
         const bubbleClass = message.deleted_for_everyone ? 'message-bubble deleted-message' : 'message-bubble';
+        
         wrapper.innerHTML = `
             <div class="${bubbleClass}" title="${escapeHTML(message.created_at || '')}">${bodyHtml}</div>
             <div class="message-meta">
                 <span class="message-time">${timeStr}</span>
-                ${deleteForm}
             </div>
         `;
         return wrapper;
@@ -2087,7 +2072,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 formData.append('ajax', '1');
                 if (token) formData.append('csrf_token', token.value);
                 try {
-                    await fetch(viewUrl, { method: 'POST', body: formData, headers: { 'Accept': 'application/json' } });
+                    const response = await fetch(viewUrl, { method: 'POST', body: formData, headers: { 'Accept': 'application/json' } });
+                    const data = await response.json();
+                    if (data && data.success && typeof data.count !== 'undefined') {
+                        const countStr = String(data.count);
+                        card.querySelectorAll('[data-reel-view-count]').forEach(el => el.textContent = countStr);
+                        card.querySelectorAll('[data-reel-view-count-badge]').forEach(el => el.textContent = countStr);
+                    }
                 } catch (e) {}
             };
 
@@ -2199,6 +2190,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     let lastTapTime = 0;
                     let singleTapTimer = null;
                     video.addEventListener('click', (e) => {
+                        const currentCommentPanel = card.querySelector('[data-reel-comment-panel]');
+                        const currentShareModal = card.querySelector('[data-share-modal]');
+                        const commentOpen = (currentCommentPanel && currentCommentPanel.classList.contains('is-open')) || commentsAreOpen();
+                        const shareOpen = currentShareModal && (currentShareModal.classList.contains('is-open') || !currentShareModal.hidden);
+                        if (commentOpen || shareOpen) {
+                            if (currentCommentPanel) {
+                                currentCommentPanel.classList.remove('is-open');
+                                document.body.classList.remove('reel-comments-open');
+                            }
+                            if (currentShareModal) {
+                                currentShareModal.classList.remove('is-open');
+                                window.setTimeout(() => {
+                                    if (!currentShareModal.classList.contains('is-open')) {
+                                        currentShareModal.setAttribute('hidden', '');
+                                    }
+                                }, 280);
+                            }
+                            return;
+                        }
+
                         const currentTime = Date.now();
                         const tapLength = currentTime - lastTapTime;
                         if (tapLength < 300 && tapLength > 0) {
@@ -2228,6 +2239,20 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                     });
                     video.addEventListener('ended', () => {
+                        const currentCommentPanel = card.querySelector('[data-reel-comment-panel]');
+                        const isCommentOpen = (currentCommentPanel && currentCommentPanel.classList.contains('is-open')) || commentsAreOpen();
+                        const currentShareModal = card.querySelector('[data-share-modal]');
+                        const isShareOpen = currentShareModal && (currentShareModal.classList.contains('is-open') || !currentShareModal.hidden);
+                        const isTyping = document.activeElement && (
+                            document.activeElement.tagName === 'INPUT' ||
+                            document.activeElement.tagName === 'TEXTAREA' ||
+                            document.activeElement.isContentEditable
+                        );
+                        if (isCommentOpen || isShareOpen || isTyping) {
+                            video.currentTime = 0;
+                            video.play().catch(() => {});
+                            return;
+                        }
                         const autoplaySetting = window.localStorage.getItem('autoplay_next_reels') !== 'false';
                         if (!autoplaySetting) {
                             video.pause();
@@ -2274,6 +2299,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     let commentsLoaded = false;
 
                     const openPanel = async () => {
+                        const shareModal = card.querySelector('[data-share-modal]');
+                        if (shareModal) {
+                            shareModal.classList.remove('is-open');
+                            window.setTimeout(() => {
+                                if (!shareModal.classList.contains('is-open')) {
+                                    shareModal.setAttribute('hidden', '');
+                                }
+                            }, 280);
+                        }
                         commentPanel.classList.add('is-open');
                         document.body.classList.add('reel-comments-open');
                         if (!commentsLoaded) {
@@ -2337,6 +2371,67 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                     }
                 }
+
+                // More options dropdown toggle
+                const moreToggle = card.querySelector('[data-reel-more-toggle]');
+                const moreMenu = card.querySelector('[data-reel-more-menu]');
+                const moreDropdown = card.querySelector('[data-reel-more-dropdown]');
+                if (moreToggle && moreMenu) {
+                    moreToggle.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const isClosed = moreMenu.hidden || moreMenu.hasAttribute('hidden');
+                        document.querySelectorAll('[data-reel-more-menu]').forEach(m => {
+                            m.hidden = true;
+                            m.setAttribute('hidden', '');
+                        });
+                        document.querySelectorAll('[data-reel-more-dropdown]').forEach(d => d.classList.remove('is-open'));
+                        if (isClosed) {
+                            moreMenu.hidden = false;
+                            moreMenu.removeAttribute('hidden');
+                            if (moreDropdown) moreDropdown.classList.add('is-open');
+                        }
+                    });
+                    moreMenu.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                    });
+                }
+
+                // Copy link in more menu with glamour feedback
+                const copyLinkBtn = card.querySelector('[data-reel-copy-link]');
+                if (copyLinkBtn) {
+                    copyLinkBtn.addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        const link = copyLinkBtn.dataset.link || window.location.href;
+                        const span = copyLinkBtn.querySelector('span');
+                        const origText = span ? span.textContent : '';
+                        try {
+                            await navigator.clipboard.writeText(link);
+                            if (span) {
+                                span.textContent = '✓ Kopyalandı!';
+                                copyLinkBtn.style.color = '#34d399';
+                            }
+                            if (typeof showAppToast === 'function') {
+                                showAppToast('Bağlantı panoya kopyalandı ✨');
+                            }
+                            setTimeout(() => {
+                                if (span) span.textContent = origText;
+                                copyLinkBtn.style.color = '';
+                                if (moreMenu) moreMenu.hidden = true;
+                                if (moreDropdown) moreDropdown.classList.remove('is-open');
+                            }, 900);
+                        } catch (err) {
+                            prompt('Klip bağlantısı:', link);
+                            if (moreMenu) moreMenu.hidden = true;
+                        }
+                    });
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('[data-reel-more-dropdown]')) {
+                    document.querySelectorAll('[data-reel-more-menu]').forEach(m => m.hidden = true);
+                    document.querySelectorAll('[data-reel-more-dropdown]').forEach(d => d.classList.remove('is-open'));
+                }
             });
 
             feed.querySelectorAll('[data-reel-like-form]').forEach((form) => {
@@ -2358,6 +2453,37 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (typeof showXpToasts === 'function') showXpToasts(result.xp_toasts || []);
                     } catch (error) {
                         console.error('Could not like reel:', error);
+                        if (typeof showAppToast === 'function') showAppToast(translateUiLocal('action_failed', 'Action did not finish. Try again.'));
+                    } finally {
+                        if (btn) { delete btn.dataset.pending; }
+                    }
+                });
+            });
+
+            feed.querySelectorAll('[data-reel-bookmark-form]').forEach((form) => {
+                form.addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    const btn = form.querySelector('button');
+                    if (btn && btn.dataset.pending === '1') return;
+                    if (btn) { btn.dataset.pending = '1'; }
+                    const formData = new FormData(form);
+                    formData.append('ajax', '1');
+                    try {
+                        const response = await fetch(form.action, { method: 'POST', body: formData, headers: { 'Accept': 'application/json' } });
+                        const result = await response.json();
+                        if (!result.success) {
+                            if (typeof showAppToast === 'function') showAppToast(result.error || 'Could not bookmark clip.');
+                            return;
+                        }
+                        btn.classList.toggle('active', result.bookmarked);
+                        btn.classList.toggle('bookmark-active', result.bookmarked);
+                        const svg = btn.querySelector('svg');
+                        if (svg) svg.setAttribute('fill', result.bookmarked ? 'currentColor' : 'none');
+                        if (result.bookmarked) {
+                            if (typeof triggerLvlInteractionFeedback === 'function') triggerLvlInteractionFeedback(btn, 'KAYDEDİLDİ!');
+                        }
+                    } catch (error) {
+                        console.error('Could not bookmark clip:', error);
                         if (typeof showAppToast === 'function') showAppToast(translateUiLocal('action_failed', 'Action did not finish. Try again.'));
                     } finally {
                         if (btn) { delete btn.dataset.pending; }
