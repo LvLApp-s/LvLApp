@@ -56,7 +56,7 @@
         </a>
         <a class="{% if active_page == 'community' %}active{% endif %}" href="{{ url_for('community') }}" aria-label="Community" title="Community" data-i18n-aria="nav_community" data-i18n-title="nav_community">
           <span class="nav-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M7.5 11a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Zm9 0a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7ZM2 20c.38-3.35 2.63-6 5.5-6s5.12 2.65 5.5 6H2Zm9.75 0c.24-1.86 1.06-3.48 2.25-4.6.72-.88 1.57-1.4 2.5-1.4 2.87 0 5.12 2.65 5.5 6H11.75Z"/></svg>
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </span>
           <span class="nav-label" data-i18n="nav_community">Community</span>
         </a>
@@ -242,7 +242,7 @@
     <span class="mobile-nav-label sr-only" data-i18n="nav_home">Home</span>
   </a>
   <a class="{% if active_page == 'community' %}active{% endif %}" href="{{ url_for('community') }}" aria-label="Community" data-i18n-aria="nav_community">
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M7.5 11a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Zm9 0a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7ZM2 20c.38-3.35 2.63-6 5.5-6s5.12 2.65 5.5 6H2Zm9.75 0c.24-1.86 1.06-3.48 2.25-4.6.72-.88 1.57-1.4 2.5-1.4 2.87 0 5.12 2.65 5.5 6H11.75Z"/></svg>
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     <span class="mobile-nav-label sr-only" data-i18n="nav_community">Community</span>
   </a>
   {% set mobile_create_href = url_for('reel_upload') if active_page == 'reels' else url_for('index', compose=1) %}
