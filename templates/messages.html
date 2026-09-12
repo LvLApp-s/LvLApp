@@ -196,39 +196,80 @@
     background: var(--bg-color, #0b0e14) !important;
     border-top: 1px solid var(--border-color) !important;
   }
-  }
   .chat-footer { flex-shrink: 0 !important; }
 }
+
+.chat-input-form {
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
 .chat-input-wrapper {
-  display: flex;
-  align-items: center;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
   background: var(--lvl-white-4);
   border: 1px solid var(--lvl-white-12);
   border-radius: 24px;
-  padding: 4px 12px;
-  width: 100%;
+  padding: 4px 10px;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  gap: 6px !important;
 }
+
 .attachment-btn {
+  flex: 0 0 auto !important;
   background: none;
   border: none;
   color: var(--lvl-white-60);
-  font-size: 24px;
-  padding: 0 8px;
+  font-size: 22px;
+  width: 32px;
+  height: 32px;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   cursor: pointer;
   transition: color 0.2s;
   line-height: 1;
+  padding: 0;
 }
+
 .attachment-btn:hover {
   color: var(--lvl-primary);
 }
+
 .chat-input-wrapper textarea {
-  flex: 1;
-  background: none;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  background: none !important;
+  border: none !important;
+  resize: none !important;
+  outline: none !important;
+  color: var(--lvl-white) !important;
+  padding: 6px 4px !important;
+  font-family: inherit !important;
+  font-size: 15px !important;
+  line-height: 1.35 !important;
+}
+
+.send-btn {
+  flex: 0 0 auto !important;
+  background: transparent;
   border: none;
-  resize: none;
-  outline: none;
-  color: var(--lvl-white);
-  padding: 8px 4px;
+  color: var(--accent-color);
+  cursor: pointer;
+  width: 34px;
+  height: 34px;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: var(--radius-round);
+  transition: 0.2s;
+  padding: 0;
+  margin-left: auto;
 }
 .attachment-preview-box {
   display: flex;
