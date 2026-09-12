@@ -4,20 +4,39 @@
 {% set title = "Notifications" %}
 
 {% block content %}
-<header class="page-header">
-  <div>
-    <h1 data-i18n="notif_alerts_title">Alerts</h1>
-    <p data-i18n="notif_alerts_desc">Short grouped updates for likes, comments, follows, messages, and high-fives.</p>
+<header class="page-header notif-page-header">
+  <div class="notif-header-info">
+    <div class="notif-header-badge">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="notif-bell-animated">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+    </div>
+    <div>
+      <h1 data-i18n="notif_alerts_title">Alerts</h1>
+      <p data-i18n="notif_alerts_desc">Short grouped updates for likes, comments, follows, messages, and high-fives.</p>
+    </div>
   </div>
-  <form action="{{ url_for('mark_notifications_read') }}" method="post">
+  <form action="{{ url_for('mark_notifications_read') }}" method="post" class="notif-mark-read-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <button class="outline-button" type="submit" data-i18n="notif_mark_read">Mark read</button>
+    <button class="outline-button notif-mark-read-btn" type="submit">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+      <span data-i18n="notif_mark_read">Mark read</span>
+    </button>
   </form>
 </header>
 
-<section class="feed" data-notifications-feed data-latest-notification-id="{{ notifications|map(attribute='id')|max if notifications else 0 }}">
+<section class="feed notifications-feed" data-notifications-feed data-latest-notification-id="{{ notifications|map(attribute='id')|max if notifications else 0 }}">
   {% if not notifications %}
-    <div class="empty-state" data-notifications-empty>
+    <div class="empty-state notif-empty-state" data-notifications-empty>
+      <div class="notif-empty-icon-wrap">
+        <svg class="notif-empty-bell" viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+      </div>
       <h2 data-i18n="notif_empty">No notifications yet</h2>
       <p data-i18n="notif_empty_sub">When people interact with you or your posts, you'll see it here.</p>
     </div>
@@ -25,24 +44,35 @@
   
   {% for notification in notifications %}
     <article class="notification-item {% if not notification.is_read %}unread{% endif %}" data-notification-id="{{ notification.id }}">
-      <div class="notification-icon type-{{ notification.type }}">
-        {% if notification.type == 'like' %}❤️{% endif %}
-        {% if notification.type == 'reel_like' %}❤️{% endif %}
-        {% if notification.type == 'follow' %}👤{% endif %}
-        {% if notification.type == 'repost' %}🔁{% endif %}
-        {% if notification.type == 'comment' %}💬{% endif %}
-        {% if notification.type == 'comment_reply' %}💬{% endif %}
-        {% if notification.type == 'comment_like' %}❤️{% endif %}
-        {% if notification.type == 'comment_repost' %}🔁{% endif %}
-        {% if notification.type == 'reel_comment' %}💬{% endif %}
-        {% if notification.type == 'message' %}✉️{% endif %}
-        {% if notification.type == 'friend_request' %}🤝{% endif %}
-        {% if notification.type == 'friend_accept' %}✓{% endif %}
-        {% if notification.type == 'high_five' %}<svg class="high-five-svg notif-high-five-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 11V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v4"/><path d="M14 10V4a2 2 0 0 0-2-2 2 2 0 0 0-2 2v6"/><path d="M10 10.5V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>{% endif %}
+      <div class="notification-avatar-container">
+        <a href="{{ url_for('profile', username=notification.actor_username) if notification.actor_username else '#' }}" class="actor-avatar-link">
+          <img class="avatar notif-actor-avatar" src="{{ notification.actor_avatar or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="{{ notification.actor_name }}" loading="lazy" />
+        </a>
+        <div class="notification-icon notif-badge notif-badge-{{ notification.type }} type-{{ notification.type }}" title="{{ notification.type }}">
+          {% if notification.type in ['like', 'reel_like', 'comment_like'] %}
+            <svg class="notif-svg notif-heart" viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+          {% elif notification.type in ['repost', 'comment_repost'] %}
+            <svg class="notif-svg notif-repost" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
+          {% elif notification.type in ['comment', 'comment_reply', 'reel_comment'] %}
+            <svg class="notif-svg notif-comment" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+          {% elif notification.type == 'follow' %}
+            <svg class="notif-svg notif-follow" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+          {% elif notification.type == 'friend_request' %}
+            <svg class="notif-svg notif-friend-req" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          {% elif notification.type == 'friend_accept' %}
+            <svg class="notif-svg notif-friend-acc" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          {% elif notification.type == 'message' %}
+            <svg class="notif-svg notif-message" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          {% elif notification.type == 'high_five' %}
+            <svg class="high-five-svg notif-high-five-svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 11V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v4"/><path d="M14 10V4a2 2 0 0 0-2-2 2 2 0 0 0-2 2v6"/><path d="M10 10.5V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>
+          {% else %}
+            <svg class="notif-svg notif-bell" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          {% endif %}
+        </div>
       </div>
       <div class="notification-body">
         <div class="notification-header">
-          <a href="{{ url_for('profile', username=notification.actor_username) }}" class="actor-link">
+          <a href="{{ url_for('profile', username=notification.actor_username) if notification.actor_username else '#' }}" class="actor-link">
             <strong>{{ notification.actor_summary or notification.actor_name }}</strong>
           </a>
           <span class="notification-text">
@@ -67,30 +97,56 @@
           {% endif %}
           <span class="time">· <time datetime="{{ notification.created_at }}" data-relative-time>{{ relative_time(notification.created_at) }}</time></span>
         </div>
+
+        {% if notification.post_content and notification.post_id and notification.post_content != 'View post' %}
+          <div class="notification-content-preview">
+            <span class="preview-quote-mark">“</span>{{ notification.post_content|truncate(120) }}<span class="preview-quote-mark">”</span>
+          </div>
+        {% elif notification.reel_caption and notification.reel_id and notification.reel_caption != 'Open reel' %}
+          <div class="notification-content-preview">
+            <span class="preview-quote-mark">“</span>{{ notification.reel_caption|truncate(120) }}<span class="preview-quote-mark">”</span>
+          </div>
+        {% endif %}
         
         {% if notification.post_id %}
-          <a href="{{ url_for('post', id=notification.post_id) }}" class="notification-action" data-i18n="notif_open_post">Open post</a>
+          <a href="{{ url_for('post', id=notification.post_id) }}" class="notification-action notif-pill-action">
+            <span data-i18n="notif_open_post">Open post</span>
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+          </a>
         {% elif notification.reel_id %}
-          <a href="{{ notification.reel_url or (url_for('reels') ~ '#reel-' ~ notification.reel_id) }}" class="notification-action" data-i18n="notif_open_clip">Open clip</a>
+          <a href="{{ notification.reel_url or (url_for('reels') ~ '#reel-' ~ notification.reel_id) }}" class="notification-action notif-pill-action">
+            <span data-i18n="notif_open_clip">Open clip</span>
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          </a>
         {% elif notification.type == 'message' %}
-          <a href="{{ notification.message_url or (url_for('messages', u=notification.actor_username) if notification.actor_username else url_for('messages')) }}" class="notification-action" data-i18n="notif_open_message">Open message</a>
+          <a href="{{ notification.message_url or (url_for('messages', u=notification.actor_username) if notification.actor_username else url_for('messages')) }}" class="notification-action notif-pill-action">
+            <span data-i18n="notif_open_message">Open message</span>
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+          </a>
         {% elif notification.type == 'friend_request' and notification.friendship_status == 'pending' and notification.friendship_action_user_id != viewer.id %}
-          <div class="notification-actions">
+          <div class="notification-actions notif-friend-actions">
             <form action="{{ url_for('respond_friend_request') }}" method="post">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <input type="hidden" name="target_id" value="{{ notification.actor_id }}">
               <input type="hidden" name="decision" value="accept">
-              <button type="submit" class="primary-button small" data-i18n="notif_accept">Accept</button>
+              <button type="submit" class="primary-button small notif-btn-accept" data-i18n="notif_accept">Accept</button>
             </form>
             <form action="{{ url_for('respond_friend_request') }}" method="post">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <input type="hidden" name="target_id" value="{{ notification.actor_id }}">
               <input type="hidden" name="decision" value="decline">
-              <button type="submit" class="outline-button small" data-i18n="notif_decline">Decline</button>
+              <button type="submit" class="outline-button small notif-btn-decline" data-i18n="notif_decline">Decline</button>
             </form>
           </div>
         {% endif %}
       </div>
+
+      {% if not notification.is_read %}
+        <div class="notif-unread-indicator" title="Unread">
+          <span class="unread-pulse-ring"></span>
+          <span class="unread-pulse-core"></span>
+        </div>
+      {% endif %}
     </article>
   {% endfor %}
 </section>

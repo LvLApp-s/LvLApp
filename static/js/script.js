@@ -1776,20 +1776,48 @@ document.addEventListener('DOMContentLoaded', () => {
         let lastMessageId = null;
         let notificationFeedRefreshing = false;
 
+        const getNotificationSvgIcon = (type) => {
+            switch (type) {
+                case 'like':
+                case 'reel_like':
+                case 'comment_like':
+                    return '<svg class="notif-svg notif-heart" viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>';
+                case 'repost':
+                case 'comment_repost':
+                    return '<svg class="notif-svg notif-repost" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>';
+                case 'comment':
+                case 'comment_reply':
+                case 'reel_comment':
+                    return '<svg class="notif-svg notif-comment" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
+                case 'follow':
+                    return '<svg class="notif-svg notif-follow" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>';
+                case 'friend_request':
+                    return '<svg class="notif-svg notif-friend-req" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+                case 'friend_accept':
+                    return '<svg class="notif-svg notif-friend-acc" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+                case 'message':
+                    return '<svg class="notif-svg notif-message" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>';
+                case 'high_five':
+                    return '<svg class="high-five-svg notif-high-five-svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v4"/><path d="M14 10V4a2 2 0 0 0-2-2 2 2 0 0 0-2 2v6"/><path d="M10 10.5V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>';
+                default:
+                    return '<svg class="notif-svg notif-bell" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>';
+            }
+        };
+
         const notificationCopy = {
-            like: ['❤️', 'notif_like', 'notif_open_post'],
-            reel_like: ['❤️', 'notif_reel_like', 'notif_open_clip'],
-            repost: ['🔁', 'notif_repost', 'notif_open_post'],
-            comment: ['💬', 'notif_comment', 'notif_open_post'],
-            comment_reply: ['💬', 'notif_comment_reply', 'notif_open_post'],
-            comment_like: ['❤️', 'notif_comment_like', 'notif_open_post'],
-            comment_repost: ['🔁', 'notif_comment_repost', 'notif_open_post'],
-            reel_comment: ['💬', 'notif_reel_comment', 'notif_open_clip'],
-            follow: ['👤', 'notif_follow', 'notif_open_profile'],
-            friend_request: ['🤝', 'notif_friend_request', 'notif_open_profile'],
-            friend_accept: ['✓', 'notif_friend_accept', 'notif_open_profile'],
-            message: ['✉️', 'notif_message', 'notif_open_message'],
-            high_five: ['<svg class="high-five-svg notif-high-five-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fbbf24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;"><path d="M18 11V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v4"/><path d="M14 10V4a2 2 0 0 0-2-2 2 2 0 0 0-2 2v6"/><path d="M10 10.5V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>', 'notif_high_five', 'notif_open_profile'],
+            like: ['notif_like', 'notif_open_post'],
+            reel_like: ['notif_reel_like', 'notif_open_clip'],
+            repost: ['notif_repost', 'notif_open_post'],
+            comment: ['notif_comment', 'notif_open_post'],
+            comment_reply: ['notif_comment_reply', 'notif_open_post'],
+            comment_like: ['notif_comment_like', 'notif_open_post'],
+            comment_repost: ['notif_comment_repost', 'notif_open_post'],
+            reel_comment: ['notif_reel_comment', 'notif_open_clip'],
+            follow: ['notif_follow', 'notif_open_profile'],
+            friend_request: ['notif_friend_request', 'notif_open_profile'],
+            friend_accept: ['notif_friend_accept', 'notif_open_profile'],
+            message: ['notif_message', 'notif_open_message'],
+            high_five: ['notif_high_five', 'notif_open_profile'],
         };
 
         function parseEventId(value, fallback = null) {
@@ -1834,25 +1862,35 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const renderNotificationItem = (notification) => {
-            const info = notificationCopy[notification.type] || ['ℹ️', 'notif_update', 'open_btn'];
+            const info = notificationCopy[notification.type] || ['notif_update', 'open_btn'];
             const actorUsername = notification.actor_username || '';
             const actorName = notification.actor_summary || notification.actor_name || translateUi('notif_someone', 'Someone');
+            const actorAvatar = notification.actor_avatar || '/static/assets/default-male-avatar.svg';
             const actionUrl = notificationUrl(notification);
             const article = document.createElement('article');
             article.className = `notification-item ${notification.is_read ? '' : 'unread'} new-notification`.trim();
             article.dataset.notificationId = String(notification.id || '');
+            const iconSvg = getNotificationSvgIcon(notification.type);
             article.innerHTML = `
-                <div class="notification-icon type-${escapeHTML(notification.type || 'update')}">${escapeHTML(info[0])}</div>
+                <div class="notification-avatar-container">
+                    <a href="${actorUsername ? `/profile/${encodeURIComponent(actorUsername)}` : '#'}" class="actor-avatar-link">
+                        <img class="avatar notif-actor-avatar" src="${escapeHTML(actorAvatar)}" alt="${escapeHTML(actorName)}" />
+                    </a>
+                    <div class="notification-icon notif-badge notif-badge-${escapeHTML(notification.type || 'update')} type-${escapeHTML(notification.type || 'update')}" title="${escapeHTML(notification.type || '')}">
+                        ${iconSvg}
+                    </div>
+                </div>
                 <div class="notification-body">
                     <div class="notification-header">
                         <a href="${actorUsername ? `/profile/${encodeURIComponent(actorUsername)}` : '#'}" class="actor-link">
                             <strong>${escapeHTML(actorName)}</strong>
                         </a>
-                        <span class="notification-text">${escapeHTML(translateUi(info[1], notification.type || 'sent an update'))}</span>
+                        <span class="notification-text">${escapeHTML(translateUi(info[0], notification.type || 'sent an update'))}</span>
                         <span class="time">· ${escapeHTML(notificationTime(notification.created_at))}</span>
                     </div>
-                    ${actionUrl ? `<a href="${escapeHTML(actionUrl)}" class="notification-action">${escapeHTML(translateUi(info[2], 'Open'))}</a>` : ''}
+                    ${actionUrl ? `<a href="${escapeHTML(actionUrl)}" class="notification-action notif-pill-action"><span>${escapeHTML(translateUi(info[1], 'Open'))}</span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg></a>` : ''}
                 </div>
+                ${!notification.is_read ? '<div class="notif-unread-indicator" title="Unread"><span class="unread-pulse-ring"></span><span class="unread-pulse-core"></span></div>' : ''}
             `;
             return article;
         };

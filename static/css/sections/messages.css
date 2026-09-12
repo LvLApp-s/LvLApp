@@ -538,6 +538,13 @@
   overflow-y: auto;
   padding: 32px 32px 40px;
   text-align: center;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.chat-unselected::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
 }
 
 .send-btn:disabled {
@@ -742,6 +749,8 @@
   overflow-y: auto;
   padding: 32px 32px 40px;
   text-align: center;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .send-btn:disabled {

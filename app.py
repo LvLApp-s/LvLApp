@@ -1754,6 +1754,7 @@ def format_notification_row(notification, viewer_id):
     actor = item.get('actor') or {}
     item['actor_username'] = actor.get('username', '')
     item['actor_name'] = actor.get('display_name') or actor.get('username') or 'Someone'
+    item['actor_avatar'] = actor.get('profile_photo_url') or url_for('static', filename='assets/default-male-avatar.svg')
     item['friendship_status'] = item.get('friendship_status') or 'pending'
     item['friendship_action_user_id'] = item.get('friendship_action_user_id') or actor.get('id')
     if item.get('type') == 'message':

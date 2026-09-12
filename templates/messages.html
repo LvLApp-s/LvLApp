@@ -63,14 +63,30 @@
 .messages-feed::-webkit-scrollbar,
 .conversations-list::-webkit-scrollbar,
 .chat-window::-webkit-scrollbar,
-.messages-container::-webkit-scrollbar {
+.messages-container::-webkit-scrollbar,
+.chat-unselected::-webkit-scrollbar,
+.user-selection-list::-webkit-scrollbar,
+.new-chat-section::-webkit-scrollbar,
+.new-chat-section .user-selection-list::-webkit-scrollbar,
+.new-chat-dialog::-webkit-scrollbar,
+.new-chat-dialog .user-selection-list::-webkit-scrollbar,
+.message-discovery-grid::-webkit-scrollbar,
+.message-discovery-panel::-webkit-scrollbar {
   display: none !important;
   width: 0 !important;
   height: 0 !important;
   background: transparent !important;
 }
 
-.conversations-list {
+.conversations-list,
+.chat-unselected,
+.user-selection-list,
+.new-chat-section,
+.new-chat-section .user-selection-list,
+.new-chat-dialog,
+.new-chat-dialog .user-selection-list,
+.message-discovery-grid,
+.message-discovery-panel {
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
 }
