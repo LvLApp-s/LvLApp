@@ -174,8 +174,36 @@
   justify-content: center;
   flex: 0 0 auto;
   border-radius: var(--radius-round);
-  background: var(--lvl-white-08);
-  font-size: 20px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.16), rgba(245, 158, 11, 0.06));
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.15);
+  transition: transform 0.25s ease, background 0.25s ease;
+}
+
+.profile-streak-icon .high-five-svg {
+  display: block;
+  transform-origin: 50% 85%;
+  animation: highFiveIdleWave 3.5s ease-in-out infinite;
+}
+
+.profile-streak-card:hover .profile-streak-icon {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(245, 158, 11, 0.12));
+  border-color: rgba(245, 158, 11, 0.5);
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.28);
+}
+
+.profile-streak-card:hover .profile-streak-icon .high-five-svg {
+  animation: highFiveSlap 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) infinite alternate;
+}
+
+@keyframes highFiveIdleWave {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  10% { transform: rotate(12deg) scale(1.06); }
+  20% { transform: rotate(-10deg) scale(1.06); }
+  30% { transform: rotate(8deg); }
+  40% { transform: rotate(-4deg); }
+  50%, 90% { transform: rotate(0deg) scale(1); }
 }
 
 .profile-streak-card strong {

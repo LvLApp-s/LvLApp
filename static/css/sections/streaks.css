@@ -3,16 +3,17 @@
 .streak-badge {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   font-size: 0.78rem;
   font-weight: 600;
-  color: var(--lvl-streak);
-  background: var(--lvl-streak-soft);
-  border: 1px solid var(--lvl-streak-border);
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.32);
   border-radius: var(--radius-pill);
-  padding: 2px 8px;
+  padding: 3px 8px;
   white-space: nowrap;
   flex-shrink: 0;
+  transition: all 0.2s ease;
 }
 
 .streak-badge-zero {
@@ -25,7 +26,7 @@
 .streak-badge-header {
   margin-left: auto;
   font-size: 0.85rem;
-  padding: 4px 10px;
+  padding: 5px 11px;
 }
 
 .conversation-item {
@@ -36,4 +37,48 @@
 .conversation-item .conv-info {
   flex: 1;
   min-width: 0;
+}
+
+/* Streak animated high-five icon */
+.streak-high-five-icon {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+  transform-origin: 50% 85%;
+  color: inherit;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.high-five-streak:not(.streak-badge-zero) .streak-high-five-icon {
+  animation: highFiveGentleWave 4s ease-in-out infinite;
+  filter: drop-shadow(0 0 3px rgba(245, 158, 11, 0.4));
+}
+
+.conversation-item:hover .streak-badge:not(.streak-badge-zero),
+.streak-badge:not(.streak-badge-zero):hover {
+  background: rgba(245, 158, 11, 0.22);
+  border-color: rgba(245, 158, 11, 0.55);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.25);
+  transform: translateY(-1px);
+}
+
+.conversation-item:hover .streak-high-five-icon,
+.streak-badge:hover .streak-high-five-icon {
+  animation: highFiveSlap 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+.notif-high-five-svg {
+  display: inline-block;
+  vertical-align: middle;
+  color: #fbbf24;
+  animation: highFiveGentleWave 4s ease-in-out infinite;
+  filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.45));
+}
+
+@keyframes highFiveGentleWave {
+  0%, 100% { transform: rotate(0deg); }
+  8% { transform: rotate(14deg); }
+  16% { transform: rotate(-10deg); }
+  24% { transform: rotate(8deg); }
+  32% { transform: rotate(0deg); }
 }

@@ -910,7 +910,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (typeof result.streak === 'number') {
                         const streakEl = document.querySelector('[data-chat-streak]');
                         if (streakEl) {
-                            streakEl.textContent = `🖐 ${result.streak}`;
+                            streakEl.innerHTML = `<svg class="high-five-svg streak-high-five-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 11V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v4"/><path d="M14 10V4a2 2 0 0 0-2-2 2 2 0 0 0-2 2v6"/><path d="M10 10.5V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg> <span class="streak-count-val">${result.streak}</span>`;
                             streakEl.dataset.streakCount = result.streak;
                             const streakLabel = translateUi('streak_days_high_five', 'day high-five streak');
                             streakEl.title = `${result.streak} ${streakLabel}`;
@@ -918,7 +918,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         if (result.streak_xp > 0) {
                             const streakLabel = translateUi('streak_days_high_five', 'day high-five streak');
-                            showXpToasts([{ points: result.streak_xp, label: `🖐 ${result.streak} ${streakLabel}` }]);
+                            showXpToasts([{ points: result.streak_xp, label: `${result.streak} ${streakLabel}` }]);
                         }
                     }
                 } else {
@@ -1789,7 +1789,7 @@ document.addEventListener('DOMContentLoaded', () => {
             friend_request: ['🤝', 'notif_friend_request', 'notif_open_profile'],
             friend_accept: ['✓', 'notif_friend_accept', 'notif_open_profile'],
             message: ['✉️', 'notif_message', 'notif_open_message'],
-            high_five: ['🖐', 'notif_high_five', 'notif_open_profile'],
+            high_five: ['<svg class="high-five-svg notif-high-five-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fbbf24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;"><path d="M18 11V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v4"/><path d="M14 10V4a2 2 0 0 0-2-2 2 2 0 0 0-2 2v6"/><path d="M10 10.5V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>', 'notif_high_five', 'notif_open_profile'],
         };
 
         function parseEventId(value, fallback = null) {
