@@ -154,7 +154,7 @@
 
   /* Messages on tablet — two-pane layout */
   .timeline-messages {
-    height: calc(100dvh - 64px - 76px - env(safe-area-inset-bottom));
+    height: calc(100dvh - 64px - env(safe-area-inset-bottom, 0px));
   }
 
   .timeline-messages .messages-container {
@@ -323,7 +323,7 @@
 
   /* Messages full-screen on small phones */
   .timeline-messages {
-    height: calc(100dvh - 64px - 76px - env(safe-area-inset-bottom));
+    height: calc(100dvh - 64px - env(safe-area-inset-bottom, 0px));
   }
 
   .timeline-messages .messages-container {

@@ -85,12 +85,25 @@
 
 /* Mobile messages — inline bypasses SW cache */
 @media (max-width: 1000px) {
+  html:has(.timeline-messages),
+  body:has(.timeline-messages) {
+    overflow: hidden !important;
+    height: 100% !important;
+    height: 100dvh !important;
+  }
+
   /* Full-width layout, no rails */
   .app-shell {
-    display: block !important;
+    display: flex !important;
+    flex-direction: column !important;
     width: 100vw !important;
     max-width: 100vw !important;
-    padding-inline: 0 !important;
+    height: 100% !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
   .left-rail-wrapper, .right-rail-wrapper {
     display: none !important;
@@ -98,35 +111,46 @@
   .timeline-messages {
     display: flex !important;
     flex-direction: column !important;
+    flex: 1 1 0 !important;
     width: 100vw !important;
     max-width: 100vw !important;
-    height: calc(100dvh - 64px - 76px - env(safe-area-inset-bottom)) !important;
+    height: calc(100dvh - 64px - env(safe-area-inset-bottom, 0px)) !important;
+    max-height: calc(100dvh - 64px - env(safe-area-inset-bottom, 0px)) !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
     overflow: hidden !important;
     box-sizing: border-box !important;
   }
-  .mobile-header { flex-shrink: 0 !important; }
+  .mobile-header {
+    flex-shrink: 0 !important;
+    min-height: 56px !important;
+  }
 
   .messages-container {
-    flex: 1 !important;
+    flex: 1 1 0 !important;
     width: 100% !important;
     max-width: 100% !important;
-    height: auto !important;
+    height: 100% !important;
+    max-height: 100% !important;
     min-height: 0 !important;
     overflow: hidden !important;
     display: flex !important;
   }
 
-  /* No chat selected: keep the list visible, then show the guide below it. */
+  /* No chat selected: full-width inbox conversations list */
   .messages-container:has(.chat-unselected) {
     flex-direction: column !important;
-    overflow-y: auto !important;
+    height: 100% !important;
   }
   .messages-container:has(.chat-unselected) .conversations-sidebar {
     width: 100% !important;
-    max-height: min(42dvh, 310px) !important;
-    flex-shrink: 0 !important;
+    flex: 1 1 auto !important;
+    max-height: none !important;
+    height: 100% !important;
     border-right: none !important;
-    border-bottom: 1px solid var(--border-color) !important;
+    border-bottom: none !important;
+    overflow-y: auto !important;
   }
   .messages-container:has(.chat-unselected) .sidebar-header h2,
   .messages-container:has(.chat-unselected) .conv-info,
@@ -136,33 +160,42 @@
   .messages-container:has(.chat-unselected) .sidebar-header {
     display: flex !important;
   }
-  .messages-container:has(.chat-unselected) .chat-window {
-    display: flex !important;
-    flex: 0 0 auto !important;
-    min-height: 0 !important;
-    overflow: visible !important;
-  }
+  .messages-container:has(.chat-unselected) .chat-window,
   .messages-container:has(.chat-unselected) .chat-unselected {
-    flex: 0 0 auto !important;
-    overflow: visible !important;
+    display: none !important;
   }
 
-  /* Chat open: hide sidebar, full-width chat. */
+  /* Chat open: hide sidebar, full-height chat window sitting directly above bottom nav */
   .messages-container:has(.messages-feed) .conversations-sidebar {
     display: none !important;
   }
-  .chat-window {
-    flex: 1 !important;
+  .messages-container:has(.messages-feed) .chat-window {
+    flex: 1 1 0 !important;
     min-width: 0 !important;
     min-height: 0 !important;
+    height: 100% !important;
+    max-height: 100% !important;
     overflow: hidden !important;
     display: flex !important;
     flex-direction: column !important;
   }
-  .messages-feed {
-    flex: 1 !important;
+  .messages-container:has(.messages-feed) .chat-header {
+    flex-shrink: 0 !important;
+  }
+  .messages-container:has(.messages-feed) .messages-feed {
+    flex: 1 1 auto !important;
     min-height: 0 !important;
     overflow-y: auto !important;
+  }
+  .messages-container:has(.messages-feed) .chat-footer {
+    flex-shrink: 0 !important;
+    position: relative !important;
+    bottom: 0 !important;
+    z-index: 10 !important;
+    padding: 8px 12px !important;
+    background: var(--bg-color, #0b0e14) !important;
+    border-top: 1px solid var(--border-color) !important;
+  }
   }
   .chat-footer { flex-shrink: 0 !important; }
 }

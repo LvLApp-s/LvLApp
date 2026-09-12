@@ -116,63 +116,71 @@
 
 @media (max-width: 767px) {
   .timeline-messages {
-    height: calc(100dvh - 64px - 76px - env(safe-area-inset-bottom));
+    height: calc(100dvh - 64px - env(safe-area-inset-bottom, 0px));
+    max-height: calc(100dvh - 64px - env(safe-area-inset-bottom, 0px));
     min-height: 0;
+    padding: 0 !important;
+    margin: 0 !important;
     overflow: hidden;
   }
 
   .timeline-messages .messages-container {
-    display: grid;
-    grid-template-columns: minmax(132px, 36vw) minmax(0, 1fr);
+    display: flex;
+    flex-direction: column;
     height: 100%;
     min-height: 0;
     overflow: hidden;
   }
 
   .timeline-messages .conversations-sidebar {
-    width: auto;
+    width: 100%;
     min-width: 0;
+    flex: 1 1 auto;
+    overflow-y: auto;
   }
 
   .timeline-messages .sidebar-header {
-    height: 48px;
-    padding: 8px;
+    height: 52px;
+    padding: 10px 14px;
   }
 
   .timeline-messages .sidebar-header h2 {
     display: block;
-    font-size: 15px;
-    line-height: 1;
+    font-size: 17px;
+    line-height: 1.2;
   }
 
   .timeline-messages .sidebar-header .new-message-btn {
     display: flex;
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     flex: 0 0 auto;
   }
 
   .timeline-messages .conversation-item {
     min-height: 64px;
-    gap: 8px;
-    padding: 8px;
+    gap: 10px;
+    padding: 10px 14px;
   }
 
   .timeline-messages .conversation-item .avatar {
-    width: 38px;
-    height: 38px;
-    flex: 0 0 38px;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
     margin: 0;
   }
 
   .timeline-messages .conversation-item .conv-info {
     display: block;
     min-width: 0;
+    flex: 1;
   }
 
   .timeline-messages .conv-header {
-    display: block;
-    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0 0 3px;
   }
 
   .timeline-messages .conv-header strong,
@@ -185,26 +193,39 @@
   }
 
   .timeline-messages .conv-header strong {
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.2;
   }
 
-  .timeline-messages .conv-header .time,
-  .timeline-messages .last-message,
+  .timeline-messages .conv-header .time {
+    display: inline-block;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .timeline-messages .last-message {
+    display: block;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
   .timeline-messages .conversation-item .streak-badge {
-    display: none;
+    display: inline-flex;
+    margin-left: 6px;
   }
 
   .timeline-messages .chat-window {
     height: 100%;
     min-height: 0;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
 
   .timeline-messages .chat-header {
-    flex: 0 0 56px;
-    min-height: 56px;
-    padding-inline: 8px;
+    flex: 0 0 54px;
+    min-height: 54px;
+    padding-inline: 10px;
   }
 
   .timeline-messages .chat-user-info {
@@ -233,19 +254,21 @@
 
   .timeline-messages .messages-feed {
     min-height: 0;
-    padding: 12px 8px;
+    flex: 1 1 auto;
+    padding: 12px 10px;
+    overflow-y: auto;
   }
 
   .timeline-messages .message-bubble-wrapper {
-    max-width: min(86%, 260px);
+    max-width: min(86%, 280px);
   }
 
   .timeline-messages .chat-footer {
-    position: sticky;
+    position: relative;
     bottom: 0;
     z-index: 5;
     flex: 0 0 auto;
-    padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+    padding: 8px 10px;
     background: var(--lvl-black);
   }
 
@@ -255,7 +278,7 @@
 
   .timeline-messages .chat-input-form textarea {
     min-height: 24px;
-    font-size: 16px;
+    font-size: 15px;
   }
 }
 
