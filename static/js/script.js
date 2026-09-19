@@ -24,6 +24,38 @@ document.addEventListener('DOMContentLoaded', () => {
         info: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.6h.01"/></svg>'
     };
 
+    // Polling that respects tab visibility. A backgrounded tab should not keep
+    // waking serverless functions; it catches up with one fetch on return.
+    function startVisiblePolling(task, intervalMs) {
+        let timer = null;
+
+        const stop = () => {
+            if (timer !== null) {
+                window.clearInterval(timer);
+                timer = null;
+            }
+        };
+
+        const start = () => {
+            if (timer !== null) return;
+            timer = window.setInterval(() => {
+                if (!document.hidden) task();
+            }, intervalMs);
+        };
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                stop();
+            } else {
+                task();
+                start();
+            }
+        });
+
+        if (!document.hidden) start();
+        return stop;
+    }
+
     const CONSENT_KEY = 'lvl_cookie_consent';
     const CONSENT_PREFERENCE_KEYS = [
         'lvl_lang',
@@ -1098,7 +1130,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Live Poll refreshing
         if (pollUrl) {
-            window.setInterval(async () => {
+            startVisiblePolling(async () => {
                 const messageEls = Array.from(messagesFeed.querySelectorAll('[data-message-id]'));
                 const latest = messageEls[messageEls.length - 1];
                 const sinceId = latest ? latest.dataset.messageId : '0';
@@ -2127,7 +2159,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         refresh();
-        window.setInterval(refresh, 8000);
+        startVisiblePolling(refresh, 8000);
     }
 
     document.querySelectorAll('[data-post-menu-toggle]').forEach((toggle) => {

@@ -96,8 +96,9 @@
 }
 
 .auth-language-switcher button {
-  min-height: 34px;
-  padding: 6px 10px;
+  /* Comfortable to tap on a phone, not just on a mouse. */
+  min-height: var(--touch-target);
+  padding: 10px 14px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-pill);
   background: transparent;
