@@ -21,6 +21,8 @@
 
 {% include "_install_prompt.html" %}
 
+{% include "_feedback.html" %}
+
 <main class="auth-layout">
   <section class="auth-hero">
     <div class="brand-lockup">
@@ -35,17 +37,10 @@
     </div>
   </section>
   <section class="auth-panel">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="flash {{ category }}" role="status" data-server-message data-server-message-original="{{ message }}">{{ message }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-
     <div class="auth-language-switcher" role="group" aria-label="Language selection" data-i18n-aria="settings_language_aria">
       <button type="button" data-lang-btn="tr" onclick="LvLI18n.applyLanguage('tr')" aria-pressed="false">TR · Türkçe</button>
       <button type="button" data-lang-btn="en" onclick="LvLI18n.applyLanguage('en')" aria-pressed="false">EN · English</button>
+      <button type="button" data-lang-btn="ar" onclick="LvLI18n.applyLanguage('ar')" aria-pressed="false">AR · العربية</button>
     </div>
 
     <div class="auth-tabs" role="tablist">
@@ -101,9 +96,12 @@
         <span data-i18n="auth_last_name">Last name</span>
         <input name="last_name" maxlength="60" autocomplete="family-name" required value="{{ register_form_data.get('last_name', '') if register_form_data else '' }}">
       </label>
-      <label>
+      <label class="field-with-status">
         <span data-i18n="auth_nickname">Nickname</span>
-        <input name="nickname" pattern="[A-Za-z0-9_]{3,24}" minlength="3" maxlength="24" title="3-24 letters, numbers, or underscores." data-i18n-title="settings_username_hint" autocomplete="username" required value="{{ register_form_data.get('nickname', '') if register_form_data else '' }}">
+        <input name="nickname" id="register-nickname" pattern="[A-Za-z0-9_]{3,24}" minlength="3" maxlength="24" title="3-24 letters, numbers, or underscores." data-i18n-title="settings_username_hint" autocomplete="username" autocapitalize="none" spellcheck="false" required
+               data-username-check aria-describedby="register-nickname-status"
+               value="{{ register_form_data.get('nickname', '') if register_form_data else '' }}">
+        <small class="field-status" id="register-nickname-status" data-username-status role="status" aria-live="polite"></small>
       </label>
       <label>
         <span data-i18n="auth_email">Email</span>
@@ -113,10 +111,17 @@
         <span data-i18n="auth_birthday">Birthday</span>
         {% set limits = birthday_limits() %}
         <input type="date" name="birthday" min="{{ limits.min.isoformat() }}" max="{{ limits.max.isoformat() }}" autocomplete="bday" required value="{{ register_form_data.get('birthday', '') if register_form_data else '' }}">
+        <small class="field-hint" data-i18n="auth_age_hint">You must be at least {{ min_age }} years old.</small>
       </label>
       <label>
         <span data-i18n="auth_password">Password</span>
-        <input type="password" name="password" minlength="8" autocomplete="new-password" required>
+        <input type="password" name="password" id="register-password" minlength="8" autocomplete="new-password" required data-password-primary>
+      </label>
+      <label class="field-with-status">
+        <span data-i18n="auth_password_confirm">Confirm password</span>
+        <input type="password" name="password_confirm" id="register-password-confirm" minlength="8" autocomplete="new-password" required
+               data-password-confirm aria-describedby="register-password-status">
+        <small class="field-status" id="register-password-status" data-password-status role="status" aria-live="polite"></small>
       </label>
       <fieldset class="gender-field">
         <legend data-i18n="auth_gender">Gender</legend>
@@ -135,9 +140,20 @@
           <span data-gender-swatch aria-hidden="true"></span>
         </div>
       </fieldset>
+      <label class="checkbox-row terms-row">
+        <input type="checkbox" name="accept_terms" value="1" required data-terms-checkbox>
+        <span class="terms-text">
+          <span data-i18n="auth_terms_prefix">I agree to the</span>
+          <a class="inline-link" href="{{ url_for('terms') }}" target="_blank" rel="noopener" data-i18n="auth_terms_link">Terms &amp; Conditions</a>
+          <span data-i18n="auth_terms_and">and</span>
+          <a class="inline-link" href="{{ url_for('privacy') }}" target="_blank" rel="noopener" data-i18n="auth_privacy_link">Privacy &amp; Cookies</a>
+        </span>
+      </label>
       <button type="submit" data-i18n="auth_create_btn">Create account</button>
     </form>
   </section>
 </main>
+
+{% include "_cookie_consent.html" %}
 </body>
 </html>

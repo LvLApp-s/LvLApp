@@ -1,3 +1,4 @@
+{% from "_verified_badge.html" import verified_badge %}
 <!doctype html>
 <html lang="en" dir="ltr">
 <head>
@@ -23,13 +24,7 @@
 
 {% include "_install_prompt.html" %}
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-    {% for category, message in messages %}
-      <div class="flash {{ category }}" role="status" data-server-message data-server-message-original="{{ message }}">{{ message }}</div>
-    {% endfor %}
-  {% endif %}
-{% endwith %}
+{% include "_feedback.html" %}
 
 {% if request.endpoint != 'auth' %}
 <div class="app-shell">
@@ -79,12 +74,6 @@
             <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
           </span>
           <span class="nav-label" data-i18n="nav_bookmarks">Bookmarks</span>
-        </a>
-        <a class="{% if active_page == 'level_guide' %}active{% endif %}" href="{{ url_for('level_guide') }}" aria-label="LvL Guide" title="LvL Guide" data-i18n-aria="nav_guide" data-i18n-title="nav_guide">
-          <span class="nav-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M5 4h14v3h-2v13H7V7H5V4Zm4 3v11h6V7H9Zm1.25 2h3.5v2h-3.5V9Zm0 3h3.5v2h-3.5v-2Z"/></svg>
-          </span>
-          <span class="nav-label" data-i18n="nav_guide">LvL Guide</span>
         </a>
         <a class="{% if active_page == 'settings' %}active{% endif %}" href="{{ url_for('settings') }}" aria-label="Settings" title="Settings" data-i18n-aria="nav_settings" data-i18n-title="nav_settings">
           <span class="nav-icon" aria-hidden="true">
@@ -159,9 +148,7 @@
                  <div class="lb-identity">
                    <strong class="lb-name">
                      {{ h.display_name }}
-                     {% if h.username in ['ikasfood', 'lvl'] or h.is_profile_verified %}
-                       <svg title="Official account" viewBox="0 0 24 24" width="13" height="13" aria-label="Official account"><path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.918-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.337 2.25c-.416-.165-.866-.25-1.336-.25-2.21 0-3.918 1.79-3.918 4 0 .495.084.965.238 1.4-1.273.65-2.148 2.02-2.148 3.6 0 1.46.758 2.75 1.875 3.45-.045.247-.074.5-.074.76 0 2.21 1.71 3.998 3.918 3.998.47 0 .92-.084 1.336-.25C9.182 21.585 10.49 22.5 12 22.5s2.816-.917 3.337-2.25c.416.165.866.25 1.336.25 2.21 0 3.918-1.79 3.918-4 0-.26-.028-.513-.074-.76 1.116-.7 1.875-1.99 1.875-3.45z" fill="var(--lvl-cyan)"/><path d="M10.153 16.52l-3.385-3.385 1.31-1.31 2.075 2.076 5.672-5.672 1.31 1.31-6.982 6.98z" fill="var(--lvl-white)"/></svg>
-                     {% endif %}
+                     {{ verified_badge(h, size='sm') }}
                    </strong>
                    <span class="lb-handle">@{{ h.username }}</span>
                    {% set highlight_level_title = level_title(h.level or 1) %}
@@ -186,42 +173,42 @@
        </div>
       {% endif %}
        {% if show_trends and trending_posts %}
-         <div class="community-trends panel">
-           <h2 data-i18n="trending_title">Trending Posts</h2>
-             <div class="trends-list custom-scrollbar trends-scroll-wrap">
-               {% for tp in trending_posts %}
-                   <a class="trend-item trend-card-link" href="{{ url_for('post', id=tp.id) }}">
-                     <div class="trend-author trend-card-author">
-                       <img class="avatar small-avatar trend-card-avatar" src="{{ (tp.user or {}).profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" />
-                       <strong class="trend-card-name">
-                         {{ (tp.user or {}).display_name }}
-                         {% if (tp.user or {}).username in ['ikasfood', 'lvl'] or (tp.user or {}).is_profile_verified %}
-                           <svg title="Official Account" viewBox="0 0 24 24" width="1.1em" height="1.1em" style="vertical-align: -0.2em; filter: drop-shadow(0 1px 3px rgba(0, 240, 255, 0.3));"><path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.918-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.337 2.25c-.416-.165-.866-.25-1.336-.25-2.21 0-3.918 1.79-3.918 4 0 .495.084.965.238 1.4-1.273.65-2.148 2.02-2.148 3.6 0 1.46.758 2.75 1.875 3.45-.045.247-.074.5-.074.76 0 2.21 1.71 3.998 3.918 3.998.47 0 .92-.084 1.336-.25C9.182 21.585 10.49 22.5 12 22.5s2.816-.917 3.337-2.25c.416.165.866.25 1.336.25 2.21 0 3.918-1.79 3.918-4 0-.26-.028-.513-.074-.76 1.116-.7 1.875-1.99 1.875-3.45z" fill="var(--lvl-cyan)"/><path d="M10.153 16.52l-3.385-3.385 1.31-1.31 2.075 2.076 5.672-5.672 1.31 1.31-6.982 6.98z" fill="var(--lvl-white)"/></svg>
-                         {% endif %}
-                       </strong>
-                     </div>
-                     <div class="trend-snippet trend-card-snippet">
-                       {% if tp.content %}
-                         <p style="margin: 0;">{{ tp.content[:80] }}{% if tp.content|length > 80 %}...{% endif %}</p>
-                       {% endif %}
-                       {% if tp.image_url %}
-                         <img src="{{ tp.image_url }}" alt="Media" class="trend-media trend-card-media" />
-                       {% endif %}
-                     </div>
-                     <div class="trend-stats trend-card-stats">
-                       <span class="trend-card-stat">
-                         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                         {{ tp.like_count or 0 }}
-                       </span>
-                       <span class="trend-card-stat">
-                         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
-                         {{ tp.comment_count or 0 }}
-                       </span>
-                     </div>
-                   </a>
-               {% endfor %}
-             </div>
-         </div>
+         <section class="panel trending-panel" aria-labelledby="trending-heading">
+           <h2 class="panel-title" id="trending-heading" data-i18n="trending_title">Trending Posts</h2>
+           <ul class="trending-list custom-scrollbar" role="list">
+             {% for tp in trending_posts %}
+               {% set tp_user = tp.user or {} %}
+               <li class="trending-row">
+                 <a class="trending-link" href="{{ url_for('post', id=tp.id) }}">
+                   <span class="trending-identity">
+                     <img class="trending-avatar" src="{{ tp_user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="" aria-hidden="true" loading="lazy">
+                     <span class="trending-name">{{ tp_user.display_name }}</span>
+                     {{ verified_badge(tp_user, size='sm') }}
+                     <span class="trending-handle">@{{ tp_user.username }}</span>
+                   </span>
+                   {% if tp.content %}
+                     <span class="trending-snippet">{{ tp.content }}</span>
+                   {% endif %}
+                   {% if tp.image_url %}
+                     <span class="trending-media">
+                       <img src="{{ tp.image_url }}" alt="" aria-hidden="true" loading="lazy">
+                     </span>
+                   {% endif %}
+                   <span class="trending-stats">
+                     <span class="trending-stat">
+                       <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                       {{ tp.like_count or 0 }}
+                     </span>
+                     <span class="trending-stat">
+                       <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.3 8.9 8.9 0 0 1-3.5-.7L3 21l1.9-5A8.3 8.3 0 0 1 12 3.2a8.4 8.4 0 0 1 9 8.3Z"/></svg>
+                       {{ tp.comment_count or 0 }}
+                     </span>
+                   </span>
+                 </a>
+               </li>
+             {% endfor %}
+           </ul>
+         </section>
       {% endif %}
       {% if home_reels is defined and home_reels %}
         {% include "_home_reel_panel.html" %}
@@ -343,16 +330,6 @@
       <span class="drawer-nav-text" data-i18n="nav_community">Topluluklar</span>
     </a>
 
-    <a class="drawer-nav-item {% if active_page == 'level_guide' %}active{% endif %}" href="{{ url_for('level_guide') }}">
-      <span class="drawer-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-        </svg>
-      </span>
-      <span class="drawer-nav-text" data-i18n="nav_guide">LvL Rehberi</span>
-    </a>
-
     <div class="drawer-divider"></div>
 
     <a class="drawer-nav-item {% if active_page == 'settings' %}active{% endif %}" href="{{ url_for('settings') }}">
@@ -380,162 +357,8 @@
   </div>
 </aside>
 </div>
-<style>
-.mobile-account-menu hr.menu-divider {
-  border: 0;
-  border-top: 1px solid var(--lvl-white-12);
-  margin: 6px 0;
-}
-.mobile-menu-badge-container {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-}
-.mobile-menu-item-left {
-  display: flex;
-  align-items: center;
-}
-.menu-item-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  margin-inline-end: 10px;
-  color: var(--text-secondary);
-  flex-shrink: 0;
-}
-.mobile-account-menu a:hover .menu-item-icon,
-.mobile-account-menu a:focus-visible .menu-item-icon {
-  color: var(--text-primary);
-}
-.menu-item-icon svg {
-  display: block;
-}
-.mobile-account-menu .nav-badge.mobile-menu-badge {
-  position: static;
-  display: inline-grid;
-  place-items: center;
-  min-width: 15px;
-  height: 15px;
-  font-size: 9px;
-  line-height: 12px;
-}
-</style>
-<style>
-.highlight-scroll-wrap {
-  max-height: 220px;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-.highlight-item-row {
-  cursor: default;
-  margin-bottom: 12px;
-}
-.highlight-item-link {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex: 1;
-  text-decoration: none;
-  color: inherit;
-  min-width: 0;
-}
-.highlight-item-avatar {
-  flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-}
-.highlight-item-body {
-  min-width: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-.highlight-item-name {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 14px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.highlight-item-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 2px;
-}
-.community-level-badge {
-  padding: 0px 6px;
-  font-size: 10px;
-  line-height: 16px;
-  height: 16px;
-}
-.trends-scroll-wrap {
-  display: flex;
-  flex-direction: column;
-  max-height: 400px;
-  overflow-y: auto;
-  padding-right: 8px;
-}
-.trend-card-link {
-  display: block;
-  padding: 12px;
-  margin-bottom: 12px;
-  background: var(--lvl-black-20);
-  border: 1px solid var(--lvl-border);
-  border-radius: 12px;
-  text-decoration: none;
-  transition: background 0.2s;
-}
-.trend-card-author {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.trend-card-avatar {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-}
-.trend-card-name {
-  color: var(--text-primary, #fff);
-  font-size: 14px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.trend-card-snippet {
-  color: var(--text-secondary);
-  font-size: 13px;
-  line-height: 1.4;
-  margin-bottom: 8px;
-}
-.trend-card-media {
-  width: 100%;
-  max-height: 140px;
-  border-radius: 8px;
-  margin-top: 8px;
-  object-fit: cover;
-}
-.trend-card-stats {
-  display: flex;
-  gap: 16px;
-  color: var(--text-muted);
-  font-size: 12px;
-  align-items: center;
-}
-.trend-card-stat {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-</style>
 {% endif %}
+
+{% include "_cookie_consent.html" %}
 </body>
 </html>

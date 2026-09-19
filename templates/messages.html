@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% from "_verified_badge.html" import verified_badge %}
 {% set active_page = "messages" %}
 {% set show_highlights = True %}
 {% set title = "Messages" %}
@@ -764,7 +765,7 @@
           <img class="avatar small-avatar" src="{{ conv.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" />
           <div class="conv-info">
             <div class="conv-header">
-              <strong>{{ conv.display_name }}</strong>
+              <strong>{{ conv.display_name }}</strong>{{ verified_badge(conv, size='sm') }}
               <span class="time">{{ conv.last_message_at }}</span>
             </div>
             <p class="last-message">{{ conv.last_message }}</p>
@@ -786,7 +787,7 @@
         <a href="{{ url_for('profile', username=target_user.username) }}" class="chat-user-info">
           <img class="avatar small-avatar" src="{{ target_user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" />
           <div>
-            <strong>{{ target_user.display_name }}</strong>
+            <strong>{{ target_user.display_name }}</strong>{{ verified_badge(target_user, size='sm') }}
             <p>@{{ target_user.username }}</p>
           </div>
         </a>

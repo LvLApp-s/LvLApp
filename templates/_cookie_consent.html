@@ -1,0 +1,21 @@
+{#
+  First-party cookie/storage notice.
+
+  Rendered hidden; static/js/script.js shows it only when no choice is stored.
+  It sits above the mobile bottom navigation and respects the bottom safe area.
+  Essential session/CSRF cookies are never gated by this dialog.
+#}
+<div class="consent-banner" data-consent-banner role="dialog" aria-modal="false"
+     aria-labelledby="consent-title" aria-describedby="consent-text" hidden>
+  <div class="consent-card">
+    <div class="consent-copy">
+      <h2 class="consent-title" id="consent-title" data-i18n="cookie_title">Cookies on LvL</h2>
+      <p class="consent-text" id="consent-text" data-i18n="cookie_text">LvL needs one session cookie to keep you signed in. We can also remember interface choices like your language and autoplay setting in your browser. No analytics, advertising or third-party tracking.</p>
+      <a class="consent-link" href="{{ url_for('privacy') }}" data-i18n="cookie_learn_more">Read what we store</a>
+    </div>
+    <div class="consent-actions">
+      <button type="button" class="secondary-button consent-button" data-consent-choice="essential" data-i18n="cookie_essential_only">Essential only</button>
+      <button type="button" class="primary-button consent-button" data-consent-choice="all" data-i18n="cookie_accept">Accept all</button>
+    </div>
+  </div>
+</div>

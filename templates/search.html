@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% from "_verified_badge.html" import verified_badge %}
 {% set active_page = "search" %}
 {% set show_highlights = True %}
 {% set title = "Search" %}
@@ -37,7 +38,7 @@
             <div class="user-result-info">
               <div class="user-result-header">
                 <div class="user-names">
-                  <a href="{{ url_for('profile', username=user.username) }}"><strong>{{ user.display_name }}</strong></a>
+                  <a href="{{ url_for('profile', username=user.username) }}"><strong>{{ user.display_name }}</strong></a>{{ verified_badge(user, size='sm') }}
                   <span>@{{ user.username }}</span>
                 </div>
                 <form action="{{ url_for('toggle_follow') }}" method="post">
@@ -80,7 +81,7 @@
               <div class="user-result-info">
                 <div class="user-result-header">
                   <div class="user-names">
-                    <a href="{{ url_for('profile', username=user.username) }}"><strong>{{ user.display_name }}</strong></a>
+                    <a href="{{ url_for('profile', username=user.username) }}"><strong>{{ user.display_name }}</strong></a>{{ verified_badge(user, size='sm') }}
                     <span>@{{ user.username }}</span>
                   </div>
                   {% if user.id != viewer.id %}

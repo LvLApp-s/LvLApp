@@ -1,3 +1,4 @@
+{% from "_verified_badge.html" import verified_badge %}
 {% set author = reel.author or reel.user or {} %}
 {% set is_demo = reel.is_demo %}
 <style>
@@ -293,7 +294,7 @@
             <img class="avatar small-avatar" src="{{ author.profile_photo_url or url_for('static', filename='assets/icon-192.png') }}" alt="Profile picture" data-i18n-alt="avatar_alt">
           {% endif %}
           <span>
-            <strong>{{ author.display_name or 'LvL' }}</strong>
+            <strong>{{ author.display_name or 'LvL' }}</strong>{{ verified_badge(author, size='sm') }}
             <small>@{{ author.username or 'demo' }}</small>
           </span>
           {% if author.level %}

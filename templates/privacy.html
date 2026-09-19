@@ -1,0 +1,50 @@
+{% extends "layout.html" %}
+{% set active_page = "privacy" %}
+{% set title = "Privacy & Cookies" %}
+{% set title_i18n = "privacy_page_title" %}
+
+{% block content %}
+<div class="page-container legal-page">
+  <header class="page-header">
+    <div class="header-content">
+      <h1 data-i18n="privacy_title">Privacy &amp; Cookies</h1>
+      <p data-i18n="privacy_subtitle">What LvL stores in your browser, and why.</p>
+    </div>
+  </header>
+
+  <section class="page-section legal-body">
+    <h2 data-i18n="privacy_h_essential">Essential — always on</h2>
+    <p data-i18n="privacy_p_essential">LvL sets one first-party session cookie when you sign in. It keeps you logged in as you move between pages and carries the token that protects forms against cross-site request forgery. It is HttpOnly, so scripts cannot read it. Without it you cannot stay signed in, so it is not something consent can switch off.</p>
+    <ul class="legal-list">
+      <li><code>session</code> — <span data-i18n="privacy_cookie_session">sign-in state and CSRF protection</span></li>
+    </ul>
+
+    <h2 data-i18n="privacy_h_preferences">Preferences — optional</h2>
+    <p data-i18n="privacy_p_preferences">If you allow it, LvL remembers a few interface choices in your browser's local storage. These never leave your device and are not sent to our servers. Decline and the app still works; it just forgets these between visits.</p>
+    <ul class="legal-list">
+      <li><code>lvl_lang</code> — <span data-i18n="privacy_pref_lang">your chosen language</span></li>
+      <li><code>autoplay_next_reels</code> — <span data-i18n="privacy_pref_autoplay">whether clips continue automatically</span></li>
+      <li><code>notification_sounds_enabled</code> — <span data-i18n="privacy_pref_sound">notification sound setting</span></li>
+      <li><code>sidebar-menu-open</code> — <span data-i18n="privacy_pref_sidebar">whether the desktop menu is expanded</span></li>
+      <li><code>lvl_cookie_consent</code> — <span data-i18n="privacy_pref_consent">your answer on this page, so we stop asking</span></li>
+    </ul>
+
+    <h2 data-i18n="privacy_h_none">What LvL does not use</h2>
+    <p data-i18n="privacy_p_none">LvL does not load analytics, advertising or third-party tracking scripts, and does not set cookies for those purposes. If that ever changes, this page and the consent notice will change with it, and the new category will be off until you turn it on.</p>
+
+    <h2 data-i18n="privacy_h_account">Account data</h2>
+    <p data-i18n="privacy_p_account">The details you enter — name, username, email, birthday, profile information — and the content you publish are stored in our database so the product can work. Deleting your account from Settings removes your account record.</p>
+
+    <h2 data-i18n="privacy_h_change">Changing your answer</h2>
+    <p data-i18n="privacy_p_change">You can update your choice at any time from the button below.</p>
+    <p>
+      <button type="button" class="secondary-button" data-consent-reopen data-i18n="cookie_manage">Manage cookie choices</button>
+    </p>
+  </section>
+
+  <section class="page-section legal-body">
+    <p class="legal-note" data-i18n="legal_disclaimer">This page describes how the product works. It is not legal advice and does not create guarantees beyond what is written here.</p>
+    <p><a class="inline-link" href="{{ url_for('terms') }}" data-i18n="terms_title">Terms &amp; Conditions</a></p>
+  </section>
+</div>
+{% endblock %}

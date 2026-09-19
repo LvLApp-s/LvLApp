@@ -1,8 +1,21 @@
+import re
 from datetime import date, datetime
 
 
-MIN_AGE = 14
+MIN_AGE = 16
 MAX_AGE = 120
+MIN_PASSWORD_LENGTH = 8
+
+# Bumped whenever the published Terms & Conditions text changes so that
+# `users.terms_version` records which revision an account accepted.
+TERMS_VERSION = '2026-09-19'
+
+USERNAME_MIN_LENGTH = 3
+USERNAME_MAX_LENGTH = 24
+USERNAME_PATTERN = re.compile(r'^[a-z0-9_]{%d,%d}$' % (USERNAME_MIN_LENGTH, USERNAME_MAX_LENGTH))
+USERNAME_FORMAT_ERROR = (
+    "Username must be 3-24 characters: letters, numbers, or underscores only."
+)
 
 
 def normalize_username(value):
@@ -90,3 +103,34 @@ def profile_banner_for_level(level):
         'label': 'First Step',
         'description': 'The starter banner for new LvL profiles.',
     }
+
+
+def validate_username_format(value):
+    """Return (normalized_username, error). Storage is always lowercase so
+    `Berkan`, `berkan` and `BERKAN` resolve to the same identity."""
+    normalized = normalize_username(value)
+    if not normalized:
+        return None, "Username is required."
+    if not USERNAME_PATTERN.match(normalized):
+        return None, USERNAME_FORMAT_ERROR
+    return normalized, None
+
+
+def validate_password_pair(password, confirmation):
+    """Shared password rules for registration and password reset."""
+    password = password or ''
+    confirmation = confirmation or ''
+    if len(password) < MIN_PASSWORD_LENGTH:
+        return f"Password must be at least {MIN_PASSWORD_LENGTH} characters."
+    if not confirmation:
+        return "Confirm your password."
+    if password != confirmation:
+        return "Passwords do not match."
+    return None
+
+
+def terms_acceptance_error(accepted):
+    """Registration is refused unless the Terms checkbox was actively ticked."""
+    if accepted in (True, '1', 'on', 'true', 'yes'):
+        return None
+    return "You must accept the Terms & Conditions to create an account."

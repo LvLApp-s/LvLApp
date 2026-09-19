@@ -1,0 +1,50 @@
+{% extends "layout.html" %}
+{% set active_page = "terms" %}
+{% set title = "Terms & Conditions" %}
+{% set title_i18n = "terms_page_title" %}
+
+{% block content %}
+<div class="page-container legal-page">
+  <header class="page-header">
+    <div class="header-content">
+      <h1 data-i18n="terms_title">Terms &amp; Conditions</h1>
+      <p data-i18n="terms_updated">Version {{ terms_version }}</p>
+    </div>
+  </header>
+
+  <section class="page-section legal-body">
+    <h2 data-i18n="terms_h_eligibility">1. Who can use LvL</h2>
+    <p data-i18n="terms_p_eligibility">You must be at least {{ min_age }} years old to create an LvL account. If we learn that an account belongs to someone younger, we may suspend or remove it.</p>
+
+    <h2 data-i18n="terms_h_account">2. Your account</h2>
+    <p data-i18n="terms_p_account">You are responsible for the accuracy of the details you register with and for keeping your password private. Usernames are unique and stored in lowercase, so one name cannot be claimed twice. Do not share your account or impersonate other people.</p>
+
+    <h2 data-i18n="terms_h_content">3. Your content</h2>
+    <p data-i18n="terms_p_content">You keep ownership of the posts, clips, comments and images you upload. By publishing them on LvL you allow us to store and display them inside the product so other members can see them. You are responsible for having the right to share whatever you upload.</p>
+
+    <h2 data-i18n="terms_h_conduct">4. Acceptable use</h2>
+    <p data-i18n="terms_p_conduct">Do not post content that is illegal, hateful, harassing, sexually explicit involving minors, or that infringes someone else's rights. Do not attempt to break, overload or gain unauthorised access to the service. We provide reporting, muting and blocking tools, and we may remove content or restrict accounts that break these rules.</p>
+
+    <h2 data-i18n="terms_h_xp">5. XP, levels and rewards</h2>
+    <p data-i18n="terms_p_xp">XP, levels, badges and unlocks are features of the product, not currency. They have no monetary value, cannot be traded or cashed out, and we may adjust how they are earned or what they unlock as the product changes.</p>
+
+    <h2 data-i18n="terms_h_verification">6. Verification</h2>
+    <p data-i18n="terms_p_verification">The verified badge is granted through manual review of a verification request. It is not tied to your level and cannot be purchased. We may withdraw it if the information behind the request turns out to be inaccurate.</p>
+
+    <h2 data-i18n="terms_h_termination">7. Ending your account</h2>
+    <p data-i18n="terms_p_termination">You can delete your account at any time from Settings. We may suspend or close an account that repeatedly breaks these terms.</p>
+
+    <h2 data-i18n="terms_h_changes">8. Changes to these terms</h2>
+    <p data-i18n="terms_p_changes">We may update these terms as LvL develops. The version identifier at the top changes when the text changes, and we record which version each account accepted.</p>
+
+    <h2 data-i18n="terms_h_contact">9. Contact</h2>
+    <p data-i18n="terms_p_contact">Questions about these terms can be sent through the contact form.</p>
+    <p><a class="inline-link" href="{{ url_for('contact') }}" data-i18n="contact_title">Contact Us</a></p>
+  </section>
+
+  <section class="page-section legal-body">
+    <p class="legal-note" data-i18n="legal_disclaimer">This page describes how the product works. It is not legal advice and does not create guarantees beyond what is written here.</p>
+    <p><a class="inline-link" href="{{ url_for('privacy') }}" data-i18n="privacy_title">Privacy &amp; Cookies</a></p>
+  </section>
+</div>
+{% endblock %}

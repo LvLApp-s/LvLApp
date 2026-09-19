@@ -1,0 +1,80 @@
+{% extends "layout.html" %}
+{% set active_page = "careers" %}
+{% set title = "Careers" %}
+{% set title_i18n = "careers_page_title" %}
+
+{% block content %}
+<div class="page-container">
+  <header class="page-header">
+    <div class="header-content">
+      <h1 data-i18n="careers_title">Join Our Team</h1>
+      <p data-i18n="careers_subtitle">We're building the future of social interaction. Come help us shape it.</p>
+    </div>
+  </header>
+
+  <section class="page-section">
+    <h2 class="page-section-title" data-i18n="careers_open">Open Positions</h2>
+    {% if open_positions %}
+      <div class="careers-positions-grid">
+        {% for pos in open_positions %}
+          <article class="careers-position-card">
+            <div class="careers-position-header">
+              <strong>{{ pos.title }}</strong>
+              <span class="careers-position-type {% if pos.type == 'Internship' %}careers-type-internship{% elif pos.type == 'Part-time' %}careers-type-parttime{% else %}careers-type-fulltime{% endif %}">{{ pos.type }}</span>
+            </div>
+            {% if pos.department %}
+              <p class="careers-position-dept">{{ pos.department }}</p>
+            {% endif %}
+            {% if pos.description %}
+              <p class="careers-position-desc">{{ pos.description }}</p>
+            {% endif %}
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <span class="empty-state-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        </span>
+        <p class="empty-state-title" data-i18n="careers_no_positions">No open positions at the moment.</p>
+        <p class="empty-state-text" data-i18n="careers_no_positions_sub">We're not actively hiring right now, but we're always happy to hear from talented people.</p>
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="page-section">
+    <h2 class="page-section-title" data-i18n="careers_apply_title">Apply Now</h2>
+    <p class="page-section-text" data-i18n="careers_apply_subtitle">Interested in joining LvL? Fill out the form below.</p>
+
+    <form id="careers-form" class="premium-form" action="{{ url_for('careers') }}" method="post" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label class="form-group">
+        <span data-i18n="careers_position">Position</span>
+        <input type="text" name="position" maxlength="120" required id="careers-position-input" data-i18n-placeholder="careers_position_placeholder" placeholder="Which role are you applying for?">
+      </label>
+      <div class="form-grid">
+        <label class="form-group">
+          <span data-i18n="careers_name">Full Name</span>
+          <input type="text" name="name" maxlength="120" required autocomplete="name" id="careers-name-input" value="{{ viewer.display_name if viewer else '' }}">
+        </label>
+        <label class="form-group">
+          <span data-i18n="careers_email">Email Address</span>
+          <input type="email" name="email" maxlength="255" required autocomplete="email" id="careers-email-input" value="{{ viewer.email if viewer else '' }}">
+        </label>
+      </div>
+      <label class="form-group">
+        <span data-i18n="careers_message">Cover Letter / Message</span>
+        <textarea name="message" rows="6" maxlength="3000" required id="careers-message-input" data-i18n-placeholder="careers_message_placeholder" placeholder="Tell us about yourself and why you want to join LvL..."></textarea>
+      </label>
+      <label class="form-group">
+        <span data-i18n="careers_cv">CV / Resume</span>
+        <input type="file" name="cv" accept=".pdf,.doc,.docx" id="careers-cv-input" class="form-file-input" required>
+        <small class="form-hint" data-i18n="careers_cv_hint">PDF, DOC, or DOCX up to 5 MB</small>
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="primary-button" data-i18n="careers_submit">Submit Application</button>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}

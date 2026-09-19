@@ -1,3 +1,4 @@
+{% from "_verified_badge.html" import verified_badge %}
 {% extends "layout.html" %}
 {% set active_page = "community" %}
 {% set show_trends = True %}
@@ -25,9 +26,7 @@
             <span class="leaderboard-identity">
               <strong class="leaderboard-name">
                 {{ h.display_name }}
-                {% if h.username in ['ikasfood', 'lvl'] or h.is_profile_verified %}
-                  <svg title="Official account" data-i18n-title="official_account" viewBox="0 0 24 24" width="1.1em" height="1.1em" aria-label="Official account" data-i18n-aria="official_account"><path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.918-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.337 2.25c-.416-.165-.866-.25-1.336-.25-2.21 0-3.918 1.79-3.918 4 0 .495.084.965.238 1.4-1.273.65-2.148 2.02-2.148 3.6 0 1.46.758 2.75 1.875 3.45-.045.247-.074.5-.074.76 0 2.21 1.71 3.998 3.918 3.998.47 0 .92-.084 1.336-.25C9.182 21.585 10.49 22.5 12 22.5s2.816-.917 3.337-2.25c.416.165.866.25 1.336.25 2.21 0 3.918-1.79 3.918-4 0-.26-.028-.513-.074-.76 1.116-.7 1.875-1.99 1.875-3.45z" fill="var(--lvl-cyan)"/><path d="M10.153 16.52l-3.385-3.385 1.31-1.31 2.075 2.076 5.672-5.672 1.31 1.31-6.982 6.98z" fill="var(--lvl-white)"/></svg>
-                {% endif %}
+                {{ verified_badge(h, size='sm') }}
               </strong>
               <span class="leaderboard-handle">@{{ h.username }}</span>
             </span>
@@ -72,10 +71,10 @@
       <strong data-i18n="community_lens_trends">Trends</strong>
       <small><span>{{ metrics.posts }}</span> <span data-i18n="community_posts_label">posts</span> <span data-i18n="community_and_label">and</span> <span>{{ metrics.follows }}</span> <span data-i18n="community_lens_trends_desc_part2">follows shaping discovery.</span></small>
     </a>
-    <a class="community-lens-card" href="{{ url_for('level_guide') }}">
+    <a class="community-lens-card" href="{{ url_for('reels') }}">
       <span aria-hidden="true">★</span>
-      <strong data-i18n="community_lens_news">News</strong>
-      <small data-i18n="community_lens_news_desc">Reward changes, XP rules, and unlocks.</small>
+      <strong data-i18n="nav_clips">Clips</strong>
+      <small data-i18n="community_lens_clips_desc">Short videos from people and groups you follow.</small>
     </a>
   </section>
 

@@ -1,4 +1,12 @@
+# The single LvL brand accent, sampled from the blue arrow in
+# static/assets/icon-512.png. Used selectively: active navigation, links,
+# focus rings, the verified badge and progress fills -- never as a blanket
+# surface colour.
+BRAND_ACCENT = '#038CFE'
+
 THEME_COLORS = {
+    'brand': BRAND_ACCENT,
+    'brand_hover': '#2A9DFF',
     'primary': '#E7E9EA',
     'primary_hover': '#D7D9DA',
     'female': '#E7E9EA',
@@ -11,7 +19,7 @@ THEME_COLORS = {
     'muted': '#71767B',
 }
 
-PROFILE_COLOR_UNLOCK_LEVEL = 20
+PROFILE_COLOR_UNLOCK_LEVEL = 5
 
 GENDER_THEME = {
     'Male': {

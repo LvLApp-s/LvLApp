@@ -1,3 +1,4 @@
+{% from "_verified_badge.html" import verified_badge %}
 {% extends "layout.html" %}
 {% set active_page = "settings" %}
 {% set show_highlights = True %}
@@ -23,18 +24,18 @@
         <div class="profile-identity-avatar-wrap">
           <img class="avatar profile-identity-avatar" src="{{ viewer.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Profile photo">
           <label class="profile-identity-edit-badge" title="Edit Photo">
-            <input type="file" name="profile_photo" accept="image/png,image/jpeg,image/gif,image/webp" data-profile-photo-input style="display:none">
+            <input type="file" name="profile_photo" accept="image/png,image/jpeg,image/gif,image/webp" data-profile-photo-input class="visually-hidden-input">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </label>
         </div>
         <div class="profile-identity-info">
-          <strong class="profile-identity-name">{{ viewer.display_name }}{% if viewer.is_profile_verified %} <svg viewBox="0 0 24 24" width="16" height="16" style="vertical-align:middle"><path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.918-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.337 2.25c-.416-.165-.866-.25-1.336-.25-2.21 0-3.918 1.79-3.918 4 0 .495.084.965.238 1.4-1.273.65-2.148 2.02-2.148 3.6 0 1.46.758 2.75 1.875 3.45-.045.247-.074.5-.074.76 0 2.21 1.71 3.998 3.918 3.998.47 0 .92-.084 1.336-.25C9.182 21.585 10.49 22.5 12 22.5s2.816-.917 3.337-2.25c.416.165.866.25 1.336.25 2.21 0 3.918-1.79 3.918-4 0-.26-.028-.513-.074-.76 1.116-.7 1.875-1.99 1.875-3.45z" fill="var(--lvl-cyan)"/><path d="M10.153 16.52l-3.385-3.385 1.31-1.31 2.075 2.076 5.672-5.672 1.31 1.31-6.982 6.98z" fill="var(--lvl-white)"/></svg>{% endif %}</strong>
+          <strong class="profile-identity-name">{{ viewer.display_name }} {{ verified_badge(viewer) }}</strong>
           <span class="profile-identity-username">@{{ viewer.username }}</span>
           <span class="profile-identity-bio">{{ viewer.bio or 'No bio yet.' }}</span>
-          <label class="outline-button small profile-identity-photo-btn" style="cursor:pointer; display:inline-flex; align-items:center; gap:6px; margin-top:8px; width:fit-content;">
+          <label class="outline-button small profile-identity-photo-btn">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             <span data-i18n="settings_edit_photo">Edit Photo</span>
-            <input type="file" name="profile_photo_btn" accept="image/png,image/jpeg,image/gif,image/webp" style="display:none" tabindex="-1">
+            <input type="file" name="profile_photo_btn" accept="image/png,image/jpeg,image/gif,image/webp" class="visually-hidden-input" tabindex="-1">
           </label>
         </div>
       </div>
@@ -132,12 +133,12 @@
               <label class="form-group">
                 <span data-i18n="settings_photo">Profile Photo</span>
                 <label class="upload-dropzone" for="profile-photo-main">
-                  <input id="profile-photo-main" type="file" name="profile_photo" accept="image/png,image/jpeg,image/gif,image/webp" data-profile-photo-input style="display:none">
+                  <input id="profile-photo-main" type="file" name="profile_photo" accept="image/png,image/jpeg,image/gif,image/webp" data-profile-photo-input class="visually-hidden-input">
                   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
                   <span data-i18n="settings_upload_photo">Upload Photo</span>
                   <small>JPG, PNG or GIF. Up to 5MB.</small>
                 </label>
-                <label class="checkbox-row" style="margin-top:8px;">
+                <label class="checkbox-row settings-row-spaced">
                   <input type="checkbox" name="remove_profile_photo" value="1">
                   <span data-i18n="settings_remove_photo">Remove current photo</span>
                 </label>
@@ -154,14 +155,14 @@
               </div>
 
               {% set profile_color_is_unlocked = profile_color_unlocked(viewer.level or 1) %}
-              <label class="form-group" style="margin-top:16px;">
+              <label class="form-group settings-group-spaced">
                 <span data-i18n="settings_banner_color">Profile Banner Color</span>
                 <div class="color-picker-wrapper">
                   <input type="color" name="profile_pic" value="{{ display_profile_color(viewer) }}" {% if not profile_color_is_unlocked %}disabled{% endif %}>
                   <input type="text" class="hex-value" value="{{ display_profile_color(viewer) }}" maxlength="7" {% if not profile_color_is_unlocked %}disabled{% endif %}>
                 </div>
                 {% if profile_color_is_unlocked %}
-                  <small data-i18n="settings_banner_hint">Profile colors unlock at LvL 20 and beyond.</small>
+                  <small data-i18n="settings_banner_hint">Profile colors are unlocked from LvL {{ profile_color_unlock_level }}.</small>
                 {% else %}
                   <small data-i18n="settings_banner_locked_hint">Profile colors unlock at LvL {{ profile_color_unlock_level }}. Until then, accounts stay black and white so reward colors stay meaningful.</small>
                 {% endif %}
@@ -169,7 +170,6 @@
               {% if not profile_color_is_unlocked %}
                 <div class="profile-color-lock-note">
                   <span data-i18n="settings_banner_earn_xp">Earn XP by posting, commenting, liking, and joining conversations.</span>
-                  <a href="{{ url_for('level_guide') }}" data-i18n="settings_banner_see_table">See the LvL reward table.</a>
                 </div>
               {% endif %}
             </div>
@@ -235,7 +235,7 @@
     </form>
 
     <!-- ── Language ── -->
-    <section class="settings-card" style="margin-top: 24px;">
+    <section class="settings-card">
       <div class="settings-card-header">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
         <div>
@@ -252,23 +252,24 @@
       </div>
     </section>
 
-    <!-- ── Project Setup ── -->
-    <section class="settings-card settings-card-inline" style="margin-top: 16px;">
-      <div class="settings-card-header" style="flex:1;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+    <!-- ── Legal ── -->
+    <section class="settings-card">
+      <div class="settings-card-header">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
         <div>
-          <h3 data-i18n="settings_project_setup">Project Setup</h3>
-          <p class="settings-helper-text" data-i18n="settings_project_hint">Check database tables, storage, clips, service worker, and PWA files.</p>
+          <h3 data-i18n="settings_legal_title">Legal</h3>
+          <p class="settings-helper-text" data-i18n="settings_legal_hint">The terms you accepted and what LvL stores in your browser.</p>
         </div>
       </div>
-      <a class="outline-button small setup-run-btn" href="{{ url_for('setup_health') }}" data-i18n="settings_open_health">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-        Run System Check
-      </a>
+      <div class="settings-card-body settings-link-row">
+        <a class="inline-link" href="{{ url_for('terms') }}" data-i18n="terms_title">Terms &amp; Conditions</a>
+        <a class="inline-link" href="{{ url_for('privacy') }}" data-i18n="privacy_title">Privacy &amp; Cookies</a>
+        <a class="inline-link" href="{{ url_for('contact') }}" data-i18n="contact_title">Contact Us</a>
+      </div>
     </section>
 
     <!-- ── Danger Zone ── -->
-    <section class="settings-card danger-zone" style="margin-top: 16px;">
+    <section class="settings-card danger-zone">
       <div class="settings-card-header">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--lvl-danger)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         <div>

@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% from "_verified_badge.html" import verified_badge %}
 {% set active_page = "profile" %}
 {% set show_highlights = True %}
 {% set title = list_title %}
@@ -31,7 +32,7 @@
             <a class="person-main" href="{{ url_for('profile', username=user.username) }}">
               <img class="avatar" src="{{ user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" data-i18n-alt="avatar_alt">
               <span>
-                <strong>{{ user.display_name or user.username }}</strong>
+                <strong>{{ user.display_name or user.username }}</strong>{{ verified_badge(user, size='sm') }}
                 <small>
                   @{{ user.username }} · LvL {{ user.level or 1 }}
                   {% if list_type == 'friends' and user.streak_count %} · <svg class="high-five-svg streak-high-five-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 11V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v4"/><path d="M14 10V4a2 2 0 0 0-2-2 2 2 0 0 0-2 2v6"/><path d="M10 10.5V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg> {{ user.streak_count }} <span data-i18n="social_day_streak">day streak</span>{% endif %}

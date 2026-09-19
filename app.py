@@ -1,5 +1,7 @@
 import os
 import json
+import math
+import random
 import threading
 import re
 import secrets
@@ -19,8 +21,19 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-from app_utils import birthday_date_limits, normalize_username, profile_banner_for_level, validate_birthday
-from app_theme import GENDER_THEME, PROFILE_COLOR_UNLOCK_LEVEL, THEME_COLORS, level_color_for_level, profile_color_unlocked
+from app_utils import (
+    MIN_AGE,
+    TERMS_VERSION,
+    USERNAME_FORMAT_ERROR,
+    birthday_date_limits,
+    normalize_username,
+    profile_banner_for_level,
+    terms_acceptance_error,
+    validate_birthday,
+    validate_password_pair,
+    validate_username_format,
+)
+from app_theme import BRAND_ACCENT, GENDER_THEME, PROFILE_COLOR_UNLOCK_LEVEL, THEME_COLORS, level_color_for_level, profile_color_unlocked
 
 load_dotenv()
 
@@ -252,6 +265,30 @@ def check_supabase():
         flash("Database connection error.", "error")
         return redirect(url_for('auth'))
 
+# --- Verification -----------------------------------------------------------
+# `users.is_profile_verified` is the canonical public verification flag and is
+# set by the admin review flow in /admin-dashboard. It is deliberately NOT
+# `users.is_verified`, which only records that an email/registration completed,
+# and it never depends on XP or account level.
+#
+# OFFICIAL_ACCOUNT_USERNAMES is the one place system accounts are listed, so
+# templates never repeat `username in [...]`. Prefer setting
+# is_profile_verified on those rows in the database; this list is the fallback
+# for environments where that has not been done yet.
+OFFICIAL_ACCOUNT_USERNAMES = frozenset({'lvl', 'ikasfood'})
+
+
+def account_is_verified(user):
+    """True when a user should render the LvL verified badge."""
+    if not user:
+        return False
+    if isinstance(user, str):
+        return normalize_username(user) in OFFICIAL_ACCOUNT_USERNAMES
+    if user.get('is_profile_verified'):
+        return True
+    return normalize_username(user.get('username')) in OFFICIAL_ACCOUNT_USERNAMES
+
+
 @app.context_processor
 def inject_helpers():
     return {
@@ -265,6 +302,9 @@ def inject_helpers():
         'static_asset': static_asset_url,
         'relative_time': relative_time,
         'oauth_providers': SUPABASE_SOCIAL_PROVIDERS,
+        'account_is_verified': account_is_verified,
+        'min_age': MIN_AGE,
+        'terms_version': TERMS_VERSION,
     }
 
 @app.context_processor
@@ -1970,15 +2010,132 @@ def get_short_videos(limit=8, community_id=None):
     except Exception:
         return []
 
-def get_trending_posts(viewer_id, limit=5):
+# --- Content diversification -------------------------------------------------
+#
+# Trending, home media and the side clip rail all face the same problem: a
+# straight "sort by score" list hands back the identical sequence on every
+# refresh, while a plain shuffle throws away relevance. The helpers below give
+# all three the same treatment:
+#
+#   score = relevance (engagement + recency)
+#         x recently-shown penalty (per browser session)
+#         x small multiplicative jitter
+#
+# The jitter is deliberately narrow, so a genuinely popular post still beats a
+# quiet one; it only reorders items that were already close together. Candidate
+# pools stay bounded (one query, no N+1) to respect the serverless budget.
+
+RECENTLY_SHOWN_LIMIT = 30
+DIVERSIFY_JITTER = (0.88, 1.12)
+
+
+def recency_weight(created_at, half_life_days=1.0):
+    """1.0 for brand new content, decaying smoothly with age."""
+    if not created_at:
+        return 0.5
     try:
-        posts_res = supabase.table('posts').select(POST_SELECT_QUERY).is_('deleted_at', 'null').order('created_at', desc=True).limit(50).execute()
+        created = datetime.fromisoformat(str(created_at).replace('Z', '+00:00'))
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=timezone.utc)
+    except Exception:
+        return 0.5
+    age_days = max((datetime.now(timezone.utc) - created).total_seconds() / 86400.0, 0.0)
+    return 1.0 / (1.0 + (age_days / max(half_life_days, 0.1)) ** 0.75)
+
+
+def engagement_weight(*counts):
+    """Diminishing returns so one viral post cannot dominate every refresh."""
+    total = sum(max(parse_int(count) or 0, 0) for count in counts)
+    return 1.0 + math.log1p(total)
+
+
+def recently_shown_ids(session_key):
+    values = session.get(session_key)
+    return values if isinstance(values, list) else []
+
+
+def remember_shown_ids(session_key, ids):
+    recent = recently_shown_ids(session_key)
+    for item_id in ids:
+        if item_id is None:
+            continue
+        if item_id in recent:
+            recent.remove(item_id)
+        recent.append(item_id)
+    session[session_key] = recent[-RECENTLY_SHOWN_LIMIT:]
+
+
+def repeat_penalty(item_id, recent):
+    """Strong penalty for the item shown most recently, fading with position."""
+    if item_id is None or item_id not in recent:
+        return 1.0
+    position = recent.index(item_id)
+    return 0.08 + 0.85 * (position / max(len(recent), 1))
+
+
+def diversify(items, limit, score_fn, session_key=None, id_key='id'):
+    """Rank `items` by `score_fn`, damp repeats, add jitter, return the top N."""
+    if not items:
+        return []
+    recent = recently_shown_ids(session_key) if session_key else []
+
+    scored = []
+    for index, item in enumerate(items):
+        try:
+            base = float(score_fn(item))
+        except Exception:
+            base = 0.0
+        base = max(base, 0.0001)
+        item_id = item.get(id_key) if isinstance(item, dict) else None
+        score = base * repeat_penalty(item_id, recent) * random.uniform(*DIVERSIFY_JITTER)
+        # index keeps the sort deterministic when two scores tie
+        scored.append((score, -index, item))
+
+    scored.sort(key=lambda row: (row[0], row[1]), reverse=True)
+    selected = [row[2] for row in scored[:max(limit, 0)]]
+
+    if session_key:
+        remember_shown_ids(session_key, [
+            item.get(id_key) for item in selected if isinstance(item, dict)
+        ])
+    return selected
+
+
+TRENDING_CANDIDATE_POOL = 60
+
+
+def get_trending_posts(viewer_id, limit=5):
+    """Posts worth surfacing in the right rail.
+
+    Candidates are the most recent visible posts (one bounded query). Each is
+    scored on engagement and recency, then diversified so refreshing Home does
+    not always produce the same five rows. Engagement dominates the score, so
+    a quiet post never leapfrogs a genuinely trending one.
+    """
+    try:
+        posts_res = (supabase.table('posts')
+                     .select(POST_SELECT_QUERY)
+                     .is_('deleted_at', 'null')
+                     .order('created_at', desc=True)
+                     .limit(TRENDING_CANDIDATE_POOL)
+                     .execute())
         posts = posts_res.data if posts_res and posts_res.data else []
         enriched = enrich_posts(visible_post_filter(posts, viewer_id), viewer_id)
-        for p in enriched:
-            p['interaction_score'] = (p.get('like_count') or 0) + (p.get('comment_count') or 0) + (p.get('repost_count') or 0)
-        enriched.sort(key=lambda x: x['interaction_score'], reverse=True)
-        return enriched[:limit]
+
+        for post in enriched:
+            post['interaction_score'] = (
+                (parse_int(post.get('like_count')) or 0)
+                + (parse_int(post.get('comment_count')) or 0)
+                + (parse_int(post.get('repost_count')) or 0)
+            )
+
+        def score(post):
+            return (engagement_weight(post.get('like_count'),
+                                      post.get('comment_count'),
+                                      post.get('repost_count'))
+                    * (0.35 + 0.65 * recency_weight(post.get('created_at'), half_life_days=2.0)))
+
+        return diversify(enriched, limit, score, session_key='recently_shown_trending')
     except Exception:
         return []
 
@@ -2162,12 +2319,18 @@ def get_demo_reels(count=5):
         'is_demo': True,
     } for reel_id, video_url, caption in samples]
 
+REEL_CANDIDATE_POOL = 50
+
+
 def get_home_reel_preview(viewer_id, limit=HOME_REEL_PREVIEW_LIMIT):
-    import random
-    from flask import session
+    """Clips for the side rail.
+
+    Keeps the original intent -- fresh clips first, already-watched ones pushed
+    down, recently-shown ones damped -- but now runs through the shared
+    diversification helper so clips, trending and media behave consistently.
+    """
     try:
-        pool_size = 50
-        home_reels_data, _ = get_reels(viewer_id, limit=pool_size, page=1)
+        home_reels_data, _ = get_reels(viewer_id, limit=REEL_CANDIDATE_POOL, page=1)
         if not home_reels_data:
             return get_demo_reels(limit)
 
@@ -2177,61 +2340,26 @@ def get_home_reel_preview(viewer_id, limit=HOME_REEL_PREVIEW_LIMIT):
             if views_res and views_res.data:
                 viewed_ids = {row['reel_id'] for row in views_res.data}
         except Exception:
-            pass
+            viewed_ids = set()
 
-        scored_reels = []
-        now = datetime.now(timezone.utc)
-        recently_shown = session.get('recently_shown_reels', [])
-        if not isinstance(recently_shown, list):
-            recently_shown = []
+        def score(reel):
+            base = (engagement_weight(reel.get('view_count'), reel.get('like_count'))
+                    * recency_weight(reel.get('created_at'), half_life_days=1.0))
+            # An already-watched clip can still come back, just far less often.
+            return base * (0.3 if reel.get('id') in viewed_ids else 1.0)
 
-        for reel in home_reels_data:
-            reel_id = reel.get('id')
-            if not reel_id:
-                continue
-
-            created_at_str = reel.get('created_at', '')
-            try:
-                created_at = datetime.fromisoformat(created_at_str.replace('Z', '+00:00'))
-                age_delta = now - created_at
-                age_days = max(age_delta.days + age_delta.seconds / 86400.0, 0.1)
-            except Exception:
-                age_days = 1.0
-
-            recency = 1.0 / (age_days ** 0.5)
-            view_count = reel.get('view_count', 0)
-            engagement = 1.0 + (view_count * 0.1)
-            rand_val = random.uniform(0.8, 1.2)
-            score = recency * engagement * rand_val
-
-            if reel_id in viewed_ids:
-                score *= 0.3
-
-            if reel_id in recently_shown:
-                try:
-                    pos = recently_shown.index(reel_id)
-                    penalty = 0.05 + 0.9 * (pos / max(len(recently_shown), 1))
-                    score *= penalty
-                except ValueError:
-                    score *= 0.05
-
-            scored_reels.append((score, reel))
-
-        scored_reels.sort(key=lambda x: x[0], reverse=True)
-        selected_reels = [item[1] for item in scored_reels[:limit]]
-
-        for reel in selected_reels:
-            rid = reel.get('id')
-            if rid:
-                if rid in recently_shown:
-                    recently_shown.remove(rid)
-                recently_shown.append(rid)
-
-        session['recently_shown_reels'] = recently_shown[-30:]
-        return selected_reels
+        selected = diversify(
+            [reel for reel in home_reels_data if reel.get('id')],
+            limit,
+            score,
+            session_key='recently_shown_reels',
+        )
+        if selected:
+            return selected
     except Exception:
         pass
     return get_demo_reels(limit)
+
 
 def get_demo_media_previews(count=HOME_MEDIA_PREVIEW_LIMIT):
     demo_author = {
@@ -2258,13 +2386,37 @@ def get_demo_media_previews(count=HOME_MEDIA_PREVIEW_LIMIT):
         'is_demo': True,
     } for index in range(max(count, 0))]
 
+HOME_MEDIA_CANDIDATE_POOL = 40
+
+
 def get_home_media_preview(viewer_id, limit=HOME_MEDIA_PREVIEW_LIMIT):
+    """Image posts for the side media rail.
+
+    Previously this was "newest first", which meant the same pictures sat there
+    all session. It now uses the same bounded-pool + diversification approach as
+    trending and clips, so the rail keeps moving while staying relevant.
+    """
     try:
-        res = supabase.table('posts').select(POST_SELECT_QUERY).is_('deleted_at', 'null').order('created_at', desc=True).limit(limit * 3).execute()
+        res = (supabase.table('posts')
+               .select(POST_SELECT_QUERY)
+               .is_('deleted_at', 'null')
+               .order('created_at', desc=True)
+               .limit(HOME_MEDIA_CANDIDATE_POOL)
+               .execute())
         rows = res.data if res and res.data else []
         media_posts = [post for post in visible_post_filter(rows, viewer_id) if post.get('image_url')]
-        if media_posts:
-            return enrich_posts(media_posts[:limit], viewer_id)
+        if not media_posts:
+            return get_demo_media_previews(limit)
+
+        enriched = enrich_posts(media_posts, viewer_id)
+
+        def score(post):
+            return (engagement_weight(post.get('like_count'), post.get('comment_count'))
+                    * (0.4 + 0.6 * recency_weight(post.get('created_at'), half_life_days=3.0)))
+
+        selected = diversify(enriched, limit, score, session_key='recently_shown_media')
+        if selected:
+            return selected
     except Exception:
         pass
     return get_demo_media_previews(limit)
@@ -3513,6 +3665,87 @@ def oauth_callback():
         flash(f"Social login could not be completed: {str(exc)}", "error")
         return redirect(url_for('auth'))
 
+# --- Registration support ---------------------------------------------------
+
+TERMS_COLUMNS = ('terms_accepted_at', 'terms_version')
+
+
+def with_terms_acceptance(payload):
+    """Stamp the Terms & Conditions revision the account agreed to."""
+    payload = dict(payload)
+    payload['terms_accepted_at'] = datetime.now(timezone.utc).isoformat()
+    payload['terms_version'] = TERMS_VERSION
+    return payload
+
+
+def strip_terms_acceptance(payload):
+    return {key: value for key, value in dict(payload).items() if key not in TERMS_COLUMNS}
+
+
+def terms_columns_missing(exc):
+    """True when Supabase rejected the insert because migration 018 is absent."""
+    message = str(exc).lower()
+    return any(column in message for column in TERMS_COLUMNS)
+
+
+def username_is_taken(username, exclude_user_id=None):
+    """Case-insensitive username lookup.
+
+    The unique indexes on users.username/users.nickname remain the final
+    authority -- this is a pre-check so the form can fail early with a clear
+    message, and the availability endpoint can give live feedback.
+    """
+    username = normalize_username(username)
+    if not username or not supabase:
+        return False
+    try:
+        res = supabase.table('users').select('id').eq('username', username).limit(2).execute()
+        rows = res.data or []
+        if not rows:
+            res = supabase.table('users').select('id').eq('nickname', username).limit(2).execute()
+            rows = res.data or []
+        if exclude_user_id is not None:
+            rows = [row for row in rows if row.get('id') != exclude_user_id]
+        return bool(rows)
+    except Exception:
+        # Never block registration on a lookup failure; the unique constraint
+        # still protects the database.
+        return False
+
+
+@app.route('/api/username-available')
+def api_username_available():
+    """UX-only availability hint. Returns no user data beyond a boolean."""
+    viewer = get_current_user()
+    raw = request.args.get('username', '')
+    normalized, error = validate_username_format(raw)
+    if error:
+        return jsonify({'status': 'invalid', 'available': False, 'error': error})
+
+    if viewer and normalize_username(viewer.get('username')) == normalized:
+        return jsonify({'status': 'current', 'available': True, 'username': normalized})
+
+    if not supabase:
+        return jsonify({'status': 'unknown', 'available': True, 'username': normalized})
+
+    taken = username_is_taken(normalized, exclude_user_id=viewer['id'] if viewer else None)
+    return jsonify({
+        'status': 'taken' if taken else 'available',
+        'available': not taken,
+        'username': normalized,
+    })
+
+
+@app.route('/terms')
+def terms():
+    return render_template('terms.html', viewer=get_current_user())
+
+
+@app.route('/privacy')
+def privacy():
+    return render_template('privacy.html', viewer=get_current_user())
+
+
 @app.route('/auth/oauth/onboarding', methods=['GET', 'POST'])
 def oauth_onboarding():
     profile = session.get('pending_oauth_profile')
@@ -3526,22 +3759,29 @@ def oauth_onboarding():
     if request.method == 'POST':
         first_name = request.form.get('first_name', '').strip()
         last_name = request.form.get('last_name', '').strip()
-        nickname = normalize_username(request.form.get('nickname', ''))
         email = (request.form.get('email') or profile.get('email') or '').strip().lower()
         gender = normalize_gender(request.form.get('gender', ''))
         birthday = request.form.get('birthday', '').strip()
+        accepted_terms = request.form.get('accept_terms')
 
-        if not all([first_name, last_name, nickname, email, gender]):
+        nickname, nickname_error = validate_username_format(request.form.get('nickname', ''))
+
+        if not all([first_name, last_name, email, gender]) or not request.form.get('nickname', '').strip():
             flash("All fields are required to finish social registration.", "error")
             return render_template('oauth_onboarding.html', profile=profile, suggested_nickname=oauth_suggested_username(profile))
 
-        if not re.match(r'^[a-z0-9_]{3,24}$', nickname):
-            flash("Username must be 3-24 characters: letters, numbers, or underscores only.", "error")
+        if nickname_error:
+            flash(nickname_error, "error")
             return render_template('oauth_onboarding.html', profile=profile, suggested_nickname=oauth_suggested_username(profile))
 
         birthday_value, birthday_error = validate_birthday(birthday, required=True)
         if birthday_error:
             flash(birthday_error, "error")
+            return render_template('oauth_onboarding.html', profile=profile, suggested_nickname=oauth_suggested_username(profile))
+
+        terms_error = terms_acceptance_error(accepted_terms)
+        if terms_error:
+            flash(terms_error, "error")
             return render_template('oauth_onboarding.html', profile=profile, suggested_nickname=oauth_suggested_username(profile))
 
         existing_user = first_oauth_user_match({**profile, 'email': email})
@@ -3581,7 +3821,12 @@ def oauth_onboarding():
         }
 
         try:
-            new_user = supabase.table('users').insert(payload).execute()
+            try:
+                new_user = supabase.table('users').insert(with_terms_acceptance(payload)).execute()
+            except Exception as terms_exc:
+                if not terms_columns_missing(terms_exc):
+                    raise
+                new_user = supabase.table('users').insert(strip_terms_acceptance(payload)).execute()
             if new_user.data:
                 start_user_session(new_user.data[0]['id'], remember=oauth_session_remember())
                 award_xp(new_user.data[0]['id'], 'account_created', 20)
@@ -3641,24 +3886,32 @@ def auth():
         elif action == 'register':
             first_name = request.form.get('first_name', '').strip()
             last_name = request.form.get('last_name', '').strip()
-            nickname = normalize_username(request.form.get('nickname', ''))
             email = request.form.get('email', '').strip().lower()
             password = request.form.get('password', '')
+            password_confirm = request.form.get('password_confirm', '')
             gender = normalize_gender(request.form.get('gender', ''))
             birthday = request.form.get('birthday', '').strip()
+            accepted_terms = request.form.get('accept_terms')
 
-            _reg_form = dict(request.form)
+            # Password values are never echoed back into the re-rendered form.
+            _reg_form = {
+                key: value for key, value in request.form.items()
+                if key not in ('password', 'password_confirm', 'csrf_token')
+            }
 
-            if not all([first_name, last_name, nickname, email, password, gender]):
+            nickname, nickname_error = validate_username_format(request.form.get('nickname', ''))
+
+            if not all([first_name, last_name, email, password, gender]) or not request.form.get('nickname', '').strip():
                 flash("All fields are required.", "error")
                 return render_template('auth.html', active_tab='register', register_form_data=_reg_form)
 
-            if len(password) < 8:
-                flash("Password must be at least 8 characters.", "error")
+            password_error = validate_password_pair(password, password_confirm)
+            if password_error:
+                flash(password_error, "error")
                 return render_template('auth.html', active_tab='register', register_form_data=_reg_form)
 
-            if not re.match(r'^[a-z0-9_]{3,24}$', nickname):
-                flash("Username must be 3-24 characters: letters, numbers, or underscores only.", "error")
+            if nickname_error:
+                flash(nickname_error, "error")
                 return render_template('auth.html', active_tab='register', register_form_data=_reg_form)
 
             birthday_value, birthday_error = validate_birthday(birthday, required=True)
@@ -3666,11 +3919,21 @@ def auth():
                 flash(birthday_error, "error")
                 return render_template('auth.html', active_tab='register', register_form_data=_reg_form)
 
+            terms_error = terms_acceptance_error(accepted_terms)
+            if terms_error:
+                flash(terms_error, "error")
+                return render_template('auth.html', active_tab='register', register_form_data=_reg_form)
+
+            if username_is_taken(nickname):
+                _reg_form['nickname'] = ''
+                flash("This username is already taken.", "error")
+                return render_template('auth.html', active_tab='register', register_form_data=_reg_form)
+
             hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
             defaults = gender_defaults(gender)
 
             try:
-                new_user = supabase.table('users').insert({
+                new_user = supabase.table('users').insert(with_terms_acceptance({
                     'first_name': first_name,
                     'last_name': last_name,
                     'nickname': nickname,
@@ -3684,7 +3947,7 @@ def auth():
                     'theme_color': defaults['theme_color'],
                     'avatar_color': defaults['theme_color'],
                     'is_verified': True,
-                }).execute()
+                })).execute()
 
                 if new_user.data:
                     start_user_session(new_user.data[0]['id'])
@@ -3692,6 +3955,32 @@ def auth():
                     flash(f"Welcome to LvL, {first_name}! You've earned 20 XP for joining.", "success")
                     return redirect(url_for('index'))
             except Exception as e:
+                if terms_columns_missing(e):
+                    # Environment has not run migration 018 yet; the account is
+                    # still created, acceptance metadata is simply not stored.
+                    try:
+                        new_user = supabase.table('users').insert(strip_terms_acceptance({
+                            'first_name': first_name,
+                            'last_name': last_name,
+                            'nickname': nickname,
+                            'username': nickname,
+                            'display_name': f"{first_name} {last_name}",
+                            'email': email,
+                            'password_hash': hashed_pw,
+                            'gender': gender,
+                            'birthday': birthday_value.isoformat(),
+                            'profile_photo_url': url_for('static', filename=defaults['avatar']),
+                            'theme_color': defaults['theme_color'],
+                            'avatar_color': defaults['theme_color'],
+                            'is_verified': True,
+                        })).execute()
+                        if new_user.data:
+                            start_user_session(new_user.data[0]['id'])
+                            award_xp(new_user.data[0]['id'], 'account_created', 20)
+                            flash(f"Welcome to LvL, {first_name}! You've earned 20 XP for joining.", "success")
+                            return redirect(url_for('index'))
+                    except Exception as retry_exc:
+                        e = retry_exc
                 err_msg = handle_db_error(e)
                 if err_msg == "This username is already taken.":
                     _reg_form['nickname'] = ''
@@ -4878,9 +5167,18 @@ def admin_update_user_level():
 
 @app.route('/setup-health')
 def setup_health():
+    """Developer/operator diagnostics.
+
+    This used to be linked from normal user Settings. It exposes table,
+    storage and migration state, so it is now limited to an authenticated
+    admin session (or local debug runs).
+    """
     viewer = get_current_user()
     if not viewer:
         return redirect(url_for('auth'))
+    if not admin_session_is_valid() and not app.debug:
+        flash("That page is only available to administrators.", "error")
+        return redirect(url_for('settings'))
     return render_template('setup_health.html',
                            viewer=viewer,
                            checks=get_setup_health(),
@@ -4897,7 +5195,7 @@ def settings():
         if action == 'update_profile':
             first_name = request.form.get('first_name', '').strip()
             last_name = request.form.get('last_name', '').strip()
-            nickname = normalize_username(request.form.get('nickname', ''))
+            nickname, nickname_error = validate_username_format(request.form.get('nickname', ''))
             bio = request.form.get('bio', '').strip()
             location = request.form.get('location', '').strip()
             website = request.form.get('website', '').strip()
@@ -4907,11 +5205,14 @@ def settings():
             profile_pic = requested_profile_color if profile_color_unlocked(viewer.get('level')) else THEME_COLORS['muted']
             remove_profile_photo = request.form.get('remove_profile_photo') == '1'
 
-            if not all([first_name, last_name, nickname, gender]):
+            if not all([first_name, last_name, gender]) or not request.form.get('nickname', '').strip():
                 flash("First name, last name, and username are required.", "error")
                 return redirect(url_for('settings'))
-            if not re.match(r'^[a-z0-9_]{3,24}$', nickname):
-                flash("Username must be 3-24 characters and use only letters, numbers, or underscores.", "error")
+            if nickname_error:
+                flash(nickname_error, "error")
+                return redirect(url_for('settings'))
+            if nickname != normalize_username(viewer.get('username')) and username_is_taken(nickname, exclude_user_id=viewer['id']):
+                flash("This username is already taken.", "error")
                 return redirect(url_for('settings'))
             if website and not normalize_website(website):
                 flash("Website must start with http:// or https://.", "error")
@@ -5054,33 +5355,36 @@ def own_profile():
 
 @app.route('/level-guide')
 def level_guide():
+    """The LvL Guide page was removed from the product.
+
+    Old links, bookmarks and push notifications still point here, so the route
+    stays alive and sends people to a sensible destination instead of 404ing.
+    XP and level information now lives on the profile where it belongs.
+    """
     viewer = get_current_user()
     if not viewer:
         return redirect(url_for('auth'))
-    highlights = get_community_highlights()
-    level_requirements = [{'level': level, 'xp': xp_required_for_level(level)} for level in range(1, 31)]
-    
-    # Load open positions from job_positions table
-    open_positions = []
-    if supabase:
-        try:
-            res = supabase.table('job_positions').select('*').eq('is_active', True).order('created_at', desc=True).execute()
-            if res and hasattr(res, 'data') and res.data is not None:
-                open_positions = res.data
-        except Exception as exc:
-            app.logger.warning(f"Failed to fetch job positions: {exc}")
+    return redirect(url_for('profile', username=viewer['username']))
 
-    # Fetch verification requests
+
+def get_verification_context(viewer):
+    """Latest verification request plus its rejection cooldown state."""
     current_request = None
     cooldown_active = False
     cooldown_remaining = None
+
     if viewer and supabase:
         try:
-            req_res = supabase.table('verification_requests').select('*').eq('user_id', viewer['id']).order('created_at', desc=True).limit(1).execute()
+            req_res = (supabase.table('verification_requests')
+                       .select('*')
+                       .eq('user_id', viewer['id'])
+                       .order('created_at', desc=True)
+                       .limit(1)
+                       .execute())
             if req_res and req_res.data:
                 current_request = req_res.data[0]
         except Exception:
-            pass
+            current_request = None
 
     if current_request and current_request.get('status') == 'Rejected':
         cooldown_until_str = current_request.get('rejection_cooldown_until')
@@ -5095,194 +5399,192 @@ def level_guide():
             except Exception:
                 pass
 
-    # Read custom success flags from flash
-    flashed = get_flashed_messages(with_categories=True)
-    flashed_msgs = [msg for _cat, msg in flashed]
-    contact_success = 'contact_success' in flashed_msgs
-    careers_success = any(cat == 'sentinel' and msg == 'careers_success' for cat, msg in flashed)
-
-    return render_template('level_guide.html',
-                           viewer=viewer,
-                           highlights=highlights,
-                           level_requirements=level_requirements,
-                           xp_rewards=XP_REWARD_RULES,
-                           level_rewards=LEVEL_REWARD_TIERS,
-                           reward_product_table=LEVEL_REWARD_PRODUCT_TABLE,
-                           achievements=ACHIEVEMENT_DEFINITIONS,
-                           open_positions=open_positions,
-                           contact_success=contact_success,
-                           careers_success=careers_success,
-                           current_request=current_request,
-                           cooldown_active=cooldown_active,
-                           cooldown_remaining=cooldown_remaining)
+    return current_request, cooldown_active, cooldown_remaining
 
 
-@app.route('/guide/contact', methods=['POST'])
-def guide_contact():
+def get_open_positions():
+    if not supabase:
+        return []
+    try:
+        res = (supabase.table('job_positions')
+               .select('*')
+               .eq('is_active', True)
+               .order('created_at', desc=True)
+               .execute())
+        if res and getattr(res, 'data', None):
+            return res.data
+    except Exception as exc:
+        app.logger.warning(f"Failed to fetch job positions: {exc}")
+    return []
+
+
+@app.route('/contact', methods=['GET', 'POST'])
+def contact():
     viewer = get_current_user()
-    name = request.form.get('name', '').strip()
-    email = request.form.get('email', '').strip()
-    subject = request.form.get('subject', 'General Question').strip()
-    message = request.form.get('message', '').strip()
-    
-    if not name or not email or not message:
-        flash("All fields are required.", "error")
-    elif not is_valid_email(email):
-        flash("Please enter a valid email address.", "error")
-    else:
-        last_submit = session.get('last_contact_submit')
-        now = datetime.now(timezone.utc)
-        if last_submit:
-            try:
-                last_time = datetime.fromisoformat(last_submit)
-                if (now - last_time).total_seconds() < 30:
-                    flash("Please wait 30 seconds before sending another message.", "error")
-                    return redirect(url_for('level_guide') + '#contact')
-            except Exception:
-                pass
 
-        try:
-            if supabase:
-                supabase.table('contact_messages').insert({
-                    'name': name,
-                    'email': email,
-                    'subject': subject,
-                    'message': message
-                }).execute()
-            session['last_contact_submit'] = now.isoformat()
-            
-            if subject == 'Suggestion':
-                flash("Thank you for your valuable suggestion! We appreciate your feedback to help level up our platform.", "success")
-            else:
-                flash("Your message has been sent successfully! We'll get back to you soon.", "success")
-        except Exception as exc:
-            flash(f"Error sending message: {exc}", "error")
-            
-    return redirect(url_for('level_guide') + '#contact')
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        email = request.form.get('email', '').strip()
+        subject = request.form.get('subject', 'General Question').strip()
+        message = request.form.get('message', '').strip()
 
-@app.route('/guide/verification', methods=['POST'])
-def guide_verification():
-    viewer = get_current_user()
-    if not viewer:
-        return redirect(url_for('auth'))
+        if not name or not email or not message:
+            flash("All fields are required.", "error")
+        elif not is_valid_email(email):
+            flash("Please enter a valid email address.", "error")
+        else:
+            last_submit = session.get('last_contact_submit')
+            now = datetime.now(timezone.utc)
+            if last_submit:
+                try:
+                    last_time = datetime.fromisoformat(last_submit)
+                    if (now - last_time).total_seconds() < 30:
+                        flash("Please wait 30 seconds before sending another message.", "error")
+                        return redirect(url_for('contact'))
+                except Exception:
+                    pass
 
-    current_request = None
-    if supabase:
-        try:
-            req_res = supabase.table('verification_requests').select('*').eq('user_id', viewer['id']).order('created_at', desc=True).limit(1).execute()
-            if req_res and req_res.data:
-                current_request = req_res.data[0]
-        except Exception:
-            pass
-
-    cooldown_active = False
-    if current_request and current_request.get('status') == 'Rejected':
-        cooldown_until_str = current_request.get('rejection_cooldown_until')
-        if cooldown_until_str:
-            try:
-                cooldown_until = datetime.fromisoformat(cooldown_until_str.replace('Z', '+00:00'))
-                now = datetime.now(timezone.utc)
-                if cooldown_until > now:
-                    cooldown_active = True
-            except Exception:
-                pass
-
-    reason = request.form.get('reason', '').strip()
-    links = request.form.get('links', '').strip()
-    doc_file = request.files.get('document')
-
-    error = None
-    if not reason:
-        error = "Please provide the reason for requesting verification."
-    elif current_request and current_request.get('status') == 'Pending':
-        error = "You already have a pending verification request."
-    elif cooldown_active:
-        error = "You cannot reapply yet."
-    else:
-        document_url = None
-        if doc_file:
-            try:
-                upload_dir = os.path.join(app.root_path, 'uploads', 'verification_docs')
-                os.makedirs(upload_dir, exist_ok=True)
-                ext = os.path.splitext(secure_filename(doc_file.filename))[1]
-                blocked_extensions = {'.exe', '.bat', '.cmd', '.sh', '.php', '.py', '.js', '.vbs', '.msi', '.scr', '.jar', '.com', '.pif', '.wsf', '.hta', '.cpl'}
-                if ext.lower() in blocked_extensions:
-                    error = "This file type is not supported for security reasons."
-                else:
-                    doc_file.seek(0, os.SEEK_END)
-                    size = doc_file.tell()
-                    doc_file.seek(0)
-                    if size > 15 * 1024 * 1024:
-                        error = "File size exceeds the limit of 15 MB."
-                    else:
-                        temp_name = f"verify_{viewer['id']}_{int(datetime.now(timezone.utc).timestamp())}{ext}"
-                        doc_file.save(os.path.join(upload_dir, temp_name))
-                        document_url = f"/verification_docs/{temp_name}"
-            except Exception as exc:
-                error = f"Document upload failed: {exc}"
-
-        if not error:
             try:
                 if supabase:
-                    supabase.table('verification_requests').insert({
-                        'user_id': viewer['id'],
-                        'reason': reason,
-                        'document_url': document_url,
-                        'links': links,
-                        'status': 'Pending'
+                    supabase.table('contact_messages').insert({
+                        'name': name,
+                        'email': email,
+                        'subject': subject,
+                        'message': message,
                     }).execute()
-                flash("Your verification request has been submitted successfully! Admins will review it soon.", "success")
+                session['last_contact_submit'] = now.isoformat()
+
+                if subject == 'Suggestion':
+                    flash("Thank you for your valuable suggestion! We appreciate your feedback to help level up our platform.", "success")
+                else:
+                    flash("Your message has been sent successfully! We'll get back to you soon.", "success")
+                return redirect(url_for('contact'))
             except Exception as exc:
-                error = f"Verification request failed: {exc}"
+                app.logger.error(f"Contact message failed: {exc}")
+                flash("Your message could not be sent. Try again.", "error")
 
-    if error:
-        flash(error, "error")
+        return redirect(url_for('contact'))
 
-    return redirect(url_for('level_guide') + '#verification')
+    return render_template('contact.html',
+                           viewer=viewer,
+                           highlights=get_community_highlights())
 
 
-@app.route('/guide/careers', methods=['POST'])
-def guide_careers():
+@app.route('/request_verification', methods=['GET', 'POST'])
+def request_verification():
     viewer = get_current_user()
     if not viewer:
         return redirect(url_for('auth'))
-    
-    name = request.form.get('name', '').strip()
-    email = request.form.get('email', '').strip()
-    position_title = request.form.get('position', '').strip()
-    message = request.form.get('message', '').strip()
-    cv_file = request.files.get('cv')
-    
-    cv_filename = None
-    if not name or not email or not position_title or not message:
-        flash("All fields are required.", "error")
-    elif not cv_file or not cv_file.filename:
-        flash("A CV / resume is required to submit your application.", "error")
-    elif not is_valid_email(email):
-        flash("Please enter a valid email address.", "error")
-    else:
+
+    current_request, cooldown_active, cooldown_remaining = get_verification_context(viewer)
+
+    if request.method == 'POST':
+        reason = request.form.get('reason', '').strip()
+        links = request.form.get('links', '').strip()
+        doc_file = request.files.get('document')
+
+        error = None
+        if not reason:
+            error = "Please provide the reason for requesting verification."
+        elif current_request and current_request.get('status') == 'Pending':
+            error = "You already have a pending verification request."
+        elif cooldown_active:
+            error = "You cannot reapply yet."
+        else:
+            document_url = None
+            if doc_file and doc_file.filename:
+                try:
+                    upload_dir = os.path.join(app.root_path, 'uploads', 'verification_docs')
+                    os.makedirs(upload_dir, exist_ok=True)
+                    ext = os.path.splitext(secure_filename(doc_file.filename))[1]
+                    blocked_extensions = {'.exe', '.bat', '.cmd', '.sh', '.php', '.py', '.js', '.vbs', '.msi', '.scr', '.jar', '.com', '.pif', '.wsf', '.hta', '.cpl'}
+                    if ext.lower() in blocked_extensions:
+                        error = "This file type is not supported for security reasons."
+                    else:
+                        doc_file.seek(0, os.SEEK_END)
+                        size = doc_file.tell()
+                        doc_file.seek(0)
+                        if size > 15 * 1024 * 1024:
+                            error = "File size exceeds the limit of 15 MB."
+                        else:
+                            temp_name = f"verify_{viewer['id']}_{int(datetime.now(timezone.utc).timestamp())}{ext}"
+                            doc_file.save(os.path.join(upload_dir, temp_name))
+                            document_url = f"/verification_docs/{temp_name}"
+                except Exception as exc:
+                    app.logger.error(f"Verification document upload failed: {exc}")
+                    error = "Document upload failed. Try again."
+
+            if not error:
+                try:
+                    if supabase:
+                        supabase.table('verification_requests').insert({
+                            'user_id': viewer['id'],
+                            'reason': reason,
+                            'document_url': document_url,
+                            'links': links,
+                            'status': 'Pending',
+                        }).execute()
+                    flash("Your verification request has been submitted successfully! Admins will review it soon.", "success")
+                except Exception as exc:
+                    app.logger.error(f"Verification request failed: {exc}")
+                    error = "Verification request failed. Try again."
+
+        if error:
+            flash(error, "error")
+
+        return redirect(url_for('request_verification'))
+
+    return render_template('verification_request.html',
+                           viewer=viewer,
+                           current_request=current_request,
+                           cooldown_active=cooldown_active,
+                           cooldown_remaining=cooldown_remaining,
+                           highlights=get_community_highlights())
+
+
+@app.route('/careers', methods=['GET', 'POST'])
+def careers():
+    viewer = get_current_user()
+    if not viewer:
+        return redirect(url_for('auth'))
+
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        email = request.form.get('email', '').strip()
+        position_title = request.form.get('position', '').strip()
+        message = request.form.get('message', '').strip()
+        cv_file = request.files.get('cv')
+
+        if not name or not email or not position_title or not message:
+            flash("All fields are required.", "error")
+            return redirect(url_for('careers'))
+        if not cv_file or not cv_file.filename:
+            flash("A CV / resume is required to submit your application.", "error")
+            return redirect(url_for('careers'))
+        if not is_valid_email(email):
+            flash("Please enter a valid email address.", "error")
+            return redirect(url_for('careers'))
+
         allowed_ext = {'.pdf', '.doc', '.docx'}
         ext = os.path.splitext(cv_file.filename.lower())[1]
         if ext not in allowed_ext:
             flash("CV must be a PDF, DOC, or DOCX file.", "error")
-            return redirect(url_for('level_guide') + '#careers')
+            return redirect(url_for('careers'))
+
         safe_name = f"cv_{uuid.uuid4().hex}{ext}"
         upload_dir = os.path.join(app.root_path, 'static', 'uploads', 'cvs')
         os.makedirs(upload_dir, exist_ok=True)
-        cv_path = os.path.join(upload_dir, safe_name)
-        cv_file.save(cv_path)
-        cv_filename = safe_name
+        cv_file.save(os.path.join(upload_dir, safe_name))
 
-        # Resolve position_id if matches an active posting
         position_id = None
         if supabase:
             try:
                 res = supabase.table('job_positions').select('id').eq('title', position_title).limit(1).execute()
-                if res and hasattr(res, 'data') and res.data:
+                if res and getattr(res, 'data', None):
                     position_id = res.data[0]['id']
             except Exception:
-                pass
-                
+                position_id = None
+
             try:
                 supabase.table('job_applications').insert({
                     'position_id': position_id,
@@ -5290,17 +5592,19 @@ def guide_careers():
                     'name': name,
                     'email': email,
                     'message': message,
-                    'cv_url': cv_filename
+                    'cv_url': safe_name,
                 }).execute()
             except Exception as exc:
                 app.logger.error(f"Failed to save job application to DB: {exc}")
-                
-        app.logger.info(f"[CAREERS] from={email} name={name} position={position_title} cv={cv_filename}")
-        # Sentinel for template detection + visible localized message
-        flash('careers_success', 'sentinel')
+
+        app.logger.info(f"[CAREERS] from={email} name={name} position={position_title} cv={safe_name}")
         flash('Application submitted successfully!', 'success')
-        
-    return redirect(url_for('level_guide') + '#careers')
+        return redirect(url_for('careers'))
+
+    return render_template('careers.html',
+                           viewer=viewer,
+                           open_positions=get_open_positions(),
+                           highlights=get_community_highlights())
 
 
 def log_admin_action(actor_username, action_type, target, details=""):
@@ -6847,14 +7151,6 @@ def api_share_search():
     if not q: return jsonify({'success': True, 'friends': []})
     res = supabase.table('users').select('id,username,display_name,profile_photo_url').ilike('username', f'%{q}%').limit(10).execute()
     return jsonify({'success': True, 'friends': res.data or []})
-
-@app.route('/contact', methods=['GET', 'POST'])
-def contact():
-    return redirect(url_for('level_guide') + '#contact')
-
-@app.route('/request_verification', methods=['GET', 'POST'])
-def request_verification():
-    return redirect(url_for('level_guide') + '#verification')
 
 @app.route('/verification_docs/<filename>')
 def serve_verification_doc(filename):
