@@ -1425,7 +1425,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sidebar) {
         safeStorageRemove('sidebar-menu-open');
         const syncSidebarMode = () => {
-            if (window.innerWidth > 991) {
+            // 1280px is where base.css widens the rail from the collapsed
+            // icon column to the labelled one. Below that the rail is only
+            // --shell-left-collapsed wide, so labels would be clipped.
+            if (window.innerWidth > 1279) {
                 sidebar.classList.add('menu-open');
                 sidebar.classList.remove('mobile-menu-open');
                 document.body.style.overflow = '';

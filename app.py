@@ -198,7 +198,7 @@ ATTACHMENT_CONTENT_TYPES = {
     'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'txt': 'text/plain',
 }
-ASSET_VERSION = "137"
+ASSET_VERSION = "138"
 HOME_REEL_PREVIEW_LIMIT = 12
 HOME_MEDIA_PREVIEW_LIMIT = 12
 
@@ -310,6 +310,8 @@ def inject_helpers():
         'account_is_verified': account_is_verified,
         'min_age': MIN_AGE,
         'terms_version': TERMS_VERSION,
+        'level_progress': level_progress,
+        'current_year': datetime.now().year,
     }
 
 @app.context_processor
@@ -505,6 +507,31 @@ def level_for_xp(total_xp):
     while total_xp >= xp_required_for_level(level + 1):
         level += 1
     return level
+
+def level_progress(user):
+    """XP standing for one account, in the shape both the profile header and the
+    left rail render. Returns None when there is no user to describe."""
+    if user is None or not hasattr(user, 'get'):
+        return None
+    raw_level = user.get('level')
+    level = max(1, int(raw_level) if raw_level is not None else 1)
+    raw_xp = user.get('total_xp')
+    total_xp = int(raw_xp) if raw_xp is not None else 0
+    current_req = xp_required_for_level(level)
+    next_req = xp_required_for_level(level + 1)
+    span = max(1, next_req - current_req)
+    earned = max(0, total_xp - current_req)
+    return {
+        'level': level,
+        'next_level': level + 1,
+        'title': activity_title_for_level(level),
+        'total_xp': total_xp,
+        'current': earned,
+        'span': span,
+        'needed': max(0, min(span, next_req - total_xp)),
+        'percent': min(100, max(0, (earned / span) * 100)),
+        'reward': next_level_reward_for_level(level),
+    }
 
 def badge_color_for_level(level):
     return level_color_for_level(level)
@@ -726,10 +753,10 @@ XP_REWARD_RULES = [
 ]
 
 LEVEL_REWARD_TIERS = [
-    {'level': 5, 'label': 'Emoji Kit', 'description': 'Unlock first profile expression tools and a cyan LvL badge.'},
+    {'level': 5, 'label': 'Profile Colour', 'description': 'Unlock custom profile colours, the first expression tools, and a cyan LvL badge.'},
     {'level': 10, 'label': 'Rising Medal', 'description': 'Unlock a purple medal badge, title upgrade, and stronger profile status.'},
     {'level': 15, 'label': 'Avatar Frame', 'description': 'Unlock avatar border styles that make your profile stand out.'},
-    {'level': 20, 'label': 'Profile Color', 'description': 'Unlock custom profile colors and the Elite Champion title.'},
+    {'level': 20, 'label': 'Elite Status', 'description': 'Unlock the Elite Champion title and elite profile status.'},
     {'level': 30, 'label': 'Mythic Badge', 'description': 'Unlock a gold medal badge and premium public status.'},
     {'level': 50, 'label': 'App Icon Recolor', 'description': 'Unlock the first prestige icon recolor tier for long-term players.'},
 ]
@@ -744,9 +771,9 @@ LEVEL_REWARD_PRODUCT_TABLE = [
     },
     {
         'level': '5',
-        'reward': 'Emoji Kit',
+        'reward': 'Profile Colour',
         'type': 'Expression',
-        'visual': 'First emoji/profile expression tools plus the cyan LvL badge color.',
+        'visual': 'Custom profile colour plus the first expression tools and the cyan LvL badge.',
         'purpose': 'Small visible reward for early activity.'
     },
     {
@@ -765,9 +792,9 @@ LEVEL_REWARD_PRODUCT_TABLE = [
     },
     {
         'level': '20',
-        'reward': 'Profile Color',
+        'reward': 'Elite Status',
         'type': 'Customization',
-        'visual': 'Custom profile color for banners, chat headers, and profile accents.',
+        'visual': 'Elite Champion title treatment across profile, chat headers, and feed.',
         'purpose': 'Unlocks personal color only after enough visible participation.'
     },
     {
@@ -6181,14 +6208,10 @@ def profile(username):
             else:
                 posts = get_profile_posts(profile_user, viewer['id'], page=page)
 
-        raw_level = profile_user.get('level')
-        level = max(1, int(raw_level) if raw_level is not None else 1)
+        standing = level_progress(profile_user)
+        level = standing['level']
         profile_banner = profile_banner_for_level(level)
-        raw_xp = profile_user.get('total_xp')
-        total_xp = int(raw_xp) if raw_xp is not None else 0
-        current_xp_req = xp_required_for_level(level)
-        next_xp_req = xp_required_for_level(level + 1)
-        progress = min(100, max(0, ((total_xp - current_xp_req) / max(1, next_xp_req - current_xp_req)) * 100))
+        progress = standing['percent']
         achievements = profile_achievements(profile_user, stats)
         summary = achievement_summary(achievements)
 
@@ -6220,9 +6243,9 @@ def profile(username):
                            profile_banner=profile_banner,
                            profile_banner_class=profile_banner['class'],
                            profile_xp_progress=progress,
-                           profile_xp_needed=next_xp_req - total_xp,
-                           profile_xp_current=max(0, total_xp - current_xp_req),
-                           profile_xp_span=max(1, next_xp_req - current_xp_req),
+                           profile_xp_needed=standing['needed'],
+                           profile_xp_current=standing['current'],
+                           profile_xp_span=standing['span'],
                            next_level_reward=next_level_reward_for_level(level),
                            achievement_summary=summary,
                            achievements=achievements)

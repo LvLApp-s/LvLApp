@@ -6034,10 +6034,43 @@ class RailAndPopoverTests(unittest.TestCase):
                 self.assertIn(item, html.split('id="account-menu"', 1)[1])
         self.assertIn('role="menu"', html.split('id="account-menu"', 1)[0][-200:] + menu)
 
-    def test_account_row_is_pinned_to_the_bottom_of_the_rail(self):
+    def test_rail_bottom_cluster_shares_the_leftover_height(self):
+        """The rail no longer ends in one long empty stretch: the slack is
+        split between the level card and the about links, and the account row
+        closes the column."""
         css = Path("static/css/sections/components.css").read_text(encoding="utf-8")
-        block = css.split('.account-row {', 1)[1].split('}', 1)[0]
-        self.assertIn('margin-top: auto', block)
+        for selector in ('\n.rail-progress {', '\n.rail-footer {'):
+            with self.subTest(selector=selector):
+                block = css.split(selector, 1)[1].split('}', 1)[0]
+                self.assertIn('margin-top: auto', block)
+        account = css.split('\n.account-row {', 1)[1].split('}', 1)[0]
+        self.assertNotIn('margin-top: auto', account)
+
+    def test_rail_shows_the_viewer_level_standing(self):
+        html = self.layout()
+        rail = html.split('<aside class="left-rail', 1)[1].split('</aside>', 1)[0]
+        self.assertIn('class="rail-progress"', rail)
+        self.assertIn('role="progressbar"', rail)
+        self.assertIn('aria-valuenow=', rail)
+        self.assertIn('rail-progress-reward', rail)
+        # The card is a link to the viewer's own profile, not a dead panel.
+        self.assertIn('href="/profile/demo"', rail.split('class="rail-progress"', 1)[0][-200:]
+                      + rail.split('class="rail-progress"', 1)[1][:200])
+
+    def test_rail_footer_keeps_the_extracted_pages_reachable(self):
+        rail = self.layout().split('<aside class="left-rail', 1)[1].split('</aside>', 1)[0]
+        footer = rail.split('class="rail-footer"', 1)[1].split('</nav>', 1)[0]
+        for href in ('/contact', '/request_verification', '/careers', '/terms', '/privacy'):
+            with self.subTest(href=href):
+                self.assertIn(f'href="{href}"', footer)
+
+    def test_expanded_rail_breakpoint_matches_the_stylesheet(self):
+        """Labels are only shown once the rail is wide enough to hold them."""
+        js = Path("static/js/script.js").read_text(encoding="utf-8")
+        self.assertIn('window.innerWidth > 1279', js)
+        base = Path("static/css/sections/base.css").read_text(encoding="utf-8")
+        self.assertIn('@media (max-width: 1279px)', base)
+
 
     def test_rail_shows_the_lvl_brand(self):
         html = self.layout()
@@ -6183,3 +6216,47 @@ class ClipRailSelectionTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LevelProgressTests(unittest.TestCase):
+    """The XP standing shared by the profile header and the rail card."""
+
+    def test_missing_user_has_no_standing(self):
+        self.assertIsNone(zapp.level_progress(None))
+
+    def test_new_account_starts_at_level_one(self):
+        standing = zapp.level_progress({})
+        self.assertEqual(standing['level'], 1)
+        self.assertEqual(standing['current'], 0)
+        self.assertEqual(standing['percent'], 0)
+        self.assertEqual(standing['needed'], standing['span'])
+
+    def test_progress_is_measured_inside_the_current_level(self):
+        # Level 3 spans 120 -> 250 XP.
+        standing = zapp.level_progress({'level': 3, 'total_xp': 185})
+        self.assertEqual(standing['span'], 130)
+        self.assertEqual(standing['current'], 65)
+        self.assertEqual(standing['needed'], 65)
+        self.assertAlmostEqual(standing['percent'], 50.0)
+
+    def test_percent_and_needed_stay_inside_their_bounds(self):
+        for level, xp in ((3, 0), (3, 10_000), (1, -5)):
+            with self.subTest(level=level, xp=xp):
+                standing = zapp.level_progress({'level': level, 'total_xp': xp})
+                self.assertGreaterEqual(standing['percent'], 0)
+                self.assertLessEqual(standing['percent'], 100)
+                self.assertGreaterEqual(standing['needed'], 0)
+                self.assertLessEqual(standing['needed'], standing['span'])
+
+    def test_standing_names_the_next_reward(self):
+        standing = zapp.level_progress({'level': 3, 'total_xp': 185})
+        self.assertEqual(standing['reward']['level'], 5)
+
+    def test_reward_tiers_agree_with_the_profile_colour_unlock(self):
+        """Profile colours unlock at level 5, so the reward table must say so
+        instead of still promising them at 20."""
+        tier = next(t for t in zapp.LEVEL_REWARD_TIERS
+                    if t['level'] == zapp.PROFILE_COLOR_UNLOCK_LEVEL)
+        self.assertIn('colour', tier['description'].lower())
+        twenty = next(t for t in zapp.LEVEL_REWARD_TIERS if t['level'] == 20)
+        self.assertNotIn('color', twenty['description'].lower())

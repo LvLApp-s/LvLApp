@@ -72,6 +72,42 @@
         </a>
       </nav>
       <a class="compose-link" href="{{ url_for('index', compose=1) }}" data-i18n="nav_post">Post</a>
+      {% set standing = level_progress(viewer) %}
+      {% if standing %}
+      <a class="rail-progress" href="{{ url_for('profile', username=viewer.username) }}"
+         aria-label="Level {{ standing.level }} progress" data-i18n-aria="rail_level_progress"
+         title="{{ level_title(standing.level) }}">
+        <span class="rail-progress-head">
+          <span class="rail-progress-level" style="--badge-color: {{ viewer.badge_color or theme_colors.brand }};">{{ standing.level }}</span>
+          <span class="rail-progress-identity">
+            <strong>{{ level_title(standing.level) }}</strong>
+            <span class="rail-progress-xp">{{ '{:,}'.format(standing.current) }} / {{ '{:,}'.format(standing.span) }} XP</span>
+          </span>
+        </span>
+        <span class="rail-progress-track" role="progressbar"
+              aria-valuenow="{{ standing.percent|round(0)|int }}" aria-valuemin="0" aria-valuemax="100">
+          <i style="width: {{ standing.percent|round(1) }}%;"></i>
+        </span>
+        <span class="rail-progress-next">
+          {{ '{:,}'.format(standing.needed) }} XP <span data-i18n="rail_xp_left">to the next level</span>
+        </span>
+        {% if standing.reward %}
+        <span class="rail-progress-reward">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13M3 12h18"/><path d="M12 8S10.5 3 8 3a2.5 2.5 0 0 0 0 5h4Zm0 0s1.5-5 4-5a2.5 2.5 0 0 1 0 5h-4Z"/></svg>
+          <span class="rail-progress-reward-label">{{ standing.reward.label }}</span>
+          <span class="rail-progress-reward-level">LvL {{ standing.reward.level }}</span>
+        </span>
+        {% endif %}
+      </a>
+      {% endif %}
+      <nav class="rail-footer" aria-label="About LvL" data-i18n-aria="rail_about_aria">
+        <a href="{{ url_for('contact') }}" data-i18n="rail_link_contact">Contact</a>
+        <a href="{{ url_for('request_verification') }}" data-i18n="rail_link_verify">Verification</a>
+        <a href="{{ url_for('careers') }}" data-i18n="rail_link_careers">Careers</a>
+        <a href="{{ url_for('terms') }}" data-i18n="rail_link_terms">Terms</a>
+        <a href="{{ url_for('privacy') }}" data-i18n="rail_link_privacy">Privacy</a>
+        <span class="rail-footer-note">© {{ current_year }} LvL</span>
+      </nav>
       <div class="account-row" data-account-row>
         <a class="mini-profile" href="{{ url_for('profile', username=viewer.username) }}">
           <img class="avatar small-avatar" src="{{ viewer.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="" aria-hidden="true" />

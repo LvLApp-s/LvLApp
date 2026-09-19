@@ -2125,3 +2125,38 @@ Object.assign(TRANSLATIONS.ar, {
 });
 
 Object.assign(TRANSLATIONS.ar, { notif_update: "أرسل تحديثًا" });
+
+/* --- Left rail: level standing card and footer links --------------------- */
+
+Object.assign(TRANSLATIONS.en, {
+  rail_level_progress: "Your level progress",
+  rail_xp_left: "to the next level",
+  rail_about_aria: "About LvL",
+  rail_link_contact: "Contact",
+  rail_link_verify: "Verification",
+  rail_link_careers: "Careers",
+  rail_link_terms: "Terms",
+  rail_link_privacy: "Privacy"
+});
+
+Object.assign(TRANSLATIONS.tr, {
+  rail_level_progress: "Seviye ilerlemeniz",
+  rail_xp_left: "sonraki seviyeye",
+  rail_about_aria: "LvL hakkında",
+  rail_link_contact: "İletişim",
+  rail_link_verify: "Doğrulama",
+  rail_link_careers: "Kariyer",
+  rail_link_terms: "Koşullar",
+  rail_link_privacy: "Gizlilik"
+});
+
+Object.assign(TRANSLATIONS.ar, {
+  rail_level_progress: "تقدّم مستواك",
+  rail_xp_left: "للمستوى التالي",
+  rail_about_aria: "عن LvL",
+  rail_link_contact: "اتصل بنا",
+  rail_link_verify: "التوثيق",
+  rail_link_careers: "الوظائف",
+  rail_link_terms: "الشروط",
+  rail_link_privacy: "الخصوصية"
+});
