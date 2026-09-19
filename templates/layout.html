@@ -55,19 +55,14 @@
           </span>
           <span class="nav-label" data-i18n="nav_community">Community</span>
         </a>
-        <a class="{% if active_page == 'messages' %}active{% endif %}" href="{{ url_for('messages') }}" aria-label="Messages" title="Messages" data-i18n-aria="nav_messages" data-i18n-title="nav_messages">
+        <a class="{% if active_page == 'messages' %}active{% endif %}" href="{{ url_for('messages') }}"
+           data-messages-trigger aria-expanded="false" aria-controls="messages-popover"
+           aria-label="Messages" title="Messages" data-i18n-aria="nav_messages" data-i18n-title="nav_messages">
           <span class="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M4 4h16v12H7.8L4 19.35V4Zm2 2v8.93L7.04 14H18V6H6Z"/></svg>
           </span>
           <span class="nav-label" data-i18n="nav_messages">Messages</span>
           <span class="nav-badge" data-live-badge="messages" aria-label="{{ unread_message_count }} unread messages" {% if unread_message_count <= 0 %}hidden{% endif %}>{{ unread_message_count if unread_message_count < 100 else '99+' }}</span>
-        </a>
-        <a class="{% if active_page == 'notifications' %}active{% endif %}" href="{{ url_for('notifications') }}" aria-label="Alerts" title="Alerts" data-i18n-aria="nav_alerts" data-i18n-title="nav_alerts">
-          <span class="nav-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 22a2.75 2.75 0 0 0 2.58-1.8H9.42A2.75 2.75 0 0 0 12 22Zm7-6V11a7 7 0 1 0-14 0v5l-2 2v1h18v-1l-2-2Zm-2 .2.8.8H6.2l.8-.8V11a5 5 0 1 1 10 0v5.2Z"/></svg>
-          </span>
-          <span class="nav-label" data-i18n="nav_alerts">Alerts</span>
-          <span class="nav-badge" data-live-badge="notifications" aria-label="{{ unread_notification_count }} unread notifications" {% if unread_notification_count <= 0 %}hidden{% endif %}>{{ unread_notification_count if unread_notification_count < 100 else '99+' }}</span>
         </a>
         <a class="{% if active_page == 'bookmarks' %}active{% endif %}" href="{{ url_for('bookmarks') }}" aria-label="Bookmarks" title="Bookmarks" data-i18n-aria="nav_bookmarks" data-i18n-title="nav_bookmarks">
           <span class="nav-icon" aria-hidden="true">
@@ -75,22 +70,56 @@
           </span>
           <span class="nav-label" data-i18n="nav_bookmarks">Bookmarks</span>
         </a>
-        <a class="{% if active_page == 'settings' %}active{% endif %}" href="{{ url_for('settings') }}" aria-label="Settings" title="Settings" data-i18n-aria="nav_settings" data-i18n-title="nav_settings">
-          <span class="nav-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M19.43 12.98c.04-.32.07-.65.07-.98s-.02-.66-.07-.98l2.11-1.65-2-3.46-2.49 1a7.22 7.22 0 0 0-1.69-.98L15 3h-4l-.36 2.93c-.6.23-1.17.56-1.69.98l-2.49-1-2 3.46 2.11 1.65c-.04.32-.07.65-.07.98s.02.66.07.98l-2.11 1.65 2 3.46 2.49-1c.52.4 1.09.74 1.69.98L11 21h4l.36-2.93c.6-.23 1.17-.56 1.69-.98l2.49 1 2-3.46-2.11-1.65ZM13 15.5A3.5 3.5 0 1 1 13 8a3.5 3.5 0 0 1 0 7.5Z"/></svg>
-          </span>
-          <span class="nav-label" data-i18n="nav_settings">Settings</span>
-        </a>
       </nav>
       <a class="compose-link" href="{{ url_for('index', compose=1) }}" data-i18n="nav_post">Post</a>
-      <a class="mini-profile" href="{{ url_for('profile', username=viewer.username) }}">
-        <img class="avatar small-avatar" src="{{ viewer.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" />
-        <div>
-          <strong>{{ viewer.display_name }}</strong>
-          <span>@{{ viewer.username }}</span>
+      <div class="account-row" data-account-row>
+        <a class="mini-profile" href="{{ url_for('profile', username=viewer.username) }}">
+          <img class="avatar small-avatar" src="{{ viewer.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="" aria-hidden="true" />
+          <div class="mini-profile-identity">
+            <strong>{{ viewer.display_name }}</strong>
+            <span>@{{ viewer.username }}</span>
+          </div>
+        </a>
+        <button type="button" class="account-more" data-account-trigger
+                aria-expanded="false" aria-controls="account-menu"
+                aria-label="Account menu" title="Account menu"
+                data-i18n-aria="nav_account_menu" data-i18n-title="nav_account_menu">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor">
+            <circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/>
+          </svg>
+        </button>
+
+        <div class="popover account-menu" id="account-menu" data-account-menu role="menu" hidden>
+          <a class="popover-item" role="menuitem" href="{{ url_for('profile', username=viewer.username) }}">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span data-i18n="nav_profile">Profile</span>
+          </a>
+          <a class="popover-item" role="menuitem" href="{{ url_for('bookmarks') }}">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            <span data-i18n="nav_bookmarks">Bookmarks</span>
+          </a>
+          <a class="popover-item" role="menuitem" href="{{ url_for('settings') }}">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6h.09A1.65 1.65 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <span data-i18n="nav_settings">Settings</span>
+          </a>
+          <div class="popover-divider" role="separator"></div>
+          <a class="popover-item popover-item-danger" role="menuitem" href="{{ url_for('logout') }}">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <span data-i18n="nav_logout">Log out</span>
+          </a>
         </div>
-      </a>
-      <a class="logout-link" href="{{ url_for('logout') }}" data-i18n="nav_logout">Log out</a>
+      </div>
+
+      <div class="popover messages-popover" id="messages-popover" data-messages-popover role="dialog"
+           aria-label="Messages" data-i18n-aria="nav_messages" hidden>
+        <div class="popover-header">
+          <h2 data-i18n="nav_messages">Messages</h2>
+          <a class="popover-header-link" href="{{ url_for('messages') }}" data-i18n="see_all">See all</a>
+        </div>
+        <div class="popover-body" data-messages-list>
+          <p class="popover-loading" data-i18n="loading">Loading…</p>
+        </div>
+      </div>
     </aside>
   </div>
   <main class="timeline timeline-{{ active_page }}">
@@ -126,6 +155,28 @@
         </span>
         <input id="global-search-input" type="search" name="q" value="{{ request.args.get('q', '') }}" placeholder="Search LvL" data-i18n-placeholder="search_placeholder">
       </form>
+
+      <div class="topbar-actions" data-notifications-root>
+        <button type="button" class="topbar-icon-button" data-notifications-trigger
+                aria-expanded="false" aria-controls="notifications-popover"
+                aria-label="Alerts" title="Alerts" data-i18n-aria="nav_alerts" data-i18n-title="nav_alerts">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="currentColor"><path d="M12 22a2.75 2.75 0 0 0 2.58-1.8H9.42A2.75 2.75 0 0 0 12 22Zm7-6V11a7 7 0 1 0-14 0v5l-2 2v1h18v-1l-2-2Zm-2 .2.8.8H6.2l.8-.8V11a5 5 0 1 1 10 0v5.2Z"/></svg>
+          <span class="nav-badge topbar-badge" data-live-badge="notifications"
+                aria-label="{{ unread_notification_count }} unread notifications"
+                {% if unread_notification_count <= 0 %}hidden{% endif %}>{{ unread_notification_count if unread_notification_count < 100 else '99+' }}</span>
+        </button>
+
+        <div class="popover notifications-popover" id="notifications-popover" data-notifications-popover
+             role="dialog" aria-label="Alerts" data-i18n-aria="nav_alerts" hidden>
+          <div class="popover-header">
+            <h2 data-i18n="nav_alerts">Alerts</h2>
+            <a class="popover-header-link" href="{{ url_for('notifications') }}" data-i18n="see_all">See all</a>
+          </div>
+          <div class="popover-body" data-notifications-list>
+            <p class="popover-loading" data-i18n="loading">Loading…</p>
+          </div>
+        </div>
+      </div>
     </header>
 {% endif %}
 

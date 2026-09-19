@@ -198,7 +198,7 @@ ATTACHMENT_CONTENT_TYPES = {
     'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'txt': 'text/plain',
 }
-ASSET_VERSION = "136"
+ASSET_VERSION = "137"
 HOME_REEL_PREVIEW_LIMIT = 12
 HOME_MEDIA_PREVIEW_LIMIT = 12
 
@@ -2078,10 +2078,16 @@ def repeat_penalty(item_id, recent):
     return 0.08 + 0.85 * (position / max(len(recent), 1))
 
 
-def diversify(items, limit, score_fn, session_key=None, id_key='id'):
-    """Rank `items` by `score_fn`, damp repeats, add jitter, return the top N."""
+def diversify(items, limit, score_fn, session_key=None, id_key='id', jitter=None):
+    """Rank `items` by `score_fn`, damp repeats, add jitter, return the top N.
+
+    `jitter` widens or narrows the random multiplier. The default band is
+    narrow, so relevance still decides trending. A wide band (for example
+    the clip rail) turns the same machinery into a weighted random pick.
+    """
     if not items:
         return []
+    jitter = jitter or DIVERSIFY_JITTER
     recent = recently_shown_ids(session_key) if session_key else []
 
     scored = []
@@ -2092,7 +2098,7 @@ def diversify(items, limit, score_fn, session_key=None, id_key='id'):
             base = 0.0
         base = max(base, 0.0001)
         item_id = item.get(id_key) if isinstance(item, dict) else None
-        score = base * repeat_penalty(item_id, recent) * random.uniform(*DIVERSIFY_JITTER)
+        score = base * repeat_penalty(item_id, recent) * random.uniform(*jitter)
         # index keeps the sort deterministic when two scores tie
         scored.append((score, -index, item))
 
@@ -2347,17 +2353,22 @@ def get_home_reel_preview(viewer_id, limit=HOME_REEL_PREVIEW_LIMIT):
         except Exception:
             viewed_ids = set()
 
+        # The side rail is a discovery surface, not a "latest uploads" list, so
+        # selection is deliberately random across the whole visible pool rather
+        # than recency-ranked. Already-watched and just-shown clips are damped
+        # so the rail keeps turning over instead of repeating itself.
         def score(reel):
-            base = (engagement_weight(reel.get('view_count'), reel.get('like_count'))
-                    * recency_weight(reel.get('created_at'), half_life_days=1.0))
-            # An already-watched clip can still come back, just far less often.
-            return base * (0.3 if reel.get('id') in viewed_ids else 1.0)
+            weight = 1.0
+            if reel.get('id') in viewed_ids:
+                weight *= 0.25
+            return weight
 
         selected = diversify(
             [reel for reel in home_reels_data if reel.get('id')],
             limit,
             score,
             session_key='recently_shown_reels',
+            jitter=(0.05, 1.0),
         )
         if selected:
             return selected
@@ -6670,6 +6681,95 @@ def api_live_status():
         'latest_message_id': latest_message_id(viewer['id']),
         'server_time': datetime.now(timezone.utc).isoformat(),
     })
+
+def get_recent_conversations(viewer_id, limit=8):
+    """Lightweight conversation list for the messages popover.
+
+    The /messages page builds a richer list (streaks, full user rows, the
+    "new chat" directory). The popover only needs who, the last line and the
+    unread count, so it stays to two bounded queries instead of loading every
+    user on the instance.
+    """
+    if not supabase or not viewer_id:
+        return []
+    try:
+        res = (supabase.table('messages')
+               .select('sender_id,receiver_id,content,created_at,is_read')
+               .or_(f"sender_id.eq.{viewer_id},receiver_id.eq.{viewer_id}")
+               .order('created_at', desc=True)
+               .limit(120)
+               .execute())
+        rows = res.data if res and res.data else []
+    except Exception:
+        return []
+
+    threads = {}
+    for message in rows:
+        sender_id = message.get('sender_id')
+        receiver_id = message.get('receiver_id')
+        other_id = receiver_id if sender_id == viewer_id else sender_id
+        if not other_id or other_id == viewer_id:
+            continue
+        thread = threads.setdefault(other_id, {
+            'id': other_id,
+            'last_message': message.get('content') or '',
+            'last_message_at': message.get('created_at') or '',
+            'unread_count': 0,
+        })
+        if sender_id == other_id and not message.get('is_read'):
+            thread['unread_count'] += 1
+
+    if not threads:
+        return []
+
+    ordered_ids = sorted(threads, key=lambda key: threads[key]['last_message_at'], reverse=True)[:limit]
+    try:
+        users_res = (supabase.table('users')
+                     .select('id,username,display_name,profile_photo_url,is_profile_verified')
+                     .in_('id', ordered_ids)
+                     .execute())
+        users = {row['id']: row for row in (users_res.data or [])}
+    except Exception:
+        return []
+
+    hidden_ids = blocked_user_ids_for_viewer(viewer_id, ordered_ids, include_mutes=False)
+
+    conversations = []
+    for other_id in ordered_ids:
+        if other_id in hidden_ids or other_id not in users:
+            continue
+        thread = threads[other_id]
+        conversations.append({**users[other_id],
+                              'last_message': thread['last_message'],
+                              'last_message_at': thread['last_message_at'],
+                              'unread_count': thread['unread_count']})
+    return conversations
+
+
+@app.route('/api/conversations')
+def api_conversations():
+    """Recent threads for the left-rail messages popover."""
+    viewer = get_current_user()
+    if not viewer:
+        return jsonify({'success': False, 'error': 'Authentication required.'}), 401
+
+    limit = parse_positive_int(request.args.get('limit'), default=8, maximum=20)
+    conversations = get_recent_conversations(viewer['id'], limit=limit)
+    return jsonify({
+        'success': True,
+        'unread_messages': unread_message_count(viewer['id']),
+        'conversations': [{
+            'username': row.get('username'),
+            'display_name': row.get('display_name') or row.get('username'),
+            'avatar': row.get('profile_photo_url') or url_for('static', filename='assets/default-male-avatar.svg'),
+            'verified': account_is_verified(row),
+            'last_message': (row.get('last_message') or '')[:90],
+            'last_message_at': row.get('last_message_at') or '',
+            'unread_count': row.get('unread_count') or 0,
+            'url': url_for('messages', u=row.get('username')),
+        } for row in conversations],
+    })
+
 
 @app.route('/api/notifications')
 def api_notifications():

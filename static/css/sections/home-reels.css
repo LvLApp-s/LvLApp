@@ -71,38 +71,39 @@
   position: relative;
   border-radius: var(--radius-md);
   overflow: hidden;
-  background: var(--lvl-black);
-  aspect-ratio: 9 / 14;
+  background: var(--lvl-surface-raised);
+  aspect-ratio: 9 / 16;
   width: 100%;
+  max-height: 340px;
+}
+
+/* The frame is the play/pause control now. */
+.home-reel-video-wrap:focus-within {
+  outline: 2px solid var(--lvl-brand);
+  outline-offset: 2px;
 }
 
 .home-reel-video {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   display: block;
   cursor: pointer;
 }
 
-.home-reel-play-btn {
+/* A quiet hint that only appears while the clip is paused. */
+.home-reel-slide:not(.is-playing) .home-reel-video-wrap::after {
+  content: "";
   position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--lvl-black-28);
-  border: none;
-  cursor: pointer;
-  color: var(--lvl-white);
-  transition: background 0.15s;
-}
-
-.home-reel-play-btn:hover {
-  background: var(--lvl-black-48);
-}
-
-.home-reel-play-btn [data-play-icon] {
-  transition: opacity 0.15s;
+  inset: 50% auto auto 50%;
+  width: 0;
+  height: 0;
+  transform: translate(-50%, -50%);
+  border-style: solid;
+  border-width: 11px 0 11px 18px;
+  border-color: transparent transparent transparent var(--lvl-white);
+  filter: drop-shadow(0 2px 6px var(--lvl-black-62));
+  opacity: 0.85;
   pointer-events: none;
 }
 

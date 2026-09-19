@@ -334,6 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initProfileAvatarModal();
     initWebBackButton();
     initSwipeBack();
+    initPopovers();
     initHomeReelPanel();
     initCommunityTimeline();
     initReelsFeed();
@@ -3129,6 +3130,216 @@ document.addEventListener('DOMContentLoaded', () => {
         if (attempt && typeof attempt.catch === 'function') attempt.catch(() => {});
     }
 
+    // --- Popovers ----------------------------------------------------------
+    //
+    // One controller for the account menu, the messages panel and the
+    // notifications panel. Each is positioned from its trigger's bounding box
+    // (the surface is position: fixed), so it is never clipped by the left
+    // rail's own scroll container and behaves the same whether the rail is
+    // expanded or collapsed.
+    //
+    // Exactly one popover is open at a time. Escape and an outside click close
+    // it, and focus returns to the trigger.
+
+    const POPOVER_GAP = 8;
+    let openPopover = null;
+
+    function positionPopover(popover, trigger, placement) {
+        const t = trigger.getBoundingClientRect();
+        const margin = 12;
+
+        // Measure while laid out but not yet painted in.
+        const wasHidden = popover.hidden;
+        if (wasHidden) {
+            popover.style.visibility = 'hidden';
+            popover.hidden = false;
+        }
+        const p = popover.getBoundingClientRect();
+        popover.style.visibility = '';
+
+        let left;
+        let top;
+
+        if (placement === 'below-end') {
+            // Notifications bell: hangs below, right edge aligned to the trigger.
+            top = t.bottom + POPOVER_GAP;
+            left = document.dir === 'rtl' ? t.left : t.right - p.width;
+            popover.style.transformOrigin = 'top right';
+        } else {
+            // Rail popovers: sit beside the rail, bottom aligned to the trigger.
+            top = Math.min(t.bottom, window.innerHeight - margin) - p.height;
+            left = document.dir === 'rtl' ? t.left - p.width - POPOVER_GAP : t.right + POPOVER_GAP;
+            popover.style.transformOrigin = 'bottom left';
+        }
+
+        left = Math.max(margin, Math.min(left, window.innerWidth - p.width - margin));
+        top = Math.max(margin, Math.min(top, window.innerHeight - p.height - margin));
+
+        popover.style.left = `${Math.round(left)}px`;
+        popover.style.top = `${Math.round(top)}px`;
+    }
+
+    function closePopover(immediate) {
+        if (!openPopover) return;
+        const { popover, trigger } = openPopover;
+        openPopover = null;
+        trigger.setAttribute('aria-expanded', 'false');
+        popover.classList.remove('is-open');
+        if (immediate) {
+            popover.hidden = true;
+        } else {
+            window.setTimeout(() => {
+                if (!popover.classList.contains('is-open')) popover.hidden = true;
+            }, 160);
+        }
+    }
+
+    function openPopoverFor(trigger, popover, placement, onOpen) {
+        if (openPopover && openPopover.popover === popover) {
+            closePopover();
+            return;
+        }
+        closePopover(true);
+
+        positionPopover(popover, trigger, placement);
+        trigger.setAttribute('aria-expanded', 'true');
+        openPopover = { popover, trigger, placement };
+        // Only animate in if this popover is still the open one; a scroll or
+        // resize between frames must not leave `is-open` on a hidden element.
+        window.requestAnimationFrame(() => {
+            if (openPopover && openPopover.popover === popover) popover.classList.add('is-open');
+        });
+
+        if (typeof onOpen === 'function') onOpen(popover);
+
+        const focusable = popover.querySelector('a, button, [tabindex]');
+        if (focusable) focusable.focus({ preventScroll: true });
+    }
+
+    function initPopover(triggerSelector, popoverSelector, placement, onOpen) {
+        const trigger = document.querySelector(triggerSelector);
+        const popover = document.querySelector(popoverSelector);
+        if (!trigger || !popover) return;
+
+        trigger.addEventListener('click', (event) => {
+            event.preventDefault();
+            openPopoverFor(trigger, popover, placement, onOpen);
+        });
+    }
+
+    function initPopovers() {
+        initPopover('[data-account-trigger]', '[data-account-menu]', 'rail');
+        initPopover('[data-messages-trigger]', '[data-messages-popover]', 'rail', loadConversations);
+        initPopover('[data-notifications-trigger]', '[data-notifications-popover]', 'below-end', loadNotificationsPopover);
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && openPopover) {
+                const { trigger } = openPopover;
+                closePopover();
+                trigger.focus({ preventScroll: true });
+            }
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!openPopover) return;
+            if (openPopover.popover.contains(event.target)) return;
+            if (openPopover.trigger.contains(event.target)) return;
+            closePopover();
+        });
+
+        // A popover is anchored to its trigger, so follow the trigger rather
+        // than closing -- clicking a trigger can itself scroll the page, and
+        // closing on that would shut the popover the moment it opened.
+        const reanchor = () => {
+            if (!openPopover) return;
+            positionPopover(openPopover.popover, openPopover.trigger, openPopover.placement);
+        };
+        window.addEventListener('resize', reanchor);
+        window.addEventListener('scroll', reanchor, { passive: true, capture: true });
+    }
+
+    function popoverMessage(popover, listSelector, key, fallback) {
+        const list = popover.querySelector(listSelector);
+        if (list) list.innerHTML = `<p class="popover-empty">${escapeHTML(translateUi(key, fallback))}</p>`;
+    }
+
+    function loadConversations(popover) {
+        const list = popover.querySelector('[data-messages-list]');
+        if (!list) return;
+        list.innerHTML = `<p class="popover-loading">${escapeHTML(translateUi('loading', 'Loading…'))}</p>`;
+
+        fetch('/api/conversations?limit=8', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then((res) => res.json())
+            .then((result) => {
+                if (!result.success || !Array.isArray(result.conversations) || !result.conversations.length) {
+                    popoverMessage(popover, '[data-messages-list]', 'messages_empty', 'No conversations yet.');
+                    return;
+                }
+                list.replaceChildren(...result.conversations.map((row) => {
+                    const link = document.createElement('a');
+                    link.className = `popover-row${row.unread_count ? ' is-unread' : ''}`;
+                    link.href = row.url;
+                    link.innerHTML =
+                        `<img class="popover-row-avatar" src="${escapeHTML(row.avatar)}" alt="" aria-hidden="true">` +
+                        `<span class="popover-row-body">` +
+                        `<span class="popover-row-title"><span class="popover-row-name"></span></span>` +
+                        `<span class="popover-row-text"></span></span>` +
+                        (row.unread_count ? '<span class="popover-row-dot" aria-hidden="true"></span>' : '');
+                    link.querySelector('.popover-row-name').textContent = row.display_name;
+                    link.querySelector('.popover-row-text').textContent = row.last_message;
+                    return link;
+                }));
+            })
+            .catch(() => popoverMessage(popover, '[data-messages-list]', 'action_failed', 'Could not load messages.'));
+    }
+
+    function loadNotificationsPopover(popover) {
+        const list = popover.querySelector('[data-notifications-list]');
+        if (!list) return;
+        list.innerHTML = `<p class="popover-loading">${escapeHTML(translateUi('loading', 'Loading…'))}</p>`;
+
+        fetch('/api/notifications?limit=12', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then((res) => res.json())
+            .then((result) => {
+                const rows = Array.isArray(result.notifications) ? result.notifications : [];
+                if (!result.success || !rows.length) {
+                    popoverMessage(popover, '[data-notifications-list]', 'notifications_empty', 'Nothing new yet.');
+                    return;
+                }
+                list.replaceChildren(...rows.map((row) => {
+                    const link = document.createElement('a');
+                    link.className = `popover-row${row.is_read ? '' : ' is-unread'}`;
+                    link.href = row.message_url || row.reel_url || (row.post_id ? `/post/${row.post_id}` : `/profile/${row.actor_username || ''}`);
+                    link.innerHTML =
+                        `<img class="popover-row-avatar" src="${escapeHTML(row.actor_avatar || '')}" alt="" aria-hidden="true">` +
+                        `<span class="popover-row-body">` +
+                        `<span class="popover-row-title"><span class="popover-row-name"></span></span>` +
+                        `<span class="popover-row-text"></span></span>`;
+                    link.querySelector('.popover-row-name').textContent = row.actor_name || translateUi('notif_someone', 'Someone');
+                    link.querySelector('.popover-row-text').textContent = notificationSummary(row);
+                    return link;
+                }));
+            })
+            .catch(() => popoverMessage(popover, '[data-notifications-list]', 'action_failed', 'Could not load alerts.'));
+    }
+
+    function notificationSummary(row) {
+        const byType = {
+            like: translateUi('notif_liked', 'liked your post'),
+            reel_like: translateUi('notif_liked_clip', 'liked your clip'),
+            comment_like: translateUi('notif_liked_comment', 'liked your reply'),
+            comment: translateUi('notif_commented', 'commented on your post'),
+            comment_reply: translateUi('notif_replied', 'replied to you'),
+            reel_comment: translateUi('notif_commented_clip', 'commented on your clip'),
+            repost: translateUi('notif_reposted', 'reposted your post'),
+            follow: translateUi('notif_followed', 'started following you'),
+            friend_request: translateUi('notif_friend_request', 'sent you a friend request'),
+            friend_accept: translateUi('notif_friend_accept', 'accepted your friend request'),
+            message: translateUi('notif_messaged', 'sent you a message'),
+        };
+        return row.content || byType[row.type] || translateUi('notif_update', 'sent an update');
+    }
+
     function initHomeReelPanel() {
         const panel = document.querySelector('[data-home-reel-panel]');
         if (!panel) return;
@@ -3184,7 +3395,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Listeners are bound exactly once per slide, here.
         slides.forEach((slide) => {
             const video = getVideo(slide);
-            const playBtn = slide.querySelector('[data-home-reel-play]');
             const muteBtn = slide.querySelector('[data-home-reel-mute]');
 
             if (video) {
@@ -3214,12 +3424,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 video.addEventListener('click', () => togglePlayback(slide));
-            }
-
-            if (playBtn) {
-                playBtn.addEventListener('click', (event) => {
-                    event.stopPropagation();
-                    togglePlayback(slide);
+                video.addEventListener('keydown', (event) => {
+                    if (event.key === ' ' || event.key === 'Enter') {
+                        event.preventDefault();
+                        togglePlayback(slide);
+                    }
                 });
             }
 

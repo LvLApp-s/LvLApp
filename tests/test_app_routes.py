@@ -2654,14 +2654,19 @@ class AppRouteTests(unittest.TestCase):
         self.assertIn('topbar-search-only', html)
         self.assertIn('class="topbar-search"', html)
         self.assertNotIn('data-web-back', html)
-        self.assertNotIn('class="topbar-actions"', html)
+        # Alerts moved out of the rail and into the top bar.
+        self.assertIn('class="topbar-actions"', html)
+        self.assertIn('data-notifications-trigger', html)
         left_rail_nav = html.split('<nav class="nav-list"', 1)[1].split('</nav>', 1)[0]
         self.assertNotIn('href="/search"', left_rail_nav)
         self.assertNotIn('aria-label="Search"', left_rail_nav)
         self.assertIn('href="/messages"', left_rail_nav)
         self.assertIn('aria-label="Messages"', left_rail_nav)
-        self.assertIn('href="/notifications"', left_rail_nav)
-        self.assertIn('aria-label="Alerts"', left_rail_nav)
+        self.assertNotIn('href="/notifications"', left_rail_nav)
+        self.assertNotIn('aria-label="Alerts"', left_rail_nav)
+        # Settings and Log out live in the account menu now.
+        self.assertNotIn('href="/settings"', left_rail_nav)
+        self.assertNotIn('href="/logout"', left_rail_nav)
         self.assertNotIn('href="/activity"', left_rail_nav)
         self.assertNotIn('aria-label="Activity"', left_rail_nav)
         self.assertNotIn('aria-label="Profile"', left_rail_nav)
@@ -2701,7 +2706,8 @@ class AppRouteTests(unittest.TestCase):
                 has_next=False,
             )
         self.assertIn('data-web-back', search_html)
-        self.assertNotIn('class="topbar-actions"', search_html)
+        # The alerts bell sits in the top bar on every page, search included.
+        self.assertIn('class="topbar-actions"', search_html)
 
     def test_mobile_reels_keep_immersive_video_fit(self):
         css = Path("static/css/sections/reels.css").read_text(encoding="utf-8")
@@ -5984,6 +5990,195 @@ class MigrationTests(unittest.TestCase):
     def test_terms_columns_are_optional_for_existing_accounts(self):
         sql = Path("database/migrations/018_terms_acceptance.sql").read_text(encoding="utf-8").lower()
         self.assertNotIn("not null", sql.split("alter table")[1].split(";")[0])
+
+
+class RailAndPopoverTests(unittest.TestCase):
+    """Rail composition, the account menu and the two data popovers."""
+
+    def setUp(self):
+        zapp.app.config.update(TESTING=True, WTF_CSRF_ENABLED=False)
+        self.client = zapp.app.test_client()
+        self.viewer = {"id": 7, "username": "demo", "display_name": "Demo User",
+                       "profile_photo_url": "", "level": 3}
+
+    def layout(self):
+        with zapp.app.test_request_context("/"):
+            return zapp.render_template("index.html", viewer=self.viewer, posts=[], mode="all",
+                                        highlights=[], page=1, has_next=False)
+
+    def rail(self):
+        html = self.layout()
+        return html.split('<nav class="nav-list"', 1)[1].split('</nav>', 1)[0]
+
+    # --- rail composition --------------------------------------------------
+
+    def test_rail_keeps_only_primary_destinations(self):
+        rail = self.rail()
+        for present in ('href="/"', 'href="/reels"', 'href="/community"',
+                        'href="/messages"', 'href="/bookmarks"'):
+            with self.subTest(present=present):
+                self.assertIn(present, rail)
+
+    def test_settings_notifications_and_logout_left_the_rail(self):
+        rail = self.rail()
+        for absent in ('href="/settings"', 'href="/notifications"', 'href="/logout"'):
+            with self.subTest(absent=absent):
+                self.assertNotIn(absent, rail)
+
+    def test_account_menu_holds_settings_and_logout(self):
+        html = self.layout()
+        menu = html.split('data-account-menu', 1)[1].split('</div>', 1)[0]
+        self.assertIn('data-account-trigger', html)
+        for item in ('/profile/demo', '/settings', '/logout'):
+            with self.subTest(item=item):
+                self.assertIn(item, html.split('id="account-menu"', 1)[1])
+        self.assertIn('role="menu"', html.split('id="account-menu"', 1)[0][-200:] + menu)
+
+    def test_account_row_is_pinned_to_the_bottom_of_the_rail(self):
+        css = Path("static/css/sections/components.css").read_text(encoding="utf-8")
+        block = css.split('.account-row {', 1)[1].split('}', 1)[0]
+        self.assertIn('margin-top: auto', block)
+
+    def test_rail_shows_the_lvl_brand(self):
+        html = self.layout()
+        self.assertIn('class="brand brand-logo"', html)
+        legacy = Path("static/css/sections/legacy-polish.css").read_text(encoding="utf-8")
+        self.assertNotIn('.brand {\n  display: none', legacy)
+
+    # --- top bar -----------------------------------------------------------
+
+    def test_alerts_bell_lives_in_the_top_bar(self):
+        html = self.layout()
+        topbar = html.split('<header class="app-topbar', 1)[1].split('</header>', 1)[0]
+        self.assertIn('data-notifications-trigger', topbar)
+        self.assertIn('data-live-badge="notifications"', topbar)
+        self.assertIn('id="notifications-popover"', topbar)
+        # It sits after the search field, not before it.
+        self.assertLess(topbar.index('class="topbar-search"'), topbar.index('topbar-actions'))
+
+    def test_popovers_start_hidden(self):
+        html = self.layout()
+        for pid in ('account-menu', 'messages-popover', 'notifications-popover'):
+            with self.subTest(popover=pid):
+                tag = html.split(f'id="{pid}"', 1)[1].split('>', 1)[0]
+                self.assertIn('hidden', tag)
+
+    def test_messages_trigger_still_links_to_the_page(self):
+        """Without JS the rail item must still navigate."""
+        rail = self.rail()
+        anchor = rail.split('data-messages-trigger', 1)[0].rsplit('<a', 1)[1]
+        self.assertIn('href="/messages"', anchor)
+
+    def test_clip_panel_has_no_play_button_overlay(self):
+        markup = Path("templates/_home_reel_panel.html").read_text(encoding="utf-8")
+        self.assertNotIn('home-reel-play-btn', markup)
+        self.assertNotIn('data-home-reel-play', markup)
+        # The frame itself is the control and is reachable by keyboard.
+        self.assertIn('tabindex="0"', markup)
+        self.assertIn('role="button"', markup)
+
+
+class ConversationsApiTests(unittest.TestCase):
+    def setUp(self):
+        zapp.app.config.update(TESTING=True, WTF_CSRF_ENABLED=False)
+        self.client = zapp.app.test_client()
+        self.viewer = {"id": 7, "username": "demo", "display_name": "Demo"}
+
+    def fake_supabase(self, messages, users):
+        class Table:
+            def __init__(self, name):
+                self.name = name
+            def select(self, *a, **k): return self
+            def or_(self, *a, **k): return self
+            def in_(self, *a, **k): return self
+            def eq(self, *a, **k): return self
+            def order(self, *a, **k): return self
+            def limit(self, *a, **k): return self
+            def execute(self):
+                return SimpleNamespace(data=messages if self.name == 'messages' else users)
+
+        class Supabase:
+            def table(self, name): return Table(name)
+        return Supabase()
+
+    def test_requires_authentication(self):
+        with patch.object(zapp, "get_current_user", return_value=None):
+            self.assertEqual(self.client.get("/api/conversations").status_code, 401)
+
+    def test_returns_one_row_per_thread_newest_first(self):
+        messages = [
+            {"sender_id": 8, "receiver_id": 7, "content": "hi again", "created_at": "2026-09-19T12:00:00", "is_read": False},
+            {"sender_id": 7, "receiver_id": 8, "content": "older", "created_at": "2026-09-19T11:00:00", "is_read": True},
+            {"sender_id": 9, "receiver_id": 7, "content": "from nine", "created_at": "2026-09-19T10:00:00", "is_read": True},
+        ]
+        users = [
+            {"id": 8, "username": "eight", "display_name": "Eight", "profile_photo_url": "", "is_profile_verified": False},
+            {"id": 9, "username": "nine", "display_name": "Nine", "profile_photo_url": "", "is_profile_verified": True},
+        ]
+        with patch.object(zapp, "get_current_user", return_value=self.viewer), \
+             patch.object(zapp, "supabase", self.fake_supabase(messages, users)), \
+             patch.object(zapp, "blocked_user_ids_for_viewer", return_value=set()), \
+             patch.object(zapp, "unread_message_count", return_value=1):
+            payload = self.client.get("/api/conversations").get_json()
+
+        self.assertTrue(payload["success"])
+        rows = payload["conversations"]
+        self.assertEqual([r["username"] for r in rows], ["eight", "nine"])
+        self.assertEqual(rows[0]["last_message"], "hi again")
+        self.assertEqual(rows[0]["unread_count"], 1)
+        self.assertEqual(rows[1]["unread_count"], 0)
+        self.assertTrue(rows[1]["verified"])
+        self.assertEqual(rows[0]["url"], "/messages?u=eight")
+
+    def test_blocked_users_are_filtered_out(self):
+        messages = [{"sender_id": 8, "receiver_id": 7, "content": "hi", "created_at": "2026-09-19T12:00:00", "is_read": True}]
+        users = [{"id": 8, "username": "eight", "display_name": "Eight", "profile_photo_url": "", "is_profile_verified": False}]
+        with patch.object(zapp, "get_current_user", return_value=self.viewer), \
+             patch.object(zapp, "supabase", self.fake_supabase(messages, users)), \
+             patch.object(zapp, "blocked_user_ids_for_viewer", return_value={8}), \
+             patch.object(zapp, "unread_message_count", return_value=0):
+            payload = self.client.get("/api/conversations").get_json()
+        self.assertEqual(payload["conversations"], [])
+
+    def test_survives_a_database_error(self):
+        class Broken:
+            def table(self, name): raise RuntimeError("down")
+        with patch.object(zapp, "get_current_user", return_value=self.viewer), \
+             patch.object(zapp, "supabase", Broken()), \
+             patch.object(zapp, "unread_message_count", return_value=0):
+            payload = self.client.get("/api/conversations").get_json()
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["conversations"], [])
+
+
+class ClipRailSelectionTests(unittest.TestCase):
+    """The side rail is a discovery surface: random, not newest-first."""
+
+    def clips(self):
+        now = datetime.now(timezone.utc)
+        return [{"id": i, "created_at": (now - timedelta(hours=i)).isoformat(),
+                 "view_count": 0, "like_count": 0} for i in range(30)]
+
+    def test_selection_is_not_newest_first(self):
+        picks = set()
+        with zapp.app.test_request_context("/"):
+            for _ in range(12):
+                chosen = zapp.diversify(self.clips(), 3, lambda r: 1.0, jitter=(0.05, 1.0))
+                picks.add(tuple(c["id"] for c in chosen))
+        self.assertGreater(len(picks), 3)
+        # The three newest are not the answer every time.
+        self.assertNotEqual(picks, {(0, 1, 2)})
+
+    def test_wide_jitter_reaches_deep_into_the_pool(self):
+        seen = set()
+        with zapp.app.test_request_context("/"):
+            for _ in range(25):
+                for clip in zapp.diversify(self.clips(), 3, lambda r: 1.0, jitter=(0.05, 1.0)):
+                    seen.add(clip["id"])
+        self.assertGreater(len(seen), 10)
+
+    def test_trending_keeps_its_narrow_jitter(self):
+        self.assertEqual(zapp.DIVERSIFY_JITTER, (0.88, 1.12))
 
 
 if __name__ == "__main__":

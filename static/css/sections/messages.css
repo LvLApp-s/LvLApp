@@ -915,7 +915,7 @@
     height: 100dvh;
   }
 
-  .app-shell {
+  .app-shell:has(.timeline-messages) {
     display: flex !important;
     flex-direction: column !important;
     width: 100vw !important;
@@ -927,7 +927,8 @@
     margin: 0 !important;
   }
 
-  .left-rail-wrapper, .right-rail-wrapper {
+  .app-shell:has(.timeline-messages) .left-rail-wrapper,
+  .app-shell:has(.timeline-messages) .right-rail-wrapper {
     display: none !important;
   }
 

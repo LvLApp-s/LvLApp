@@ -200,8 +200,9 @@
   /* --- Layout --------------------------------------------------------- */
   --shell-left-expanded: 248px;
   --shell-left-collapsed: 88px;
-  --shell-main: 680px;
-  --shell-right: 320px;
+  --shell-main: 760px;
+  --shell-main-wide: 920px;
+  --shell-right: 350px;
   --mobile-header-height: 52px;
   --mobile-nav-height: 56px;
   --safe-top: env(safe-area-inset-top, 0px);
@@ -327,25 +328,105 @@ a:hover {
 }
 
 /* Layout & Container */
+/* ---------------------------------------------------------------------------
+   App shell.
+
+   THE layout definition. This used to be spread over eleven competing
+   `.app-shell` rules with different max-widths and column templates, which is
+   why the right rail floated ~90px away from the timeline instead of sitting
+   against it. One grid, three columns, defined once:
+
+     rail  |  timeline  |  right rail
+
+   The outer columns are exactly as wide as their content, so the rails always
+   hug the centre column and leftover space stays outside the shell.
+   --------------------------------------------------------------------------- */
+
 .app-shell {
-  display: flex;
+  display: grid;
+  grid-template-columns:
+    var(--shell-left-expanded)
+    minmax(0, var(--shell-main))
+    var(--shell-right);
   justify-content: center;
+  align-items: stretch;
+  width: 100%;
   min-height: 100vh;
-  margin: 0 auto;
+  margin-inline: auto;
+  background: var(--bg-color);
+}
+
+/* No right rail on this page: give the space back to the timeline. */
+.app-shell:not(:has(.right-rail)) {
+  grid-template-columns:
+    var(--shell-left-expanded)
+    minmax(0, var(--shell-main-wide))
+    0;
+}
+
+.left-rail-wrapper,
+.right-rail-wrapper {
+  display: flex;
+  min-width: 0;
+  z-index: var(--z-rail);
 }
 
 .left-rail-wrapper {
-  display: flex;
-  flex-grow: 1;
   justify-content: flex-end;
-  z-index: 20;
 }
 
 .right-rail-wrapper {
-  display: flex;
-  flex-grow: 1;
   justify-content: flex-start;
-  z-index: 20;
+}
+
+.app-shell:not(:has(.right-rail)) .right-rail-wrapper {
+  display: none;
+}
+
+/* Tablet and small laptop: collapse the rail to icons, keep the right rail. */
+@media (max-width: 1279px) {
+  .app-shell,
+  .app-shell:not(:has(.right-rail)) {
+    grid-template-columns:
+      var(--shell-left-collapsed)
+      minmax(0, 1fr)
+      var(--shell-right);
+  }
+
+  .app-shell:not(:has(.right-rail)) {
+    grid-template-columns: var(--shell-left-collapsed) minmax(0, 1fr) 0;
+  }
+
+  .left-rail,
+  .left-rail.menu-open,
+  .left-rail:not(.menu-open) {
+    width: var(--shell-left-collapsed);
+  }
+}
+
+/* Narrow laptop / split screen: drop the right rail entirely. */
+@media (max-width: 1099px) {
+  /* Cap the feed so it stays readable once the right rail is gone. */
+  .app-shell,
+  .app-shell:not(:has(.right-rail)) {
+    grid-template-columns:
+      var(--shell-left-collapsed)
+      minmax(0, var(--shell-main-wide))
+      0;
+  }
+
+  .right-rail-wrapper {
+    display: none;
+  }
+}
+
+/* Phone: single column with room for the fixed bottom navigation. */
+@media (max-width: 767px) {
+  .app-shell {
+    display: block;
+    max-width: none;
+    padding-bottom: var(--mobile-nav-clearance);
+  }
 }
 
 .left-rail {
@@ -516,8 +597,8 @@ a:hover {
 }
 
 .timeline {
-  width: var(--shell-main);
-  border-right: 1px solid var(--border-color);
+  min-width: 0;
+  border-inline-end: 1px solid var(--border-color);
   min-height: 100vh;
   background-color: var(--bg-color);
 }

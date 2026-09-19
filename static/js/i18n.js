@@ -2064,3 +2064,64 @@ Object.assign(TRANSLATIONS.ar, {
   verification_status_pending: "قيد المراجعة",
   verification_status_rejected: "مرفوض"
 });
+
+/* --- Rail account menu, messages and notification popovers --------------- */
+
+Object.assign(TRANSLATIONS.en, {
+  nav_account_menu: "Account menu",
+  loading: "Loading…",
+  see_all: "See all",
+  messages_empty: "No conversations yet.",
+  notifications_empty: "Nothing new yet.",
+  notif_liked: "liked your post",
+  notif_liked_clip: "liked your clip",
+  notif_liked_comment: "liked your reply",
+  notif_commented: "commented on your post",
+  notif_replied: "replied to you",
+  notif_commented_clip: "commented on your clip",
+  notif_reposted: "reposted your post",
+  notif_followed: "started following you",
+  notif_friend_request: "sent you a friend request",
+  notif_friend_accept: "accepted your friend request",
+  notif_messaged: "sent you a message"
+});
+
+Object.assign(TRANSLATIONS.tr, {
+  nav_account_menu: "Hesap menüsü",
+  loading: "Yükleniyor…",
+  see_all: "Tümünü gör",
+  messages_empty: "Henüz sohbet yok.",
+  notifications_empty: "Yeni bir şey yok.",
+  notif_liked: "gönderini beğendi",
+  notif_liked_clip: "klibini beğendi",
+  notif_liked_comment: "yanıtını beğendi",
+  notif_commented: "gönderine yorum yaptı",
+  notif_replied: "sana yanıt verdi",
+  notif_commented_clip: "klibine yorum yaptı",
+  notif_reposted: "gönderini yeniden paylaştı",
+  notif_followed: "seni takip etmeye başladı",
+  notif_friend_request: "sana arkadaşlık isteği gönderdi",
+  notif_friend_accept: "arkadaşlık isteğini kabul etti",
+  notif_messaged: "sana mesaj gönderdi"
+});
+
+Object.assign(TRANSLATIONS.ar, {
+  nav_account_menu: "قائمة الحساب",
+  loading: "جارٍ التحميل…",
+  see_all: "عرض الكل",
+  messages_empty: "لا توجد محادثات بعد.",
+  notifications_empty: "لا جديد بعد.",
+  notif_liked: "أعجب بمنشورك",
+  notif_liked_clip: "أعجب بمقطعك",
+  notif_liked_comment: "أعجب بردّك",
+  notif_commented: "علّق على منشورك",
+  notif_replied: "ردّ عليك",
+  notif_commented_clip: "علّق على مقطعك",
+  notif_reposted: "أعاد نشر منشورك",
+  notif_followed: "بدأ بمتابعتك",
+  notif_friend_request: "أرسل لك طلب صداقة",
+  notif_friend_accept: "قبل طلب صداقتك",
+  notif_messaged: "أرسل لك رسالة"
+});
+
+Object.assign(TRANSLATIONS.ar, { notif_update: "أرسل تحديثًا" });

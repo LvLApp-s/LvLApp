@@ -417,9 +417,6 @@
 }
 
 @media (max-width: 1180px) and (orientation: landscape) {
-  .timeline-messages {
-    max-width: none;
-  }
 
   .messages-container {
     display: grid;
@@ -543,11 +540,6 @@
 
   .left-rail-wrapper {
     display: none;
-  }
-
-  .timeline {
-    width: 100%;
-    max-width: none;
   }
 
   .community-detail,
