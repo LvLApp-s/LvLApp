@@ -33,7 +33,7 @@
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: transparent;
   transition: background 0.15s;
 }
@@ -55,7 +55,7 @@
 .lb-avatar {
   width: 40px;
   height: 40px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   object-fit: cover;
   flex-shrink: 0;
   border: 2px solid var(--border-color);
@@ -93,7 +93,7 @@
   align-items: center;
   justify-content: center;
   padding: 2px 8px;
-  border-radius: 20px;
+  border-radius: var(--radius-2xl);
   font-size: 11px;
   font-weight: 700;
   color: var(--lvl-black);
@@ -112,7 +112,7 @@
   align-items: center;
   justify-content: center;
   padding: 5px 14px;
-  border-radius: 20px;
+  border-radius: var(--radius-2xl);
   border: 1px solid var(--border-color);
   background: transparent;
   color: var(--text-primary);

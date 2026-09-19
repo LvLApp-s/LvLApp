@@ -367,7 +367,7 @@
 }
 
 .auth-form button[type="submit"]:hover {
-  background-color: var(--lvl-surface-10);
+  background-color: var(--lvl-surface-inverse);
 }
 
 .auth-helper-link {

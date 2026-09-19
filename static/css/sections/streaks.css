@@ -6,7 +6,7 @@
   gap: 4px;
   font-size: 0.78rem;
   font-weight: 600;
-  color: #fbbf24;
+  color: var(--lvl-warning);
   background: rgba(245, 158, 11, 0.12);
   border: 1px solid rgba(245, 158, 11, 0.32);
   border-radius: var(--radius-pill);
@@ -70,7 +70,7 @@
 .notif-high-five-svg {
   display: inline-block;
   vertical-align: middle;
-  color: #fbbf24;
+  color: var(--lvl-warning);
   animation: highFiveGentleWave 4s ease-in-out infinite;
   filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.45));
 }

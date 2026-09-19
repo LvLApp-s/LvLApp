@@ -24,13 +24,13 @@
   border-radius: var(--radius-sm);
   background:
     radial-gradient(circle at 88% 18%, var(--lvl-primary-soft-16), transparent 26%),
-    linear-gradient(135deg, var(--lvl-surface-7), var(--lvl-surface-4));
+    linear-gradient(135deg, var(--lvl-surface-overlay), var(--lvl-surface-raised));
 }
 
 .community-detail-hero {
   background:
     radial-gradient(circle at 86% 18%, color-mix(in srgb, var(--community-color, var(--accent-color)) 42%, transparent), transparent 28%),
-    linear-gradient(135deg, color-mix(in srgb, var(--community-color, var(--accent-color)) 22%, var(--lvl-surface-22)), var(--lvl-surface-4) 76%);
+    linear-gradient(135deg, color-mix(in srgb, var(--community-color, var(--accent-color)) 22%, var(--lvl-surface-overlay)), var(--lvl-surface-raised) 76%);
 }
 
 .community-detail-hero h1 {
@@ -50,7 +50,7 @@
 .community-members-panel {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  background: var(--lvl-surface-7);
+  background: var(--lvl-surface-overlay);
 }
 
 .community-card small,
@@ -296,7 +296,7 @@
   height: 72px;
   border-radius: var(--radius-md);
   object-fit: cover;
-  background: var(--surface-panel-soft, var(--lvl-surface-7));
+  background: var(--surface-panel-soft, var(--lvl-surface-overlay));
 }
 
 .image-upload-preview button {
@@ -313,7 +313,7 @@
   overflow: hidden;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  background: var(--surface-panel-soft, var(--lvl-surface-7));
+  background: var(--surface-panel-soft, var(--lvl-surface-overlay));
 }
 
 .post-media img {
@@ -346,7 +346,7 @@
   overflow: hidden;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-2xl);
-  background: var(--surface-panel, var(--lvl-surface-24));
+  background: var(--surface-panel, var(--lvl-surface-raised));
 }
 
 .profile-preview-banner {
@@ -360,7 +360,7 @@
   position: relative;
   width: 72px;
   height: 72px;
-  border: 4px solid var(--surface-panel, var(--lvl-surface-24));
+  border: 4px solid var(--surface-panel, var(--lvl-surface-raised));
 }
 
 .profile-preview-card p {
@@ -396,7 +396,7 @@
   padding: 12px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  background: var(--surface-panel-soft, var(--lvl-surface-7));
+  background: var(--surface-panel-soft, var(--lvl-surface-overlay));
   cursor: pointer;
 }
 

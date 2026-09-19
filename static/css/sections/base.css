@@ -1,46 +1,50 @@
 /* Design tokens, reset, shell layout */
 :root {
+  /* ---------------------------------------------------------------------
+     LvL design tokens.
+
+     One source of truth for colour, spacing, geometry, motion and layout.
+     Anything a future native app would also need lives here; nothing visual
+     should be hard-coded in a template or a section stylesheet.
+     --------------------------------------------------------------------- */
+
+  /* --- Brand ---------------------------------------------------------- */
+  /* Sampled from the blue arrow in static/assets/icon-512.png. Used
+     selectively: active navigation, links, focus rings, the verified badge,
+     progress fills. Never as a blanket surface colour. */
+  --lvl-brand: #038cfe;
+  --lvl-brand-hover: #2a9dff;
+  --lvl-brand-soft: rgba(3, 140, 254, 0.14);
+  --lvl-brand-softer: rgba(3, 140, 254, 0.08);
+  --lvl-brand-border: rgba(3, 140, 254, 0.38);
+
+  /* --- Neutrals ------------------------------------------------------- */
   --lvl-black: #000000;
   --lvl-white: #ffffff;
   --lvl-text-primary: #e7e9ea;
-  --lvl-text-secondary: #71767b;
+  --lvl-text-secondary: #8b949c;
+  --lvl-text-tertiary: #71767b;
   --lvl-text-inverse: #0f1419;
-  --lvl-border: #2f3336;
+  --lvl-border: #23272b;
   --lvl-border-strong: #333639;
-  --lvl-surface-1: #020304;
-  --lvl-surface-2: #030405;
-  --lvl-surface-3: #05070a;
-  --lvl-surface-4: #07090b;
-  --lvl-surface-5: #080a0d;
-  --lvl-surface-6: #0b1118;
-  --lvl-surface-7: #111418;
-  --lvl-surface-8: #16181c;
-  --lvl-surface-9: #202327;
-  --lvl-surface-10: #d7d9da;
-  --lvl-surface-11: #171b20;
-  --lvl-surface-12: #12161b;
-  --lvl-surface-13: #15191f;
-  --lvl-surface-14: #07121b;
-  --lvl-surface-15: #0a1722;
-  --lvl-surface-16: #0e1217;
-  --lvl-surface-17: #11151a;
-  --lvl-surface-18: #0a0d12;
-  --lvl-surface-19: #111827;
-  --lvl-surface-20: #180f24;
-  --lvl-surface-21: #0c1117;
-  --lvl-surface-22: #101419;
-  --lvl-surface-23: #111111;
-  --lvl-surface-24: #070d14;
-  --lvl-surface-25: #0a1420;
-  --lvl-surface-26: #0b1724;
-  --lvl-surface-27: #06111c;
-  --lvl-surface-28: #0e1620;
-  --lvl-surface-29: #08111f;
-  --lvl-surface-30: #1a1030;
-  --lvl-surface-31: #141004;
-  --lvl-surface-32: #280b18;
+
+  /* --- Surfaces ------------------------------------------------------- */
+  /* Four steps, not thirty-two. base -> raised -> overlay -> hover. */
+  --lvl-surface-base: #000000;
+  --lvl-surface-raised: #0b0d10;
+  --lvl-surface-overlay: #14171a;
+  --lvl-surface-hover: #1c2024;
+  --lvl-surface-inverse: #d7d9da;
   --lvl-light-surface: #f7f9f9;
   --lvl-app-icon-ink: #050505;
+
+  /* Progression tints. Reserved for XP / level / reward moments only. */
+  --lvl-tint-cool: #0e1420;
+  --lvl-tint-violet: #1a1030;
+  --lvl-tint-amber: #1a1206;
+  --lvl-tint-crimson: #240a14;
+
+  /* --- Semantic colour ------------------------------------------------ */
   --lvl-primary: #e7e9ea;
   --lvl-primary-hover: #d7d9da;
   --lvl-female: #e7e9ea;
@@ -48,15 +52,22 @@
   --lvl-danger: #f4212e;
   --lvl-danger-hover: #dc1f29;
   --lvl-warning: #f5c542;
+  --lvl-scrollbar: #536471;
+
+  /* Progression accents (levels, badges, streaks). */
   --lvl-orange: #f97316;
   --lvl-purple: #8b5cf6;
   --lvl-cyan: #38bdf8;
   --lvl-blue-strong: #3b82f6;
   --lvl-deep-blue: #0066ff;
   --lvl-purple-strong: #a855f7;
-  --lvl-scrollbar: #536471;
-  --lvl-primary-soft: rgba(231, 233, 234, 0.1);
+  --lvl-streak: #ff6b35;
+  --lvl-streak-soft: rgba(255, 107, 53, 0.12);
+  --lvl-streak-border: rgba(255, 107, 53, 0.25);
+
+  /* --- Alpha ramps ---------------------------------------------------- */
   --lvl-primary-softer: rgba(231, 233, 234, 0.05);
+  --lvl-primary-soft: rgba(231, 233, 234, 0.1);
   --lvl-primary-soft-12: rgba(231, 233, 234, 0.12);
   --lvl-primary-soft-15: rgba(231, 233, 234, 0.15);
   --lvl-primary-soft-16: rgba(231, 233, 234, 0.16);
@@ -72,15 +83,16 @@
   --lvl-primary-solid-96: rgba(231, 233, 234, 0.96);
   --lvl-female-soft: rgba(231, 233, 234, 0.1);
   --lvl-female-soft-38: rgba(231, 233, 234, 0.38);
-  --lvl-success-soft: rgba(0, 186, 124, 0.12);
   --lvl-success-soft-10: rgba(0, 186, 124, 0.1);
+  --lvl-success-soft: rgba(0, 186, 124, 0.12);
   --lvl-success-border: rgba(0, 186, 124, 0.45);
-  --lvl-danger-soft: rgba(244, 33, 46, 0.12);
   --lvl-danger-softer: rgba(244, 33, 46, 0.07);
   --lvl-danger-soft-10: rgba(244, 33, 46, 0.1);
-  --lvl-danger-border: rgba(244, 33, 46, 0.45);
+  --lvl-danger-soft: rgba(244, 33, 46, 0.12);
   --lvl-danger-border-light: rgba(244, 33, 46, 0.42);
+  --lvl-danger-border: rgba(244, 33, 46, 0.45);
   --lvl-danger-border-strong: rgba(244, 33, 46, 0.64);
+  --lvl-warning-soft: rgba(245, 197, 66, 0.12);
   --lvl-warning-soft-34: rgba(245, 197, 66, 0.34);
   --lvl-warning-soft-46: rgba(245, 197, 66, 0.46);
   --lvl-warning-border: rgba(245, 197, 66, 0.55);
@@ -106,25 +118,8 @@
   --lvl-white-18: rgba(255, 255, 255, 0.18);
   --lvl-white-22: rgba(255, 255, 255, 0.22);
   --lvl-white-75: rgba(255, 255, 255, 0.75);
-  --lvl-streak: #ff6b35;
-  --lvl-streak-soft: rgba(255, 107, 53, 0.12);
-  --lvl-streak-border: rgba(255, 107, 53, 0.25);
-  --provider-google: #4285f4;
-  --provider-facebook: #1877f2;
-  --provider-microsoft: #f25022;
-  --provider-twitter: #1d9bf0;
-  --provider-gitlab: #fc6d26;
-  --provider-bitbucket: #2684ff;
-  --provider-figma: #a259ff;
-  --provider-kakao: #fee500;
-  --provider-keycloak: #4d9de0;
-  --provider-linkedin: #0a66c2;
-  --provider-slack: #36c5f0;
-  --provider-spotify: #1db954;
-  --provider-twitch: #9146ff;
-  --provider-workos: #7c3aed;
-  --provider-zoom: #2d8cff;
   --lvl-black-08: rgba(0, 0, 0, 0.08);
+  --lvl-black-20: rgba(0, 0, 0, 0.2);
   --lvl-black-28: rgba(0, 0, 0, 0.28);
   --lvl-black-32: rgba(0, 0, 0, 0.32);
   --lvl-black-34: rgba(0, 0, 0, 0.34);
@@ -142,6 +137,25 @@
   --lvl-black-85: rgba(0, 0, 0, 0.85);
   --lvl-black-86: rgba(0, 0, 0, 0.86);
   --lvl-black-94: rgba(0, 0, 0, 0.94);
+
+  /* --- Social provider marks (brand-owned, not part of the LvL palette) - */
+  --provider-google: #4285f4;
+  --provider-facebook: #1877f2;
+  --provider-microsoft: #f25022;
+  --provider-twitter: #1d9bf0;
+  --provider-gitlab: #fc6d26;
+  --provider-bitbucket: #2684ff;
+  --provider-figma: #a259ff;
+  --provider-kakao: #fee500;
+  --provider-keycloak: #4d9de0;
+  --provider-linkedin: #0a66c2;
+  --provider-slack: #36c5f0;
+  --provider-spotify: #1db954;
+  --provider-twitch: #9146ff;
+  --provider-workos: #7c3aed;
+  --provider-zoom: #2d8cff;
+
+  /* --- Geometry ------------------------------------------------------- */
   --radius-xs: 4px;
   --radius-sm: 8px;
   --radius-icon: 9px;
@@ -152,6 +166,7 @@
   --radius-bubble: 24px;
   --radius-pill: 9999px;
   --radius-round: 50%;
+
   --space-1: 4px;
   --space-2: 6px;
   --space-3: 8px;
@@ -164,11 +179,16 @@
   --space-10: 24px;
   --space-11: 28px;
   --space-12: 32px;
+
+  /* --- Controls ------------------------------------------------------- */
   --control-xs: 32px;
   --control-sm: 38px;
   --control-md: 44px;
   --control-lg: 48px;
   --control-xl: 52px;
+  /* Minimum comfortable touch area; every tappable control meets this. */
+  --touch-target: 44px;
+
   --icon-sm: 24px;
   --swatch-md: 32px;
   --badge-height-sm: 24px;
@@ -176,20 +196,59 @@
   --avatar-sm: 40px;
   --avatar-md: 48px;
   --avatar-lg: 64px;
+
+  /* --- Layout --------------------------------------------------------- */
   --shell-left-expanded: 248px;
   --shell-left-collapsed: 88px;
   --shell-main: 680px;
   --shell-right: 320px;
+  --mobile-header-height: 52px;
+  --mobile-nav-height: 56px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  /* Total space a fixed bottom element must clear on mobile. */
+  --mobile-nav-clearance: calc(var(--mobile-nav-height) + var(--safe-bottom));
+
+  /* --- Elevation ------------------------------------------------------ */
+  --shadow-sm: 0 1px 2px var(--lvl-black-32);
+  --shadow-md: 0 8px 24px var(--lvl-black-45);
+  --shadow-lg: 0 18px 48px var(--lvl-black-58);
+  --overlay-scrim: var(--lvl-black-62);
+
+  /* --- Motion --------------------------------------------------------- */
+  /* Interface transitions stay in the 150-250ms band with one easing pair. */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --duration-slow: 250ms;
+  --transition-base: var(--duration-base) var(--ease-standard);
+
+  /* --- Stacking ------------------------------------------------------- */
+  --z-rail: 20;
+  --z-sticky: 40;
+  --z-bottom-nav: 60;
+  --z-drawer: 80;
+  --z-modal: 100;
+  --z-toast: 120;
+  --z-alert: 140;
+
+  /* --- Aliases used throughout the sections --------------------------- */
   --line-default: 1px solid var(--border-color);
-  --bg-color: var(--lvl-black);
+  --bg-color: var(--lvl-surface-base);
   --text-primary: var(--lvl-text-primary);
   --text-secondary: var(--lvl-text-secondary);
+  --text-muted: var(--lvl-text-tertiary);
   --border-color: var(--lvl-border);
   --accent-color: var(--lvl-primary);
   --accent-hover: var(--lvl-primary-hover);
-  --hover-bg: color-mix(in srgb, var(--lvl-text-primary) 10%, transparent);
+  --brand-color: var(--lvl-brand);
+  --hover-bg: var(--lvl-white-05);
   --error-color: var(--lvl-danger);
   --success-color: var(--lvl-success);
+  --warning-color: var(--lvl-warning);
 }
 
 * {

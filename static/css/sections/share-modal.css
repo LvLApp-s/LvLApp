@@ -93,7 +93,7 @@
 }
 
 .share-search-input:focus {
-  border-color: #38bdf8 !important;
+  border-color: var(--lvl-cyan) !important;
   background: rgba(255, 255, 255, 0.12) !important;
 }
 
@@ -112,7 +112,7 @@
 }
 
 .close-share-modal:hover {
-  color: #fff !important;
+  color: var(--lvl-white) !important;
   background: rgba(255, 255, 255, 0.15) !important;
 }
 
@@ -137,7 +137,7 @@
 
 .share-friends-list::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.2) !important;
-  border-radius: 9999px !important;
+  border-radius: var(--radius-pill) !important;
 }
 
 .share-friends-list::-webkit-scrollbar-thumb:hover {
@@ -149,7 +149,7 @@
   align-items: center !important;
   justify-content: space-between !important;
   padding: 8px 6px !important;
-  border-radius: 10px !important;
+  border-radius: var(--radius-md) !important;
   transition: background 0.15s ease !important;
 }
 
@@ -197,8 +197,8 @@
 }
 
 .share-send-btn {
-  background: #0284c7 !important;
-  color: #ffffff !important;
+  background: var(--lvl-brand) !important;
+  color: var(--lvl-white) !important;
   border: none !important;
   border-radius: var(--radius-pill) !important;
   padding: 6px 16px !important;
@@ -210,7 +210,7 @@
 }
 
 .share-send-btn:hover {
-  background: #0ea5e9 !important;
+  background: var(--lvl-brand-hover) !important;
   transform: scale(1.05) !important;
   box-shadow: 0 0 10px rgba(14, 165, 233, 0.5) !important;
 }

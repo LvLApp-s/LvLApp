@@ -216,7 +216,7 @@
   padding: 14px;
   border: 1px solid var(--lvl-white-16);
   border-radius: var(--radius-xl);
-  background: color-mix(in srgb, var(--lvl-surface-5) 94%, transparent);
+  background: color-mix(in srgb, var(--lvl-surface-raised) 94%, transparent);
   color: var(--text-primary);
   box-shadow: 0 18px 60px var(--lvl-black-48);
   backdrop-filter: blur(18px);

@@ -133,7 +133,7 @@
   border: 1px solid rgba(245, 158, 11, 0.35);
   border-radius: var(--radius-round);
   background: rgba(245, 158, 11, 0.08);
-  color: #fbbf24;
+  color: var(--lvl-warning);
   cursor: pointer;
   font: inherit;
   padding: 0;
@@ -157,9 +157,9 @@
 
 .profile-high-five-button:hover,
 .profile-high-five-button:focus-visible {
-  border-color: #f59e0b;
+  border-color: var(--lvl-warning);
   background: rgba(245, 158, 11, 0.2);
-  color: #fef08a;
+  color: var(--lvl-warning);
   transform: translateY(-2px) scale(1.08);
   box-shadow: 0 4px 18px rgba(245, 158, 11, 0.35);
 }
@@ -194,9 +194,9 @@
   position: absolute;
   width: 4px;
   height: 4px;
-  border-radius: 50%;
-  background: #fef08a;
-  box-shadow: 0 0 6px #f59e0b;
+  border-radius: var(--radius-round);
+  background: var(--lvl-warning);
+  box-shadow: 0 0 6px var(--lvl-warning);
 }
 
 .high-five-sparkles .s1 {
@@ -316,22 +316,22 @@
 
 .message-bubble {
   padding: 8px 14px;
-  border-radius: 18px;
+  border-radius: var(--radius-2xl);
   font-size: 14.5px;
   line-height: 1.45;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
 }
 
 .own .message-bubble {
-  background: linear-gradient(135deg, #0084ff, #0066ee) !important;
-  color: #ffffff !important;
+  background: linear-gradient(135deg, var(--lvl-brand), var(--lvl-brand-hover)) !important;
+  color: var(--lvl-white) !important;
   border-bottom-right-radius: 4px;
 }
 
 .message-bubble-wrapper:not(.own) .message-bubble {
-  background: #252538 !important;
+  background: var(--lvl-surface-overlay) !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  color: #f0f2f5 !important;
+  color: var(--lvl-text-primary) !important;
   border-bottom-left-radius: 4px;
 }
 
@@ -345,14 +345,14 @@
   background:
     radial-gradient(circle at 18% 22%, var(--lvl-cyan-soft-42), transparent 26%),
     radial-gradient(circle at 78% 18%, var(--lvl-purple-strong-soft-40), transparent 30%),
-    linear-gradient(135deg, var(--lvl-surface-29), var(--lvl-surface-30) 72%);
+    linear-gradient(135deg, var(--lvl-surface-raised), var(--lvl-tint-violet) 72%);
 }
 
 .profile-banner.level-5 {
   background:
     radial-gradient(circle at 20% 20%, var(--lvl-warning-soft-46), transparent 24%),
     radial-gradient(circle at 82% 78%, var(--lvl-female-soft-38), transparent 30%),
-    linear-gradient(135deg, var(--lvl-surface-31), var(--lvl-surface-32) 72%);
+    linear-gradient(135deg, var(--lvl-tint-amber), var(--lvl-tint-crimson) 72%);
 }
 
 .profile-banner.level-6 {
@@ -360,7 +360,7 @@
     radial-gradient(circle at 16% 26%, var(--lvl-purple-strong-soft-40), transparent 26%),
     radial-gradient(circle at 82% 18%, var(--lvl-cyan-soft-42), transparent 30%),
     radial-gradient(circle at 72% 82%, var(--lvl-warning-soft-34), transparent 24%),
-    linear-gradient(135deg, var(--lvl-surface-30), var(--lvl-surface-29) 72%);
+    linear-gradient(135deg, var(--lvl-tint-violet), var(--lvl-surface-raised) 72%);
 }
 
 .profile-banner.level-7 {
@@ -368,7 +368,7 @@
     radial-gradient(circle at 18% 22%, var(--lvl-warning-soft-46), transparent 24%),
     radial-gradient(circle at 82% 18%, var(--lvl-purple-strong-soft-40), transparent 26%),
     radial-gradient(circle at 70% 84%, var(--lvl-cyan-soft-42), transparent 28%),
-    linear-gradient(135deg, var(--lvl-surface-31), var(--lvl-surface-32) 74%);
+    linear-gradient(135deg, var(--lvl-tint-amber), var(--lvl-tint-crimson) 74%);
 }
 
 .checkbox-row {
@@ -576,78 +576,4 @@
     width: auto;
     align-items: center;
   }
-}
-
-/* ── App Toasts Styling ── */
-.flash:not(.app-toast) {
-  position: relative !important;
-  top: auto !important;
-  left: auto !important;
-  transform: none !important;
-  width: 100% !important;
-  margin: 16px auto !important;
-  box-shadow: none !important;
-  z-index: 1 !important;
-  text-align: left !important;
-}
-
-.app-toast {
-  position: fixed !important;
-  z-index: 9999 !important;
-  left: 50% !important;
-  top: calc(24px + (var(--flash-index, 0) * 64px)) !important;
-  transform: translateX(-50%) !important;
-  width: max-content !important;
-  min-width: 260px !important;
-  max-width: 90vw !important;
-  padding: 10px 18px !important;
-  border-radius: var(--radius-pill) !important;
-  font-size: 13px !important;
-  font-weight: 600 !important;
-  text-align: left !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4) !important;
-  cursor: pointer !important;
-  backdrop-filter: blur(10px) !important;
-  -webkit-backdrop-filter: blur(10px) !important;
-  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-@media (min-width: 768px) {
-  .app-toast {
-    left: auto !important;
-    right: 24px !important;
-    transform: none !important;
-  }
-  .app-toast.is-hiding {
-    transform: translateY(-6px) !important;
-    opacity: 0 !important;
-  }
-  [dir="rtl"] .app-toast {
-    right: auto !important;
-    left: 24px !important;
-  }
-}
-
-.app-toast.success {
-  background: var(--lvl-success-soft) !important;
-  border: 1px solid var(--lvl-success-border) !important;
-  color: var(--lvl-success-text-soft) !important;
-}
-.app-toast.error {
-  background: var(--lvl-danger-soft) !important;
-  border: 1px solid var(--lvl-danger-border) !important;
-  color: var(--lvl-danger-text-soft) !important;
-}
-.app-toast.info {
-  background: var(--lvl-primary-soft-18) !important;
-  border: 1px solid var(--lvl-primary-border) !important;
-  color: var(--lvl-primary-text-soft) !important;
-}
-.app-toast.warning {
-  background: var(--lvl-warning-soft-34) !important;
-  border: 1px solid var(--lvl-warning-border) !important;
-  color: var(--lvl-warning) !important;
 }

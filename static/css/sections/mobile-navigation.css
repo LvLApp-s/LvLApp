@@ -298,10 +298,6 @@
   flex-shrink: 0;
 }
 
-.flash.error {
-  color: var(--lvl-white);
-}
-
 .profile-avatar-btn {
   border-radius: var(--radius-round);
 }

@@ -26,7 +26,7 @@
 
 .search-page-form input {
   width: 100%;
-  background-color: var(--lvl-surface-9);
+  background-color: var(--lvl-surface-hover);
   border: 1px solid transparent;
   color: var(--text-primary);
   padding: 10px 12px 10px 42px;

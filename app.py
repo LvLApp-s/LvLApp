@@ -198,7 +198,7 @@ ATTACHMENT_CONTENT_TYPES = {
     'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'txt': 'text/plain',
 }
-ASSET_VERSION = "135"
+ASSET_VERSION = "136"
 HOME_REEL_PREVIEW_LIMIT = 12
 HOME_MEDIA_PREVIEW_LIMIT = 12
 
@@ -5176,7 +5176,7 @@ def setup_health():
     viewer = get_current_user()
     if not viewer:
         return redirect(url_for('auth'))
-    if not admin_session_is_valid() and not app.debug:
+    if not admin_session_is_valid() and not app.config.get("DEBUG"):
         flash("That page is only available to administrators.", "error")
         return redirect(url_for('settings'))
     return render_template('setup_health.html',
@@ -6104,6 +6104,7 @@ def profile(username):
         if profile_hidden_by_safety:
             stats = {'following': 0, 'followers': 0, 'friends': 0, 'posts': 0, 'comments': 0}
             posts = []
+            reels = []
         else:
             try:
                 posts_count = supabase.table('posts').select('id', count='exact').eq('user_id', profile_user['id']).eq('status', 'published').is_('deleted_at', 'null').execute()

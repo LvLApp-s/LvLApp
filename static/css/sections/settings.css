@@ -2,9 +2,9 @@
 
 /* ── Cards ── */
 .settings-card {
-  background: var(--lvl-surface-2);
+  background: var(--lvl-surface-raised);
   border: 1px solid var(--border-color);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 
@@ -66,7 +66,7 @@
 .profile-identity-avatar {
   width: 80px;
   height: 80px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   border: 3px solid var(--border-color);
   object-fit: cover;
 }
@@ -77,14 +77,14 @@
   right: 2px;
   width: 24px;
   height: 24px;
-  background: var(--lvl-primary, #1DA1F2);
-  border-radius: 50%;
+  background: var(--lvl-primary);
+  border-radius: var(--radius-round);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #fff;
-  border: 2px solid var(--lvl-surface-2);
+  color: var(--lvl-white);
+  border: 2px solid var(--lvl-surface-raised);
 }
 
 .profile-identity-info {
@@ -149,7 +149,7 @@
   gap: 8px;
   padding: 24px 16px;
   border: 2px dashed var(--border-color);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   transition: border-color 0.2s, background 0.2s;
   text-align: center;
@@ -293,8 +293,8 @@
 .toggle-knob {
   position: absolute;
   inset: 0;
-  background: var(--lvl-surface-5);
-  border-radius: 13px;
+  background: var(--lvl-surface-raised);
+  border-radius: var(--radius-lg);
   transition: 0.2s;
 }
 
@@ -305,14 +305,14 @@
   left: 3px;
   width: 20px;
   height: 20px;
-  background: #fff;
-  border-radius: 50%;
+  background: var(--lvl-white);
+  border-radius: var(--radius-round);
   transition: 0.2s;
   box-shadow: 0 1px 4px rgba(0,0,0,0.3);
 }
 
 .toggle-switch input:checked + .toggle-knob {
-  background: var(--lvl-primary, #1DA1F2);
+  background: var(--lvl-primary);
 }
 
 .toggle-switch input:checked + .toggle-knob::after {
@@ -347,8 +347,8 @@
 .lang-btn[aria-pressed="true"],
 .lang-btn.active {
   background: transparent;
-  border-color: var(--accent-color, #1DA1F2);
-  color: var(--accent-color, #1DA1F2);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
   font-weight: 700;
 }
 
@@ -511,7 +511,7 @@
   padding: 12px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  background: var(--lvl-surface-3);
+  background: var(--lvl-surface-raised);
   color: var(--text-primary);
   font: inherit;
 }
@@ -525,7 +525,7 @@
   padding: 20px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  background: var(--lvl-surface-2);
+  background: var(--lvl-surface-raised);
 }
 
 .form-card-spaced {
@@ -653,7 +653,7 @@
   padding: 164px 18px 18px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  background: linear-gradient(180deg, var(--lvl-surface-5), var(--lvl-black));
+  background: linear-gradient(180deg, var(--lvl-surface-raised), var(--lvl-black));
 }
 
 .settings-container .profile-preview-banner {
@@ -663,7 +663,7 @@
   background:
     radial-gradient(circle at 15% 20%, var(--profile-preview-color, var(--lvl-primary)), transparent 34%),
     linear-gradient(135deg, var(--lvl-white-08), transparent 55%),
-    var(--lvl-surface-8);
+    var(--lvl-surface-overlay);
 }
 
 .settings-container .profile-preview-avatar {
@@ -723,7 +723,7 @@
 }
 
 .primary-button:hover {
-  background-color: var(--lvl-surface-10);
+  background-color: var(--lvl-surface-inverse);
 }
 
 .primary-button.small,

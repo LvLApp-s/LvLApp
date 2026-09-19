@@ -150,7 +150,7 @@
 
 .topbar-search:focus-within {
   border-color: var(--accent-color);
-  background: var(--lvl-surface-5);
+  background: var(--lvl-surface-raised);
 }
 
 .topbar-search input {

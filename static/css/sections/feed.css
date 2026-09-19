@@ -105,9 +105,9 @@
 
 /* â”€â”€ GIF Picker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .gif-picker-panel {
-  background: var(--lvl-surface, #111);
+  background: var(--lvl-surface);
   border: 1px solid var(--border-color, rgba(255,255,255,0.1));
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   padding: 12px;
   display: flex;
   flex-direction: column;
@@ -124,8 +124,8 @@
   flex: 1;
   background: rgba(255,255,255,0.06);
   border: 1px solid var(--border-color, rgba(255,255,255,0.1));
-  border-radius: 8px;
-  color: var(--text-primary, #fff);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
   font-family: inherit;
   font-size: 14px;
   padding: 7px 12px;
@@ -133,14 +133,14 @@
   transition: border-color 0.2s;
 }
 .gif-search-input:focus {
-  border-color: var(--accent-color, #0ff);
+  border-color: var(--accent-color);
 }
 
 .gif-search-btn {
-  background: var(--accent-color, #0ff);
+  background: var(--accent-color);
   border: none;
-  border-radius: 8px;
-  color: #000;
+  border-radius: var(--radius-sm);
+  color: var(--lvl-black);
   cursor: pointer;
   font-size: 16px;
   padding: 7px 11px;
@@ -154,20 +154,20 @@
   gap: 6px;
   max-height: 240px;
   overflow-y: auto;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 
 .gif-result-item {
   width: 100%;
   aspect-ratio: 1;
   object-fit: cover;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition: transform 0.15s, box-shadow 0.15s;
 }
 .gif-result-item:hover {
   transform: scale(1.04);
-  box-shadow: 0 0 0 2px var(--accent-color, #0ff);
+  box-shadow: 0 0 0 2px var(--accent-color);
 }
 
 .gif-selected-preview {
@@ -176,7 +176,7 @@
   gap: 8px;
 }
 .gif-selected-preview [data-gif-preview-img] {
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   max-height: 100px;
   max-width: 160px;
   object-fit: contain;
@@ -184,8 +184,8 @@
 .gif-clear-btn {
   background: rgba(255,255,255,0.12);
   border: none;
-  border-radius: 50%;
-  color: var(--text-primary, #fff);
+  border-radius: var(--radius-round);
+  color: var(--text-primary);
   cursor: pointer;
   font-size: 14px;
   height: 26px;
@@ -245,7 +245,7 @@
   color: var(--community-color, var(--lvl-cyan));
   background: color-mix(in srgb, var(--community-color, var(--lvl-cyan)) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--community-color, var(--lvl-cyan)) 35%, transparent);
-  border-radius: 20px;
+  border-radius: var(--radius-2xl);
   padding: 2px 9px 2px 6px;
   margin-bottom: 6px;
   text-decoration: none;
@@ -496,71 +496,6 @@
   font-size: 15px;
 }
 
-/* Flash Messages */
-.flash {
-  position: fixed;
-  top: calc(16px + (var(--flash-index, 0) * 58px));
-  left: 50%;
-  z-index: 3000;
-  width: min(92vw, 480px);
-  padding: 12px 16px;
-  text-align: center;
-  font-weight: bold;
-  color: var(--lvl-text-inverse);
-  background-color: var(--accent-color);
-  font-size: 15px;
-  border-radius: var(--radius-md);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
-  transform: translateX(-50%);
-  cursor: pointer;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-}
-
-.flash-message-text {
-  min-width: 0;
-  flex: 1;
-}
-
-.flash-close-button {
-  flex: 0 0 auto;
-  width: 30px;
-  height: 30px;
-  display: inline-grid;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-round);
-  background: rgba(0, 0, 0, 0.18);
-  color: currentColor;
-  font: inherit;
-  font-size: 20px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.flash-close-button:hover,
-.flash-close-button:focus-visible {
-  background: rgba(0, 0, 0, 0.32);
-  outline: 2px solid currentColor;
-  outline-offset: 1px;
-}
-
-.flash.is-hiding {
-  opacity: 0;
-  transform: translate(-50%, -8px);
-}
-
-.flash.error {
-  background-color: var(--error-color);
-}
-
-.flash.success {
-  background-color: var(--success-color);
-}
 .draft-list { display: grid; gap: var(--space-3); padding: var(--space-4); }
 .draft-card { display: flex; justify-content: space-between; gap: var(--space-4); padding: var(--space-4); border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--surface-panel); }
 .draft-card p { white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -639,7 +574,7 @@
   box-shadow: none !important;
   outline: none !important;
   -webkit-tap-highlight-color: transparent !important;
-  color: var(--text-secondary, #94a3b8);
+  color: var(--text-secondary);
   font-family: inherit;
   font-size: 13px;
   font-weight: 600;
@@ -663,7 +598,7 @@
 
 /* ── Like / Heart (Rose Pink Glow) ── */
 .lvl-action-like:hover {
-  color: #f43f5e;
+  color: var(--lvl-danger);
 }
 
 .lvl-action-like:hover .post-action-icon {
@@ -672,7 +607,7 @@
 
 .post-action-button.like-active,
 .lvl-action-like.active {
-  color: #f43f5e !important;
+  color: var(--lvl-danger) !important;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
@@ -690,14 +625,14 @@
 .post-action-button.like-active .post-action-icon svg path,
 .lvl-action-like.active .post-action-icon svg,
 .lvl-action-like.active .post-action-icon svg path {
-  fill: #f43f5e !important;
-  stroke: #f43f5e !important;
+  fill: var(--lvl-danger) !important;
+  stroke: var(--lvl-danger) !important;
   filter: drop-shadow(0 0 6px rgba(244, 63, 94, 0.6)) !important;
 }
 
 /* ── Repost (Vibrant Emerald) ── */
 .lvl-action-repost:hover {
-  color: #10b981;
+  color: var(--lvl-success);
 }
 
 .lvl-action-repost:hover .post-action-icon {
@@ -706,7 +641,7 @@
 
 .post-action-button.repost-active,
 .lvl-action-repost.active {
-  color: #10b981 !important;
+  color: var(--lvl-success) !important;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
@@ -719,13 +654,13 @@
 
 .post-action-button.repost-active .post-action-icon svg,
 .lvl-action-repost.active .post-action-icon svg {
-  stroke: #10b981;
+  stroke: var(--lvl-success);
   filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.6));
 }
 
 /* ── Vault / Bookmark (Warm Amber Gold) ── */
 .lvl-action-vault:hover {
-  color: #f59e0b;
+  color: var(--lvl-warning);
 }
 
 .lvl-action-vault:hover .post-action-icon {
@@ -734,7 +669,7 @@
 
 .post-action-button.bookmark-active,
 .lvl-action-vault.active {
-  color: #f59e0b !important;
+  color: var(--lvl-warning) !important;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
@@ -747,14 +682,14 @@
 
 .post-action-button.bookmark-active .post-action-icon svg,
 .lvl-action-vault.active .post-action-icon svg {
-  fill: #f59e0b;
-  stroke: #f59e0b;
+  fill: var(--lvl-warning);
+  stroke: var(--lvl-warning);
   filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.6));
 }
 
 /* ── Reply / Comment (Electric Blue) ── */
 .lvl-action-reply:hover {
-  color: #3b82f6;
+  color: var(--lvl-blue-strong);
 }
 
 .lvl-action-reply:hover .post-action-icon {
@@ -763,7 +698,7 @@
 
 /* ── Share (Deep Cyan) ── */
 .lvl-action-share:hover {
-  color: #06b6d4;
+  color: var(--lvl-brand);
 }
 
 .lvl-action-share:hover .post-action-icon {
@@ -805,9 +740,9 @@
   font-weight: 800;
   letter-spacing: 0.5px;
   padding: 2px 7px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #f43f5e, #ff6b81);
-  color: #ffffff;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--lvl-danger), var(--lvl-danger-hover));
+  color: var(--lvl-white);
   box-shadow: 0 2px 10px rgba(244, 63, 94, 0.4);
   white-space: nowrap;
   -webkit-animation: lvl-xp-ascend 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
@@ -834,8 +769,8 @@
   position: fixed;
   width: 40px;
   height: 40px;
-  border-radius: 50%;
-  border: 2px solid #f43f5e;
+  border-radius: var(--radius-round);
+  border: 2px solid var(--lvl-danger);
   pointer-events: none;
   -webkit-animation: lvl-shockwave-expand 0.55s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
   animation: lvl-shockwave-expand 0.55s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
@@ -869,9 +804,9 @@
   left: 0;
   width: 5px;
   height: 5px;
-  border-radius: 50%;
-  background-color: var(--dot-color, #f43f5e);
-  box-shadow: 0 0 6px var(--dot-color, #f43f5e);
+  border-radius: var(--radius-round);
+  background-color: var(--dot-color);
+  box-shadow: 0 0 6px var(--dot-color);
   opacity: 0;
   transform: translate(-50%, -50%) scale(0);
 }

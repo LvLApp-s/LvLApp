@@ -2,7 +2,7 @@
   The single LvL verified badge.
 
   Usage:
-      {% from "_verified_badge.html" import verified_badge %}
+      {% from "_verified_badge.html" import verified_badge with context %}
       {{ verified_badge(post.user) }}
       {{ verified_badge(user, size='lg') }}
 

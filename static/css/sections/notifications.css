@@ -3,25 +3,25 @@
    ========================================================================== */
 
 :root {
-  --notif-color-like-1: #f43f5e;
+  --notif-color-like-1: var(--lvl-danger);
   --notif-color-like-2: #e11d48;
-  --notif-color-repost-1: #10b981;
+  --notif-color-repost-1: var(--lvl-success);
   --notif-color-repost-2: #059669;
-  --notif-color-comment-1: #0ea5e9;
-  --notif-color-comment-2: #0284c7;
+  --notif-color-comment-1: var(--lvl-brand-hover);
+  --notif-color-comment-2: var(--lvl-brand);
   --notif-color-follow-1: #a855f7;
   --notif-color-follow-2: #7c3aed;
-  --notif-color-friend-1: #f59e0b;
+  --notif-color-friend-1: var(--lvl-warning);
   --notif-color-friend-2: #d97706;
   --notif-color-accept-1: #14b8a6;
   --notif-color-accept-2: #0d9488;
-  --notif-color-msg-1: #3b82f6;
+  --notif-color-msg-1: var(--lvl-blue-strong);
   --notif-color-msg-2: #1d4ed8;
-  --notif-color-highfive-1: #fbbf24;
-  --notif-color-highfive-2: #f59e0b;
+  --notif-color-highfive-1: var(--lvl-warning);
+  --notif-color-highfive-2: var(--lvl-warning);
   --notif-color-highfive-ink: #1c1917;
-  --notif-accent: #38bdf8;
-  --notif-accept-bg: #10b981;
+  --notif-accent: var(--lvl-cyan);
+  --notif-accept-bg: var(--lvl-success);
 }
 
 .notif-page-header {

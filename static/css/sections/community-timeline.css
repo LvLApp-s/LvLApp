@@ -25,7 +25,7 @@
   border-radius: var(--radius-sm);
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--accent-color) 13%, transparent), transparent 42%),
-    var(--lvl-surface-6);
+    var(--lvl-surface-raised);
 }
 
 .community-hub-hero h2,
@@ -82,7 +82,7 @@
   padding: var(--space-3);
   border: var(--line-default);
   border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--lvl-surface-1) 88%, transparent);
+  background: color-mix(in srgb, var(--lvl-surface-raised) 88%, transparent);
   backdrop-filter: blur(16px);
 }
 
@@ -137,13 +137,13 @@
   border-radius: var(--radius-sm);
   color: inherit;
   text-decoration: none;
-  background: var(--lvl-surface-4);
+  background: var(--lvl-surface-raised);
   scroll-snap-align: start;
 }
 
 .community-lens-card:hover {
   border-color: color-mix(in srgb, var(--accent-color) 44%, var(--border-color));
-  background: color-mix(in srgb, var(--accent-color) 10%, var(--lvl-surface-4));
+  background: color-mix(in srgb, var(--accent-color) 10%, var(--lvl-surface-raised));
 }
 
 .community-lens-card > span {
@@ -176,7 +176,7 @@
   overflow: hidden;
   border: var(--line-default);
   border-radius: var(--radius-sm);
-  background: var(--lvl-surface-3);
+  background: var(--lvl-surface-raised);
 }
 
 .community-timeline-track {
@@ -288,7 +288,7 @@
   padding: var(--space-7);
   border: var(--line-default);
   border-radius: var(--radius-sm);
-  background: var(--lvl-surface-4);
+  background: var(--lvl-surface-raised);
 }
 
 .community-space-scroll {

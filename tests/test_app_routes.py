@@ -539,7 +539,8 @@ class AppRouteTests(unittest.TestCase):
 
     def test_nickname_fields_allow_uppercase_input(self):
         auth_html = self.client.get("/auth").data.decode()
-        self.assertIn('name="nickname" pattern="[A-Za-z0-9_]{3,24}"', auth_html)
+        self.assertIn('name="nickname"', auth_html)
+        self.assertIn('pattern="[A-Za-z0-9_]{3,24}"', auth_html)
         self.assertIn('name="birthday"', auth_html)
 
         fake_user = {
@@ -562,7 +563,8 @@ class AppRouteTests(unittest.TestCase):
              patch.object(zapp, "get_community_highlights", return_value=[]), \
              patch.object(zapp, "get_home_reel_preview", return_value=[]):
             settings_html = self.client.get("/settings").data.decode()
-        self.assertIn('name="nickname" maxlength="24" pattern="[A-Za-z0-9_]{3,24}"', settings_html)
+        self.assertIn('name="nickname"', settings_html)
+        self.assertIn('pattern="[A-Za-z0-9_]{3,24}"', settings_html)
         self.assertIn('name="remove_profile_photo"', settings_html)
 
     def test_auth_page_lists_enabled_social_providers_only(self):
@@ -1349,11 +1351,15 @@ class AppRouteTests(unittest.TestCase):
                 "email": "join@example.com",
                 "birthday": "2000-01-01",
                 "gender": "Male",
+                "accept_terms": "1",
             })
 
         self.assertEqual(response.status_code, 302)
         self.assertTrue(response.location.endswith("/"))
         self.assertEqual(fake.inserted_payload["oauth_provider"], "google")
+        # Social sign-up records terms acceptance like email registration.
+        self.assertEqual(fake.inserted_payload["terms_version"], zapp.TERMS_VERSION)
+        self.assertTrue(fake.inserted_payload["terms_accepted_at"])
         self.assertEqual(fake.inserted_payload["supabase_auth_user_id"], "33333333-3333-3333-3333-333333333333")
         self.assertEqual(fake.inserted_payload["username"], "joinmember")
         with self.client.session_transaction() as sess:
@@ -2122,7 +2128,8 @@ class AppRouteTests(unittest.TestCase):
         self.assertIn('name="account_status"', html)
         self.assertIn("Review pending", html)
 
-    def test_level_guide_page_explains_xp_and_rewards(self):
+    def test_level_guide_is_removed_from_the_product(self):
+        """The guide page is gone; the route survives so old links still work."""
         fake_user = {
             "id": 7,
             "username": "demo",
@@ -2133,14 +2140,21 @@ class AppRouteTests(unittest.TestCase):
         with patch.object(zapp, "supabase", object()), \
              patch.object(zapp, "get_current_user", return_value=fake_user), \
              patch.object(zapp, "get_community_highlights", return_value=[]):
-            html = self.client.get("/level-guide").data.decode()
+            res = self.client.get("/level-guide")
 
-        self.assertIn("LvL Guide", html)
-        self.assertIn("+10 XP", html)
-        self.assertIn("Reward Roadmap", html)
-        self.assertIn("Profile Color", html)
-        self.assertIn("App Icon Recolor", html)
-        self.assertIn("Achievements are display badges", html)
+        self.assertEqual(res.status_code, 302)
+        self.assertTrue(res.headers["Location"].endswith("/profile/demo"))
+
+    def test_navigation_has_no_lvl_guide_entries(self):
+        viewer = {"id": 7, "username": "demo", "display_name": "Demo User", "profile_photo_url": ""}
+        with patch.object(zapp, "get_current_user", return_value=viewer), \
+             patch.object(zapp, "get_community_highlights", return_value=[]), \
+             patch.object(zapp, "get_home_reel_preview", return_value=[]):
+            html = self.client.get("/settings").data.decode()
+
+        self.assertNotIn('href="/level-guide"', html)
+        self.assertNotIn("LvL Guide", html)
+        self.assertNotIn("LvL Rehberi", html)
 
     def test_community_template_renders_three_timeline_tabs(self):
         viewer = {"id": 7, "username": "viewer", "display_name": "Viewer", "profile_photo_url": ""}
@@ -2182,7 +2196,7 @@ class AppRouteTests(unittest.TestCase):
         self.assertIn('class="community-lens-strip"', html)
         self.assertIn("History", html)
         self.assertIn("Trends", html)
-        self.assertIn("News", html)
+        self.assertIn("Clips", html)
         self.assertIn('data-community-pane="followers"', html)
         self.assertIn('aria-current="page"', html)
         self.assertRegex(html, r'data-community-pane="followers"[\s\S]+?hidden')
@@ -2277,8 +2291,8 @@ class AppRouteTests(unittest.TestCase):
         settings_html = Path("templates/settings.html").read_text(encoding="utf-8")
         settings_css = Path("static/css/sections/settings.css").read_text(encoding="utf-8")
 
-        self.assertIn("Profile banner color", settings_html)
-        self.assertIn("Changes the banner on your profile", settings_html)
+        self.assertIn("Profile Banner Color", settings_html)
+        self.assertIn('data-i18n="settings_banner_color"', settings_html)
         self.assertIn("--profile-preview-color", settings_css)
         self.assertNotIn("--lvl-white-10", settings_css)
 
@@ -2710,13 +2724,24 @@ class AppRouteTests(unittest.TestCase):
         self.assertIn("top: auto", css)
 
     def test_mobile_reel_comments_keep_composer_above_bottom_nav(self):
+        """Nothing may sit under the fixed bottom nav or the home indicator."""
         css = Path("static/css/sections/reels.css").read_text(encoding="utf-8")
+        base_css = Path("static/css/sections/base.css").read_text(encoding="utf-8")
 
-        self.assertIn("--reels-mobile-bottom-nav: 76px", css)
-        self.assertIn("bottom: calc(var(--reels-mobile-bottom-nav) + env(safe-area-inset-bottom))", css)
-        self.assertIn("max-height: calc(100dvh - 64px - var(--reels-mobile-bottom-nav) - env(safe-area-inset-bottom))", css)
+        # One shared clearance token, defined once.
+        self.assertIn("--mobile-nav-height", base_css)
+        self.assertIn("--safe-bottom: env(safe-area-inset-bottom, 0px)", base_css)
+        self.assertIn(
+            "--mobile-nav-clearance: calc(var(--mobile-nav-height) + var(--safe-bottom))",
+            base_css,
+        )
+
+        # Reels uses that token instead of its own hard-coded copy.
+        self.assertNotIn("--reels-mobile-bottom-nav", css)
+        self.assertIn("var(--mobile-nav-clearance)", css)
         self.assertIn(".reel-comment-submit-form", css)
         self.assertIn("position: sticky", css)
+        self.assertIn("padding-bottom: calc(var(--space-4) + var(--safe-bottom))", css)
 
     def test_reels_template_does_not_render_bottom_pagination_buttons(self):
         viewer = {"id": 7, "username": "demo", "display_name": "Demo User", "profile_photo_url": ""}
@@ -2740,7 +2765,7 @@ class AppRouteTests(unittest.TestCase):
         css = Path("static/css/sections/reels.css").read_text(encoding="utf-8")
         mobile_nav_css = Path("static/css/sections/mobile-navigation.css").read_text(encoding="utf-8")
 
-        self.assertIn("--reels-mobile-header: 52px", css)
+        self.assertIn("--reels-mobile-header: var(--mobile-header-height)", css)
         self.assertIn(".reels-header-title", css)
         self.assertIn("display: none", css)
         self.assertIn(".reels-header .compact-action", css)
@@ -2787,30 +2812,22 @@ class AppRouteTests(unittest.TestCase):
         self.assertEqual(fake_get_reels.call_args.kwargs["tab"], "for_you")
 
     def test_sidebar_labels_are_visible_only_when_menu_is_open(self):
+        """The rail collapses to icons and expands to icon + label."""
         css = Path("static/css/sections/navigation.css").read_text(encoding="utf-8")
-        hardening_css = Path("static/css/sections/hardening.css").read_text(encoding="utf-8")
-        mobile_drawer_css = Path("static/css/sections/mobile-drawer.css").read_text(encoding="utf-8")
-        mobile_navigation_css = Path("static/css/sections/mobile-navigation.css").read_text(encoding="utf-8")
+        base_css = Path("static/css/sections/base.css").read_text(encoding="utf-8")
         script = Path("static/js/script.js").read_text(encoding="utf-8")
 
         self.assertIn(".left-rail:not(.menu-open) .nav-list a .sr-only", css)
         self.assertIn(".mobile-bottom-nav a .sr-only", css)
         self.assertIn(".left-rail.menu-open .nav-list a", css)
-        self.assertIn("justify-content: flex-start", css)
-        self.assertIn("gap: 14px", css)
-        legacy_css = Path("static/css/sections/legacy-polish.css").read_text(encoding="utf-8")
-        self.assertIn("transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);", legacy_css)
-        self.assertIn(".left-rail-wrapper:has(.left-rail.menu-open)", legacy_css)
-        self.assertIn(".left-rail.menu-open .mini-profile div", hardening_css)
-        self.assertIn("display: flex !important", hardening_css)
-        self.assertIn("text-overflow: ellipsis", hardening_css)
-        self.assertIn(".left-rail.menu-open", mobile_drawer_css)
-        self.assertIn("display: none !important", mobile_drawer_css)
-        self.assertIn(".mobile-account-menu:not([hidden])", mobile_drawer_css)
-        self.assertIn("grid-template-columns: 40px minmax(0, 1fr) auto", mobile_navigation_css)
-        self.assertIn("data-mobile-profile-trigger", script)
-        self.assertIn("data-mobile-account-menu", script)
-        self.assertIn("mobileProfileTrigger.addEventListener('click'", script)
+
+        # Collapsed width and label hiding live in base.css, in one place.
+        self.assertIn("--shell-left-collapsed", base_css)
+        self.assertIn(".left-rail:not(.menu-open) .nav-label", base_css)
+
+        # The phone menu is the slide-over drawer, wired from script.js.
+        self.assertIn("data-mobile-drawer-trigger", script)
+        self.assertIn("data-mobile-drawer-close", script)
         self.assertNotIn("mobile-sidebar-toggle", script)
 
     def test_community_highlights_badges_and_profile_hover_are_guarded(self):
@@ -2874,6 +2891,7 @@ class AppRouteTests(unittest.TestCase):
         ]
         with patch.object(zapp, "get_current_user", return_value=viewer), \
              patch.object(zapp, "get_setup_health", return_value=checks), \
+             patch.object(zapp, "admin_session_is_valid", return_value=True), \
              patch.object(zapp, "get_community_highlights", return_value=[]):
             html = self.client.get("/setup-health").data.decode()
 
@@ -2881,6 +2899,24 @@ class AppRouteTests(unittest.TestCase):
         self.assertIn("Supabase connection", html)
         self.assertIn("Reels table", html)
         self.assertIn("PWA manifest", html)
+
+    def test_setup_health_is_not_exposed_to_normal_users(self):
+        """Operator diagnostics must not be reachable from user Settings."""
+        viewer = {"id": 7, "username": "demo", "display_name": "Demo User", "profile_photo_url": ""}
+        with patch.object(zapp, "get_current_user", return_value=viewer), \
+             patch.object(zapp, "admin_session_is_valid", return_value=False), \
+             patch.dict(zapp.app.config, {"DEBUG": False}), \
+             patch.object(zapp, "get_community_highlights", return_value=[]):
+            res = self.client.get("/setup-health")
+
+        self.assertEqual(res.status_code, 302)
+        self.assertTrue(res.headers["Location"].endswith("/settings"))
+
+        with patch.object(zapp, "get_current_user", return_value=viewer), \
+             patch.object(zapp, "get_community_highlights", return_value=[]), \
+             patch.object(zapp, "get_home_reel_preview", return_value=[]):
+            settings_html = self.client.get("/settings").data.decode()
+        self.assertNotIn('href="/setup-health"', settings_html)
 
     def test_activity_template_groups_recent_user_history(self):
         viewer = {"id": 7, "username": "demo", "display_name": "Demo User", "profile_photo_url": ""}
@@ -3206,14 +3242,15 @@ class AppRouteTests(unittest.TestCase):
         self.assertIn('/profile/demo/following', html)
         self.assertIn('/profile/demo/followers', html)
         self.assertIn('/profile/demo/friends', html)
-        self.assertIn("Achievements", html)
+        self.assertIn('id="pprogress-inline"', html)
         self.assertIn("First Post", html)
         self.assertIn('href="/activity"', html)
         self.assertIn(">Activity</a>", html)
         self.assertIn('href="/settings"', html)
         self.assertIn(">Settings</a>", html)
-        self.assertIn('href="/level-guide"', html)
-        self.assertIn(">LvL Guide</a>", html)
+        # The LvL Guide button was removed with the guide itself.
+        self.assertNotIn('href="/level-guide"', html)
+        self.assertNotIn("LvL Guide", html)
         self.assertIn("profile-owner-actions", html)
 
     def test_other_profile_has_high_five_action(self):
@@ -4408,7 +4445,9 @@ class AppRouteTests(unittest.TestCase):
         self.assertIn('data-delete-message-url="/delete_message"', html)
         self.assertIn('data-message-id="42"', html)
         self.assertIn('data-load-older-messages', html)
-        self.assertIn('delete_for_me', html)
+        # Delete is wired through the feed container, not a per-bubble form.
+        self.assertIn('data-csrf-token', html)
+        self.assertIn('data-viewer-id', html)
 
     def test_messages_empty_state_restores_discovery_content(self):
         viewer = {"id": 7, "username": "viewer", "display_name": "Viewer", "profile_photo_url": ""}
@@ -4474,7 +4513,7 @@ class AppRouteTests(unittest.TestCase):
         self.assertIn('/delete_account', html)
         self.assertIn('name="confirm_username"', html)
         self.assertIn('name="current_password"', html)
-        self.assertIn("Delete account", html)
+        self.assertIn("Delete Account", html)
 
     def test_settings_template_can_render_shared_right_rail(self):
         fake_user = {
@@ -5063,9 +5102,12 @@ class AppRouteTests(unittest.TestCase):
             self.assertTrue(os.path.exists(stored_path))
 
     def test_contact_form_validation_and_submission(self):
-        res = self.client.get("/contact")
-        self.assertEqual(res.status_code, 302)
-        self.assertTrue(res.headers['Location'].endswith("/level-guide#contact"))
+        with patch.object(zapp, "get_current_user", return_value=None), \
+             patch.object(zapp, "get_community_highlights", return_value=[]):
+            res = self.client.get("/contact")
+        self.assertEqual(res.status_code, 200)
+        self.assertIn(b"Contact Us", res.data)
+        self.assertIn(b'action="/contact"', res.data)
 
         class FakeResponse:
             data = []
@@ -5087,7 +5129,7 @@ class AppRouteTests(unittest.TestCase):
                 return None
 
         with patch.object(zapp, "supabase", FakeSupabase()):
-            res = self.client.post("/guide/contact", data={
+            res = self.client.post("/contact", data={
                 "csrf_token": self.csrf(),
                 "name": "Test User",
                 "email": "invalid-email",
@@ -5095,11 +5137,11 @@ class AppRouteTests(unittest.TestCase):
                 "message": "Hello world"
             })
             self.assertEqual(res.status_code, 302)
-            self.assertTrue(res.headers['Location'].endswith("/level-guide#contact"))
+            self.assertTrue(res.headers['Location'].endswith("/contact"))
             self.assertEqual(len(fake_table.inserted), 0)
 
         with patch.object(zapp, "supabase", FakeSupabase()):
-            res = self.client.post("/guide/contact", data={
+            res = self.client.post("/contact", data={
                 "csrf_token": self.csrf(),
                 "name": "Test User",
                 "email": "test@example.com",
@@ -5107,12 +5149,12 @@ class AppRouteTests(unittest.TestCase):
                 "message": "This is a suggestion message"
             })
             self.assertEqual(res.status_code, 302)
-            self.assertTrue(res.headers['Location'].endswith("/level-guide#contact"))
+            self.assertTrue(res.headers['Location'].endswith("/contact"))
             self.assertEqual(len(fake_table.inserted), 1)
             self.assertEqual(fake_table.inserted[0]["subject"], "Suggestion")
 
     def test_careers_form_requires_login_and_saves_application(self):
-        res = self.client.post("/guide/careers", data={
+        res = self.client.post("/careers", data={
             "csrf_token": self.csrf(),
             "name": "Sina",
             "email": "sina@example.com",
@@ -5162,7 +5204,7 @@ class AppRouteTests(unittest.TestCase):
 
         with patch.object(zapp, "get_current_user", return_value=user), \
              patch.object(zapp, "supabase", FakeSupabase()):
-            res = self.client.post("/guide/careers", data={
+            res = self.client.post("/careers", data={
                 "csrf_token": self.csrf(),
                 "name": "Sina",
                 "email": "invalid-email",
@@ -5170,10 +5212,10 @@ class AppRouteTests(unittest.TestCase):
                 "message": "I can help with backend systems."
             })
             self.assertEqual(res.status_code, 302)
-            self.assertTrue(res.headers['Location'].endswith("/level-guide#careers"))
+            self.assertTrue(res.headers['Location'].endswith("/careers"))
             self.assertEqual(applications_table.inserted, [])
 
-            res = self.client.post("/guide/careers", data={
+            res = self.client.post("/careers", data={
                 "csrf_token": self.csrf(),
                 "name": "Sina",
                 "email": "sina@example.com",
@@ -5182,29 +5224,41 @@ class AppRouteTests(unittest.TestCase):
                 "cv": (io.BytesIO(b"bad executable"), "resume.exe")
             })
             self.assertEqual(res.status_code, 302)
-            self.assertTrue(res.headers['Location'].endswith("/level-guide#careers"))
+            self.assertTrue(res.headers['Location'].endswith("/careers"))
             self.assertEqual(applications_table.inserted, [])
 
-            res = self.client.post("/guide/careers", data={
+            # A CV is required, so a submission without one is rejected.
+            res = self.client.post("/careers", data={
                 "csrf_token": self.csrf(),
                 "name": "Sina",
                 "email": "sina@example.com",
                 "position": "Backend Engineer",
                 "message": "I can help with backend systems."
             })
+            self.assertEqual(res.status_code, 302)
+            self.assertEqual(applications_table.inserted, [])
+
+            res = self.client.post("/careers", data={
+                "csrf_token": self.csrf(),
+                "name": "Sina",
+                "email": "sina@example.com",
+                "position": "Backend Engineer",
+                "message": "I can help with backend systems.",
+                "cv": (io.BytesIO(b"%PDF-1.4 resume"), "resume.pdf")
+            })
 
         self.assertEqual(res.status_code, 302)
-        self.assertTrue(res.headers['Location'].endswith("/level-guide#careers"))
+        self.assertTrue(res.headers['Location'].endswith("/careers"))
         self.assertEqual(positions_table.filters, [("title", "Backend Engineer")])
         self.assertEqual(len(applications_table.inserted), 1)
         self.assertEqual(applications_table.inserted[0]["position_id"], "position-1")
         self.assertEqual(applications_table.inserted[0]["position_title"], "Backend Engineer")
-        self.assertIsNone(applications_table.inserted[0]["cv_url"])
+        self.assertTrue(applications_table.inserted[0]["cv_url"].endswith(".pdf"))
 
     def test_verification_request_cooldown_and_submission(self):
         res = self.client.get("/request_verification")
         self.assertEqual(res.status_code, 302)
-        self.assertTrue(res.headers['Location'].endswith("/level-guide#verification"))
+        self.assertTrue(res.headers['Location'].endswith("/auth"))
 
         user = {"id": 8, "username": "demo", "display_name": "Demo User", "email": "demo@example.com"}
         
@@ -5243,13 +5297,13 @@ class AppRouteTests(unittest.TestCase):
 
         with patch.object(zapp, "get_current_user", return_value=user), \
              patch.object(zapp, "supabase", FakeSupabasePending()):
-            res = self.client.post("/guide/verification", data={
+            res = self.client.post("/request_verification", data={
                 "csrf_token": self.csrf(),
                 "reason": "Verify me please",
                 "links": "https://twitter.com/demo"
             })
             self.assertEqual(res.status_code, 302)
-            self.assertTrue(res.headers['Location'].endswith("/level-guide#verification"))
+            self.assertTrue(res.headers['Location'].endswith("/request_verification"))
             self.assertEqual(len(fake_table_pending.inserted), 0)
 
         cooldown_time = (datetime.now(timezone.utc) + timedelta(days=5)).isoformat()
@@ -5262,13 +5316,13 @@ class AppRouteTests(unittest.TestCase):
 
         with patch.object(zapp, "get_current_user", return_value=user), \
              patch.object(zapp, "supabase", FakeSupabaseCooldown()):
-            res = self.client.post("/guide/verification", data={
+            res = self.client.post("/request_verification", data={
                 "csrf_token": self.csrf(),
                 "reason": "Verify me please",
                 "links": "https://twitter.com/demo"
             })
             self.assertEqual(res.status_code, 302)
-            self.assertTrue(res.headers['Location'].endswith("/level-guide#verification"))
+            self.assertTrue(res.headers['Location'].endswith("/request_verification"))
             self.assertEqual(len(fake_table_cooldown.inserted), 0)
 
         fake_table_clean = FakeTable([])
@@ -5280,13 +5334,13 @@ class AppRouteTests(unittest.TestCase):
 
         with patch.object(zapp, "get_current_user", return_value=user), \
              patch.object(zapp, "supabase", FakeSupabaseClean()):
-            res = self.client.post("/guide/verification", data={
+            res = self.client.post("/request_verification", data={
                 "csrf_token": self.csrf(),
                 "reason": "Verify me please",
                 "links": "https://twitter.com/demo"
             })
             self.assertEqual(res.status_code, 302)
-            self.assertTrue(res.headers['Location'].endswith("/level-guide#verification"))
+            self.assertTrue(res.headers['Location'].endswith("/request_verification"))
             self.assertEqual(len(fake_table_clean.inserted), 1)
             self.assertEqual(fake_table_clean.inserted[0]["reason"], "Verify me please")
 

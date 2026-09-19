@@ -38,7 +38,7 @@
     background: transparent !important;
     padding: 0 !important;
     cursor: pointer !important;
-    border-radius: 50% !important;
+    border-radius: var(--radius-round) !important;
     outline: none !important;
     flex-shrink: 0 !important;
     transition: transform 0.18s ease;
@@ -57,7 +57,7 @@
     max-width: 36px !important;
     max-height: 36px !important;
     aspect-ratio: 1 / 1 !important;
-    border-radius: 50% !important;
+    border-radius: var(--radius-round) !important;
     object-fit: cover !important;
     display: block !important;
     flex-shrink: 0 !important;
@@ -67,7 +67,7 @@
   }
 
   .mobile-drawer-trigger:hover .mobile-header-avatar {
-    border-color: var(--lvl-cyan, #00f0ff) !important;
+    border-color: var(--lvl-cyan) !important;
     transform: scale(1.05);
   }
 
@@ -77,10 +77,10 @@
     right: -1px;
     width: 10px;
     height: 10px;
-    border-radius: 50% !important;
-    background: var(--lvl-cyan, #00f0ff);
-    border: 2px solid var(--lvl-surface-1, #000000);
-    box-shadow: 0 0 6px var(--lvl-cyan, #00f0ff);
+    border-radius: var(--radius-round) !important;
+    background: var(--lvl-cyan);
+    border: 2px solid var(--lvl-surface-base);
+    box-shadow: 0 0 6px var(--lvl-cyan);
   }
 
   /* Backdrop Overlay */
@@ -112,7 +112,7 @@
     left: 0;
     z-index: 2001;
     width: min(300px, 82vw);
-    background: var(--lvl-surface-1, #000000);
+    background: var(--lvl-surface-base);
     border-right: 1px solid var(--lvl-border, rgba(255, 255, 255, 0.1));
     box-shadow: 14px 0 40px rgba(0, 0, 0, 0.85);
     transform: translateX(-100%);
@@ -156,7 +156,7 @@
     max-width: 52px !important;
     max-height: 52px !important;
     aspect-ratio: 1 / 1 !important;
-    border-radius: 50% !important;
+    border-radius: var(--radius-round) !important;
     object-fit: cover !important;
     display: block !important;
     border: 2px solid rgba(255, 255, 255, 0.18) !important;
@@ -166,16 +166,16 @@
 
   .drawer-user-avatar-link:hover .drawer-avatar {
     transform: scale(1.06);
-    border-color: var(--lvl-cyan, #00f0ff) !important;
+    border-color: var(--lvl-cyan) !important;
   }
 
   .drawer-close-btn {
     width: 36px;
     height: 36px;
-    border-radius: 50% !important;
+    border-radius: var(--radius-round) !important;
     background: rgba(255, 255, 255, 0.06);
     border: none;
-    color: var(--text-secondary, #94a3b8);
+    color: var(--text-secondary);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -185,7 +185,7 @@
 
   .drawer-close-btn:hover {
     background: rgba(255, 255, 255, 0.14);
-    color: var(--text-primary, #ffffff);
+    color: var(--text-primary);
     transform: rotate(90deg) scale(1.08);
   }
 
@@ -215,7 +215,7 @@
   .drawer-display-name {
     font-size: 17px;
     font-weight: 800;
-    color: var(--text-primary, #ffffff);
+    color: var(--text-primary);
     line-height: 1.2;
     text-decoration: none !important;
   }
@@ -226,14 +226,14 @@
     padding: 1px 7px;
     border-radius: var(--radius-pill);
     background: rgba(0, 240, 255, 0.12);
-    color: var(--lvl-cyan, #00f0ff);
+    color: var(--lvl-cyan);
     border: 1px solid rgba(0, 240, 255, 0.25);
     letter-spacing: 0.3px;
   }
 
   .drawer-username {
     font-size: 14px;
-    color: var(--text-secondary, #71767b);
+    color: var(--text-secondary);
     line-height: 1.2;
     text-decoration: none !important;
   }
@@ -255,7 +255,7 @@
     gap: 16px;
     padding: 12px 16px;
     border-radius: var(--radius-lg);
-    color: var(--text-primary, #e7e9ea);
+    color: var(--text-primary);
     text-decoration: none !important;
     font-size: 16px;
     font-weight: 700;
@@ -269,10 +269,10 @@
 
   .drawer-nav-item:hover {
     background: rgba(255, 255, 255, 0.08);
-    color: var(--lvl-white, #ffffff);
+    color: var(--lvl-white);
     text-decoration: none !important;
     transform: translateX(6px);
-    box-shadow: inset 3.5px 0 0 var(--lvl-cyan, #00f0ff);
+    box-shadow: inset 3.5px 0 0 var(--lvl-cyan);
   }
 
   .drawer-nav-item:active {
@@ -288,9 +288,9 @@
   }
 
   .drawer-nav-item.active {
-    color: var(--lvl-cyan, #00f0ff);
+    color: var(--lvl-cyan);
     background: rgba(0, 240, 255, 0.07);
-    box-shadow: inset 3.5px 0 0 var(--lvl-cyan, #00f0ff);
+    box-shadow: inset 3.5px 0 0 var(--lvl-cyan);
   }
 
   .drawer-icon {
@@ -306,7 +306,7 @@
 
   .drawer-nav-item:hover .drawer-icon {
     transform: scale(1.18);
-    color: var(--lvl-cyan, #00f0ff);
+    color: var(--lvl-cyan);
   }
 
   .drawer-nav-text {
@@ -324,8 +324,8 @@
     font-weight: 800;
     padding: 2px 7px;
     border-radius: var(--radius-pill);
-    background: var(--lvl-cyan, #00f0ff);
-    color: var(--lvl-black, #000000);
+    background: var(--lvl-cyan);
+    color: var(--lvl-black);
     box-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
     transition: transform 0.2s ease;
   }
@@ -356,7 +356,7 @@
     gap: 14px;
     padding: 11px 16px;
     border-radius: var(--radius-lg);
-    color: var(--lvl-danger, #f4212e);
+    color: var(--lvl-danger);
     text-decoration: none !important;
     font-size: 15px;
     font-weight: 700;
@@ -368,10 +368,10 @@
 
   .drawer-logout-btn:hover {
     background: rgba(244, 33, 46, 0.12);
-    color: var(--lvl-danger, #f4212e);
+    color: var(--lvl-danger);
     text-decoration: none !important;
     transform: translateX(6px);
-    box-shadow: inset 3.5px 0 0 var(--lvl-danger, #f4212e);
+    box-shadow: inset 3.5px 0 0 var(--lvl-danger);
   }
 
   .drawer-logout-btn:active {

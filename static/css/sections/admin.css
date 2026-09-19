@@ -1,0 +1,312 @@
+/* Admin dashboard. Operator-only surface, kept out of the product cascade. */
+
+/* ── Admin Styles ── */
+.admin-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px 16px;
+}
+.admin-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 24px;
+  scrollbar-width: none;
+}
+.admin-section-header,
+.admin-card-header,
+.admin-user-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.admin-section-header {
+  align-items: center;
+  margin-bottom: 16px;
+}
+.admin-card-header {
+  gap: 8px;
+}
+.admin-user-summary {
+  gap: 10px;
+}
+.admin-panel-card {
+  padding: 20px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--lvl-surface-raised);
+}
+.admin-add-position-form {
+  margin-bottom: 24px;
+  border-color: var(--lvl-cyan);
+}
+.admin-form-actions-tight,
+.admin-button-row,
+.admin-status-form,
+.admin-search-form,
+.admin-user-restriction-form,
+.admin-warning-actions {
+  display: flex;
+  gap: 8px;
+}
+.admin-form-actions-tight {
+  margin-top: 12px;
+}
+.careers-positions-grid,
+.admin-grid-container {
+  display: grid;
+  gap: 16px;
+}
+.admin-grid-container {
+  margin-top: 16px;
+}
+.admin-grid-container-sm {
+  gap: 12px;
+}
+.admin-position-card,
+.admin-report-card,
+.admin-post-card {
+  position: relative;
+}
+.admin-position-header {
+  padding-right: 120px;
+}
+.admin-position-desc {
+  white-space: pre-wrap;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.admin-action-buttons {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  gap: 8px;
+}
+.admin-button-xs {
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: var(--radius-sm);
+}
+.admin-button-sm {
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--lvl-white);
+  font-weight: bold;
+}
+.admin-cv-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  margin-left: 8px;
+}
+.admin-cv-btn-flush {
+  margin-left: 0;
+  margin-top: 4px;
+}
+.admin-message-text {
+  white-space: pre-wrap;
+  line-height: 1.5;
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.admin-text-muted {
+  color: var(--text-muted);
+}
+.admin-card-footer {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+.admin-status-form {
+  align-items: center;
+  margin: 0;
+}
+.admin-select-compact {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+.admin-text-input,
+.admin-search-input,
+.admin-days-input,
+.admin-reason-input,
+.admin-warning-textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-color);
+  color: var(--text-primary);
+}
+.admin-success-button {
+  background: var(--lvl-success);
+  border-color: var(--lvl-success);
+  color: var(--lvl-white);
+  font-weight: bold;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+}
+.admin-report-header,
+.admin-post-header {
+  display: flex;
+  justify-content: space-between;
+}
+.admin-report-header {
+  margin-bottom: 12px;
+}
+.admin-reported-post {
+  background: var(--lvl-surface-raised);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  margin-bottom: 16px;
+}
+.admin-search-form {
+  margin-bottom: 20px;
+}
+.admin-search-input {
+  flex: 1;
+  padding: 10px;
+  background: var(--lvl-surface-raised);
+}
+.admin-search-button {
+  min-height: 40px;
+  padding: 0 16px;
+}
+.admin-user-actions {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.admin-user-status-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 8px;
+  font-size: 12px;
+}
+.admin-user-restriction-form {
+  align-items: center;
+  flex-wrap: wrap;
+  flex: 1 1 100%;
+}
+.admin-days-input {
+  width: 84px;
+}
+.admin-reason-input {
+  min-width: 180px;
+  flex: 1 1 220px;
+}
+.admin-post-card {
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--lvl-surface-raised);
+}
+.admin-post-header {
+  margin-bottom: 8px;
+}
+.admin-post-content {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin-bottom: 12px;
+}
+.admin-related-content {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--lvl-surface-raised);
+}
+.admin-log-box {
+  background: var(--lvl-surface-raised);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  max-height: 500px;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+.admin-log-entry {
+  border-bottom: 1px solid var(--lvl-border);
+  padding: 6px 0;
+}
+.admin-warning-modal {
+  position: fixed;
+  z-index: 10000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.8);
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.admin-warning-dialog {
+  background: var(--lvl-surface-raised);
+  border: 1px solid var(--lvl-cyan);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.6);
+}
+.admin-warning-textarea {
+  font: inherit;
+  resize: vertical;
+}
+.admin-warning-actions {
+  justify-content: flex-end;
+}
+.admin-status-pill {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: var(--radius-md);
+  font-weight: bold;
+  background: var(--lvl-primary-soft-15);
+  color: var(--text-secondary);
+}
+.admin-status-pill.active {
+  background: var(--lvl-success-soft-10);
+  color: var(--lvl-success);
+}
+.admin-status-pill.danger {
+  background: var(--lvl-danger-soft);
+  color: var(--lvl-danger-text-soft);
+}
+.admin-sec-hidden {
+  display: none;
+}
+.admin-select-input {
+  background: var(--bg-color);
+  color: var(--text-primary);
+  border: 1px solid var(--lvl-border);
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  font: inherit;
+}

@@ -1,48 +1,290 @@
-/* Runtime feedback: XP toasts and small empty text states */
+/* ---------------------------------------------------------------------------
+   Feedback: the one surface for every message LvL shows.
+
+   Two stacks, one visual language:
+     .feedback-alerts  TOP    errors and warnings, role="alert"
+     .feedback-toasts  BOTTOM success and info, role="status"
+
+   Server flash messages (templates/_feedback.html) and client messages
+   (showAppToast / showXpToasts in script.js) render the same markup into the
+   same stacks, so nothing here needs !important to win a fight.
+   --------------------------------------------------------------------------- */
+
+.feedback-alerts,
+.feedback-toasts {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  width: min(100% - 32px, 440px);
+  pointer-events: none;
+  gap: var(--space-3);
+}
+
+.feedback-alerts {
+  top: calc(var(--safe-top) + var(--space-5));
+  z-index: var(--z-alert);
+}
+
+.feedback-toasts {
+  /* Clears the mobile bottom navigation and the home indicator. */
+  bottom: calc(var(--mobile-nav-clearance) + var(--space-5));
+  z-index: var(--z-toast);
+  flex-direction: column-reverse;
+}
+
+.feedback-alerts:empty,
+.feedback-toasts:empty {
+  display: none;
+}
+
+.feedback-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--lvl-white-12);
+  border-radius: var(--radius-md);
+  background: var(--lvl-surface-overlay);
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: start;
+  box-shadow: var(--shadow-md);
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity var(--duration-base) var(--ease-standard),
+    transform var(--duration-base) var(--ease-standard);
+}
+
+.feedback-toasts .feedback-item {
+  transform: translateY(12px);
+}
+
+.feedback-alerts .feedback-item {
+  transform: translateY(-12px);
+}
+
+.feedback-item.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.feedback-item.is-leaving {
+  opacity: 0;
+  transition-timing-function: var(--ease-exit);
+  transition-duration: var(--duration-fast);
+}
+
+.feedback-toasts .feedback-item.is-leaving {
+  transform: translateY(8px);
+}
+
+.feedback-alerts .feedback-item.is-leaving {
+  transform: translateY(-8px);
+}
+
+.feedback-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+
+.feedback-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.feedback-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.feedback-close {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: var(--control-xs);
+  height: var(--control-xs);
+  margin: calc(var(--space-2) * -1) calc(var(--space-3) * -1) calc(var(--space-2) * -1) 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-round);
+  background: none;
+  color: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+  transition: opacity var(--duration-fast) var(--ease-standard),
+              background-color var(--duration-fast) var(--ease-standard);
+}
+
+.feedback-close svg {
+  width: 16px;
+  height: 16px;
+}
+
+.feedback-close:hover {
+  opacity: 1;
+  background: var(--lvl-white-08);
+}
+
+.feedback-close:focus-visible {
+  opacity: 1;
+  outline: 2px solid currentColor;
+  outline-offset: 1px;
+}
+
+/* --- Categories ---------------------------------------------------------- */
+
+.feedback-success {
+  border-color: var(--lvl-success-border);
+  background: color-mix(in srgb, var(--lvl-success) 14%, var(--lvl-surface-overlay));
+  color: var(--lvl-success-text-soft);
+}
+
+.feedback-info {
+  border-color: var(--lvl-brand-border);
+  background: color-mix(in srgb, var(--lvl-brand) 12%, var(--lvl-surface-overlay));
+  color: var(--lvl-primary-text-soft);
+}
+
+/* Alerts read stronger than normal feedback, without becoming a new product. */
+.feedback-error {
+  border-color: var(--lvl-danger-border-strong);
+  border-width: 1px;
+  background: color-mix(in srgb, var(--lvl-danger) 18%, var(--lvl-surface-overlay));
+  color: var(--lvl-danger-text-soft);
+  box-shadow: var(--shadow-lg);
+  font-weight: 600;
+}
+
+.feedback-warning {
+  border-color: var(--lvl-warning-border);
+  background: color-mix(in srgb, var(--lvl-warning) 16%, var(--lvl-surface-overlay));
+  color: var(--lvl-warning);
+  box-shadow: var(--shadow-lg);
+  font-weight: 600;
+}
+
+/* XP and level-up moments: the one place a progression accent belongs. */
+.feedback-xp {
+  border-color: var(--lvl-primary-soft-28);
+  background: var(--lvl-surface-overlay);
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.feedback-level-up {
+  border-color: var(--lvl-warning-border);
+  color: var(--lvl-warning);
+}
+
+/* --- Inline, in-place feedback ------------------------------------------- */
+/* Form validation stays next to its field; only blocked submits escalate. */
+
+.inline-notice {
+  margin-top: var(--space-5);
+  padding: var(--space-4) var(--space-5);
+  border-inline-start: 2px solid var(--border-color);
+  border-radius: var(--radius-xs);
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.inline-notice-success {
+  border-inline-start-color: var(--lvl-success);
+  color: var(--lvl-success-text-soft);
+}
+
+.inline-notice-warning {
+  border-inline-start-color: var(--lvl-warning);
+  color: var(--lvl-warning);
+}
+
+.field-status,
+.field-hint {
+  display: block;
+  margin-top: var(--space-2);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  min-height: 1em;
+}
+
+.field-status[data-state="checking"] {
+  color: var(--text-secondary);
+}
+
+.field-status[data-state="available"],
+.field-status[data-state="match"] {
+  color: var(--lvl-success);
+}
+
+.field-status[data-state="taken"],
+.field-status[data-state="invalid"],
+.field-status[data-state="mismatch"] {
+  color: var(--lvl-danger);
+}
+
+label.has-error input,
+label.has-error textarea,
+label.has-error select {
+  border-color: var(--lvl-danger-border);
+}
+
+label.has-success input {
+  border-color: var(--lvl-success-border);
+}
+
+.terms-row.has-error {
+  color: var(--lvl-danger);
+}
+
+.terms-row.has-error input[type="checkbox"] {
+  outline: 2px solid var(--lvl-danger);
+  outline-offset: 2px;
+}
+
 .empty-bio {
   color: var(--text-secondary);
 }
 
-.xp-toast-stack {
-  position: fixed;
-  right: 96px;
-  bottom: 34px;
-  z-index: 270;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 10px;
-  pointer-events: none;
+@media (min-width: 768px) {
+  /* On desktop the stacks tuck into a corner instead of spanning the page. */
+  .feedback-alerts,
+  .feedback-toasts {
+    left: auto;
+    right: var(--space-10);
+    transform: none;
+    width: min(100% - 48px, 380px);
+  }
+
+  .feedback-toasts {
+    bottom: var(--space-10);
+  }
+
+  [dir="rtl"] .feedback-alerts,
+  [dir="rtl"] .feedback-toasts {
+    right: auto;
+    left: var(--space-10);
+  }
 }
 
-.xp-toast {
-  opacity: 0;
-  transform: translateY(10px) scale(0.96);
-  border: 1px solid var(--lvl-primary-soft-35);
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--lvl-surface-7) 94%, transparent);
-  color: var(--text-primary);
-  padding: 10px 14px;
-  font-size: 14px;
-  font-weight: 800;
-  box-shadow: 0 16px 38px var(--lvl-black-45);
-  transition: opacity 0.22s ease, transform 0.22s ease;
-}
+@media (prefers-reduced-motion: reduce) {
+  .feedback-item {
+    transition: opacity 1ms linear;
+    transform: none;
+  }
 
-.xp-toast.show {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-}
-
-.xp-toast.level-up {
-  border-color: var(--lvl-warning-border);
-  background: linear-gradient(135deg, var(--lvl-primary-solid-96), var(--lvl-purple-solid-96));
-  color: var(--lvl-white);
-}
-
-@media (max-width: 1000px) {
-  .xp-toast-stack {
-    right: 16px;
-    bottom: 154px;
+  .feedback-item.is-visible,
+  .feedback-item.is-leaving {
+    transform: none;
   }
 }

@@ -166,7 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function triggerTwitterHeartBurst(btn) {
         if (!btn) return;
-        const colors = ['#f43f5e', '#ec4899', '#d946ef', '#8b5cf6', '#3b82f6', '#06b6d4', '#10b981', '#f59e0b'];
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
         const rect = btn.getBoundingClientRect();
         const burstContainer = document.createElement('span');
         burstContainer.className = 'lvl-x-burst-container';
@@ -180,10 +180,10 @@ document.addEventListener('DOMContentLoaded', () => {
             'width:1px',
             'height:1px'
         ].join(';');
-        for (let i = 0; i < 8; i++) {
+        // Colour comes from --dot-color in CSS, which resolves to the like accent.
+        for (let i = 0; i < 6; i++) {
             const dot = document.createElement('span');
             dot.className = `lvl-x-dot lvl-x-dot-${i}`;
-            dot.style.setProperty('--dot-color', colors[i]);
             burstContainer.appendChild(dot);
         }
         document.body.appendChild(burstContainer);
@@ -217,19 +217,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!btn) return;
         btn.classList.toggle('active', !!liked);
         btn.classList.toggle('like-active', !!liked);
-        /* Set color directly on SVG + path attributes (Mobile WebKit does not always respect CSS class changes) */
+        // The .like-active class drives fill/stroke from tokens in feed.css.
+        // Only the presentational attributes are reset here, because inline
+        // fill/stroke on the SVG would otherwise outrank the stylesheet.
         const svg = btn.querySelector('svg');
         const paths = svg ? svg.querySelectorAll('path,circle,polygon,polyline') : [];
-        const likeColor = '#f43f5e';
         if (svg) {
-            svg.setAttribute('fill', liked ? likeColor : 'none');
-            svg.setAttribute('stroke', liked ? likeColor : 'currentColor');
-            svg.style.cssText += `;fill:${liked ? likeColor : 'none'};stroke:${liked ? likeColor : 'currentColor'};color:${liked ? likeColor : ''}`;
+            svg.setAttribute('fill', liked ? 'currentColor' : 'none');
+            svg.setAttribute('stroke', 'currentColor');
         }
-        paths.forEach(p => {
-            p.setAttribute('fill', liked ? likeColor : 'none');
-            p.setAttribute('stroke', liked ? likeColor : 'currentColor');
-            p.style.cssText += `;fill:${liked ? likeColor : 'none'};stroke:${liked ? likeColor : 'currentColor'}`;
+        paths.forEach((path) => {
+            path.setAttribute('fill', liked ? 'currentColor' : 'none');
+            path.setAttribute('stroke', 'currentColor');
         });
         /* Update count */
         if (count !== undefined) {
@@ -1636,7 +1635,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     attachmentHtml = `
                         <div class="message-attachment">
-                            <a href="${escapeHTML(message.attachment_url)}" download class="attachment-download-link" style="color: #ffffff;">
+                            <a href="${escapeHTML(message.attachment_url)}" download class="attachment-download-link">
                                 <span class="attachment-icon">📁</span>
                                 <span class="attachment-name-text">${escapeHTML(message.attachment_name || 'attachment')}</span>
                             </a>
@@ -2680,11 +2679,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         try {
                             await navigator.clipboard.writeText(link);
                             if (span) {
-                                span.textContent = '✓ Kopyalandı!';
-                                copyLinkBtn.style.color = '#34d399';
+                                span.textContent = translateUi('copied', 'Copied');
+                                copyLinkBtn.classList.add('is-copied');
                             }
                             if (typeof showAppToast === 'function') {
-                                showAppToast('Bağlantı panoya kopyalandı ✨');
+                                showAppToast(translateUi('link_copied', 'Link copied to clipboard.'), 'success');
                             }
                             setTimeout(() => {
                                 if (span) span.textContent = origText;
