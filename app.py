@@ -258,7 +258,12 @@ def check_supabase():
                 return jsonify({'success': False, 'error': 'Security check failed. Refresh the page and try again.'}), 400
             flash("Security check failed. Refresh the page and try again.", "error")
             return redirect(safe_redirect_url(url_for('index')))
-    public_auth_endpoints = {'static', 'service_worker', 'auth', 'forgot_password', 'reset_password'}
+    # Terms and Privacy must be readable before signing up -- the registration
+    # form links to them, so gating them behind a session would be circular.
+    public_auth_endpoints = {
+        'static', 'service_worker', 'auth', 'forgot_password', 'reset_password',
+        'terms', 'privacy',
+    }
     if not supabase and request.endpoint in {'auth', 'forgot_password', 'reset_password'}:
         flash("Supabase connection failed. Add SUPABASE_URL and SUPABASE_SECRET to your .env file.", "error")
     elif not supabase and not app.config.get('TESTING') and request.endpoint not in public_auth_endpoints:

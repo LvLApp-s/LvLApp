@@ -251,6 +251,51 @@
   --warning-color: var(--lvl-warning);
 }
 
+/* ---------------------------------------------------------------------------
+   Motion contract.
+
+   Interface transitions run 150-250ms on --ease-standard. Anything longer has
+   to earn it. One authoritative reduced-motion guard sits here so individual
+   components do not each have to remember.
+   --------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--lvl-brand);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+/* Every tappable control clears the minimum touch area on a phone. */
+@media (pointer: coarse) {
+  button,
+  a[role="button"],
+  .mobile-bottom-nav a,
+  .library-tab,
+  .feedback-close,
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-height: var(--touch-target);
+  }
+
+  .mobile-bottom-nav a,
+  button,
+  a[role="button"] {
+    min-width: var(--touch-target);
+  }
+}
+
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -258,7 +303,7 @@
 }
 
 [hidden] {
-  display: none !important;
+  display: none;
 }
 
 body {
@@ -488,7 +533,7 @@ a:hover {
   -ms-overflow-style: none;
 }
 .right-rail::-webkit-scrollbar {
-  display: none !important;
+  display: none;
 }
 
 .custom-scrollbar {
@@ -496,7 +541,7 @@ a:hover {
   -ms-overflow-style: none; /* IE and Edge */
 }
 .custom-scrollbar::-webkit-scrollbar {
-  display: none !important; /* Chrome, Safari, Opera */
+  display: none; /* Chrome, Safari, Opera */
 }
 
 /* ==========================================================================

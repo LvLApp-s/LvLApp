@@ -1,5 +1,4 @@
 /* Product hardening and layout safety additions */
-/* LvL product hardening additions */
 .post-content {
   min-width: 0;
   flex: 1;
@@ -11,11 +10,13 @@
   color: inherit;
   text-decoration: none;
 }
+
 .post-author-link strong {
   display: inline-flex;
   align-items: center;
   gap: 4px;
 }
+
 .post-author-link span {
   color: var(--text-secondary);
   font-size: 14px;
@@ -117,6 +118,8 @@
   display: inline-flex;
   align-items: baseline;
   gap: 5px;
+  color: inherit;
+  text-decoration: none;
 }
 
 .profile-high-five-form {
@@ -165,7 +168,7 @@
 }
 
 .profile-high-five-button:hover .profile-high-five-svg {
-  animation: highFiveSlap 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) infinite alternate;
+  animation: highFiveSlap 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) 2 alternate;
   filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.65));
 }
 
@@ -177,7 +180,6 @@
   transform: rotate(20deg) scale(0.95);
 }
 
-/* Micro sparkle effects around high-five on hover */
 .high-five-sparkles {
   position: absolute;
   inset: -6px;
@@ -202,47 +204,62 @@
 .high-five-sparkles .s1 {
   top: 0;
   right: 2px;
-  animation: sparklePulse 1.2s infinite ease-in-out;
 }
 
 .high-five-sparkles .s2 {
   top: -3px;
   left: 5px;
-  animation: sparklePulse 1.2s infinite ease-in-out 0.4s;
 }
 
 .high-five-sparkles .s3 {
   bottom: 4px;
   right: -2px;
-  animation: sparklePulse 1.2s infinite ease-in-out 0.8s;
 }
 
 @keyframes highFiveSlap {
-  0% { transform: rotate(0deg) scale(1); }
-  35% { transform: rotate(-18deg) scale(1.15); }
-  70% { transform: rotate(14deg) scale(1.2); }
-  100% { transform: rotate(-6deg) scale(1.1); }
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+
+  35% {
+    transform: rotate(-18deg) scale(1.15);
+  }
+
+  70% {
+    transform: rotate(14deg) scale(1.2);
+  }
+
+  100% {
+    transform: rotate(-6deg) scale(1.1);
+  }
+
 }
 
 @keyframes sparklePulse {
-  0%, 100% { transform: scale(0.4); opacity: 0.3; }
-  50% { transform: scale(1.4); opacity: 1; }
+  0%, 100% {
+    transform: scale(0.4);
+    opacity: 0.3;
+  }
+
+  50% {
+    transform: scale(1.4);
+    opacity: 1;
+  }
+
 }
 
-/* Hide labels only when menu is CLOSED */
 .left-rail:not(.menu-open):not(.mobile-menu-open) .nav-label.sr-only {
-  position: absolute !important;
-  width: 1px !important;
-  height: 1px !important;
-  padding: 0 !important;
-  margin: -1px !important;
-  overflow: hidden !important;
-  clip: rect(0, 0, 0, 0) !important;
-  white-space: nowrap !important;
-  border: 0 !important;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
-/* When menu is open, show labels properly */
 .left-rail.menu-open .nav-label,
 .left-rail.mobile-menu-open .nav-label {
   position: static !important;
@@ -260,7 +277,6 @@
   color: var(--text-primary) !important;
 }
 
-/* Center icons only when menu is CLOSED; left-align with label when open */
 .left-rail:not(.menu-open):not(.mobile-menu-open) .nav-list a {
   justify-content: center !important;
   padding-inline: 0 !important;
@@ -300,11 +316,6 @@
   white-space: nowrap !important;
 }
 
-.profile-stats a {
-  color: inherit;
-  text-decoration: none;
-}
-
 .profile-stats a:hover {
   text-decoration: underline;
 }
@@ -330,7 +341,7 @@
 
 .message-bubble-wrapper:not(.own) .message-bubble {
   background: var(--lvl-surface-overlay) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid var(--border-color) !important;
   color: var(--lvl-text-primary) !important;
   border-bottom-left-radius: 4px;
 }
@@ -339,36 +350,33 @@
   .timeline-messages .message-bubble-wrapper {
     max-width: min(80%, 280px);
   }
+
 }
 
 .profile-banner.level-4 {
-  background:
-    radial-gradient(circle at 18% 22%, var(--lvl-cyan-soft-42), transparent 26%),
-    radial-gradient(circle at 78% 18%, var(--lvl-purple-strong-soft-40), transparent 30%),
-    linear-gradient(135deg, var(--lvl-surface-raised), var(--lvl-tint-violet) 72%);
+  background: radial-gradient(circle at 18% 22%, var(--lvl-cyan-soft-42), transparent 26%),
+  radial-gradient(circle at 78% 18%, var(--lvl-purple-strong-soft-40), transparent 30%),
+  linear-gradient(135deg, var(--lvl-surface-raised), var(--lvl-tint-violet) 72%);
 }
 
 .profile-banner.level-5 {
-  background:
-    radial-gradient(circle at 20% 20%, var(--lvl-warning-soft-46), transparent 24%),
-    radial-gradient(circle at 82% 78%, var(--lvl-female-soft-38), transparent 30%),
-    linear-gradient(135deg, var(--lvl-tint-amber), var(--lvl-tint-crimson) 72%);
+  background: radial-gradient(circle at 20% 20%, var(--lvl-warning-soft-46), transparent 24%),
+  radial-gradient(circle at 82% 78%, var(--lvl-female-soft-38), transparent 30%),
+  linear-gradient(135deg, var(--lvl-tint-amber), var(--lvl-tint-crimson) 72%);
 }
 
 .profile-banner.level-6 {
-  background:
-    radial-gradient(circle at 16% 26%, var(--lvl-purple-strong-soft-40), transparent 26%),
-    radial-gradient(circle at 82% 18%, var(--lvl-cyan-soft-42), transparent 30%),
-    radial-gradient(circle at 72% 82%, var(--lvl-warning-soft-34), transparent 24%),
-    linear-gradient(135deg, var(--lvl-tint-violet), var(--lvl-surface-raised) 72%);
+  background: radial-gradient(circle at 16% 26%, var(--lvl-purple-strong-soft-40), transparent 26%),
+  radial-gradient(circle at 82% 18%, var(--lvl-cyan-soft-42), transparent 30%),
+  radial-gradient(circle at 72% 82%, var(--lvl-warning-soft-34), transparent 24%),
+  linear-gradient(135deg, var(--lvl-tint-violet), var(--lvl-surface-raised) 72%);
 }
 
 .profile-banner.level-7 {
-  background:
-    radial-gradient(circle at 18% 22%, var(--lvl-warning-soft-46), transparent 24%),
-    radial-gradient(circle at 82% 18%, var(--lvl-purple-strong-soft-40), transparent 26%),
-    radial-gradient(circle at 70% 84%, var(--lvl-cyan-soft-42), transparent 28%),
-    linear-gradient(135deg, var(--lvl-tint-amber), var(--lvl-tint-crimson) 74%);
+  background: radial-gradient(circle at 18% 22%, var(--lvl-warning-soft-46), transparent 24%),
+  radial-gradient(circle at 82% 18%, var(--lvl-purple-strong-soft-40), transparent 26%),
+  radial-gradient(circle at 70% 84%, var(--lvl-cyan-soft-42), transparent 28%),
+  linear-gradient(135deg, var(--lvl-tint-amber), var(--lvl-tint-crimson) 74%);
 }
 
 .checkbox-row {
@@ -387,7 +395,7 @@
 .people-list-panel {
   margin: 12px 14px 18px;
   overflow: hidden;
-  border: 1px solid var(--surface-border);
+  border: 1px solid var(--border-color);
   border-radius: var(--surface-radius);
   background: linear-gradient(180deg, var(--surface-panel-raised), var(--surface-panel));
   box-shadow: var(--surface-shadow);
@@ -480,9 +488,9 @@
   .people-list-scroll {
     max-height: calc(100dvh - 220px);
   }
+
 }
 
-/* ── Unified Toast Notification System ── */
 .toast-container {
   position: fixed;
   top: 24px;
@@ -501,7 +509,7 @@
   background: rgba(18, 18, 18, 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   padding: 14px 18px;
   box-shadow: 0 12px 34px rgba(0, 0, 0, 0.45);
@@ -554,18 +562,20 @@
   color: var(--text-primary);
 }
 
-/* Status variants */
 .toast-item.success {
   border-left: 4px solid var(--lvl-success);
 }
+
 .toast-item.error {
   border-left: 4px solid var(--lvl-danger);
 }
+
 .toast-item.warning {
   border-left: 4px solid var(--lvl-warning);
 }
+
 .toast-item.info {
-  border-left: 4px solid var(--lvl-cyan);
+  border-left: 4px solid var(--lvl-brand);
 }
 
 @media (max-width: 767px) {
@@ -576,4 +586,6 @@
     width: auto;
     align-items: center;
   }
+
 }
+

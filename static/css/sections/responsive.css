@@ -167,10 +167,6 @@
   }
 
   /* Guide on tablet */
-  .guide-container {
-    max-width: 640px;
-    margin: 0 auto;
-  }
 
   /* Reel on tablet */
   .reel-player-container {
@@ -341,13 +337,7 @@
   }
 
   /* Guide compact */
-  .guide-container {
-    padding: 12px;
-  }
 
-  .guide-tab-panel {
-    padding: 12px 0;
-  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -493,28 +483,12 @@
 .reel-card,
 .reel-video-frame,
 .careers-position-card,
-.guide-form-card {
-  min-width: 0;
-}
-
 .post-content,
 .share-friend-info,
 .share-friend-info span,
 .careers-position-card,
-.guide-form-card {
-  overflow-wrap: anywhere;
-}
-
 .reply-gif-field,
 .reply-gif-field input,
-.guide-form-card input,
-.guide-form-card textarea,
-.guide-form-card select {
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
 .share-modal-content {
   width: min(400px, 100%);
   max-height: min(82dvh, 720px);
@@ -570,7 +544,4 @@
     max-width: calc(100vw - 24px);
   }
 
-  .guide-form-card {
-    padding: clamp(16px, 4vw, 24px);
-  }
 }

@@ -100,20 +100,6 @@
   font-size: 15px;
 }
 
-.level-guide-link {
-  display: inline-flex;
-  width: fit-content;
-  margin-top: 12px;
-  color: var(--accent-color);
-  font-size: 13px;
-  font-weight: 800;
-  text-decoration: none;
-}
-
-.level-guide-link:hover {
-  text-decoration: underline;
-}
-
 .profile-achievements-card {
   margin-top: 16px;
   padding: 14px;
@@ -194,40 +180,9 @@
   background: linear-gradient(90deg, var(--lvl-success), var(--lvl-primary));
 }
 
-.level-guide-page {
-  padding-bottom: 24px;
-}
 
-.level-guide-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(220px, 0.75fr);
-  gap: 16px;
-  align-items: stretch;
-}
 
-.level-guide-hero h2 {
-  max-width: 720px;
-  margin: 4px 0 8px;
-  font-size: 30px;
-  line-height: 1.12;
-}
 
-.level-guide-hero p,
-.level-guide-panel p {
-  color: var(--text-secondary);
-}
-
-.level-guide-score-card {
-  display: grid;
-  align-content: center;
-  gap: 8px;
-  padding: 16px;
-  border: 1px solid var(--lvl-primary-border);
-  border-radius: var(--radius-sm);
-  background: linear-gradient(135deg, var(--lvl-primary-soft-15), var(--lvl-purple-soft-25));
-}
-
-.level-guide-score-card span,
 .panel-kicker {
   color: var(--text-secondary);
   font-size: 12px;
@@ -235,15 +190,12 @@
   text-transform: uppercase;
 }
 
-.level-guide-score-card strong {
-  font-size: 20px;
-}
 
 .level-path-panel {
   background:
     radial-gradient(circle at 16% 18%, var(--lvl-primary-soft-22), transparent 30%),
     radial-gradient(circle at 86% 24%, var(--lvl-female-soft-25), transparent 28%),
-    linear-gradient(180deg, var(--surface-panel-raised, var(--lvl-surface-overlay)), var(--surface-panel, var(--lvl-surface-raised))) !important;
+    linear-gradient(180deg, var(--surface-panel-raised, var(--lvl-surface-overlay)), var(--surface-panel, var(--lvl-surface-raised)));
 }
 
 .level-step-grid {
@@ -265,7 +217,7 @@
   height: 38px;
   display: grid;
   place-items: center;
-  border: 1px solid var(--lvl-white-16);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-round);
   background: var(--lvl-white-06);
   font-style: normal;
@@ -297,20 +249,9 @@
   background: linear-gradient(180deg, var(--lvl-success-soft), var(--lvl-surface-raised));
 }
 
-.level-guide-panel {
-  display: grid;
-  gap: 14px;
-}
 
 .xp-rule-grid,
-.achievement-guide-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
 .xp-rule-grid article,
-.achievement-guide-grid article,
 .reward-ladder article,
 .level-requirement-grid div {
   display: grid;
@@ -329,9 +270,6 @@
 
 .xp-rule-grid article span,
 .reward-ladder article strong,
-.achievement-guide-grid article strong {
-  font-weight: 800;
-}
 
 .reward-ladder {
   display: grid;
@@ -428,10 +366,8 @@
 }
 
 @media (max-width: 560px) {
-  .level-guide-hero,
   .reward-ladder,
   .xp-rule-grid,
-  .achievement-guide-grid,
   .level-requirement-grid {
     grid-template-columns: 1fr;
   }

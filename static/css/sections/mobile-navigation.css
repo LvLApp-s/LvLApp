@@ -81,7 +81,7 @@
     align-items: center;
     gap: 8px;
     padding-inline: 11px;
-    border: 1px solid var(--lvl-white-12);
+    border: 1px solid var(--border-color);
     border-radius: var(--radius-pill);
     background: var(--lvl-white-06);
     color: var(--text-secondary);
@@ -350,7 +350,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid var(--lvl-white-12);
+    border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
     background: var(--lvl-white-04);
     overflow: hidden;
@@ -394,8 +394,8 @@
     margin-inline: auto;
     border-radius: var(--radius-round);
     background: var(--text-primary);
-    color: var(--lvl-text-inverse) !important;
-    font-size: 30px !important;
+    color: var(--lvl-text-inverse);
+    font-size: 30px;
     line-height: 1;
     box-shadow: 0 12px 34px var(--lvl-black-58);
   }

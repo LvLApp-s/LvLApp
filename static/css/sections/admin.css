@@ -252,7 +252,7 @@
   color: var(--text-primary);
 }
 .admin-log-entry {
-  border-bottom: 1px solid var(--lvl-border);
+  border-bottom: 1px solid var(--border-color);
   padding: 6px 0;
 }
 .admin-warning-modal {
@@ -269,7 +269,7 @@
 }
 .admin-warning-dialog {
   background: var(--lvl-surface-raised);
-  border: 1px solid var(--lvl-cyan);
+  border: 1px solid var(--lvl-brand);
   border-radius: var(--radius-lg);
   padding: 24px;
   width: 100%;
@@ -305,7 +305,7 @@
 .admin-select-input {
   background: var(--bg-color);
   color: var(--text-primary);
-  border: 1px solid var(--lvl-border);
+  border: 1px solid var(--border-color);
   padding: 8px;
   border-radius: var(--radius-sm);
   font: inherit;

@@ -38,7 +38,7 @@
   height: 44px;
   display: grid;
   place-items: center;
-  border: 1px solid var(--lvl-white-12);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   background: var(--lvl-white-05);
   font-size: 20px;

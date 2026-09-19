@@ -5,7 +5,7 @@ import tempfile
 import unittest
 import inspect
 from email import message_from_string
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import ANY, patch
@@ -5343,6 +5343,647 @@ class AppRouteTests(unittest.TestCase):
             self.assertTrue(res.headers['Location'].endswith("/request_verification"))
             self.assertEqual(len(fake_table_clean.inserted), 1)
             self.assertEqual(fake_table_clean.inserted[0]["reason"], "Verify me please")
+
+
+class RegistrationRequirementTests(unittest.TestCase):
+    """Covers the registration rules added in the final implementation pass:
+    minimum age 16, confirmed password, accepted terms and unique usernames."""
+
+    def setUp(self):
+        zapp.app.config.update(TESTING=True, WTF_CSRF_ENABLED=False)
+        self.client = zapp.app.test_client()
+
+    def csrf(self):
+        html = self.client.get("/auth").data.decode()
+        return html.split('name="csrf_token" value="', 1)[1].split('"', 1)[0]
+
+    def register(self, supabase, **overrides):
+        today = date.today()
+        form = {
+            "csrf_token": self.csrf(),
+            "action": "register",
+            "first_name": "Demo",
+            "last_name": "User",
+            "nickname": "demouser",
+            "email": "demo@example.com",
+            "password": "correct-horse",
+            "password_confirm": "correct-horse",
+            "gender": "Male",
+            "birthday": today.replace(year=today.year - 20).isoformat(),
+            "accept_terms": "1",
+        }
+        form.update(overrides)
+        form = {k: v for k, v in form.items() if v is not None}
+        with patch.object(zapp, "supabase", supabase), \
+             patch.object(zapp, "award_xp", return_value=None), \
+             patch.object(zapp, "start_user_session", return_value=None):
+            return self.client.post("/auth", data=form)
+
+    @staticmethod
+    def fake_supabase(existing_usernames=()):
+        inserted = []
+
+        class Table:
+            def __init__(self, name):
+                self.name = name
+                self._value = None
+
+            def select(self, *a, **k):
+                return self
+
+            def eq(self, _column, value):
+                self._value = value
+                return self
+
+            def limit(self, *a, **k):
+                return self
+
+            def insert(self, payload):
+                inserted.append(payload)
+                self._value = 'INSERT'
+                return self
+
+            def execute(self):
+                if self._value == 'INSERT':
+                    return SimpleNamespace(data=[{"id": 1, **inserted[-1]}])
+                if self._value in existing_usernames:
+                    return SimpleNamespace(data=[{"id": 99}])
+                return SimpleNamespace(data=[])
+
+        class Supabase:
+            def table(self, name):
+                return Table(name)
+
+        supabase = Supabase()
+        supabase.inserted = inserted
+        return supabase
+
+    def assert_rejected(self, response, message):
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(message, response.data.decode())
+
+    # --- age ---------------------------------------------------------------
+
+    def test_registration_rejects_users_under_sixteen(self):
+        supabase = self.fake_supabase()
+        today = date.today()
+        one_day_short = today.replace(year=today.year - 16) + timedelta(days=1)
+
+        response = self.register(supabase, birthday=one_day_short.isoformat())
+
+        self.assert_rejected(response, "You must be at least 16 years old")
+        self.assertEqual(supabase.inserted, [])
+
+    def test_registration_accepts_exactly_sixteen(self):
+        supabase = self.fake_supabase()
+        today = date.today()
+        exactly_sixteen = today.replace(year=today.year - 16)
+
+        response = self.register(supabase, birthday=exactly_sixteen.isoformat())
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(len(supabase.inserted), 1)
+
+    def test_registration_rejects_invalid_birthday(self):
+        supabase = self.fake_supabase()
+
+        response = self.register(supabase, birthday="not-a-date")
+
+        self.assert_rejected(response, "Birthday must use a real date")
+        self.assertEqual(supabase.inserted, [])
+
+    def test_registration_form_advertises_the_age_floor(self):
+        html = self.client.get("/auth").data.decode()
+        limits = zapp.birthday_date_limits()
+
+        self.assertIn(f'max="{limits["max"].isoformat()}"', html)
+        self.assertIn("at least 16 years old", html)
+
+    # --- password ----------------------------------------------------------
+
+    def test_registration_rejects_password_mismatch(self):
+        supabase = self.fake_supabase()
+
+        response = self.register(supabase, password_confirm="something-else")
+
+        self.assert_rejected(response, "Passwords do not match")
+        self.assertEqual(supabase.inserted, [])
+
+    def test_registration_requires_the_confirmation_field(self):
+        supabase = self.fake_supabase()
+
+        response = self.register(supabase, password_confirm="")
+
+        self.assert_rejected(response, "Confirm your password")
+        self.assertEqual(supabase.inserted, [])
+
+    def test_registration_never_echoes_password_values_back(self):
+        supabase = self.fake_supabase()
+
+        response = self.register(supabase, password_confirm="something-else")
+
+        self.assertNotIn("correct-horse", response.data.decode())
+
+    def test_confirm_password_field_is_rendered(self):
+        html = self.client.get("/auth").data.decode()
+
+        self.assertIn('name="password_confirm"', html)
+        self.assertIn('autocomplete="new-password"', html)
+
+    # --- terms -------------------------------------------------------------
+
+    def test_registration_rejects_unaccepted_terms(self):
+        supabase = self.fake_supabase()
+
+        response = self.register(supabase, accept_terms=None)
+
+        self.assert_rejected(response, "accept the Terms")
+        self.assertEqual(supabase.inserted, [])
+
+    def test_registration_records_accepted_terms_version(self):
+        supabase = self.fake_supabase()
+
+        response = self.register(supabase)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(supabase.inserted[0]["terms_version"], zapp.TERMS_VERSION)
+        self.assertTrue(supabase.inserted[0]["terms_accepted_at"])
+
+    def test_terms_checkbox_is_not_pre_selected(self):
+        html = self.client.get("/auth").data.decode()
+        checkbox = html.split('name="accept_terms"', 1)[1].split(">", 1)[0]
+
+        self.assertNotIn("checked", checkbox)
+        self.assertIn("required", checkbox)
+        self.assertIn('href="/terms"', html)
+
+    def test_terms_and_privacy_pages_are_readable_before_signing_up(self):
+        for path, heading in (("/terms", "Terms &amp; Conditions"), ("/privacy", "Privacy &amp; Cookies")):
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 200)
+                self.assertIn(heading, response.data.decode())
+
+    # --- username ----------------------------------------------------------
+
+    def test_registration_rejects_duplicate_username(self):
+        supabase = self.fake_supabase(existing_usernames={"demouser"})
+
+        response = self.register(supabase)
+
+        self.assert_rejected(response, "already taken")
+        self.assertEqual(supabase.inserted, [])
+
+    def test_registration_normalises_username_case(self):
+        supabase = self.fake_supabase()
+
+        response = self.register(supabase, nickname="BerkanE")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(supabase.inserted[0]["username"], "berkane")
+        self.assertEqual(supabase.inserted[0]["nickname"], "berkane")
+
+    def test_registration_rejects_invalid_username_format(self):
+        supabase = self.fake_supabase()
+
+        response = self.register(supabase, nickname="no spaces")
+
+        self.assert_rejected(response, "3-24 characters")
+        self.assertEqual(supabase.inserted, [])
+
+
+class UsernameAvailabilityTests(unittest.TestCase):
+    def setUp(self):
+        zapp.app.config.update(TESTING=True, WTF_CSRF_ENABLED=False)
+        self.client = zapp.app.test_client()
+
+    def check(self, value, taken=False, viewer=None):
+        with patch.object(zapp, "supabase", object()), \
+             patch.object(zapp, "username_is_taken", return_value=taken), \
+             patch.object(zapp, "get_current_user", return_value=viewer):
+            response = self.client.get("/api/username-available", query_string={"username": value})
+        self.assertEqual(response.status_code, 200)
+        return response.get_json()
+
+    def test_available_username(self):
+        self.assertEqual(self.check("freename"), {
+            "status": "available", "available": True, "username": "freename"})
+
+    def test_taken_username(self):
+        result = self.check("takenname", taken=True)
+        self.assertEqual(result["status"], "taken")
+        self.assertFalse(result["available"])
+
+    def test_invalid_username_format(self):
+        result = self.check("a b")
+        self.assertEqual(result["status"], "invalid")
+        self.assertFalse(result["available"])
+        self.assertIn("3-24", result["error"])
+
+    def test_own_username_while_editing_settings(self):
+        result = self.check("Demo", viewer={"id": 7, "username": "demo"})
+        self.assertEqual(result["status"], "current")
+        self.assertTrue(result["available"])
+
+    def test_endpoint_exposes_no_user_data(self):
+        result = self.check("takenname", taken=True)
+        self.assertEqual(set(result), {"status", "available", "username"})
+
+    def test_username_is_taken_is_case_insensitive(self):
+        captured = []
+
+        class Table:
+            def select(self, *a, **k):
+                return self
+
+            def eq(self, column, value):
+                captured.append((column, value))
+                return self
+
+            def limit(self, *a, **k):
+                return self
+
+            def execute(self):
+                return SimpleNamespace(data=[])
+
+        class Supabase:
+            def table(self, name):
+                return Table()
+
+        with patch.object(zapp, "supabase", Supabase()):
+            zapp.username_is_taken("BERKAN")
+
+        self.assertIn(("username", "berkan"), captured)
+
+
+class ProfileCustomisationUnlockTests(unittest.TestCase):
+    def test_locked_below_level_five(self):
+        self.assertFalse(zapp.profile_color_unlocked(4))
+
+    def test_unlocked_from_level_five(self):
+        self.assertTrue(zapp.profile_color_unlocked(5))
+        self.assertTrue(zapp.profile_color_unlocked(20))
+
+    def test_unlock_threshold_is_five(self):
+        self.assertEqual(zapp.PROFILE_COLOR_UNLOCK_LEVEL, 5)
+
+    def test_settings_shows_the_control_locked_at_level_four(self):
+        zapp.app.config.update(TESTING=True, WTF_CSRF_ENABLED=False)
+        client = zapp.app.test_client()
+        viewer = {"id": 7, "username": "demo", "display_name": "Demo",
+                  "profile_photo_url": "", "level": 4, "theme_color": "#71767B"}
+        with patch.object(zapp, "get_current_user", return_value=viewer), \
+             patch.object(zapp, "get_community_highlights", return_value=[]), \
+             patch.object(zapp, "get_home_reel_preview", return_value=[]):
+            html = client.get("/settings").data.decode()
+        self.assertIn('name="profile_pic"', html)
+        self.assertIn("disabled", html.split('name="profile_pic"', 1)[1].split(">", 1)[0])
+
+    def test_settings_unlocks_the_control_at_level_five(self):
+        zapp.app.config.update(TESTING=True, WTF_CSRF_ENABLED=False)
+        client = zapp.app.test_client()
+        viewer = {"id": 7, "username": "demo", "display_name": "Demo",
+                  "profile_photo_url": "", "level": 5, "theme_color": "#71767B"}
+        with patch.object(zapp, "get_current_user", return_value=viewer), \
+             patch.object(zapp, "get_community_highlights", return_value=[]), \
+             patch.object(zapp, "get_home_reel_preview", return_value=[]):
+            html = client.get("/settings").data.decode()
+        self.assertNotIn("disabled", html.split('name="profile_pic"', 1)[1].split(">", 1)[0])
+
+
+class VerifiedBadgeTests(unittest.TestCase):
+    """One reusable badge, driven by is_profile_verified and never by level."""
+
+    def render(self, user):
+        from flask import render_template_string
+
+        with zapp.app.test_request_context("/"):
+            return render_template_string(
+                '{% from "_verified_badge.html" import verified_badge with context %}'
+                '{{ verified_badge(user) }}',
+                user=user,
+            )
+
+    def test_verified_profile_renders_the_badge(self):
+        html = self.render({"username": "someone", "is_profile_verified": True})
+        self.assertIn("verified-badge", html)
+
+    def test_unverified_profile_renders_nothing(self):
+        html = self.render({"username": "someone", "is_profile_verified": False})
+        self.assertNotIn("verified-badge", html.strip())
+
+    def test_badge_does_not_depend_on_level(self):
+        html = self.render({"username": "someone", "is_profile_verified": False, "level": 99})
+        self.assertNotIn("verified-badge", html.strip())
+
+    def test_is_verified_alone_does_not_grant_the_badge(self):
+        # users.is_verified only records that registration completed.
+        html = self.render({"username": "someone", "is_verified": True})
+        self.assertNotIn("verified-badge", html.strip())
+
+    def test_official_accounts_are_centralised(self):
+        self.assertTrue(zapp.account_is_verified({"username": "lvl"}))
+        self.assertFalse(zapp.account_is_verified({"username": "someone"}))
+        for path in sorted(Path("templates").glob("*.html")):
+            with self.subTest(path=path.name):
+                self.assertNotIn("'ikasfood'", path.read_text(encoding="utf-8"))
+
+    def test_badge_markup_exists_in_exactly_one_template(self):
+        owners = [
+            path.name for path in sorted(Path("templates").glob("*.html"))
+            if "verified-badge-shield" in path.read_text(encoding="utf-8")
+        ]
+        self.assertEqual(owners, ["_verified_badge.html"])
+
+
+class FeedbackSurfaceTests(unittest.TestCase):
+    """Errors and warnings at the top, normal feedback at the bottom."""
+
+    def setUp(self):
+        zapp.app.config.update(TESTING=True, WTF_CSRF_ENABLED=False)
+        self.client = zapp.app.test_client()
+
+    def test_both_stacks_are_rendered(self):
+        html = self.client.get("/auth").data.decode()
+        self.assertIn("data-alert-stack", html)
+        self.assertIn("data-toast-stack", html)
+
+    def test_errors_render_into_the_alert_stack_with_alert_role(self):
+        with zapp.app.test_request_context("/"):
+            zapp.flash("Something failed.", "error")
+            html = zapp.render_template("_feedback.html")
+        alerts, toasts = html.split("data-toast-stack")
+        self.assertIn("Something failed.", alerts)
+        self.assertIn('role="alert"', alerts)
+        self.assertNotIn("Something failed.", toasts)
+
+    def test_success_renders_into_the_toast_stack_with_status_role(self):
+        with zapp.app.test_request_context("/"):
+            zapp.flash("Profile updated.", "success")
+            html = zapp.render_template("_feedback.html")
+        alerts, toasts = html.split("data-toast-stack")
+        self.assertIn("Profile updated.", toasts)
+        self.assertIn('role="status"', toasts)
+        self.assertNotIn("Profile updated.", alerts)
+
+    def test_feedback_uses_svg_icons_not_emoji(self):
+        with zapp.app.test_request_context("/"):
+            zapp.flash("Done.", "success")
+            zapp.flash("Broken.", "error")
+            html = zapp.render_template("_feedback.html")
+        self.assertIn("<svg", html)
+        for emoji in ("\u2705", "\u274c", "\u26a0"):
+            self.assertNotIn(emoji, html)
+
+    def test_toast_stack_clears_the_mobile_bottom_navigation(self):
+        css = Path("static/css/sections/feedback.css").read_text(encoding="utf-8")
+        self.assertIn("bottom: calc(var(--mobile-nav-clearance) + var(--space-5))", css)
+        self.assertIn("top: calc(var(--safe-top) + var(--space-5))", css)
+
+    def test_there_is_only_one_feedback_implementation(self):
+        owners = [
+            path.name for path in sorted(Path("static/css/sections").glob("*.css"))
+            if ".feedback-item {" in path.read_text(encoding="utf-8")
+        ]
+        self.assertEqual(owners, ["feedback.css"])
+
+    def test_no_override_dump_stylesheet_was_added(self):
+        forbidden = {"final-fix.css", "final-polish.css", "fix-v2.css",
+                     "photo-requirements.css", "new-hardening.css"}
+        present = {path.name for path in Path("static/css/sections").glob("*.css")}
+        self.assertEqual(forbidden & present, set())
+
+
+class CookieConsentTests(unittest.TestCase):
+    def setUp(self):
+        zapp.app.config.update(TESTING=True, WTF_CSRF_ENABLED=False)
+        self.client = zapp.app.test_client()
+
+    def test_consent_banner_is_rendered_on_the_auth_page(self):
+        html = self.client.get("/auth").data.decode()
+        self.assertIn("data-consent-banner", html)
+        self.assertIn('data-consent-choice="essential"', html)
+        self.assertIn('data-consent-choice="all"', html)
+
+    def test_consent_banner_starts_hidden_until_javascript_decides(self):
+        html = self.client.get("/auth").data.decode()
+        banner = html.split("data-consent-banner", 1)[1].split(">", 1)[0]
+        self.assertIn("hidden", html.split('class="consent-banner"', 1)[1].split(">", 1)[0])
+
+    def test_consent_links_to_the_privacy_page(self):
+        html = self.client.get("/auth").data.decode()
+        self.assertIn('href="/privacy"', html)
+
+    def test_privacy_page_does_not_claim_tracking_that_does_not_exist(self):
+        html = self.client.get("/privacy").data.decode()
+        self.assertIn("does not load analytics", html)
+        self.assertIn("session", html)
+
+    def test_optional_storage_is_gated_but_session_cookie_is_not(self):
+        script = Path("static/js/script.js").read_text(encoding="utf-8")
+        self.assertIn("function preferencesAllowed()", script)
+        self.assertIn("function writePreference(", script)
+        # Preference writes must go through the gate, never straight to storage.
+        body = script.split("function initCookieConsent()", 1)[1]
+        self.assertNotIn("localStorage.setItem('autoplay_next_reels'", body)
+
+    def test_consent_banner_clears_the_mobile_navigation(self):
+        css = Path("static/css/sections/components.css").read_text(encoding="utf-8")
+        self.assertIn("bottom: calc(var(--mobile-nav-clearance) + var(--space-5))", css)
+
+
+class ContentDiversificationTests(unittest.TestCase):
+    """Trending and media must vary between refreshes without going random."""
+
+    def make_posts(self, count=20):
+        now = datetime.now(timezone.utc)
+        return [{
+            "id": i,
+            "created_at": (now - timedelta(hours=i)).isoformat(),
+            "like_count": 100 if i == 0 else 1,
+            "comment_count": 0,
+            "repost_count": 0,
+            "image_url": "http://example.com/a.png",
+            "user": {"id": 1, "username": "demo"},
+        } for i in range(count)]
+
+    def test_engagement_still_beats_noise(self):
+        posts = self.make_posts()
+        with zapp.app.test_request_context("/"):
+            scores = [
+                zapp.engagement_weight(p.get("like_count"), p.get("comment_count"))
+                for p in posts
+            ]
+        self.assertGreater(scores[0], max(scores[1:]) * 2)
+
+    def test_diversify_returns_the_requested_number(self):
+        posts = self.make_posts()
+        with zapp.app.test_request_context("/"):
+            picked = zapp.diversify(posts, 5, lambda p: 1.0)
+        self.assertEqual(len(picked), 5)
+
+    def test_repeated_calls_do_not_always_return_the_same_sequence(self):
+        posts = self.make_posts(30)
+        sequences = set()
+        with zapp.app.test_request_context("/"):
+            for _ in range(8):
+                picked = zapp.diversify(posts, 5, lambda p: 1.0,
+                                        session_key="recently_shown_test")
+                sequences.add(tuple(p["id"] for p in picked))
+        self.assertGreater(len(sequences), 1)
+
+    def test_recently_shown_items_are_pushed_down(self):
+        posts = self.make_posts(10)
+        with zapp.app.test_request_context("/"):
+            first = zapp.diversify(posts, 3, lambda p: 1.0, session_key="recently_shown_test")
+            second = zapp.diversify(posts, 3, lambda p: 1.0, session_key="recently_shown_test")
+        self.assertNotEqual([p["id"] for p in first], [p["id"] for p in second])
+
+    def test_recency_weight_prefers_newer_content(self):
+        now = datetime.now(timezone.utc)
+        fresh = zapp.recency_weight((now - timedelta(hours=1)).isoformat())
+        stale = zapp.recency_weight((now - timedelta(days=30)).isoformat())
+        self.assertGreater(fresh, stale)
+
+    def test_candidate_pools_stay_bounded(self):
+        self.assertLessEqual(zapp.TRENDING_CANDIDATE_POOL, 100)
+        self.assertLessEqual(zapp.HOME_MEDIA_CANDIDATE_POOL, 100)
+        self.assertLessEqual(zapp.REEL_CANDIDATE_POOL, 100)
+
+
+class SavedLibraryTests(unittest.TestCase):
+    def setUp(self):
+        zapp.app.config.update(TESTING=True, WTF_CSRF_ENABLED=False)
+        self.client = zapp.app.test_client()
+        self.viewer = {"id": 7, "username": "demo", "display_name": "Demo",
+                       "profile_photo_url": "", "level": 1}
+
+    def render(self, **kwargs):
+        with zapp.app.test_request_context("/bookmarks"):
+            return zapp.render_template(
+                "bookmarks.html",
+                viewer=self.viewer, highlights=[], tab=kwargs.get("tab", "posts"),
+                posts=kwargs.get("posts", []), reels=kwargs.get("reels", []),
+                page=1, has_next=False,
+            )
+
+    def test_tabs_for_posts_and_clips(self):
+        html = self.render()
+        self.assertIn('href="/bookmarks?tab=posts"', html)
+        self.assertIn('href="/bookmarks?tab=clips"', html)
+        self.assertIn('role="tablist"', html)
+
+    def test_media_posts_render_as_a_gallery(self):
+        posts = [{"id": 1, "image_url": "http://example.com/a.png", "content": "hi",
+                  "like_count": 2, "comment_count": 1,
+                  "user": {"id": 8, "username": "demo", "display_name": "Demo"}}]
+        html = self.render(posts=posts)
+        self.assertIn("library-grid", html)
+        self.assertIn("http://example.com/a.png", html)
+
+    def test_text_posts_stay_readable_cards(self):
+        posts = [{"id": 2, "image_url": None, "content": "a text only post",
+                  "reply_count": 0, "repost_count": 0, "like_count": 0,
+                  "viewer_reposted": False, "viewer_liked": False, "is_repost": False,
+                  "user": {"id": 8, "username": "demo", "display_name": "Demo",
+                           "profile_photo_url": ""}}]
+        html = self.render(posts=posts)
+        self.assertIn("a text only post", html)
+        self.assertNotIn("library-grid", html)
+
+    def test_empty_states(self):
+        self.assertIn("bookmarks_empty_posts", self.render())
+        self.assertIn("bookmarks_empty_clips", self.render(tab="clips"))
+
+    def test_profile_saved_tab_points_at_the_canonical_page(self):
+        """Saved content has one implementation, not two."""
+        profile = Path("templates/profile.html").read_text(encoding="utf-8")
+        self.assertIn("url_for('bookmarks')", profile)
+        self.assertNotIn("m='saved'", profile)
+
+    def test_profile_saved_mode_redirects_to_bookmarks(self):
+        with patch.object(zapp, "get_current_user", return_value=self.viewer), \
+             patch.object(zapp, "supabase", object()):
+            with zapp.app.test_request_context("/profile/demo?m=saved"):
+                pass
+        # The redirect itself is exercised through the route in AppRouteTests;
+        # here we assert the profile route no longer queries bookmarks tables.
+        source = Path("app.py").read_text(encoding="utf-8")
+        saved_branch = source.split("elif mode == 'saved':", 1)[1].split("else:", 1)[0]
+        self.assertIn("url_for('bookmarks'", saved_branch)
+        self.assertNotIn("supabase.table('bookmarks')", saved_branch)
+
+
+class IndependentRouteTests(unittest.TestCase):
+    """Contact, Verification and Careers survived the LvL Guide removal."""
+
+    def setUp(self):
+        zapp.app.config.update(TESTING=True, WTF_CSRF_ENABLED=False)
+        self.client = zapp.app.test_client()
+        self.viewer = {"id": 7, "username": "demo", "display_name": "Demo",
+                       "email": "demo@example.com", "profile_photo_url": ""}
+
+    def test_contact_page_renders_its_own_template(self):
+        with patch.object(zapp, "get_current_user", return_value=self.viewer), \
+             patch.object(zapp, "get_community_highlights", return_value=[]):
+            html = self.client.get("/contact").data.decode()
+        self.assertIn('action="/contact"', html)
+        self.assertIn("contact_subject", html)
+
+    def test_verification_page_renders_its_own_template(self):
+        with patch.object(zapp, "get_current_user", return_value=self.viewer), \
+             patch.object(zapp, "supabase", None), \
+             patch.object(zapp, "get_community_highlights", return_value=[]):
+            html = self.client.get("/request_verification").data.decode()
+        self.assertIn('action="/request_verification"', html)
+        self.assertIn("verification_reason", html)
+
+    def test_careers_page_renders_its_own_template(self):
+        with patch.object(zapp, "get_current_user", return_value=self.viewer), \
+             patch.object(zapp, "get_open_positions", return_value=[]), \
+             patch.object(zapp, "get_community_highlights", return_value=[]):
+            html = self.client.get("/careers").data.decode()
+        self.assertIn('action="/careers"', html)
+        self.assertIn("careers_cv", html)
+
+    def test_no_template_links_to_the_removed_guide(self):
+        for path in sorted(Path("templates").glob("*.html")):
+            with self.subTest(path=path.name):
+                text = path.read_text(encoding="utf-8")
+                self.assertNotIn("url_for('level_guide')", text)
+                self.assertNotIn('href="/level-guide"', text)
+
+    def test_guide_template_and_routes_are_gone(self):
+        self.assertFalse(Path("templates/level_guide.html").exists())
+        source = Path("app.py").read_text(encoding="utf-8")
+        for endpoint in ("def guide_contact", "def guide_verification", "def guide_careers"):
+            self.assertNotIn(endpoint, source)
+
+    def test_guide_styles_were_removed_with_the_page(self):
+        for path in sorted(Path("static/css").glob("**/*.css")):
+            with self.subTest(path=path.name):
+                self.assertNotIn(".level-guide", path.read_text(encoding="utf-8"))
+
+
+class MigrationTests(unittest.TestCase):
+    def test_terms_migration_is_idempotent_and_registered(self):
+        sql = Path("database/migrations/018_terms_acceptance.sql").read_text(encoding="utf-8").lower()
+        for snippet in ("add column if not exists terms_accepted_at",
+                        "add column if not exists terms_version",
+                        "create index if not exists",
+                        "create unique index if not exists idx_users_username_lower_unique",
+                        "create unique index if not exists idx_users_nickname_lower_unique"):
+            with self.subTest(snippet=snippet):
+                self.assertIn(snippet, sql)
+
+        readme = Path("database/README.md").read_text(encoding="utf-8")
+        self.assertIn("migrations/018_terms_acceptance.sql", readme)
+        self.assertLess(readme.index("migrations/017_reel_bookmarks.sql"),
+                        readme.index("migrations/018_terms_acceptance.sql"))
+
+    def test_terms_columns_are_optional_for_existing_accounts(self):
+        sql = Path("database/migrations/018_terms_acceptance.sql").read_text(encoding="utf-8").lower()
+        self.assertNotIn("not null", sql.split("alter table")[1].split(";")[0])
 
 
 if __name__ == "__main__":

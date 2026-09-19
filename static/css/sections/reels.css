@@ -1,5 +1,4 @@
 /* Reels tabs, cards, comments, and modal helpers */
-/* Reels page and upload layout */
 :root {
   --max-reel-height-desktop: 78vh;
   --max-reel-height-tablet: 70vh;
@@ -11,12 +10,14 @@
   :root {
     --max-reel-height: var(--max-reel-height-tablet);
   }
+
 }
 
 @media (max-width: 768px) {
   :root {
     --max-reel-height: var(--max-reel-height-mobile);
   }
+
 }
 
 .timeline-reels {
@@ -27,7 +28,6 @@
   background: var(--lvl-black);
 }
 
-/* Desktop: reels takes full available width */
 @media (min-width: 1001px) {
   .app-shell:has(.timeline-reels) {
     max-width: 100% !important;
@@ -47,6 +47,7 @@
     max-width: 860px;
     margin: 0 auto;
   }
+
 }
 
 .reels-page {
@@ -61,18 +62,20 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   min-height: var(--reels-header-block);
   padding: 14px 18px;
   border-bottom: 1px solid var(--border-color);
   background: var(--lvl-black-86);
   backdrop-filter: blur(18px);
+  flex-wrap: nowrap;
 }
 
 @media (max-width: 767px) {
   .reels-header {
     top: 122px;
   }
+
 }
 
 .reels-header h1 {
@@ -122,16 +125,15 @@
 }
 
 .reel-video-frame {
-  background: linear-gradient(135deg, var(--lvl-surface-raised), var(--lvl-surface-hover));
+  background: var(--lvl-black);
   position: relative;
   width: min(calc(var(--max-reel-height) * 9 / 16), 420px, 100%);
   height: auto;
   max-height: var(--max-reel-height);
   aspect-ratio: 9 / 16;
   overflow: hidden;
-  border: 1px solid var(--lvl-white-12);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  background: var(--lvl-black);
   box-shadow: 0 22px 70px var(--lvl-black-58);
 }
 
@@ -328,29 +330,30 @@
 }
 
 .reel-action-button:hover {
-  transform: scale(1.15);
+  transform: scale(1.18) !important;
   background: transparent !important;
   border: none !important;
 }
 
 .reel-action-button:active {
-  transform: scale(0.92);
+  transform: scale(0.92) !important;
 }
 
-/* Sound / Mute toggle active state -> YELLOW (var(--lvl-warning)) */
 .reel-action-button.reel-action-mute.active,
 .reel-action-mute.active {
   color: var(--lvl-warning) !important;
   background: transparent !important;
   border: none !important;
 }
+
 .reel-action-button.reel-action-mute.active svg,
 .reel-action-mute.active svg {
   stroke: var(--lvl-warning) !important;
-  filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.85));
+  filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.95)) drop-shadow(0 0 20px rgba(250, 204, 21, 0.5)) !important;
+  color: var(--lvl-warning) !important;
+  animation: reelSoundWave 1.4s ease-in-out infinite alternate;
 }
 
-/* Heart / Like active state -> PINK/RED (var(--lvl-danger)) */
 .reel-action-button.reel-action-like.active {
   color: var(--lvl-danger) !important;
   background: transparent !important;
@@ -382,7 +385,6 @@
   opacity: 0.72;
 }
 
-/* Double-Tap Heart Burst for Clips */
 .lvl-clip-doubletap-burst {
   position: absolute;
   top: 50%;
@@ -428,10 +430,26 @@
 }
 
 @keyframes lvl-clip-burst-anim {
-  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3) rotate(-15deg); }
-  35% { opacity: 1; transform: translate(-50%, -50%) scale(1.3) rotate(5deg); }
-  65% { opacity: 1; transform: translate(-50%, -60%) scale(1.1) rotate(0deg); }
-  100% { opacity: 0; transform: translate(-50%, -85%) scale(0.8); }
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.3) rotate(-15deg);
+  }
+
+  35% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.3) rotate(5deg);
+  }
+
+  65% {
+    opacity: 1;
+    transform: translate(-50%, -60%) scale(1.1) rotate(0deg);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -85%) scale(0.8);
+  }
+
 }
 
 .reel-comment-form {
@@ -590,15 +608,6 @@
   color: var(--error-color);
 }
 
-
-/* ─── Reels tabs ─────────────────────────────────────────────────────────── */
-.reels-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: nowrap;
-}
-
 .reels-header-title {
   flex-shrink: 0;
 }
@@ -635,21 +644,19 @@
   border-color: var(--lvl-white-14);
 }
 
-/* ─── Reel action button icon alignment ─────────────────────────────────── */
 .reel-action-button svg {
   display: block;
   flex-shrink: 0;
 }
 
-/* ─── Reel action views button & badge ───────────────────────────────── */
 .reel-action-button.reel-action-views {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 4px !important;
-  color: var(--lvl-white) !important;
-  cursor: default !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--lvl-white);
+  cursor: default;
   opacity: 0.95;
 }
 
@@ -673,11 +680,15 @@
   background: rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid var(--border-color);
   color: rgba(255, 255, 255, 0.9);
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .reel-views-pill svg {
@@ -685,7 +696,6 @@
   opacity: 0.85;
 }
 
-/* ─── Reel 3-dots more options dropdown ───────────────────────────── */
 .reel-more-dropdown {
   position: relative;
   display: flex;
@@ -694,8 +704,8 @@
 }
 
 .reel-action-button.reel-action-more {
-  cursor: pointer !important;
-  color: var(--lvl-white) !important;
+  cursor: pointer;
+  color: var(--lvl-white);
   opacity: 0.9;
   transition: transform 0.15s ease, opacity 0.15s ease;
 }
@@ -721,9 +731,9 @@
   display: flex !important;
   flex-direction: column !important;
   gap: 3px !important;
-  z-index: 120 !important;
+  z-index: 120;
   animation: reelMorePop 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-  white-space: nowrap !important;
+  white-space: nowrap;
 }
 
 .reel-more-menu[hidden] {
@@ -735,10 +745,12 @@
     opacity: 0;
     transform: scale(0.92) translateX(6px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateX(0);
   }
+
 }
 
 .reel-actions .reel-more-item,
@@ -808,7 +820,6 @@
   stroke: currentColor !important;
 }
 
-/* ─── Reel comment panel (Instagram-style overlay on top of video) ───────── */
 .reel-comment-panel {
   position: absolute;
   inset: auto 0 0 0;
@@ -821,7 +832,7 @@
   background: rgba(18, 18, 28, 0.94);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  border-top: 1px solid var(--border-color);
   border-left: none;
   border-right: none;
   border-bottom: none;
@@ -956,7 +967,7 @@
   display: flex;
   gap: 8px;
   padding: 10px 14px;
-  border-top: 1px solid var(--lvl-white-12);
+  border-top: 1px solid var(--border-color);
   background: color-mix(in srgb, var(--lvl-surface-overlay) 96%, transparent);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -1001,7 +1012,6 @@
   cursor: default;
 }
 
-/* ─── Avatar modal ────────────────────────────────────────────────────────── */
 .profile-avatar-btn {
   background: none;
   border: none;
@@ -1061,7 +1071,6 @@
   background: var(--lvl-white-22);
 }
 
-/* ─── Text overflow / layout safety ─────────────────────────────────────── */
 .post-author-link strong,
 .post-author-link span,
 .mini-profile strong,
@@ -1110,6 +1119,7 @@
   .timeline-reels {
     --reels-topbar-offset: 64px;
   }
+
 }
 
 @media (max-width: 640px) {
@@ -1119,8 +1129,6 @@
   }
 
   .reels-page {
-    /* Header and bottom-nav clearance come from the shared tokens in base.css
-       so the reels page cannot drift away from the rest of the app. */
     --reels-mobile-header: var(--mobile-header-height);
     min-height: calc(100dvh - var(--mobile-nav-clearance));
   }
@@ -1252,24 +1260,26 @@
     width: min(260px, 72vw);
     margin-inline: auto;
   }
+
 }
+
 .share-modal-header {
   display: flex;
   align-items: center;
   gap: 10px;
   padding-bottom: 15px;
-  border-bottom: 1px solid var(--lvl-border);
+  border-bottom: 1px solid var(--border-color);
 }
+
 .share-search-input {
   flex: 1;
   padding: 6px 12px;
   border-radius: var(--radius-pill);
-  border: 1px solid var(--lvl-border);
+  border: 1px solid var(--border-color);
   background: var(--lvl-black-20);
   color: var(--lvl-text-primary);
 }
 
-/* Embedded Reels Feed for Profile & Bookmarks */
 .profile-reels-feed,
 .bookmarks-reels-feed {
   width: 100%;
@@ -1299,7 +1309,7 @@
   overflow: hidden !important;
   position: relative !important;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6) !important;
-  border: 1px solid var(--lvl-white-12) !important;
+  border: 1px solid var(--border-color) !important;
 }
 
 .profile-reels-feed .reel-actions,
@@ -1336,8 +1346,6 @@
   margin-bottom: 8px;
 }
 
-/* === Clip card rules, moved out of templates/_reel_card.html === */
-
 .reel-actions,
   .reel-actions > form,
   .reel-actions > button,
@@ -1345,257 +1353,321 @@
   .reel-actions > div > button,
   .reel-actions > a,
   .reel-action-button {
-    background: transparent !important;
-    border: none !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    outline: none !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    -webkit-tap-highlight-color: transparent !important;
-  }
-  .reel-actions .reel-more-menu {
-    width: max-content !important;
-    min-width: 175px !important;
-    background: rgba(18, 18, 28, 0.96) !important;
-    border: 1px solid rgba(255, 255, 255, 0.16) !important;
-    border-radius: var(--radius-lg) !important;
-    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75) !important;
-    backdrop-filter: blur(24px) !important;
-    -webkit-backdrop-filter: blur(24px) !important;
-    padding: 6px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 3px !important;
-  }
-  .reel-actions .reel-more-menu[hidden],
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+.reel-actions .reel-more-menu {
+  width: max-content !important;
+  min-width: 175px !important;
+  background: rgba(18, 18, 28, 0.96) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  padding: 6px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 3px !important;
+}
+
+.reel-actions .reel-more-menu[hidden],
   .reel-more-menu[hidden] {
-    display: none !important;
-  }
-  .reel-actions .reel-more-item {
-    width: 100% !important;
-    height: auto !important;
-    min-height: 38px !important;
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-    gap: 10px !important;
-    padding: 8px 12px !important;
-    border-radius: var(--radius-icon) !important;
-    font-size: 13px !important;
-    font-weight: 600 !important;
-    color: rgba(255, 255, 255, 0.9) !important;
-    text-decoration: none !important;
-    white-space: nowrap !important;
-    box-sizing: border-box !important;
-  }
-  .reel-actions .reel-more-item svg {
-    width: 18px !important;
-    height: 18px !important;
-    min-width: 18px !important;
-    flex-shrink: 0 !important;
-    display: block !important;
-    margin: 0 !important;
-  }
-  .reel-actions .reel-more-item span {
-    display: inline-block !important;
-    white-space: nowrap !important;
-    font-size: 13px !important;
-    font-weight: 600 !important;
-    line-height: 1 !important;
-  }
-  .reel-actions .reel-more-item:hover {
-    background: rgba(255, 255, 255, 0.12) !important;
-    color: var(--lvl-white) !important;
-  }
-  .reel-actions .reel-more-item.danger {
-    color: var(--lvl-danger) !important;
-  }
-  .reel-actions .reel-more-item.danger:hover {
-    background: rgba(244, 63, 94, 0.2) !important;
-    color: var(--lvl-danger) !important;
-  }
-  /* ─── Glamorous Active & Interaction Animations ─── */
-  .reel-action-button {
-    transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.22s ease !important;
-  }
-  .reel-action-button:hover {
-    transform: scale(1.18) !important;
-  }
-  .reel-action-button:active {
-    transform: scale(0.92) !important;
+  display: none !important;
+}
+
+.reel-actions .reel-more-item {
+  width: 100% !important;
+  height: auto !important;
+  min-height: 38px !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  padding: 8px 12px !important;
+  border-radius: var(--radius-icon) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  text-decoration: none !important;
+  white-space: nowrap !important;
+  box-sizing: border-box !important;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.reel-actions .reel-more-item svg {
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  flex-shrink: 0 !important;
+  display: block !important;
+  margin: 0 !important;
+}
+
+.reel-actions .reel-more-item span {
+  display: inline-block !important;
+  white-space: nowrap !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+}
+
+.reel-actions .reel-more-item:hover {
+  background: rgba(255, 255, 255, 0.14) !important;
+  color: var(--lvl-white) !important;
+  transform: translateX(-4px) scale(1.02);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.reel-actions .reel-more-item.danger {
+  color: var(--lvl-danger) !important;
+}
+
+.reel-actions .reel-more-item.danger:hover {
+  background: rgba(244, 63, 94, 0.2) !important;
+  color: var(--lvl-danger) !important;
+}
+
+.reel-action-button {
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.22s ease;
+}
+
+@keyframes reelSoundWave {
+  0% {
+    transform: scale(1) rotate(0deg);
   }
 
-  /* 1. Mute / Sound toggle */
-  .reel-action-button.reel-action-mute.active,
-  .reel-action-mute.active {
-    color: var(--lvl-warning) !important;
-  }
-  .reel-action-button.reel-action-mute.active svg,
-  .reel-action-mute.active svg {
-    stroke: var(--lvl-warning) !important;
-    color: var(--lvl-warning) !important;
-    animation: reelSoundWave 1.4s ease-in-out infinite alternate !important;
-    filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.95)) drop-shadow(0 0 20px rgba(250, 204, 21, 0.5)) !important;
-  }
-  @keyframes reelSoundWave {
-    0%   { transform: scale(1) rotate(0deg); }
-    30%  { transform: scale(1.12) rotate(-4deg); }
-    70%  { transform: scale(1.06) rotate(4deg); }
-    100% { transform: scale(1.14) rotate(0deg); }
+  30% {
+    transform: scale(1.12) rotate(-4deg);
   }
 
-  /* 2. Like button */
-  .reel-action-button.reel-action-like.active,
+  70% {
+    transform: scale(1.06) rotate(4deg);
+  }
+
+  100% {
+    transform: scale(1.14) rotate(0deg);
+  }
+
+}
+
+.reel-action-button.reel-action-like.active,
   .reel-action-like.active {
-    color: var(--lvl-danger) !important;
-  }
-  .reel-action-button.reel-action-like.active svg,
+  color: var(--lvl-danger) !important;
+}
+
+.reel-action-button.reel-action-like.active svg,
   .reel-action-like.active svg {
-    fill: var(--lvl-danger) !important;
-    stroke: var(--lvl-danger) !important;
-    animation: reelHeartBeat 1.6s cubic-bezier(0.25, 1, 0.5, 1) infinite !important;
-    filter: drop-shadow(0 0 12px rgba(244, 63, 94, 0.95)) drop-shadow(0 0 22px rgba(244, 63, 94, 0.6)) !important;
-  }
-  @keyframes reelHeartBeat {
-    0%   { transform: scale(1); }
-    15%  { transform: scale(1.22); filter: drop-shadow(0 0 16px rgba(244, 63, 94, 1)) drop-shadow(0 0 26px rgba(244, 63, 94, 0.8)); }
-    30%  { transform: scale(1.08); }
-    45%  { transform: scale(1.18); filter: drop-shadow(0 0 14px rgba(244, 63, 94, 0.95)); }
-    60%  { transform: scale(1.04); }
-    100% { transform: scale(1); }
+  fill: var(--lvl-danger) !important;
+  stroke: var(--lvl-danger) !important;
+  filter: drop-shadow(0 0 12px rgba(244, 63, 94, 0.95)) drop-shadow(0 0 22px rgba(244, 63, 94, 0.6)) !important;
+}
+
+@keyframes reelHeartBeat {
+  0% {
+    transform: scale(1);
   }
 
-  /* 3. Comment button */
-  .reel-action-button.reel-action-comment:hover svg {
-    filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.9)) !important;
-    color: var(--lvl-cyan) !important;
-  }
-  body.reel-comments-open .reel-action-button.reel-action-comment svg {
-    color: var(--lvl-cyan) !important;
-    stroke: var(--lvl-cyan) !important;
-    animation: reelCommentBounce 1.5s ease-in-out infinite alternate !important;
-    filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.95)) drop-shadow(0 0 20px rgba(56, 189, 248, 0.5)) !important;
-  }
-  @keyframes reelCommentBounce {
-    0%   { transform: scale(1) translateY(0); }
-    50%  { transform: scale(1.15) translateY(-3px); }
-    0%   { transform: scale(1) translateY(0); }
-    50%  { transform: scale(1.15) translateY(-3px); }
-    100% { transform: scale(1.08) translateY(-1px); }
+  15% {
+    transform: scale(1.22);
+    filter: drop-shadow(0 0 16px rgba(244, 63, 94, 1)) drop-shadow(0 0 26px rgba(244, 63, 94, 0.8));
   }
 
-  /* 4. Bookmark button */
-  .reel-action-button.reel-action-bookmark:hover svg {
-    transform: scale(1.22) translateY(-2px) !important;
-    color: var(--lvl-warning) !important;
-    stroke: var(--lvl-warning) !important;
-    filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.95)) drop-shadow(0 0 22px rgba(251, 191, 36, 0.5)) !important;
-    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease !important;
+  30% {
+    transform: scale(1.08);
   }
-  .reel-action-button.reel-action-bookmark.active,
+
+  45% {
+    transform: scale(1.18);
+    filter: drop-shadow(0 0 14px rgba(244, 63, 94, 0.95));
+  }
+
+  60% {
+    transform: scale(1.04);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+
+}
+
+.reel-action-button.reel-action-comment:hover svg {
+  filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.9)) !important;
+  color: var(--lvl-cyan) !important;
+}
+
+body.reel-comments-open .reel-action-button.reel-action-comment svg {
+  color: var(--lvl-cyan) !important;
+  stroke: var(--lvl-cyan) !important;
+  filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.95)) drop-shadow(0 0 20px rgba(56, 189, 248, 0.5)) !important;
+}
+
+@keyframes reelCommentBounce {
+  0% {
+    transform: scale(1) translateY(0);
+  }
+
+  50% {
+    transform: scale(1.15) translateY(-3px);
+  }
+
+  100% {
+    transform: scale(1.08) translateY(-1px);
+  }
+
+}
+
+.reel-action-button.reel-action-bookmark:hover svg {
+  transform: scale(1.22) translateY(-2px) !important;
+  color: var(--lvl-warning) !important;
+  stroke: var(--lvl-warning) !important;
+  filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.95)) drop-shadow(0 0 22px rgba(251, 191, 36, 0.5)) !important;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease !important;
+}
+
+.reel-action-button.reel-action-bookmark.active,
   .reel-action-button.reel-action-bookmark.bookmark-active {
-    color: var(--lvl-warning) !important;
-  }
-  .reel-action-button.reel-action-bookmark.active svg,
+  color: var(--lvl-warning) !important;
+}
+
+.reel-action-button.reel-action-bookmark.active svg,
   .reel-action-button.reel-action-bookmark.bookmark-active svg {
-    fill: var(--lvl-warning) !important;
-    stroke: var(--lvl-warning) !important;
-    animation: reelBookmarkPop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-    filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.95)) drop-shadow(0 0 22px rgba(245, 158, 11, 0.6)) !important;
-  }
-  @keyframes reelBookmarkPop {
-    0%   { transform: scale(0.8); }
-    50%  { transform: scale(1.35) translateY(-3px); }
-    100% { transform: scale(1) translateY(0); }
+  fill: var(--lvl-warning) !important;
+  stroke: var(--lvl-warning) !important;
+  animation: reelBookmarkPop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+  filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.95)) drop-shadow(0 0 22px rgba(245, 158, 11, 0.6)) !important;
+}
+
+@keyframes reelBookmarkPop {
+  0% {
+    transform: scale(0.8);
   }
 
-  /* 5. Share button */
-  .reel-action-button.reel-action-share:hover svg {
-    transform: scale(1.2) translate(2px, -2px) rotate(-10deg) !important;
-    color: var(--lvl-purple-strong) !important;
-    stroke: var(--lvl-purple-strong) !important;
-    filter: drop-shadow(0 0 12px rgba(192, 132, 252, 0.9)) drop-shadow(0 0 20px rgba(192, 132, 252, 0.5)) !important;
-    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease !important;
+  50% {
+    transform: scale(1.35) translateY(-3px);
   }
 
-  /* 6. 3-dots More options button */
-  .reel-action-button.reel-action-more:hover svg,
+  100% {
+    transform: scale(1) translateY(0);
+  }
+
+}
+
+.reel-action-button.reel-action-share:hover svg {
+  transform: scale(1.2) translate(2px, -2px) rotate(-10deg) !important;
+  color: var(--lvl-purple-strong) !important;
+  stroke: var(--lvl-purple-strong) !important;
+  filter: drop-shadow(0 0 12px rgba(192, 132, 252, 0.9)) drop-shadow(0 0 20px rgba(192, 132, 252, 0.5)) !important;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease !important;
+}
+
+.reel-action-button.reel-action-more:hover svg,
   .reel-more-dropdown.is-open .reel-action-button.reel-action-more svg {
-    transform: scale(1.2) rotate(90deg) !important;
-    color: var(--lvl-brand-hover) !important;
-    filter: drop-shadow(0 0 10px rgba(96, 165, 250, 0.9)) drop-shadow(0 0 18px rgba(96, 165, 250, 0.5)) !important;
-    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease !important;
-  }
+  transform: scale(1.2) rotate(90deg) !important;
+  color: var(--lvl-brand-hover) !important;
+  filter: drop-shadow(0 0 10px rgba(96, 165, 250, 0.9)) drop-shadow(0 0 18px rgba(96, 165, 250, 0.5)) !important;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease !important;
+}
 
-  /* 6. Views Pill Shimmer */
-  .reel-views-pill {
-    position: relative !important;
-    overflow: hidden !important;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45) !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
-  }
-  .reel-views-pill:hover {
-    transform: scale(1.06) !important;
-    box-shadow: 0 4px 18px rgba(56, 189, 248, 0.35) !important;
-  }
-  .reel-views-pill::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+.reel-views-pill:hover {
+  transform: scale(1.06) !important;
+  box-shadow: 0 4px 18px rgba(56, 189, 248, 0.35) !important;
+}
+
+.reel-views-pill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, var(--lvl-white-08), transparent);
+  transform: translateX(-100%);
+}
+
+@keyframes reelShimmer {
+  0%, 35% {
     transform: translateX(-100%);
-    animation: reelShimmer 3s infinite;
-  }
-  @keyframes reelShimmer {
-    0%, 35% { transform: translateX(-100%); }
-    65%, 100% { transform: translateX(100%); }
-  }
-  .reel-views-pill svg {
-    animation: eyeGlow 3.5s infinite ease-in-out !important;
-  }
-  @keyframes eyeGlow {
-    0%, 80%, 100% { transform: scale(1); filter: none; }
-    88% { transform: scale(1.25); filter: drop-shadow(0 0 6px var(--lvl-cyan)); }
-    94% { transform: scale(0.95); }
   }
 
-  /* 7. 3-dots Menu Item Micro-Animations */
-  .reel-actions .reel-more-item {
-    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease !important;
+  65%, 100% {
+    transform: translateX(100%);
   }
-  .reel-actions .reel-more-item:hover {
-    transform: translateX(-4px) scale(1.02) !important;
-    background: rgba(255, 255, 255, 0.14) !important;
-    color: var(--lvl-white) !important;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
+
+}
+
+@keyframes eyeGlow {
+  0%, 80%, 100% {
+    transform: scale(1);
+    filter: none;
   }
-  .reel-actions .reel-more-item[download]:hover svg {
-    animation: downloadDrop 0.6s ease infinite alternate !important;
-    color: var(--lvl-cyan) !important;
-    stroke: var(--lvl-cyan) !important;
+
+  88% {
+    transform: scale(1.25);
+    filter: drop-shadow(0 0 6px var(--lvl-cyan));
   }
-  @keyframes downloadDrop {
-    from { transform: translateY(0); }
-    to   { transform: translateY(3px); }
+
+  94% {
+    transform: scale(0.95);
   }
-  .reel-actions .reel-more-item[data-reel-copy-link]:hover svg {
-    animation: copyRotate 0.5s ease !important;
-    color: var(--lvl-success) !important;
-    stroke: var(--lvl-success) !important;
+
+}
+
+.reel-actions .reel-more-item[download]:hover svg {
+  color: var(--lvl-cyan) !important;
+  stroke: var(--lvl-cyan) !important;
+}
+
+@keyframes downloadDrop {
+  from {
+    transform: translateY(0);
   }
-  @keyframes copyRotate {
-    0%   { transform: rotate(0deg) scale(1); }
-    50%  { transform: rotate(-16deg) scale(1.25); }
-    100% { transform: rotate(0deg) scale(1.1); }
+
+  to {
+    transform: translateY(3px);
   }
-  .reel-actions .reel-more-item.danger:hover svg {
-    animation: trashWiggle 0.4s ease infinite alternate !important;
-    stroke: var(--lvl-danger) !important;
+
+}
+
+.reel-actions .reel-more-item[data-reel-copy-link]:hover svg {
+  animation: copyRotate 0.5s ease !important;
+  color: var(--lvl-success) !important;
+  stroke: var(--lvl-success) !important;
+}
+
+@keyframes copyRotate {
+  0% {
+    transform: rotate(0deg) scale(1);
   }
-  @keyframes trashWiggle {
-    0%   { transform: rotate(-8deg) scale(1.15); }
-    100% { transform: rotate(8deg) scale(1.15); }
+
+  50% {
+    transform: rotate(-16deg) scale(1.25);
   }
+
+  100% {
+    transform: rotate(0deg) scale(1.1);
+  }
+
+}
+
+.reel-actions .reel-more-item.danger:hover svg {
+  stroke: var(--lvl-danger) !important;
+}
+
+@keyframes trashWiggle {
+  0% {
+    transform: rotate(-8deg) scale(1.15);
+  }
+
+  100% {
+    transform: rotate(8deg) scale(1.15);
+  }
+
+}
+

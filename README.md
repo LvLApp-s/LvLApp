@@ -25,6 +25,9 @@ LvL is a leveling-first social media web application built with Python Flask, Su
 - User profile pages with editable profile details
 - Profile preview before saving profile edits
 - Report, mute, and block safety controls
+- Registration requires age 16+, a confirmed password, and accepted Terms
+- Live username availability checking on registration and in settings
+- First-party cookie consent separating essential from optional storage
 - First-run onboarding for new accounts
 - Default illustrated avatars and theme colors based on gender
 - Community timelines for Followers, Following, and Community
@@ -178,7 +181,11 @@ The original PHP/MySQL/XAMPP files are preserved under `legacy/`. They are not p
 | `/notifications` | Notifications |
 | `/community` | Community timelines and groups |
 | `/community/<slug>` | Community detail |
-| `/level-guide` | XP, level, and reward guide |
+| `/contact` | Contact form |
+| `/request_verification` | Profile verification request |
+| `/careers` | Open positions and applications |
+| `/terms` | Terms & Conditions |
+| `/privacy` | Privacy & cookie information |
 | `/reels` | Reels feed |
 | `/reels/upload` | Upload a reel |
 | `/search` | Search |
@@ -187,5 +194,8 @@ The original PHP/MySQL/XAMPP files are preserved under `legacy/`. They are not p
 
 - The `legacy/` folder is not used by the active app.
 - Styles are intentionally split through `static/css/styles.css`: keep default layout/navigation/feed rules separate from reward-specific CSS so level rewards can grow without bloating the base UI.
+- The LvL Guide page was removed. `/level-guide` redirects to the viewer's profile so old links keep working; Contact, Verification and Careers are now independent pages.
+- `/setup-health` is restricted to an authenticated admin session (or local debug runs) and is no longer linked from user Settings.
+- Profile colour customisation unlocks at LvL 5 (`app_theme.PROFILE_COLOR_UNLOCK_LEVEL`).
 - `tests/test_supabase.py` is skipped by default. Run it only when you intentionally want a live Supabase smoke test: `RUN_SUPABASE_SMOKE=1 python -m unittest tests.test_supabase`.
 - See `docs/AI_GUIDELINES.md` for technical context when using AI tools.

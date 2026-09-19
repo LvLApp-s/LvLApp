@@ -9,7 +9,7 @@
   background: rgba(18, 18, 28, 0.94) !important;
   backdrop-filter: blur(24px) !important;
   -webkit-backdrop-filter: blur(24px) !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-top: 1px solid var(--border-color) !important;
   border-left: none !important;
   border-right: none !important;
   border-bottom: none !important;
@@ -45,32 +45,32 @@
 
 .share-modal-content {
   width: 100% !important;
-  max-width: 100% !important;
-  height: 100% !important;
+  max-width: 100%;
+  height: 100%;
   max-height: 100% !important;
-  background: transparent !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  border: none !important;
-  border-radius: 0 !important;
-  padding: 14px 16px !important;
-  box-shadow: none !important;
-  display: flex !important;
-  flex-direction: column !important;
-  animation: none !important;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none;
+  border-radius: 0;
+  padding: 14px 16px;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  animation: none;
   overflow: hidden !important;
-  box-sizing: border-box !important;
+  box-sizing: border-box;
 }
 
 .share-modal-header {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: 10px !important;
-  margin-bottom: 12px !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
-  padding-bottom: 12px !important;
-  flex-shrink: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 12px;
+  flex-shrink: 0;
 }
 
 .share-modal-header strong {
@@ -81,34 +81,34 @@
 }
 
 .share-search-input {
-  flex: 1 !important;
+  flex: 1;
   background: rgba(255, 255, 255, 0.08) !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  border-radius: var(--radius-pill) !important;
-  padding: 7px 14px !important;
-  color: var(--lvl-white) !important;
-  font-size: 13px !important;
-  outline: none !important;
-  min-width: 0 !important;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-pill);
+  padding: 7px 14px;
+  color: var(--lvl-white);
+  font-size: 13px;
+  outline: none;
+  min-width: 0;
 }
 
 .share-search-input:focus {
-  border-color: var(--lvl-cyan) !important;
+  border-color: var(--lvl-cyan);
   background: rgba(255, 255, 255, 0.12) !important;
 }
 
 .close-share-modal {
   background: transparent !important;
-  border: none !important;
+  border: none;
   color: rgba(255, 255, 255, 0.7) !important;
-  cursor: pointer !important;
-  padding: 4px !important;
-  border-radius: var(--radius-round) !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  transition: 0.15s ease !important;
-  flex-shrink: 0 !important;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-round);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: 0.15s ease;
+  flex-shrink: 0;
 }
 
 .close-share-modal:hover {
@@ -117,18 +117,18 @@
 }
 
 .share-friends-list {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 8px !important;
-  flex: 1 !important;
-  overflow-y: auto !important;
-  scrollbar-width: thin !important;
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent !important;
-  padding-right: 4px !important;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  padding-right: 4px;
 }
 
 .share-friends-list::-webkit-scrollbar {
-  width: 5px !important;
+  width: 5px;
 }
 
 .share-friends-list::-webkit-scrollbar-track {
@@ -137,7 +137,7 @@
 
 .share-friends-list::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.2) !important;
-  border-radius: var(--radius-pill) !important;
+  border-radius: var(--radius-pill);
 }
 
 .share-friends-list::-webkit-scrollbar-thumb:hover {
@@ -145,22 +145,22 @@
 }
 
 .share-friend-item {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  padding: 8px 6px !important;
-  border-radius: var(--radius-md) !important;
-  transition: background 0.15s ease !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 6px;
+  border-radius: var(--radius-md);
+  transition: background 0.15s ease;
 }
 
 .share-friend-item:hover {
-  background: rgba(255, 255, 255, 0.06) !important;
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .share-friend-info {
-  display: flex !important;
-  align-items: center !important;
-  gap: 10px !important;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   min-width: 0 !important;
   flex: 1 !important;
 }
@@ -170,12 +170,12 @@
   height: 34px !important;
   border-radius: var(--radius-round) !important;
   object-fit: cover !important;
-  flex-shrink: 0 !important;
+  flex-shrink: 0;
 }
 
 .share-friend-info span {
   display: flex !important;
-  flex-direction: column !important;
+  flex-direction: column;
   min-width: 0 !important;
   line-height: 1.2 !important;
 }
@@ -189,36 +189,36 @@
 }
 
 .share-friend-info small {
-  font-size: 11px !important;
+  font-size: 11px;
   color: rgba(255, 255, 255, 0.6) !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .share-send-btn {
   background: var(--lvl-brand) !important;
-  color: var(--lvl-white) !important;
-  border: none !important;
-  border-radius: var(--radius-pill) !important;
-  padding: 6px 16px !important;
-  font-size: 12px !important;
-  font-weight: 700 !important;
-  cursor: pointer !important;
-  transition: all 0.18s ease !important;
-  flex-shrink: 0 !important;
+  color: var(--lvl-white);
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  flex-shrink: 0;
 }
 
 .share-send-btn:hover {
   background: var(--lvl-brand-hover) !important;
-  transform: scale(1.05) !important;
-  box-shadow: 0 0 10px rgba(14, 165, 233, 0.5) !important;
+  transform: scale(1.05);
+  box-shadow: 0 0 10px rgba(14, 165, 233, 0.5);
 }
 
 .share-send-btn.sent {
-  background: rgba(255, 255, 255, 0.12) !important;
-  color: rgba(255, 255, 255, 0.5) !important;
-  cursor: default !important;
-  transform: none !important;
-  box-shadow: none !important;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.5);
+  cursor: default;
+  transform: none;
+  box-shadow: none;
 }

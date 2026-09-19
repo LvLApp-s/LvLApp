@@ -52,6 +52,34 @@
   to { opacity: 1; transform: scale(1); }
 }
 
+/* --- Buttons -------------------------------------------------------------- */
+/* .primary-button lives in settings.css; the quiet counterpart belongs with
+   the shared components that use it. */
+
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 12px 20px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-standard),
+              border-color var(--duration-fast) var(--ease-standard);
+}
+
+.secondary-button:hover {
+  background: var(--lvl-white-05);
+  border-color: var(--lvl-border-strong);
+}
+
 /* --- Cookie consent ------------------------------------------------------ */
 
 .consent-banner {
@@ -77,7 +105,7 @@
   flex-direction: column;
   gap: var(--space-6);
   padding: var(--space-7);
-  border: 1px solid var(--lvl-white-12);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-xl);
   background: var(--lvl-surface-overlay);
   box-shadow: var(--shadow-lg);
@@ -108,6 +136,13 @@
   gap: var(--space-3);
 }
 
+/* Narrow phones: stacked, full width, no wrapped button labels. */
+@media (max-width: 379px) {
+  .consent-actions {
+    flex-direction: column;
+  }
+}
+
 .consent-button {
   flex: 1 1 0;
   min-height: var(--touch-target);
@@ -119,7 +154,7 @@
     right: auto;
     bottom: var(--space-10);
     transform: translateY(12px);
-    width: min(100% - 48px, 460px);
+    width: min(100% - 48px, 560px);
   }
 
   .consent-banner.is-visible {
@@ -138,10 +173,12 @@
 
   .consent-actions {
     flex: 0 0 auto;
+    flex-direction: column;
   }
 
   .consent-button {
     flex: 0 0 auto;
+    width: 100%;
   }
 }
 

@@ -564,3 +564,15 @@
     min-height: 42px;
   }
 }
+
+/* The auth page has no app bar, so a top alert has nothing to sit above.
+   Reserve room for the alert stack only while one is on screen. */
+body:has(.feedback-alerts .feedback-item) .auth-panel {
+  padding-top: 132px;
+}
+
+@media (min-width: 768px) {
+  body:has(.feedback-alerts .feedback-item) .auth-panel {
+    padding-top: 160px;
+  }
+}

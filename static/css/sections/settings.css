@@ -67,7 +67,7 @@
   width: 80px;
   height: 80px;
   border-radius: var(--radius-round);
-  border: 3px solid var(--border-color);
+  border: 1px solid var(--border-color);
   object-fit: cover;
 }
 
@@ -370,7 +370,7 @@
 
 .input-password-wrapper input {
   width: 100%;
-  padding-right: 42px !important;
+  padding-right: 42px;
 }
 
 .password-toggle-btn {
@@ -628,7 +628,7 @@
   line-height: 1.5;
   color: var(--text-secondary);
   background: var(--lvl-white-03);
-  border-left: 2px solid var(--border-color);
+  border-left: 1px solid var(--border-color);
 }
 
 .profile-color-lock-note::before {
@@ -789,7 +789,7 @@
   justify-content: space-between;
   gap: 16px;
   padding: 16px;
-  border: 1px solid var(--surface-border);
+  border: 1px solid var(--border-color);
   border-radius: var(--surface-radius-small);
   background: linear-gradient(180deg, var(--surface-panel-raised), var(--surface-panel));
 }

@@ -1742,3 +1742,27 @@ Object.assign(TURKISH_SERVER_MESSAGES, {
   "A CV / resume is required to submit your application.": "Başvuru için bir CV / özgeçmiş gereklidir.",
   "CV must be a PDF, DOC, or DOCX file.": "CV, PDF, DOC veya DOCX dosyası olmalıdır."
 });
+
+Object.assign(TRANSLATIONS.en, {
+  settings_banner_hint: "Profile colors are unlocked from LvL",
+  settings_banner_locked_hint: "Profile colors unlock at LvL",
+  settings_banner_locked_tail: "Until then, accounts stay black and white so reward colors stay meaningful.",
+  copied: "Copied",
+  link_copied: "Link copied to clipboard."
+});
+
+Object.assign(TRANSLATIONS.tr, {
+  settings_banner_hint: "Profil renkleri şu seviyeden itibaren açık: LvL",
+  settings_banner_locked_hint: "Profil renkleri şu seviyede açılır: LvL",
+  settings_banner_locked_tail: "O zamana kadar hesaplar siyah-beyaz kalır, böylece ödül renkleri anlamını korur.",
+  copied: "Kopyalandı",
+  link_copied: "Bağlantı panoya kopyalandı."
+});
+
+Object.assign(TRANSLATIONS.ar, {
+  settings_banner_hint: "تُفتح ألوان الملف الشخصي ابتداءً من المستوى",
+  settings_banner_locked_hint: "تُفتح ألوان الملف الشخصي عند المستوى",
+  settings_banner_locked_tail: "حتى ذلك الحين تبقى الحسابات بالأبيض والأسود حتى تحتفظ ألوان المكافآت بمعناها.",
+  copied: "تم النسخ",
+  link_copied: "تم نسخ الرابط."
+});

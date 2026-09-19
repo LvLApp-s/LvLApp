@@ -111,7 +111,7 @@
         <span data-i18n="auth_birthday">Birthday</span>
         {% set limits = birthday_limits() %}
         <input type="date" name="birthday" min="{{ limits.min.isoformat() }}" max="{{ limits.max.isoformat() }}" autocomplete="bday" required value="{{ register_form_data.get('birthday', '') if register_form_data else '' }}">
-        <small class="field-hint" data-i18n="auth_age_hint">You must be at least {{ min_age }} years old.</small>
+        <small class="field-hint" data-i18n="auth_age_hint">You must be at least 16 years old.</small>
       </label>
       <label>
         <span data-i18n="auth_password">Password</span>

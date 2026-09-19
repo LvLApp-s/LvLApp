@@ -10,7 +10,7 @@
   .left-rail,
   .left-rail.menu-open,
   .left-rail.mobile-menu-open {
-    display: none !important;
+    display: none;
   }
 }
 
@@ -24,23 +24,23 @@
 @media (max-width: 767px) {
   /* Topbar Trigger Avatar Button */
   .mobile-drawer-trigger {
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    position: relative !important;
-    width: 36px !important;
-    height: 36px !important;
-    min-width: 36px !important;
-    min-height: 36px !important;
-    max-width: 36px !important;
-    max-height: 36px !important;
-    border: none !important;
-    background: transparent !important;
-    padding: 0 !important;
-    cursor: pointer !important;
-    border-radius: var(--radius-round) !important;
-    outline: none !important;
-    flex-shrink: 0 !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    max-width: 36px;
+    max-height: 36px;
+    border: none;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    border-radius: var(--radius-round);
+    outline: none;
+    flex-shrink: 0;
     transition: transform 0.18s ease;
   }
 
@@ -50,24 +50,24 @@
 
   /* Perfectly Circular Topbar Avatar */
   .mobile-header-avatar {
-    width: 36px !important;
-    height: 36px !important;
-    min-width: 36px !important;
-    min-height: 36px !important;
-    max-width: 36px !important;
-    max-height: 36px !important;
-    aspect-ratio: 1 / 1 !important;
-    border-radius: var(--radius-round) !important;
-    object-fit: cover !important;
-    display: block !important;
-    flex-shrink: 0 !important;
-    border: 2px solid rgba(255, 255, 255, 0.22) !important;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    max-width: 36px;
+    max-height: 36px;
+    aspect-ratio: 1 / 1;
+    border-radius: var(--radius-round);
+    object-fit: cover;
+    display: block;
+    flex-shrink: 0;
+    border: 2px solid rgba(255, 255, 255, 0.22);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
     transition: border-color 0.2s ease, transform 0.2s ease;
   }
 
   .mobile-drawer-trigger:hover .mobile-header-avatar {
-    border-color: var(--lvl-cyan) !important;
+    border-color: var(--lvl-cyan);
     transform: scale(1.05);
   }
 
@@ -77,7 +77,7 @@
     right: -1px;
     width: 10px;
     height: 10px;
-    border-radius: var(--radius-round) !important;
+    border-radius: var(--radius-round);
     background: var(--lvl-cyan);
     border: 2px solid var(--lvl-surface-base);
     box-shadow: 0 0 6px var(--lvl-cyan);
@@ -133,7 +133,7 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid var(--border-color);
   }
 
   .drawer-user-row {
@@ -144,35 +144,35 @@
 
   .drawer-user-avatar-link {
     display: inline-flex;
-    text-decoration: none !important;
+    text-decoration: none;
   }
 
   /* Perfectly Circular Drawer Avatar */
   .drawer-avatar {
-    width: 52px !important;
-    height: 52px !important;
-    min-width: 52px !important;
-    min-height: 52px !important;
-    max-width: 52px !important;
-    max-height: 52px !important;
-    aspect-ratio: 1 / 1 !important;
-    border-radius: var(--radius-round) !important;
-    object-fit: cover !important;
-    display: block !important;
-    border: 2px solid rgba(255, 255, 255, 0.18) !important;
+    width: 52px;
+    height: 52px;
+    min-width: 52px;
+    min-height: 52px;
+    max-width: 52px;
+    max-height: 52px;
+    aspect-ratio: 1 / 1;
+    border-radius: var(--radius-round);
+    object-fit: cover;
+    display: block;
+    border: 2px solid rgba(255, 255, 255, 0.18);
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
     transition: transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.2s ease;
   }
 
   .drawer-user-avatar-link:hover .drawer-avatar {
     transform: scale(1.06);
-    border-color: var(--lvl-cyan) !important;
+    border-color: var(--lvl-cyan);
   }
 
   .drawer-close-btn {
     width: 36px;
     height: 36px;
-    border-radius: var(--radius-round) !important;
+    border-radius: var(--radius-round);
     background: rgba(255, 255, 255, 0.06);
     border: none;
     color: var(--text-secondary);
@@ -217,7 +217,7 @@
     font-weight: 800;
     color: var(--text-primary);
     line-height: 1.2;
-    text-decoration: none !important;
+    text-decoration: none;
   }
 
   .drawer-level-badge {
@@ -235,7 +235,7 @@
     font-size: 14px;
     color: var(--text-secondary);
     line-height: 1.2;
-    text-decoration: none !important;
+    text-decoration: none;
   }
 
   /* Drawer Navigation Items with Rich Animations & No Underline */
@@ -315,7 +315,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    text-decoration: none !important;
+    text-decoration: none;
   }
 
   .drawer-badge {
@@ -344,7 +344,7 @@
   .mobile-drawer-footer {
     margin-top: auto;
     padding: 12px 16px;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    border-top: 1px solid var(--border-color);
   }
 
   .drawer-logout-btn,

@@ -1,20 +1,33 @@
-/* Unified LvL surface system */
-/* LvL brand and unified surface system */
+/* ---------------------------------------------------------------------------
+   Surface system.
+
+   Two kinds of surface, not one blanket card:
+
+     flow      page headers, composer, feed posts, empty states. Separated by a
+               single hairline and spacing. No box, no shadow, no gradient --
+               the content is the thing you look at.
+     card      panels that are genuinely a discrete object in a rail or grid.
+               One hairline border, one radius, no shadow.
+
+   Everything that used to get `border + gradient + shadow !important` now falls
+   into one of those two, which is what removes the "floating boxes stacked on a
+   dark page" look.
+   --------------------------------------------------------------------------- */
 :root {
   --surface-panel: var(--lvl-surface-raised);
   --surface-panel-raised: var(--lvl-surface-raised);
   --surface-panel-soft: var(--lvl-surface-raised);
-  --surface-border: var(--lvl-system-blue-shadow);
-  --surface-border-strong: var(--lvl-system-blue-border);
-  --surface-shadow: 0 18px 48px var(--lvl-black-34);
-  --surface-radius: var(--radius-2xl);
-  --surface-radius-small: var(--radius-lg);
+  --surface-border: var(--border-color);
+  --surface-border-strong: var(--lvl-border-strong);
+  --surface-shadow: none;
+  --surface-radius: var(--radius-xl);
+  --surface-radius-small: var(--radius-md);
   --component-radius: var(--radius-sm);
   --interactive-radius: var(--radius-pill);
 }
 
 .brand-logo {
-  width: auto !important;
+  width: auto;
   min-width: 0;
   gap: 10px;
   padding: 6px 10px 6px 6px;
@@ -22,7 +35,7 @@
 }
 
 .left-rail:not(.menu-open) .brand-logo {
-  display: none !important;
+  display: none;
 }
 
 .left-rail.menu-open .sidebar-top {
@@ -72,32 +85,48 @@
   font-size: 12px;
 }
 
-.page-header,
-.composer,
-.post,
-.empty-state,
+/* Cards: a discrete object, one hairline, no decoration. */
 .community-highlights.panel,
-.profile-info-container,
 .profile-account-card,
 .profile-xp-card,
 .profile-achievements-card,
 .profile-preview-card,
-.premium-form,
 .form-section,
-.level-guide-hero,
-.level-guide-panel,
 .message-discovery-panel,
 .community-compose-panel,
 .community-members-panel,
 .community-card,
 .user-result-card,
-.new-chat-panel,
-.chat-window,
-.conversations-sidebar {
-  border: 1px solid var(--surface-border) !important;
-  border-radius: var(--surface-radius) !important;
-  background: linear-gradient(180deg, var(--surface-panel-raised), var(--surface-panel)) !important;
-  box-shadow: var(--surface-shadow);
+.new-chat-panel {
+  border: 1px solid var(--border-color);
+  border-radius: var(--surface-radius);
+  background: var(--surface-panel);
+}
+
+/* Flow surfaces: separated by a line, never boxed. */
+.page-header,
+.composer,
+.post,
+.empty-state,
+.profile-info-container,
+.premium-form {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.page-header,
+.composer {
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* A card inside a card is border-on-border noise. */
+.community-highlights.panel .panel,
+.community-members-panel .community-card,
+.new-chat-panel .user-result-card {
+  border: 0;
+  background: transparent;
 }
 
 .page-header,
@@ -106,8 +135,6 @@
 .empty-state,
 .profile-info-container,
 .premium-form,
-.level-guide-hero,
-.level-guide-panel,
 .message-discovery-panel,
 .community-compose-panel,
 .community-members-panel,
@@ -116,23 +143,24 @@
 }
 
 .page-header {
-  margin: 14px;
-  padding: 18px;
+  margin: 0;
+  padding: 18px 16px;
 }
 
-.composer,
-.post,
-.empty-state,
 .profile-account-card,
 .profile-xp-card,
 .profile-achievements-card,
 .form-section,
-.level-guide-hero,
-.level-guide-panel,
 .message-discovery-panel,
 .community-compose-panel,
 .community-members-panel {
   margin: 12px 14px;
+}
+
+.composer,
+.post,
+.empty-state {
+  margin: 0;
 }
 
 .composer {
@@ -145,13 +173,11 @@
 
 .profile-info-container,
 .premium-form {
-  margin: 0 14px 14px;
-  padding: 18px;
+  margin: 0;
+  padding: 18px 16px;
 }
 
 .form-section,
-.level-guide-hero,
-.level-guide-panel,
 .message-discovery-panel,
 .community-compose-panel,
 .community-members-panel {
@@ -165,15 +191,9 @@
 }
 
 .profile-achievements-card,
-.level-guide-panel,
-.level-guide-hero {
-  margin: 12px 14px;
-  padding: 16px;
-}
-
 .community-card,
 .user-result-card {
-  border-radius: var(--surface-radius-small) !important;
+  border-radius: var(--surface-radius-small);
   box-shadow: none;
 }
 
@@ -301,18 +321,13 @@
 }
 
 @media (max-width: 640px) {
-  .level-guide-hero,
   .xp-rule-grid,
-  .achievement-guide-grid,
   .reward-ladder,
   .level-requirement-grid,
   .achievement-grid {
     grid-template-columns: 1fr;
   }
 
-  .level-guide-hero h2 {
-    font-size: 24px;
-  }
 
   .xp-score-row {
     align-items: flex-start;
@@ -336,26 +351,22 @@
   .composer,
   .post,
   .empty-state,
-    .profile-info-container,
-    .premium-form,
-    .form-section,
-    .message-discovery-panel,
-    .community-compose-panel,
+  .profile-info-container,
+  .premium-form,
+  .form-section,
+  .message-discovery-panel,
+  .community-compose-panel,
   .community-members-panel,
   .profile-account-card,
   .profile-xp-card,
-  .profile-achievements-card,
-  .level-guide-hero,
-  .level-guide-panel {
+  .profile-achievements-card {
     margin-inline: 10px;
-    border-radius: var(--radius-xl) !important;
+    border-radius: var(--radius-xl);
   }
 
   .post,
-    .composer,
-    .form-section,
-    .level-guide-hero,
-    .level-guide-panel {
+  .composer,
+  .form-section {
     padding: 14px;
   }
 }

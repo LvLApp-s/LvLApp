@@ -428,26 +428,6 @@
 }
 
 /* ── Level Guide ── */
-[dir="rtl"] .guide-container,
-[dir="rtl"] .guide-content {
-  direction: rtl;
-  text-align: right;
-}
-
-[dir="rtl"] .guide-tabs-wrapper {
-  direction: rtl;
-}
-
-[dir="rtl"] .guide-step {
-  direction: rtl;
-  text-align: right;
-}
-
-[dir="rtl"] .guide-form-card {
-  direction: rtl;
-  text-align: right;
-}
-
 /* ── Reel cards ── */
 [dir="rtl"] .reel-card-info {
   direction: rtl;

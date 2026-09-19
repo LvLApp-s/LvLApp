@@ -14,6 +14,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // no such category is offered. If one is ever added it belongs here, off by
     // default, alongside a matching entry on the privacy page.
 
+    const FEEDBACK_ALERT_CATEGORIES = ['error', 'warning'];
+    const FEEDBACK_TIMEOUTS = { success: 4000, info: 5000, warning: 9000, error: 9000 };
+
+    const FEEDBACK_ICONS = {
+        success: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5 5L20 6.5"/></svg>',
+        error: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5"/><path d="M12 16.4h.01"/></svg>',
+        warning: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5 21 19H3z"/><path d="M12 10v4"/><path d="M12 17h.01"/></svg>',
+        info: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.6h.01"/></svg>'
+    };
+
     const CONSENT_KEY = 'lvl_cookie_consent';
     const CONSENT_PREFERENCE_KEYS = [
         'lvl_lang',
@@ -1770,16 +1780,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // the mobile bottom navigation and respects the bottom safe area.
     // Server-rendered flash messages are placed in the same two stacks by
     // templates/_feedback.html, so there is nothing to keep in sync.
-
-    const FEEDBACK_ALERT_CATEGORIES = ['error', 'warning'];
-    const FEEDBACK_TIMEOUTS = { success: 4000, info: 5000, warning: 9000, error: 9000 };
-
-    const FEEDBACK_ICONS = {
-        success: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5 5L20 6.5"/></svg>',
-        error: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5"/><path d="M12 16.4h.01"/></svg>',
-        warning: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5 21 19H3z"/><path d="M12 10v4"/><path d="M12 17h.01"/></svg>',
-        info: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.6h.01"/></svg>'
-    };
 
     function isAlertCategory(category) {
         return FEEDBACK_ALERT_CATEGORIES.indexOf(category) !== -1;

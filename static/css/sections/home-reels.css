@@ -288,8 +288,8 @@
   }
 
   .app-shell:has(.timeline-reels):has(.home-media-panel) .timeline-reels {
-    width: 760px !important;
-    max-width: 760px !important;
+    width: 760px;
+    max-width: 760px;
     border-right: 1px solid var(--border-color);
   }
 

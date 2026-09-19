@@ -164,9 +164,9 @@
                   <input type="text" class="hex-value" value="{{ display_profile_color(viewer) }}" maxlength="7" {% if not profile_color_is_unlocked %}disabled{% endif %}>
                 </div>
                 {% if profile_color_is_unlocked %}
-                  <small data-i18n="settings_banner_hint">Profile colors are unlocked from LvL {{ profile_color_unlock_level }}.</small>
+                  <small><span data-i18n="settings_banner_hint">Profile colors are unlocked from LvL</span> {{ profile_color_unlock_level }}.</small>
                 {% else %}
-                  <small data-i18n="settings_banner_locked_hint">Profile colors unlock at LvL {{ profile_color_unlock_level }}. Until then, accounts stay black and white so reward colors stay meaningful.</small>
+                  <small><span data-i18n="settings_banner_locked_hint">Profile colors unlock at LvL</span> {{ profile_color_unlock_level }}. <span data-i18n="settings_banner_locked_tail">Until then, accounts stay black and white so reward colors stay meaningful.</span></small>
                 {% endif %}
               </label>
               {% if not profile_color_is_unlocked %}
