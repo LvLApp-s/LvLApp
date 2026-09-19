@@ -24,6 +24,7 @@ For a fresh Supabase project, run the SQL files in this order:
 18. `migrations/015_attachment_storage_bucket.sql`
 19. `migrations/016_user_account_status.sql`
 20. `migrations/017_reel_bookmarks.sql`
+21. `migrations/018_terms_acceptance.sql`
 
 `migrations/003_safety_and_demo.sql` is optional demo seed data. Do not run it in production unless you intentionally want demo users/posts.
 
@@ -43,6 +44,7 @@ For a fresh Supabase project, run the SQL files in this order:
 - `migrations/015_attachment_storage_bucket.sql` creates the private `lvl-attachments` Supabase Storage bucket used by secure message/file attachments.
 - `migrations/016_user_account_status.sql` adds admin-controlled active/suspended/banned account status fields for reversible moderation.
 - `migrations/017_reel_bookmarks.sql` adds the first-class reel bookmarks table for saving clips.
+- `migrations/018_terms_acceptance.sql` records the accepted Terms & Conditions revision per account and adds case-insensitive unique indexes for username/nickname.
 - `legacy/mysql_schema.sql` is an archived MySQL/XAMPP schema from the old PHP version. Do not use it for the Flask/Supabase app.
 
 Future database changes should be written as Supabase/PostgreSQL migrations, not MySQL scripts.

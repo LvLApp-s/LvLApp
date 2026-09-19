@@ -6155,48 +6155,12 @@ def profile(username):
                 else:
                     posts = []
             elif mode == 'saved':
+                # /bookmarks is the single canonical Saved experience. This
+                # branch used to be a second implementation of the same
+                # queries; old links now land on the real one.
                 if not is_own_profile:
                     return redirect(url_for('profile', username=profile_user['username'], m='posts'))
-                saved_sub = request.args.get('sub', 'posts')
-                if saved_sub == 'clips':
-                    saved_reel_ids = get_all_bookmarked_reel_ids(viewer['id'])
-                    if saved_reel_ids:
-                        offset = (page - 1) * POSTS_PER_PAGE
-                        page_reel_ids = saved_reel_ids[offset:offset + POSTS_PER_PAGE]
-                        if page_reel_ids:
-                            try:
-                                select_query_reels = '*, user:users!reels_user_id_fkey(*), community:communities!reels_community_id_fkey(*)'
-                                res = supabase.table('reels').select(select_query_reels).in_('id', page_reel_ids).eq('status', 'active').is_('deleted_at', 'null').execute()
-                                raw_reels = res.data or []
-                                order_map = {rid: i for i, rid in enumerate(page_reel_ids)}
-                                raw_reels.sort(key=lambda r: order_map.get(r.get('id'), 9999))
-                                reels = enrich_reels(raw_reels, viewer['id'])
-                            except Exception as exc:
-                                app.logger.error("Error loading saved reels in profile: %s", exc)
-                                reels = []
-                        has_next = len(saved_reel_ids) > (offset + POSTS_PER_PAGE)
-                    else:
-                        reels = []
-                    posts = []
-                else:
-                    saved_sub = 'posts'
-                    try:
-                        b_res = supabase.table('bookmarks').select('post_id').eq('user_id', viewer['id']).order('created_at', desc=True).execute()
-                        saved_post_ids = [b['post_id'] for b in b_res.data] if (b_res and b_res.data) else []
-                        if saved_post_ids:
-                            offset = (page - 1) * POSTS_PER_PAGE
-                            posts_res = execute_published_posts(lambda: supabase.table('posts').select(POST_SELECT_QUERY).in_('id', saved_post_ids).is_('deleted_at', 'null').range(offset, offset + POSTS_PER_PAGE - 1))
-                            raw_posts = posts_res.data if posts_res and posts_res.data else []
-                            order_map = {pid: i for i, pid in enumerate(saved_post_ids)}
-                            raw_posts.sort(key=lambda p: order_map.get(p.get('id'), 9999))
-                            posts = enrich_posts(visible_post_filter(raw_posts, viewer['id']), viewer['id'])
-                            has_next = len(saved_post_ids) > (offset + POSTS_PER_PAGE)
-                        else:
-                            posts = []
-                    except Exception as exc:
-                        app.logger.error("Error loading saved posts in profile: %s", exc)
-                        posts = []
-                    reels = []
+                return redirect(url_for('bookmarks', tab=request.args.get('sub', 'posts')))
             else:
                 posts = get_profile_posts(profile_user, viewer['id'], page=page)
 
@@ -6218,7 +6182,7 @@ def profile(username):
         flash(handle_db_error(e), "error")
         return redirect(url_for('index'))
 
-    profile_has_next = has_next if mode == 'saved' else (len(posts) == POSTS_PER_PAGE if mode != 'clips' else len(reels) == POSTS_PER_PAGE)
+    profile_has_next = len(posts) == POSTS_PER_PAGE if mode != 'clips' else len(reels) == POSTS_PER_PAGE
 
     return render_template('profile.html',
                            viewer=viewer,
@@ -6233,7 +6197,6 @@ def profile(username):
                            posts=posts,
                            reels=reels,
                            mode=mode,
-                           saved_sub=locals().get('saved_sub', 'posts'),
                            page=page,
                            has_next=profile_has_next,
                            highlights=highlights,

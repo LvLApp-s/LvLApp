@@ -75,9 +75,11 @@
         <span data-i18n="auth_last_name">Last name</span>
         <input name="last_name" maxlength="60" autocomplete="family-name" value="{{ profile.last_name or '' }}" required>
       </label>
-      <label>
+      <label class="field-with-status">
         <span data-i18n="auth_nickname">Nickname</span>
-        <input name="nickname" pattern="[A-Za-z0-9_]{3,24}" autocomplete="username" value="{{ suggested_nickname or '' }}" required>
+        <input name="nickname" pattern="[A-Za-z0-9_]{3,24}" minlength="3" maxlength="24" autocomplete="username" autocapitalize="none" spellcheck="false" value="{{ suggested_nickname or '' }}" required
+               data-username-check aria-describedby="oauth-nickname-status">
+        <small class="field-status" id="oauth-nickname-status" data-username-status role="status" aria-live="polite"></small>
       </label>
       <label>
         <span data-i18n="auth_email">Email</span>
@@ -87,6 +89,7 @@
         <span data-i18n="auth_birthday">Birthday</span>
         {% set limits = birthday_limits() %}
         <input type="date" name="birthday" min="{{ limits.min.isoformat() }}" max="{{ limits.max.isoformat() }}" autocomplete="bday" required>
+        <small class="field-hint" data-i18n="auth_age_hint">You must be at least {{ min_age }} years old.</small>
       </label>
       <fieldset class="gender-field">
         <legend data-i18n="auth_gender">Gender</legend>
@@ -105,6 +108,15 @@
           <span data-gender-swatch aria-hidden="true"></span>
         </div>
       </fieldset>
+      <label class="checkbox-row terms-row">
+        <input type="checkbox" name="accept_terms" value="1" required data-terms-checkbox>
+        <span class="terms-text">
+          <span data-i18n="auth_terms_prefix">I agree to the</span>
+          <a class="inline-link" href="{{ url_for('terms') }}" target="_blank" rel="noopener" data-i18n="auth_terms_link">Terms &amp; Conditions</a>
+          <span data-i18n="auth_terms_and">and</span>
+          <a class="inline-link" href="{{ url_for('privacy') }}" target="_blank" rel="noopener" data-i18n="auth_privacy_link">Privacy &amp; Cookies</a>
+        </span>
+      </label>
       <button type="submit" data-i18n="oauth_create_action">Create account and enter LvL</button>
     </form>
   </section>

@@ -1,4 +1,111 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // --- Cookie / storage consent -------------------------------------------
+    //
+    // LvL stores two kinds of thing in the browser:
+    //
+    //   essential   the Flask session cookie (HttpOnly, set server side). It
+    //               carries sign-in state and the CSRF token, so it is never
+    //               gated -- switching it off would mean "log out".
+    //   preferences interface choices kept in localStorage: language, autoplay,
+    //               notification sound, sidebar state, dismissed prompts. These
+    //               never leave the device and are only written once allowed.
+    //
+    // There are no analytics, advertising or third-party tracking scripts, so
+    // no such category is offered. If one is ever added it belongs here, off by
+    // default, alongside a matching entry on the privacy page.
+
+    const CONSENT_KEY = 'lvl_cookie_consent';
+    const CONSENT_PREFERENCE_KEYS = [
+        'lvl_lang',
+        'autoplay_next_reels',
+        'notification_sounds_enabled',
+        'sidebar-menu-open',
+        'lvl_install_prompt_dismissed'
+    ];
+
+    function safeStorageGet(key) {
+        try { return window.localStorage.getItem(key); } catch (_) { return null; }
+    }
+
+    function safeStorageSet(key, value) {
+        try { window.localStorage.setItem(key, value); return true; } catch (_) { return false; }
+    }
+
+    function safeStorageRemove(key) {
+        try { window.localStorage.removeItem(key); } catch (_) { /* ignore */ }
+    }
+
+    function consentChoice() {
+        const stored = safeStorageGet(CONSENT_KEY);
+        return stored === 'all' || stored === 'essential' ? stored : null;
+    }
+
+    function preferencesAllowed() {
+        // Before a choice is made we do not write optional storage, but we do
+        // still read anything already there so the app does not visibly reset.
+        return consentChoice() === 'all';
+    }
+
+    function readPreference(key, fallback) {
+        const value = safeStorageGet(key);
+        return value === null ? (fallback === undefined ? null : fallback) : value;
+    }
+
+    function writePreference(key, value) {
+        if (!preferencesAllowed()) return false;
+        return safeStorageSet(key, value);
+    }
+
+    function setConsent(choice) {
+        safeStorageSet(CONSENT_KEY, choice);
+        if (choice === 'essential') {
+            CONSENT_PREFERENCE_KEYS.forEach(safeStorageRemove);
+        }
+        document.dispatchEvent(new CustomEvent('lvl:consent', { detail: { choice } }));
+    }
+
+    function initCookieConsent() {
+        const banner = document.querySelector('[data-consent-banner]');
+
+        const openBanner = () => {
+            if (!banner) return;
+            banner.hidden = false;
+            window.requestAnimationFrame(() => banner.classList.add('is-visible'));
+        };
+
+        const closeBanner = () => {
+            if (!banner) return;
+            banner.classList.remove('is-visible');
+            window.setTimeout(() => { banner.hidden = true; }, 260);
+        };
+
+        if (banner) {
+            banner.querySelectorAll('[data-consent-choice]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    setConsent(button.dataset.consentChoice === 'all' ? 'all' : 'essential');
+                    closeBanner();
+                });
+            });
+            if (!consentChoice()) openBanner();
+        }
+
+        // "Manage cookie choices" on the privacy page.
+        document.querySelectorAll('[data-consent-reopen]').forEach((button) => {
+            button.addEventListener('click', () => {
+                safeStorageRemove(CONSENT_KEY);
+                openBanner();
+            });
+        });
+    }
+
+    window.LvLConsent = {
+        choice: consentChoice,
+        allowsPreferences: preferencesAllowed,
+        read: readPreference,
+        write: writePreference,
+        set: setConsent
+    };
+
     function translateUi(key, fallback) {
         const lang = window.LvLI18n ? window.LvLI18n.getCurrentLang() : 'en';
         const dictionary = window.LvLI18n && window.LvLI18n.TRANSLATIONS
@@ -170,7 +277,8 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => burst.remove(), 900);
     }
 
-    initFlashMessages();
+    initFeedback();
+    initCookieConsent();
     initXpToasts();
     initGenderPreview();
     initNewChatPanel();
@@ -178,6 +286,9 @@ document.addEventListener('DOMContentLoaded', () => {
     initInstallPrompt();
     initLiveStatusBadges();
     initBirthdayValidation();
+    initUsernameAvailability();
+    initPasswordConfirmation();
+    initTermsAcceptance();
     initProfilePreview();
     initProfileAvatarModal();
     initWebBackButton();
@@ -256,7 +367,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         play(type) {
-            const soundEnabled = window.localStorage.getItem('notification_sounds_enabled') !== 'false';
+            const soundEnabled = readPreference('notification_sounds_enabled', 'true') !== 'false';
             if (!soundEnabled) return;
 
             this.init();
@@ -1169,7 +1280,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let manualPromptTimer = null;
 
         const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-        if (isStandalone || window.localStorage.getItem(dismissedKey) === '1') {
+        if (isStandalone || readPreference(dismissedKey) === '1') {
             return;
         }
 
@@ -1248,7 +1359,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const choice = await deferredPrompt.userChoice;
                 deferredPrompt = null;
                 if (choice && choice.outcome === 'accepted') {
-                    window.localStorage.setItem(dismissedKey, '1');
+                    writePreference(dismissedKey, '1');
                     hidePrompt();
                 }
             });
@@ -1256,13 +1367,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (dismissButton) {
             dismissButton.addEventListener('click', () => {
-                window.localStorage.setItem(dismissedKey, '1');
+                writePreference(dismissedKey, '1');
                 hidePrompt();
             });
         }
 
         window.addEventListener('appinstalled', () => {
-            window.localStorage.setItem(dismissedKey, '1');
+            writePreference(dismissedKey, '1');
             hidePrompt();
         });
     }
@@ -1270,7 +1381,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Sidebar mode: desktop stays open; mobile uses header/bottom navigation.
     const sidebar = document.querySelector('.left-rail');
     if (sidebar) {
-        localStorage.removeItem('sidebar-menu-open');
+        safeStorageRemove('sidebar-menu-open');
         const syncSidebarMode = () => {
             if (window.innerWidth > 991) {
                 sidebar.classList.add('menu-open');
@@ -1562,19 +1673,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function initPreferencesSettings() {
         const autoplayCheckbox = document.getElementById('autoplay-next-reels-checkbox');
         if (autoplayCheckbox) {
-            const autoplaySetting = window.localStorage.getItem('autoplay_next_reels');
+            const autoplaySetting = readPreference('autoplay_next_reels');
             autoplayCheckbox.checked = autoplaySetting !== 'false';
             autoplayCheckbox.addEventListener('change', () => {
-                window.localStorage.setItem('autoplay_next_reels', autoplayCheckbox.checked ? 'true' : 'false');
+                writePreference('autoplay_next_reels', autoplayCheckbox.checked ? 'true' : 'false');
             });
         }
 
         const soundCheckbox = document.getElementById('notification-sounds-checkbox');
         if (soundCheckbox) {
-            const soundSetting = window.localStorage.getItem('notification_sounds_enabled');
+            const soundSetting = readPreference('notification_sounds_enabled');
             soundCheckbox.checked = soundSetting !== 'false';
             soundCheckbox.addEventListener('change', () => {
-                window.localStorage.setItem('notification_sounds_enabled', soundCheckbox.checked ? 'true' : 'false');
+                writePreference('notification_sounds_enabled', soundCheckbox.checked ? 'true' : 'false');
             });
         }
     }
@@ -1652,115 +1763,155 @@ document.addEventListener('DOMContentLoaded', () => {
         updatePreview();
     }
 
-    function showXpToasts(toasts) {
-        if (!Array.isArray(toasts) || toasts.length === 0) return;
+    // --- Feedback ----------------------------------------------------------
+    //
+    // One implementation for every message the app shows. Errors and warnings
+    // go to the TOP alert stack (role="alert"); success and informational
+    // feedback goes to the BOTTOM toast stack (role="status"), which sits above
+    // the mobile bottom navigation and respects the bottom safe area.
+    // Server-rendered flash messages are placed in the same two stacks by
+    // templates/_feedback.html, so there is nothing to keep in sync.
 
-        let stack = document.querySelector('.xp-toast-stack');
+    const FEEDBACK_ALERT_CATEGORIES = ['error', 'warning'];
+    const FEEDBACK_TIMEOUTS = { success: 4000, info: 5000, warning: 9000, error: 9000 };
+
+    const FEEDBACK_ICONS = {
+        success: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5 5L20 6.5"/></svg>',
+        error: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5"/><path d="M12 16.4h.01"/></svg>',
+        warning: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5 21 19H3z"/><path d="M12 10v4"/><path d="M12 17h.01"/></svg>',
+        info: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.6h.01"/></svg>'
+    };
+
+    function isAlertCategory(category) {
+        return FEEDBACK_ALERT_CATEGORIES.indexOf(category) !== -1;
+    }
+
+    function feedbackStack(category) {
+        const selector = isAlertCategory(category) ? '[data-alert-stack]' : '[data-toast-stack]';
+        let stack = document.querySelector(selector);
         if (!stack) {
             stack = document.createElement('div');
-            stack.className = 'xp-toast-stack';
+            stack.className = isAlertCategory(category) ? 'feedback-alerts' : 'feedback-toasts';
+            stack.setAttribute(isAlertCategory(category) ? 'data-alert-stack' : 'data-toast-stack', '');
+            stack.setAttribute('aria-live', isAlertCategory(category) ? 'assertive' : 'polite');
             document.body.appendChild(stack);
         }
-
-        toasts.forEach((toast, index) => {
-            const item = document.createElement('div');
-            item.className = `xp-toast ${toast.type === 'level' ? 'level-up' : ''}`;
-            item.textContent = toast.message || '';
-            stack.appendChild(item);
-
-            window.setTimeout(() => {
-                item.classList.add('show');
-            }, index * 120);
-
-            window.setTimeout(() => {
-                item.classList.remove('show');
-                window.setTimeout(() => item.remove(), 220);
-            }, 2600 + index * 300);
-        });
+        return stack;
     }
 
-    function initFlashMessages() {
-        document.querySelectorAll('.flash').forEach((flash, index) => {
-            if (flash.dataset.flashReady === '1') return;
-            flash.dataset.flashReady = '1';
-            flash.style.setProperty('--flash-index', index);
-            flash.setAttribute('role', flash.classList.contains('error') ? 'alert' : 'status');
+    function dismissFeedback(item) {
+        if (!item || item.dataset.dismissed === '1') return;
+        item.dataset.dismissed = '1';
+        item.classList.add('is-leaving');
+        const remove = () => item.remove();
+        item.addEventListener('transitionend', remove, { once: true });
+        // Fallback for reduced-motion / interrupted transitions.
+        window.setTimeout(remove, 400);
+    }
 
-            const messageText = document.createElement('span');
-            messageText.className = 'flash-message-text';
-            while (flash.firstChild) messageText.appendChild(flash.firstChild);
-            flash.appendChild(messageText);
+    function enhanceFeedbackItem(item) {
+        if (item.dataset.feedbackReady === '1') return;
+        item.dataset.feedbackReady = '1';
 
+        const category = item.dataset.feedbackCategory || 'info';
+        if (!item.querySelector('.feedback-close')) {
             const closeButton = document.createElement('button');
             closeButton.type = 'button';
-            closeButton.className = 'flash-close-button';
-            closeButton.textContent = '×';
+            closeButton.className = 'feedback-close';
             closeButton.setAttribute('aria-label', translateUi('flash_close', 'Close message'));
-            closeButton.setAttribute('title', translateUi('flash_close', 'Close message'));
             closeButton.dataset.i18nAria = 'flash_close';
-            closeButton.dataset.i18nTitle = 'flash_close';
-            closeButton.addEventListener('click', () => dismissFlash(flash));
-            flash.appendChild(closeButton);
+            closeButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+            closeButton.addEventListener('click', () => dismissFeedback(item));
+            item.appendChild(closeButton);
+        }
 
-            if (!flash.classList.contains('error') && !flash.classList.contains('warning')) {
-                window.setTimeout(() => dismissFlash(flash), 8000 + index * 200);
-            }
+        // Enter on the next frame so the transition actually runs.
+        window.requestAnimationFrame(() => item.classList.add('is-visible'));
+
+        const timeout = FEEDBACK_TIMEOUTS[category] || FEEDBACK_TIMEOUTS.info;
+        let timer = window.setTimeout(() => dismissFeedback(item), timeout);
+        item.addEventListener('mouseenter', () => window.clearTimeout(timer));
+        item.addEventListener('mouseleave', () => {
+            timer = window.setTimeout(() => dismissFeedback(item), 2000);
         });
     }
 
-    function dismissFlash(flash) {
-        if (!flash || flash.dataset.dismissed === '1') return;
-        flash.dataset.dismissed = '1';
-        flash.classList.add('is-hiding');
-        window.setTimeout(() => flash.remove(), 220);
+    function initFeedback() {
+        document.querySelectorAll('[data-feedback]').forEach(enhanceFeedbackItem);
     }
 
-    function showAppToast(message, category = 'error') {
-        if (!message) return;
+    function showFeedback(message, category) {
+        if (!message) return null;
+        category = category || 'info';
 
-        let displayMessage = String(message).trim();
-        if (category === 'error' && displayMessage.length > 60) {
-            console.error('Detailed Error Log:', displayMessage);
-            if (displayMessage.toLowerCase().includes('size') || displayMessage.toLowerCase().includes('large')) {
-                displayMessage = 'File size too large.';
-            } else if (displayMessage.toLowerCase().includes('type') || displayMessage.toLowerCase().includes('format')) {
-                displayMessage = 'Unsupported file format.';
-            } else if (displayMessage.toLowerCase().includes('permission') || displayMessage.toLowerCase().includes('authorized')) {
-                displayMessage = 'Access denied.';
+        let text = String(message).trim();
+        if (category === 'error' && text.length > 60) {
+            console.error('Detailed error:', text);
+            const lower = text.toLowerCase();
+            if (lower.includes('size') || lower.includes('large')) {
+                text = translateUi('error_file_too_large', 'File size too large.');
+            } else if (lower.includes('type') || lower.includes('format')) {
+                text = translateUi('error_unsupported_file', 'Unsupported file format.');
+            } else if (lower.includes('permission') || lower.includes('authorized')) {
+                text = translateUi('error_access_denied', 'Access denied.');
             } else {
-                displayMessage = 'Action failed. Please try again.';
+                text = translateUi('action_failed', 'Action failed. Please try again.');
             }
         }
-        
-        // Always attempt to translate the toast
-        const originalDisplayMessage = displayMessage;
+
+        const original = text;
         if (window.LvLI18n && typeof window.LvLI18n.translateServerMessage === 'function') {
-            displayMessage = window.LvLI18n.translateServerMessage(originalDisplayMessage, window.LvLI18n.getCurrentLang());
+            text = window.LvLI18n.translateServerMessage(original, window.LvLI18n.getCurrentLang());
         }
 
-        const duplicate = Array.from(document.querySelectorAll('.app-toast')).find((flash) => (
-            flash.textContent.trim().includes(displayMessage)
-            && flash.classList.contains(category)
-            && flash.dataset.dismissed !== '1'
+        const stack = feedbackStack(category);
+
+        // Deduplicate: an identical live message is refreshed, not stacked.
+        const duplicate = Array.from(stack.querySelectorAll('[data-feedback]')).find((node) => (
+            node.dataset.dismissed !== '1'
+            && node.dataset.feedbackCategory === category
+            && (node.querySelector('.feedback-text') || {}).textContent === text
         ));
         if (duplicate) {
-            duplicate.style.setProperty('--flash-index', '0');
-            return;
+            duplicate.classList.remove('is-leaving');
+            return duplicate;
         }
 
-        const flash = document.createElement('div');
-        flash.className = `flash ${category} app-toast`;
-        flash.dataset.serverMessage = '';
-        flash.dataset.serverMessageOriginal = originalDisplayMessage;
-        
-        let icon = 'ℹ️';
-        if (category === 'success') icon = '✅';
-        else if (category === 'error') icon = '❌';
-        else if (category === 'warning') icon = '⚠️';
+        const item = document.createElement('div');
+        item.className = `feedback-item feedback-${category}`;
+        item.setAttribute('role', isAlertCategory(category) ? 'alert' : 'status');
+        item.dataset.feedback = '';
+        item.dataset.feedbackCategory = category;
+        item.dataset.serverMessage = '';
+        item.dataset.serverMessageOriginal = original;
+        item.innerHTML =
+            `<span class="feedback-icon" aria-hidden="true">${FEEDBACK_ICONS[category] || FEEDBACK_ICONS.info}</span>` +
+            `<span class="feedback-text"></span>`;
+        item.querySelector('.feedback-text').textContent = text;
 
-        flash.innerHTML = `<span aria-hidden="true">${icon}</span> <span>${escapeHTML(displayMessage)}</span>`;
-        document.body.appendChild(flash);
-        initFlashMessages();
+        stack.appendChild(item);
+        enhanceFeedbackItem(item);
+        return item;
+    }
+
+    // Kept as the app-wide entry point; ~40 call sites use this name.
+    function showAppToast(message, category = 'error') {
+        return showFeedback(message, category);
+    }
+
+    // XP and level-up feedback is ordinary bottom feedback with a progression
+    // accent -- not a separate notification system.
+    function showXpToasts(toasts) {
+        if (!Array.isArray(toasts) || toasts.length === 0) return;
+        toasts.forEach((toast, index) => {
+            window.setTimeout(() => {
+                const item = showFeedback(toast.message || '', 'info');
+                if (item) {
+                    item.classList.add('feedback-xp');
+                    if (toast.type === 'level') item.classList.add('feedback-level-up');
+                }
+            }, index * 160);
+        });
     }
 
     function initLiveStatusBadges() {
@@ -2375,7 +2526,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             video.play().catch(() => {});
                             return;
                         }
-                        const autoplaySetting = window.localStorage.getItem('autoplay_next_reels') !== 'false';
+                        const autoplaySetting = readPreference('autoplay_next_reels', 'true') !== 'false';
                         if (!autoplaySetting) {
                             video.pause();
                             card.classList.add('is-paused');
@@ -2917,6 +3068,36 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- Side clip rail autoplay -------------------------------------------
+    //
+    // One IntersectionObserver system, not two. Rules:
+    //   * a slide that is meaningfully visible plays, muted
+    //   * leaving the viewport pauses it
+    //   * only one preview video plays at a time, app-wide
+    //   * nothing preloads until it is about to play
+    //   * a hidden tab pauses; returning resumes if still visible
+    // Manual play/pause and mute/unmute always win over autoplay.
+
+    let activePreviewVideo = null;
+
+    function stopOtherPreviewVideos(video) {
+        if (activePreviewVideo && activePreviewVideo !== video && !activePreviewVideo.paused) {
+            activePreviewVideo.pause();
+        }
+        activePreviewVideo = video || null;
+    }
+
+    function playPreviewMuted(video) {
+        if (!video) return;
+        // Browsers only allow unattended playback while muted.
+        if (!video.dataset.userUnmuted) video.muted = true;
+        video.playsInline = true;
+        if (video.preload === 'none') video.preload = 'metadata';
+        stopOtherPreviewVideos(video);
+        const attempt = video.play();
+        if (attempt && typeof attempt.catch === 'function') attempt.catch(() => {});
+    }
+
     function initHomeReelPanel() {
         const panel = document.querySelector('[data-home-reel-panel]');
         if (!panel) return;
@@ -2929,114 +3110,103 @@ document.addEventListener('DOMContentLoaded', () => {
         let panelVisible = false;
 
         const getVideo = (slide) => slide.querySelector('[data-home-reel-video]');
-        const getPlayBtn = (slide) => slide.querySelector('[data-home-reel-play]');
-        const getPlayIcon = (slide) => slide.querySelector('[data-play-icon]');
 
         const pauseSlide = (slide) => {
-            const vid = getVideo(slide);
-            if (vid && !vid.paused) vid.pause();
+            const video = slide && getVideo(slide);
+            if (video && !video.paused) video.pause();
         };
 
-        const updatePlayIcon = (slide) => {
-            const vid = getVideo(slide);
-            const icon = getPlayIcon(slide);
-            if (!vid || !icon) return;
-            // Show play icon when paused, hide when playing
-            icon.style.opacity = vid.paused ? '1' : '0';
+        const updatePlayState = (slide) => {
+            const video = getVideo(slide);
+            if (!video) return;
+            slide.classList.toggle('is-playing', !video.paused);
+        };
+
+        const togglePlayback = (slide) => {
+            const video = getVideo(slide);
+            if (!video) return;
+            if (video.paused) {
+                playPreviewMuted(video);
+            } else {
+                video.pause();
+            }
         };
 
         const activateSlide = (index, options = {}) => {
             const { scroll = false, autoplay = panelVisible } = options;
-            slides.forEach((s, i) => {
-                s.classList.toggle('is-active', i === index);
-                if (i !== index) pauseSlide(s);
+            slides.forEach((slide, i) => {
+                slide.classList.toggle('is-active', i === index);
+                if (i !== index) pauseSlide(slide);
             });
             current = index;
 
             const activeSlide = slides[current];
+            if (!activeSlide) return;
+
             if (scroll && slidesContainer) {
-                slidesContainer.scrollTo({
-                    top: activeSlide.offsetTop,
-                    behavior: 'smooth'
-                });
+                slidesContainer.scrollTo({ top: activeSlide.offsetTop, behavior: 'smooth' });
             }
-            const vid = getVideo(activeSlide);
-            if (vid) {
-                if (autoplay) vid.play().catch(() => {});
-                updatePlayIcon(activeSlide);
-                vid.addEventListener('play', () => updatePlayIcon(activeSlide), { once: false });
-                vid.addEventListener('pause', () => updatePlayIcon(activeSlide), { once: false });
-            }
+            if (autoplay) playPreviewMuted(getVideo(activeSlide));
+            updatePlayState(activeSlide);
         };
 
+        // Listeners are bound exactly once per slide, here.
         slides.forEach((slide) => {
-            const vid = getVideo(slide);
-            const playBtn = getPlayBtn(slide);
+            const video = getVideo(slide);
+            const playBtn = slide.querySelector('[data-home-reel-play]');
             const muteBtn = slide.querySelector('[data-home-reel-mute]');
 
-            if (vid) {
-                const adjustHomeAspect = () => {
-                    const aspect = vid.videoWidth / vid.videoHeight;
+            if (video) {
+                const adjustAspect = () => {
                     const wrap = slide.querySelector('.home-reel-video-wrap');
-                    if (wrap && aspect) {
-                        if (aspect > 1.2) {
-                            wrap.style.aspectRatio = '16 / 9';
-                        } else if (aspect < 0.8) {
-                            wrap.style.aspectRatio = '9 / 16';
-                        } else {
-                            wrap.style.aspectRatio = '1 / 1';
-                        }
-                    }
+                    if (!wrap || !video.videoWidth || !video.videoHeight) return;
+                    const aspect = video.videoWidth / video.videoHeight;
+                    wrap.dataset.aspect = aspect > 1.2 ? 'wide' : (aspect < 0.8 ? 'tall' : 'square');
                 };
+                if (video.readyState >= 1) adjustAspect();
+                else video.addEventListener('loadedmetadata', adjustAspect);
 
-                if (vid.readyState >= 1) {
-                    adjustHomeAspect();
-                } else {
-                    vid.addEventListener('loadedmetadata', adjustHomeAspect);
-                }
+                video.addEventListener('play', () => {
+                    stopOtherPreviewVideos(video);
+                    updatePlayState(slide);
+                });
+                video.addEventListener('pause', () => updatePlayState(slide));
 
-                vid.addEventListener('ended', () => {
-                    const autoplaySetting = window.localStorage.getItem('autoplay_next_reels') !== 'false';
-                    if (!autoplaySetting) {
-                        vid.pause();
-                        updatePlayIcon(slide);
-                        return;
-                    }
+                video.addEventListener('ended', () => {
+                    const autoplayNext = readPreference('autoplay_next_reels', 'true') !== 'false';
                     const nextIndex = current + 1;
-                    if (nextIndex < slides.length) {
+                    if (autoplayNext && nextIndex < slides.length) {
                         activateSlide(nextIndex, { scroll: true, autoplay: true });
                     } else {
-                        vid.pause();
-                        updatePlayIcon(slide);
+                        updatePlayState(slide);
                     }
                 });
 
-                vid.addEventListener('click', () => {
-                    if (vid.paused) { vid.play().catch(() => {}); } else { vid.pause(); }
-                    updatePlayIcon(slide);
-                });
-                vid.addEventListener('play', () => updatePlayIcon(slide));
-                vid.addEventListener('pause', () => updatePlayIcon(slide));
+                video.addEventListener('click', () => togglePlayback(slide));
             }
 
-            if (playBtn && vid) {
-                playBtn.addEventListener('click', () => {
-                    if (vid.paused) { vid.play().catch(() => {}); } else { vid.pause(); }
-                    updatePlayIcon(slide);
+            if (playBtn) {
+                playBtn.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    togglePlayback(slide);
                 });
             }
 
-            if (muteBtn && vid) {
-                muteBtn.addEventListener('click', () => {
-                    vid.muted = !vid.muted;
-                    muteBtn.classList.toggle('active', !vid.muted);
-                    const muteKey = vid.muted ? 'home_unmute_aria' : 'home_mute_aria';
+            if (muteBtn && video) {
+                muteBtn.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    video.muted = !video.muted;
+                    if (video.muted) delete video.dataset.userUnmuted;
+                    else video.dataset.userUnmuted = '1';
+                    muteBtn.classList.toggle('active', !video.muted);
+                    const muteKey = video.muted ? 'home_unmute_aria' : 'home_mute_aria';
                     muteBtn.dataset.i18nAria = muteKey;
-                    muteBtn.setAttribute('aria-label', translateUi(muteKey, vid.muted ? 'Unmute' : 'Mute'));
+                    muteBtn.setAttribute('aria-label', translateUi(muteKey, video.muted ? 'Unmute' : 'Mute'));
                 });
             }
         });
 
+        // Which slide inside the rail is in view.
         if (slidesContainer) {
             const slideObserver = new IntersectionObserver((entries) => {
                 entries.forEach((entry) => {
@@ -3050,19 +3220,27 @@ document.addEventListener('DOMContentLoaded', () => {
             slides.forEach((slide) => slideObserver.observe(slide));
         }
 
-        // Auto-play first slide when visible via IntersectionObserver
-        const observer = new IntersectionObserver((entries) => {
+        // Whether the rail itself is on screen at all.
+        const panelObserver = new IntersectionObserver((entries) => {
             entries.forEach((entry) => {
-                panelVisible = entry.isIntersecting;
-                if (entry.isIntersecting) {
-                    const vid = getVideo(slides[current]);
-                    if (vid && vid.paused) vid.play().catch(() => {});
+                panelVisible = entry.isIntersecting && entry.intersectionRatio >= 0.3;
+                if (panelVisible && !document.hidden) {
+                    playPreviewMuted(getVideo(slides[current]));
                 } else {
                     pauseSlide(slides[current]);
                 }
             });
-        }, { threshold: 0.3 });
-        observer.observe(panel);
+        }, { threshold: [0, 0.3, 0.6] });
+        panelObserver.observe(panel);
+
+        // A background tab should not keep decoding video.
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                pauseSlide(slides[current]);
+            } else if (panelVisible) {
+                playPreviewMuted(getVideo(slides[current]));
+            }
+        });
 
         activateSlide(0, { autoplay: false });
     }
@@ -3076,6 +3254,152 @@ document.addEventListener('DOMContentLoaded', () => {
             // Scroll to top to ensure it's visible
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
+    }
+
+    const MIN_SIGNUP_AGE = 16;
+
+    // --- Registration field feedback ---------------------------------------
+    //
+    // Inline, progressive and quiet: a field only says something once it has
+    // enough to say. The backend re-validates all of this -- these helpers are
+    // UX assistance, never the authority.
+
+    function setFieldStatus(node, state, message) {
+        if (!node) return;
+        node.dataset.state = state || '';
+        node.textContent = message || '';
+        const field = node.closest('label');
+        if (field) {
+            field.classList.toggle('has-error', state === 'invalid' || state === 'taken' || state === 'mismatch');
+            field.classList.toggle('has-success', state === 'available' || state === 'match');
+        }
+    }
+
+    function initUsernameAvailability() {
+        const inputs = document.querySelectorAll('[data-username-check]');
+        if (!inputs.length) return;
+
+        inputs.forEach((input) => {
+            const field = input.closest('label') || input.parentElement;
+            const status = field ? field.querySelector('[data-username-status]') : null;
+            if (!status) return;
+
+            const original = (input.value || '').trim().toLowerCase();
+            let timer = null;
+            let pending = null;
+            let lastQuery = '';
+
+            const check = (value) => {
+                if (pending) pending.abort();
+                pending = new AbortController();
+                setFieldStatus(status, 'checking', translateUi('username_checking', 'Checking availability...'));
+
+                fetch(`/api/username-available?username=${encodeURIComponent(value)}`, {
+                    signal: pending.signal,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                    .then((res) => res.json())
+                    .then((result) => {
+                        if ((input.value || '').trim().toLowerCase() !== value) return;
+                        if (result.status === 'invalid') {
+                            setFieldStatus(status, 'invalid', translateUi('username_invalid', 'Use 3-24 letters, numbers or underscores.'));
+                        } else if (result.status === 'current') {
+                            setFieldStatus(status, 'available', translateUi('username_current', 'This is your current username.'));
+                        } else if (result.available) {
+                            setFieldStatus(status, 'available', translateUi('username_available', 'Username is available.'));
+                        } else {
+                            setFieldStatus(status, 'taken', translateUi('username_taken', 'That username is taken.'));
+                        }
+                    })
+                    .catch((error) => {
+                        if (error && error.name === 'AbortError') return;
+                        setFieldStatus(status, '', '');
+                    });
+            };
+
+            input.addEventListener('input', () => {
+                const value = (input.value || '').trim().toLowerCase();
+                window.clearTimeout(timer);
+                if (pending) { pending.abort(); pending = null; }
+
+                if (!value) { setFieldStatus(status, '', ''); return; }
+                if (value === original) {
+                    setFieldStatus(status, 'available', translateUi('username_current', 'This is your current username.'));
+                    return;
+                }
+                if (!/^[a-z0-9_]{3,24}$/.test(value)) {
+                    // Say nothing until the field could plausibly be valid.
+                    setFieldStatus(status, value.length >= 3 ? 'invalid' : '', value.length >= 3
+                        ? translateUi('username_invalid', 'Use 3-24 letters, numbers or underscores.')
+                        : '');
+                    return;
+                }
+                if (value === lastQuery) return;
+                lastQuery = value;
+                // Debounced: one request after typing settles, not per keystroke.
+                timer = window.setTimeout(() => check(value), 450);
+            });
+        });
+    }
+
+    function initPasswordConfirmation() {
+        document.querySelectorAll('[data-password-confirm]').forEach((confirmInput) => {
+            const form = confirmInput.closest('form');
+            if (!form) return;
+            const passwordInput = form.querySelector('[data-password-primary]');
+            const confirmField = confirmInput.closest('label') || confirmInput.parentElement;
+            const status = confirmField ? confirmField.querySelector('[data-password-status]') : null;
+            if (!passwordInput) return;
+
+            const evaluate = (quiet) => {
+                const password = passwordInput.value || '';
+                const confirmation = confirmInput.value || '';
+                if (!confirmation) {
+                    if (!quiet) setFieldStatus(status, '', '');
+                    return !password;
+                }
+                if (password !== confirmation) {
+                    setFieldStatus(status, 'mismatch', translateUi('password_mismatch', 'Passwords do not match.'));
+                    confirmInput.setCustomValidity(translateUi('password_mismatch', 'Passwords do not match.'));
+                    return false;
+                }
+                setFieldStatus(status, 'match', translateUi('password_match', 'Passwords match.'));
+                confirmInput.setCustomValidity('');
+                return true;
+            };
+
+            confirmInput.addEventListener('input', () => evaluate(false));
+            passwordInput.addEventListener('input', () => evaluate(true));
+
+            form.addEventListener('submit', (event) => {
+                if (!evaluate(false)) {
+                    event.preventDefault();
+                    confirmInput.focus();
+                }
+            });
+        });
+    }
+
+    function initTermsAcceptance() {
+        document.querySelectorAll('[data-terms-checkbox]').forEach((checkbox) => {
+            const form = checkbox.closest('form');
+            if (!form) return;
+            // Never pre-select, even if the browser restored the form state.
+            checkbox.checked = false;
+            form.addEventListener('submit', (event) => {
+                if (!checkbox.checked) {
+                    event.preventDefault();
+                    const row = checkbox.closest('.terms-row');
+                    if (row) row.classList.add('has-error');
+                    showAppToast(translateUi('terms_required', 'You must accept the Terms & Conditions to create an account.'), 'warning');
+                    checkbox.focus();
+                }
+            });
+            checkbox.addEventListener('change', () => {
+                const row = checkbox.closest('.terms-row');
+                if (row) row.classList.toggle('has-error', !checkbox.checked);
+            });
+        });
     }
 
     function initBirthdayValidation() {
@@ -3102,9 +3426,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     age--;
                 }
 
-                if (age < 14) {
+                if (age < MIN_SIGNUP_AGE) {
                     e.preventDefault();
-                    showAppToast(translateUi('birthday_min_age_error', 'You must be at least 14 years old to use LvL.'));
+                    showAppToast(translateUi('birthday_min_age_error', 'You must be at least 16 years old to use LvL.'));
                     return;
                 }
 

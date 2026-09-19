@@ -67,8 +67,10 @@
               <span data-i18n="settings_username">Username</span>
               <div class="input-prefix-wrapper">
                 <span class="input-prefix">@</span>
-                <input name="nickname" maxlength="24" pattern="[A-Za-z0-9_]{3,24}" minlength="3" title="3-24 letters, numbers, or underscores." data-i18n-title="settings_username_hint" value="{{ viewer.nickname or viewer.username }}" required>
+                <input name="nickname" maxlength="24" pattern="[A-Za-z0-9_]{3,24}" minlength="3" title="3-24 letters, numbers, or underscores." data-i18n-title="settings_username_hint" autocapitalize="none" spellcheck="false" value="{{ viewer.nickname or viewer.username }}" required
+                       data-username-check aria-describedby="settings-nickname-status">
               </div>
+              <small class="field-status" id="settings-nickname-status" data-username-status role="status" aria-live="polite"></small>
             </label>
             <label class="form-group">
               <span data-i18n="settings_bio">Bio</span>
