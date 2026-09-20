@@ -198,7 +198,7 @@ ATTACHMENT_CONTENT_TYPES = {
     'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'txt': 'text/plain',
 }
-ASSET_VERSION = "143"
+ASSET_VERSION = "144"
 HOME_REEL_PREVIEW_LIMIT = 12
 HOME_MEDIA_PREVIEW_LIMIT = 12
 
@@ -6809,7 +6809,7 @@ def api_feed_updates():
 
 @app.route('/api/conversations')
 def api_conversations():
-    """Recent threads for the left-rail messages popover."""
+    """Recent threads for the message dock and the rail trigger."""
     viewer = get_current_user()
     if not viewer:
         return jsonify({'success': False, 'error': 'Authentication required.'}), 401
@@ -6820,6 +6820,7 @@ def api_conversations():
         'success': True,
         'unread_messages': unread_message_count(viewer['id']),
         'conversations': [{
+            'id': row.get('id'),
             'username': row.get('username'),
             'display_name': row.get('display_name') or row.get('username'),
             'avatar': row.get('profile_photo_url') or url_for('static', filename='assets/default-male-avatar.svg'),

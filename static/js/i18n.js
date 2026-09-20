@@ -2226,3 +2226,35 @@ Object.assign(TRANSLATIONS.ar, {
   settings_theme_dark: "داكن",
   settings_theme_light: "فاتح"
 });
+
+/* --- Message dock --------------------------------------------------------- */
+
+Object.assign(TRANSLATIONS.en, {
+  msg_dock_open_all: "Open all messages",
+  msg_dock_conversation: "Conversation",
+  msg_dock_back: "Back to messages",
+  msg_dock_expand: "Open in Messages",
+  msg_dock_start: "Say hello.",
+  send_btn: "Send",
+  close_btn: "Close"
+});
+
+Object.assign(TRANSLATIONS.tr, {
+  msg_dock_open_all: "Tüm mesajları aç",
+  msg_dock_conversation: "Sohbet",
+  msg_dock_back: "Mesajlara dön",
+  msg_dock_expand: "Mesajlar'da aç",
+  msg_dock_start: "Bir merhaba yaz.",
+  send_btn: "Gönder",
+  close_btn: "Kapat"
+});
+
+Object.assign(TRANSLATIONS.ar, {
+  msg_dock_open_all: "فتح كل الرسائل",
+  msg_dock_conversation: "محادثة",
+  msg_dock_back: "العودة إلى الرسائل",
+  msg_dock_expand: "فتح في الرسائل",
+  msg_dock_start: "ابدأ بتحية.",
+  send_btn: "إرسال",
+  close_btn: "إغلاق"
+});

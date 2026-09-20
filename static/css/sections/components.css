@@ -1093,6 +1093,13 @@
   background: var(--lvl-surface-hover);
 }
 
+/* The card is a link, so a generic link-hover underline would strike through
+   every line inside it. */
+.rail-progress:hover,
+.rail-progress:hover * {
+  text-decoration: none;
+}
+
 .rail-progress-head {
   display: flex;
   align-items: center;

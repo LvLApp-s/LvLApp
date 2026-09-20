@@ -34,8 +34,11 @@
   border-radius: var(--radius-xl);
 }
 
+/* Collapsed the rail keeps the LvL mark, like Instagram's glyph; only the
+   wordmark next to it goes away (base.css hides .brand-text). */
 .left-rail:not(.menu-open) .brand-logo {
-  display: none;
+  justify-content: center;
+  padding: 6px;
 }
 
 .left-rail.menu-open .sidebar-top {

@@ -204,10 +204,10 @@
   --shell-main-wide: 920px;
   /* Past this the feed stops growing: a post column wider than this reads
      like a spreadsheet row. */
-  --shell-main-max: 1200px;
+  --shell-main-max: 1320px;
   /* The rail grows with the window instead of stopping at a fixed width, so
      a left-anchored shell has no dead strip on the right. */
-  --shell-right: clamp(380px, 28vw, 560px);
+  --shell-right: clamp(380px, 30vw, 600px);
   /* Desktop sticky header: min-height plus its 1px bottom border. Anything
      that sticks below it offsets by this. */
   --topbar-height: 65px;
@@ -529,8 +529,11 @@ a:hover {
   display: grid;
   /* The feed takes whatever the two rails do not: the shell always spans the
      window, so there is nothing left over at either edge. */
+  /* The left column always reserves the icon rail's width. The rail slides
+     out over the feed on hover, the way Instagram's does, so the layout
+     never shifts under the pointer. */
   grid-template-columns:
-    var(--shell-left-expanded)
+    var(--shell-left-collapsed)
     minmax(0, var(--shell-main-max))
     var(--shell-right);
   justify-content: start;
@@ -544,7 +547,7 @@ a:hover {
 /* No right rail on this page: give the space back to the timeline. */
 .app-shell:not(:has(.right-rail)) {
   grid-template-columns:
-    var(--shell-left-expanded)
+    var(--shell-left-collapsed)
     minmax(0, var(--shell-main-max))
     0;
 }
@@ -558,6 +561,9 @@ a:hover {
 
 .left-rail-wrapper {
   justify-content: flex-end;
+  /* The wrapper is the rail's stacking context, so it has to sit above the
+     sticky top bar for the expanded rail to slide over it. */
+  z-index: 95;
 }
 
 .right-rail-wrapper {
@@ -582,8 +588,6 @@ a:hover {
     grid-template-columns: var(--shell-left-collapsed) minmax(0, 1fr) 0;
   }
 
-  .left-rail,
-  .left-rail.menu-open,
   .left-rail:not(.menu-open) {
     width: var(--shell-left-collapsed);
   }
@@ -616,17 +620,29 @@ a:hover {
 .left-rail {
   display: flex;
   flex-direction: column;
-  width: var(--shell-left-expanded);
+  width: var(--shell-left-collapsed);
   padding: 0 12px;
-  position: sticky;
+  position: fixed;
+  inset-inline-start: 0;
   top: 0;
+  /* Above the sticky top bar: the expanded rail slides over the page, so it
+     must not be clipped by the header. */
+  z-index: 95;
   height: 100vh;
   border-right: 1px solid var(--border-color);
-  transition: width 0.2s cubic-bezier(0, 0, 0.2, 1);
+  background: var(--bg-color);
+  transition: width var(--duration-base) var(--ease-standard),
+              box-shadow var(--duration-base) var(--ease-standard);
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
+}
+
+/* Hover, keyboard focus, or an open rail popover opens the labelled rail. */
+.left-rail.menu-open {
+  width: var(--shell-left-expanded);
+  box-shadow: var(--shadow-lg);
 }
 
 .left-rail::-webkit-scrollbar {

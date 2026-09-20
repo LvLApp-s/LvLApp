@@ -503,6 +503,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initWebBackButton();
     initSwipeBack();
     initPopovers();
+    initMessageDock();
     initMarkAllRead();
     initTheme();
     initScrollMemory();
@@ -1596,20 +1597,47 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.querySelector('.left-rail');
     if (sidebar) {
         safeStorageRemove('sidebar-menu-open');
-        const syncSidebarMode = () => {
-            // 1280px is where base.css widens the rail from the collapsed
-            // icon column to the labelled one. Below that the rail is only
-            // --shell-left-collapsed wide, so labels would be clipped.
-            if (window.innerWidth > 1279) {
-                sidebar.classList.add('menu-open');
-                sidebar.classList.remove('mobile-menu-open');
-                document.body.style.overflow = '';
-            } else {
-                sidebar.classList.remove('menu-open');
-                sidebar.classList.remove('mobile-menu-open');
-                document.body.style.overflow = '';
-            }
+        // Instagram's rail: icons by default, labels while the pointer (or
+        // keyboard focus) is on it. `menu-open` is the same class the
+        // labelled state already used, so every existing rule still applies.
+        const DESKTOP_RAIL = '(min-width: 768px)';
+        let railPinned = false;
+
+        const desktopRail = () => window.matchMedia(DESKTOP_RAIL).matches;
+
+        const openRail = () => {
+            if (!desktopRail()) return;
+            sidebar.classList.add('menu-open');
         };
+
+        const closeRail = () => {
+            if (railPinned) return;
+            sidebar.classList.remove('menu-open');
+        };
+
+        const syncSidebarMode = () => {
+            sidebar.classList.remove('mobile-menu-open');
+            document.body.style.overflow = '';
+            if (!desktopRail()) sidebar.classList.remove('menu-open');
+        };
+
+        sidebar.addEventListener('mouseenter', openRail);
+        sidebar.addEventListener('mouseleave', closeRail);
+        sidebar.addEventListener('focusin', openRail);
+        sidebar.addEventListener('focusout', (event) => {
+            if (sidebar.contains(event.relatedTarget)) return;
+            closeRail();
+        });
+
+        // A popover anchored to the rail keeps it open, or it would collapse
+        // out from under the menu the reader just opened.
+        document.addEventListener('lvl:popover', (event) => {
+            const detail = event.detail || {};
+            if (!detail.trigger || !sidebar.contains(detail.trigger)) return;
+            railPinned = !!detail.open;
+            if (detail.open) openRail();
+            else closeRail();
+        });
 
         syncSidebarMode();
         window.addEventListener('resize', syncSidebarMode);
@@ -3360,6 +3388,7 @@ document.addEventListener('DOMContentLoaded', () => {
         openPopover = null;
         trigger.setAttribute('aria-expanded', 'false');
         popover.classList.remove('is-open');
+        document.dispatchEvent(new CustomEvent('lvl:popover', { detail: { trigger, popover, open: false } }));
         if (immediate) {
             popover.hidden = true;
         } else {
@@ -3379,6 +3408,7 @@ document.addEventListener('DOMContentLoaded', () => {
         positionPopover(popover, trigger, placement);
         trigger.setAttribute('aria-expanded', 'true');
         openPopover = { popover, trigger, placement };
+        document.dispatchEvent(new CustomEvent('lvl:popover', { detail: { trigger, popover, open: true } }));
         // Only animate in if this popover is still the open one; a scroll or
         // resize between frames must not leave `is-open` on a hidden element.
         window.requestAnimationFrame(() => {
@@ -3404,7 +3434,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function initPopovers() {
         initPopover('[data-account-trigger]', '[data-account-menu]', 'rail');
-        initPopover('[data-messages-trigger]', '[data-messages-popover]', 'rail', loadConversations);
         initPopover('[data-notifications-trigger]', '[data-notifications-popover]', 'below-end', loadNotificationsPopover);
 
         document.addEventListener('keydown', (event) => {
@@ -3507,34 +3536,245 @@ document.addEventListener('DOMContentLoaded', () => {
         if (list) list.innerHTML = `<p class="popover-empty">${escapeHTML(translateUi(key, fallback))}</p>`;
     }
 
-    function loadConversations(popover) {
-        const list = popover.querySelector('[data-messages-list]');
-        if (!list) return;
-        list.innerHTML = `<p class="popover-loading">${escapeHTML(translateUi('loading', 'Loading…'))}</p>`;
+    /* --- Message dock ---------------------------------------------------- */
+    /* A pill, a conversation list and a small chat window at the bottom
+       right. The full /messages page stays canonical; this is the quick
+       surface, so it only ever holds one open thread. */
 
-        fetch('/api/conversations?limit=8', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-            .then((res) => res.json())
-            .then((result) => {
-                if (!result.success || !Array.isArray(result.conversations) || !result.conversations.length) {
-                    popoverMessage(popover, '[data-messages-list]', 'messages_empty', 'No conversations yet.');
-                    return;
-                }
-                list.replaceChildren(...result.conversations.map((row) => {
-                    const link = document.createElement('a');
-                    link.className = `popover-row${row.unread_count ? ' is-unread' : ''}`;
-                    link.href = row.url;
-                    link.innerHTML =
-                        `<img class="popover-row-avatar" src="${escapeHTML(row.avatar)}" alt="" aria-hidden="true">` +
-                        `<span class="popover-row-body">` +
-                        `<span class="popover-row-title"><span class="popover-row-name"></span></span>` +
-                        `<span class="popover-row-text"></span></span>` +
-                        (row.unread_count ? '<span class="popover-row-dot" aria-hidden="true"></span>' : '');
-                    link.querySelector('.popover-row-name').textContent = row.display_name;
-                    link.querySelector('.popover-row-text').textContent = row.last_message;
-                    return link;
-                }));
-            })
-            .catch(() => popoverMessage(popover, '[data-messages-list]', 'action_failed', 'Could not load messages.'));
+    const DOCK_POLL_MS = 12000;
+
+    function initMessageDock() {
+        const dock = document.querySelector('[data-msg-dock]');
+        if (!dock) return;
+
+        const panel = dock.querySelector('[data-msg-dock-panel]');
+        const chat = dock.querySelector('[data-msg-dock-chat]');
+        const list = dock.querySelector('[data-msg-dock-list]');
+        const log = dock.querySelector('[data-msg-chat-log]');
+        const form = dock.querySelector('[data-msg-chat-form]');
+        const input = dock.querySelector('[data-msg-chat-input]');
+        const receiver = dock.querySelector('[data-msg-chat-receiver]');
+        const pill = dock.querySelector('.msg-dock-pill');
+        if (!panel || !chat || !list) return;
+
+        let openThread = null;   // { username, display_name, avatar, id }
+        let lastMessageId = 0;
+        let stopPolling = null;
+
+        const show = (element) => {
+            element.hidden = false;
+            window.requestAnimationFrame(() => element.classList.add('is-open'));
+        };
+
+        const hide = (element) => {
+            element.classList.remove('is-open');
+            window.setTimeout(() => {
+                if (!element.classList.contains('is-open')) element.hidden = true;
+            }, 180);
+        };
+
+        const setExpanded = (expanded) => {
+            dock.querySelectorAll('[data-msg-dock-toggle]').forEach((trigger) => {
+                trigger.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            });
+            document.querySelectorAll('[data-msg-dock-toggle]').forEach((trigger) => {
+                trigger.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            });
+        };
+
+        const stopThreadPolling = () => {
+            if (stopPolling) stopPolling();
+            stopPolling = null;
+        };
+
+        const closeAll = () => {
+            stopThreadPolling();
+            openThread = null;
+            hide(panel);
+            hide(chat);
+            setExpanded(false);
+            if (pill) pill.hidden = false;
+        };
+
+        const openList = () => {
+            stopThreadPolling();
+            openThread = null;
+            hide(chat);
+            show(panel);
+            setExpanded(true);
+            if (pill) pill.hidden = true;
+            loadConversationList();
+        };
+
+        function loadConversationList() {
+            list.innerHTML = `<p class="popover-loading">${escapeHTML(translateUi('loading', 'Loading…'))}</p>`;
+            fetch('/api/conversations?limit=12', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then((res) => res.json())
+                .then((result) => {
+                    const rows = Array.isArray(result.conversations) ? result.conversations : [];
+                    if (!result.success || !rows.length) {
+                        list.innerHTML = `<p class="msg-dock-empty">${escapeHTML(translateUi('messages_empty', 'No conversations yet.'))}</p>`;
+                        return;
+                    }
+                    list.replaceChildren(...rows.map(conversationRow));
+                })
+                .catch(() => {
+                    list.innerHTML = `<p class="msg-dock-error">${escapeHTML(translateUi('action_failed', 'Could not load messages.'))}</p>`;
+                });
+        }
+
+        function conversationRow(row) {
+            const link = document.createElement('a');
+            link.className = `popover-row${row.unread_count ? ' is-unread' : ''}`;
+            link.href = row.url;
+            link.innerHTML =
+                `<img class="popover-row-avatar" src="${escapeHTML(row.avatar || '')}" alt="" aria-hidden="true">` +
+                '<span class="popover-row-body">' +
+                '<span class="popover-row-title"><span class="popover-row-name"></span></span>' +
+                '<span class="popover-row-text"></span></span>' +
+                (row.unread_count ? '<span class="popover-row-dot" aria-hidden="true"></span>' : '');
+            link.querySelector('.popover-row-name').textContent = row.display_name || row.username;
+            link.querySelector('.popover-row-text').textContent = row.last_message || '';
+            link.addEventListener('click', (event) => {
+                event.preventDefault();
+                openConversation(row);
+            });
+            return link;
+        }
+
+        function openConversation(row) {
+            openThread = row;
+            lastMessageId = 0;
+            hide(panel);
+            show(chat);
+            setExpanded(true);
+            if (pill) pill.hidden = true;
+
+            const avatar = dock.querySelector('[data-msg-chat-avatar]');
+            const name = dock.querySelector('[data-msg-chat-name]');
+            const peer = dock.querySelector('[data-msg-chat-peer]');
+            const expand = dock.querySelector('[data-msg-chat-expand]');
+            if (avatar && row.avatar) avatar.src = row.avatar;
+            if (name) name.textContent = row.display_name || row.username;
+            if (peer) peer.href = `/profile/${encodeURIComponent(row.username)}`;
+            if (expand) expand.href = row.url || `/messages?u=${encodeURIComponent(row.username)}`;
+            if (receiver) receiver.value = row.id || '';
+
+            log.innerHTML = `<p class="popover-loading">${escapeHTML(translateUi('loading', 'Loading…'))}</p>`;
+            loadThread(true);
+            stopThreadPolling();
+            stopPolling = startVisiblePolling(() => loadThread(false), DOCK_POLL_MS);
+            if (input) window.setTimeout(() => input.focus(), 220);
+        }
+
+        function loadThread(replace) {
+            if (!openThread) return;
+            const query = replace ? '' : `&since_id=${lastMessageId}`;
+            fetch(`/api/messages/${encodeURIComponent(openThread.username)}?limit=30${query}`,
+                  { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then((res) => res.json())
+                .then((result) => {
+                    if (!result.success) throw new Error('failed');
+                    const rows = Array.isArray(result.messages) ? result.messages : [];
+                    if (replace) {
+                        log.replaceChildren();
+                        if (!rows.length) {
+                            log.innerHTML = `<p class="msg-dock-empty">${escapeHTML(translateUi('msg_dock_start', 'Say hello.'))}</p>`;
+                        }
+                    }
+                    rows.forEach((message) => appendBubble(message, result.viewer_id));
+                    if (rows.length) scrollLogToEnd();
+                })
+                .catch(() => {
+                    if (replace) log.innerHTML = `<p class="msg-dock-error">${escapeHTML(translateUi('action_failed', 'Could not load messages.'))}</p>`;
+                });
+        }
+
+        function appendBubble(message, viewerId) {
+            const id = Number(message.id) || 0;
+            if (id && id <= lastMessageId) return;
+            if (id) lastMessageId = id;
+
+            const outgoing = String(message.sender_id) === String(viewerId);
+            const bubble = document.createElement('div');
+            bubble.className = `msg-dock-bubble ${outgoing ? 'msg-dock-bubble-out' : 'msg-dock-bubble-in'}`;
+            if (message.content) bubble.textContent = message.content;
+            if (message.attachment_url && (message.attachment_type || '').startsWith('image')) {
+                const image = document.createElement('img');
+                image.src = message.attachment_url;
+                image.alt = message.attachment_name || '';
+                image.loading = 'lazy';
+                bubble.appendChild(image);
+            }
+            const empty = log.querySelector('.msg-dock-empty, .msg-dock-error, .popover-loading');
+            if (empty) empty.remove();
+            log.appendChild(bubble);
+        }
+
+        function scrollLogToEnd() {
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // --- wiring ---------------------------------------------------------
+
+        document.addEventListener('click', (event) => {
+            const toggle = event.target.closest('[data-msg-dock-toggle]');
+            if (toggle) {
+                event.preventDefault();
+                if (!panel.hidden || !chat.hidden) closeAll();
+                else openList();
+                return;
+            }
+            if (event.target.closest('[data-msg-dock-close]')) {
+                event.preventDefault();
+                closeAll();
+                return;
+            }
+            if (event.target.closest('[data-msg-chat-back]')) {
+                event.preventDefault();
+                openList();
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key !== 'Escape') return;
+            if (panel.hidden && chat.hidden) return;
+            closeAll();
+        });
+
+        if (form) {
+            form.addEventListener('submit', (event) => {
+                event.preventDefault();
+                if (!openThread || !input) return;
+                const content = input.value.trim();
+                if (!content) return;
+
+                const body = new URLSearchParams(new FormData(form));
+                body.set('content', content);
+                input.value = '';
+
+                fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-Token': csrfToken(),
+                    },
+                    body: body.toString(),
+                })
+                    .then((res) => res.json())
+                    .then((result) => {
+                        if (!result || !result.success || !result.message) throw new Error('failed');
+                        appendBubble(result.message, result.message.sender_id);
+                        scrollLogToEnd();
+                        if (result.streak_xp) showXpToasts([{ amount: result.streak_xp }]);
+                    })
+                    .catch(() => {
+                        input.value = content;
+                        showAppToast(translateUi('action_failed', 'Message could not be sent.'), 'error');
+                    });
+            });
+        }
     }
 
     function loadNotificationsPopover(popover) {

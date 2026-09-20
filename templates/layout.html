@@ -43,7 +43,9 @@
 {% if viewer %}
 <div class="app-shell">
   <div class="left-rail-wrapper">
-    <aside class="left-rail menu-open">
+    {# The labelled state is `menu-open`; script.js adds it while the pointer or
+   keyboard focus is on the rail, so the rail starts as an icon column. #}
+    <aside class="left-rail">
       <div class="sidebar-top desktop-only">
         <a class="brand brand-logo" href="{{ url_for('index') }}" aria-label="LvL home" data-i18n-aria="brand_home_aria">
           <img src="{{ static_asset('assets/icon-192.png') }}" alt="" aria-hidden="true">
@@ -70,7 +72,7 @@
           <span class="nav-label" data-i18n="nav_community">Community</span>
         </a>
         <a class="{% if active_page == 'messages' %}active{% endif %}" href="{{ url_for('messages') }}"
-           data-messages-trigger aria-expanded="false" aria-controls="messages-popover"
+           data-msg-dock-toggle aria-expanded="false" aria-controls="msg-dock-panel"
            aria-label="Messages" title="Messages" data-i18n-aria="nav_messages" data-i18n-title="nav_messages">
           <span class="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M4 4h16v12H7.8L4 19.35V4Zm2 2v8.93L7.04 14H18V6H6Z"/></svg>
@@ -152,16 +154,6 @@
         </div>
       </div>
 
-      <div class="popover messages-popover" id="messages-popover" data-messages-popover role="dialog"
-           aria-label="Messages" data-i18n-aria="nav_messages" hidden>
-        <div class="popover-header">
-          <h2 data-i18n="nav_messages">Messages</h2>
-          <a class="popover-header-link" href="{{ url_for('messages') }}" data-i18n="see_all">See all</a>
-        </div>
-        <div class="popover-body" data-messages-list>
-          <p class="popover-loading" data-i18n="loading">Loading…</p>
-        </div>
-      </div>
     </aside>
   </div>
   <main class="timeline timeline-{{ active_page }}">
@@ -456,6 +448,7 @@
 </div>
 {% endif %}
 
+{% if viewer %}{% include "_message_dock.html" %}{% endif %}
 {% include "_cookie_consent.html" %}
 </body>
 </html>

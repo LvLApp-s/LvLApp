@@ -2646,7 +2646,8 @@ class AppRouteTests(unittest.TestCase):
 
         self.assertIn('/reels', html)
         self.assertIn('Clips', html)
-        self.assertIn('<aside class="left-rail menu-open">', html)
+        # The rail ships collapsed; `menu-open` is the hovered state.
+        self.assertIn('<aside class="left-rail">', html)
         self.assertNotIn('id="sidebar-toggle"', html)
         self.assertNotIn('class="mobile-sidebar-toggle"', html)
         self.assertIn('class="mobile-brand mobile-brand-logo-only" href="/" aria-label="Home"', html)
@@ -6084,13 +6085,6 @@ class RailAndPopoverTests(unittest.TestCase):
         # viewport instead of ending in an empty strip.
         self.assertIn('minmax(0, var(--shell-main-max))', shell)
 
-    def test_expanded_rail_breakpoint_matches_the_stylesheet(self):
-        """Labels are only shown once the rail is wide enough to hold them."""
-        js = Path("static/js/script.js").read_text(encoding="utf-8")
-        self.assertIn('window.innerWidth > 1279', js)
-        base = Path("static/css/sections/base.css").read_text(encoding="utf-8")
-        self.assertIn('@media (max-width: 1279px)', base)
-
 
     def test_rail_shows_the_lvl_brand(self):
         html = self.layout()
@@ -6111,15 +6105,16 @@ class RailAndPopoverTests(unittest.TestCase):
 
     def test_popovers_start_hidden(self):
         html = self.layout()
-        for pid in ('account-menu', 'messages-popover', 'notifications-popover'):
+        for pid in ('account-menu', 'notifications-popover'):
             with self.subTest(popover=pid):
                 tag = html.split(f'id="{pid}"', 1)[1].split('>', 1)[0]
                 self.assertIn('hidden', tag)
 
     def test_messages_trigger_still_links_to_the_page(self):
-        """Without JS the rail item must still navigate."""
+        """Without JS the rail item must still navigate; with JS it opens the
+        dock instead."""
         rail = self.rail()
-        anchor = rail.split('data-messages-trigger', 1)[0].rsplit('<a', 1)[1]
+        anchor = rail.split('data-msg-dock-toggle', 1)[0].rsplit('<a', 1)[1]
         self.assertIn('href="/messages"', anchor)
 
     def test_clip_panel_has_no_play_button_overlay(self):
@@ -6435,3 +6430,108 @@ class ThemeAndFrontendAffordanceTests(unittest.TestCase):
         js = Path("static/js/script.js").read_text(encoding="utf-8")
         self.assertIn("history.scrollRestoration = 'manual'", js)
         self.assertIn("back_forward", js)
+
+
+class RailHoverTests(unittest.TestCase):
+    """The rail is an icon column that opens on hover, like Instagram's."""
+
+    def setUp(self):
+        zapp.app.config.update(TESTING=True, WTF_CSRF_ENABLED=False)
+        self.viewer = {"id": 7, "username": "demo", "display_name": "Demo User",
+                       "profile_photo_url": "", "level": 3}
+
+    def layout(self):
+        with zapp.app.test_request_context("/"):
+            return zapp.render_template("index.html", viewer=self.viewer, posts=[], mode="all",
+                                        highlights=[], page=1, has_next=False)
+
+    def test_rail_renders_collapsed(self):
+        """`menu-open` is the hovered state now, so the markup must not ship
+        with it or the rail would start wide and never collapse without JS."""
+        html = self.layout()
+        rail_tag = html.split('<aside class="left-rail', 1)[1].split('>', 1)[0]
+        self.assertNotIn('menu-open', rail_tag)
+
+    def test_expanded_rail_overlays_instead_of_pushing(self):
+        css = Path("static/css/sections/base.css").read_text(encoding="utf-8")
+        rail = css.split('\n.left-rail {', 1)[1].split('\n}', 1)[0]
+        self.assertIn('position: fixed', rail)
+        self.assertIn('width: var(--shell-left-collapsed)', rail)
+        open_state = css.split('\n.left-rail.menu-open {', 1)[1].split('\n}', 1)[0]
+        self.assertIn('width: var(--shell-left-expanded)', open_state)
+        # The grid keeps the collapsed width reserved, so nothing shifts.
+        shell = css.split('\n.app-shell {', 1)[1].split('\n}', 1)[0]
+        self.assertIn('var(--shell-left-collapsed)', shell)
+
+    def test_rail_opens_on_pointer_and_keyboard(self):
+        js = Path("static/js/script.js").read_text(encoding="utf-8")
+        for hook in ("'mouseenter'", "'mouseleave'", "'focusin'", "'focusout'"):
+            with self.subTest(hook=hook):
+                self.assertIn(hook, js)
+        # An open rail popover pins the rail so it cannot collapse under it.
+        self.assertIn("lvl:popover", js)
+
+    def test_no_section_restates_the_rail_box(self):
+        """legacy-polish used to redeclare position/size and pinned the rail
+        to `sticky`, which clipped the expanded rail inside its grid cell."""
+        legacy = Path("static/css/sections/legacy-polish.css").read_text(encoding="utf-8")
+        self.assertNotIn("""\n.left-rail,\n.left-rail:not(.menu-open) {\n  position: sticky""", legacy)
+
+
+class MessageDockTests(unittest.TestCase):
+    """The bottom-right dock: pill, conversation list, mini chat window."""
+
+    def setUp(self):
+        zapp.app.config.update(TESTING=True, WTF_CSRF_ENABLED=False)
+        self.client = zapp.app.test_client()
+        self.viewer = {"id": 7, "username": "demo", "display_name": "Demo User",
+                       "profile_photo_url": "", "level": 3}
+
+    def layout(self):
+        with zapp.app.test_request_context("/"):
+            return zapp.render_template("index.html", viewer=self.viewer, posts=[], mode="all",
+                                        highlights=[], page=1, has_next=False)
+
+    def test_dock_is_rendered_for_a_signed_in_viewer(self):
+        html = self.layout()
+        for hook in ('data-msg-dock', 'data-msg-dock-panel', 'data-msg-dock-chat',
+                     'data-msg-chat-log', 'data-msg-chat-form'):
+            with self.subTest(hook=hook):
+                self.assertIn(hook, html)
+
+    def test_pill_is_a_real_link_without_javascript(self):
+        dock = self.layout().split('<div class="msg-dock"', 1)[1]
+        pill = dock.split('</a>', 1)[0]
+        self.assertIn('href="/messages"', pill)
+        self.assertIn('data-live-badge="messages"', pill)
+
+    def test_composer_posts_to_the_existing_endpoint(self):
+        form = self.layout().split('data-msg-chat-form', 1)[1].split('</form>', 1)[0]
+        self.assertIn('name="csrf_token"', form)
+        self.assertIn('data-msg-chat-receiver', form)
+        self.assertIn('name="ajax" value="1"', form)
+
+    def test_rail_messages_item_opens_the_dock(self):
+        html = self.layout()
+        rail = html.split('<nav class="nav-list"', 1)[1].split('</nav>', 1)[0]
+        self.assertIn('data-msg-dock-toggle', rail)
+        self.assertIn('href="/messages"', rail)
+        # The old rail popover is gone; one messages surface, not two.
+        self.assertNotIn('data-messages-popover', html)
+
+    def test_dock_is_hidden_on_phones(self):
+        css = Path("static/css/sections/message-dock.css").read_text(encoding="utf-8")
+        phone = css.split('@media (max-width: 767px) {', 1)[1].split('}', 1)[0]
+        self.assertIn('.msg-dock', phone)
+        self.assertIn('display: none', phone)
+
+    def test_dock_stylesheet_is_in_the_manifest(self):
+        manifest = Path("static/css/styles.css").read_text(encoding="utf-8")
+        self.assertIn('sections/message-dock.css', manifest)
+
+    def test_conversations_api_exposes_the_recipient_id(self):
+        """The dock sends straight from the window, so it needs the id the
+        send endpoint expects."""
+        source = Path("app.py").read_text(encoding="utf-8")
+        payload = source.split("'conversations': [{", 1)[1].split('}]', 1)[0]
+        self.assertIn("'id': row.get('id')", payload)

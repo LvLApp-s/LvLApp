@@ -959,21 +959,12 @@ button {
 }
 
 
-.left-rail,
+/* base.css owns the rail box (position, size, padding, scrolling). This
+   block used to restate all of it and, being later in the cascade, pinned
+   the rail to `position: sticky`, so the hover-expanded rail was clipped by
+   its 88px grid cell instead of sliding over the feed. */
 .left-rail:not(.menu-open) {
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  padding: 16px 12px;
-  display: flex;
-  flex-direction: column;
   align-items: center;
-  border-right: 0;
-  background: var(--bg-color);
-  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-width: none;
 }
 
 .left-rail::-webkit-scrollbar {
