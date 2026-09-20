@@ -653,7 +653,7 @@
   padding: 164px 18px 18px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  background: linear-gradient(180deg, var(--lvl-surface-raised), var(--lvl-black));
+  background: linear-gradient(180deg, var(--lvl-surface-raised), var(--bg-color));
 }
 
 .settings-container .profile-preview-banner {
@@ -672,7 +672,7 @@
   left: 18px;
   width: 78px;
   height: 78px;
-  border: 4px solid var(--lvl-black);
+  border: 4px solid var(--bg-color);
   box-shadow: 0 10px 28px var(--lvl-black-45);
 }
 

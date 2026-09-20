@@ -86,10 +86,10 @@
   justify-content: center;
   align-items: center;
   gap: 10px;
-  min-height: 64px;
+  min-height: calc(var(--topbar-height) - 1px);
   padding: 10px 14px;
   border-bottom: 1px solid var(--border-color);
-  background: color-mix(in srgb, var(--lvl-black) 86%, transparent);
+  background: var(--chrome-blur);
   backdrop-filter: blur(16px);
 }
 

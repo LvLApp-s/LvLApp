@@ -2160,3 +2160,69 @@ Object.assign(TRANSLATIONS.ar, {
   rail_link_terms: "الشروط",
   rail_link_privacy: "الخصوصية"
 });
+
+/* --- Alerts: mark everything read ---------------------------------------- */
+
+Object.assign(TRANSLATIONS.en, {
+  notif_mark_all_read: "Mark all read",
+  notif_marked_read: "All alerts marked as read."
+});
+
+Object.assign(TRANSLATIONS.tr, {
+  notif_mark_all_read: "Tümünü okundu işaretle",
+  notif_marked_read: "Tüm bildirimler okundu olarak işaretlendi."
+});
+
+Object.assign(TRANSLATIONS.ar, {
+  notif_mark_all_read: "تعليم الكل كمقروء",
+  notif_marked_read: "تم تعليم كل التنبيهات كمقروءة."
+});
+
+/* --- Feed: new posts pill ------------------------------------------------ */
+
+Object.assign(TRANSLATIONS.en, {
+  feed_new_posts: "New posts",
+  feed_new_post_one: "1 new post",
+  feed_new_posts_many: "new posts"
+});
+
+Object.assign(TRANSLATIONS.tr, {
+  feed_new_posts: "Yeni gönderiler",
+  feed_new_post_one: "1 yeni gönderi",
+  feed_new_posts_many: "yeni gönderi"
+});
+
+Object.assign(TRANSLATIONS.ar, {
+  feed_new_posts: "منشورات جديدة",
+  feed_new_post_one: "منشور جديد",
+  feed_new_posts_many: "منشورات جديدة"
+});
+
+/* --- Theme control -------------------------------------------------------- */
+
+Object.assign(TRANSLATIONS.en, {
+  settings_theme_title: "Theme",
+  settings_theme_subtitle: "Dark by default. Light mode follows your device unless you pick one.",
+  settings_theme_aria: "Theme selection",
+  settings_theme_system: "System",
+  settings_theme_dark: "Dark",
+  settings_theme_light: "Light"
+});
+
+Object.assign(TRANSLATIONS.tr, {
+  settings_theme_title: "Tema",
+  settings_theme_subtitle: "Varsayılan koyu. Açık tema, siz seçmediğiniz sürece cihazınızı izler.",
+  settings_theme_aria: "Tema seçimi",
+  settings_theme_system: "Sistem",
+  settings_theme_dark: "Koyu",
+  settings_theme_light: "Açık"
+});
+
+Object.assign(TRANSLATIONS.ar, {
+  settings_theme_title: "المظهر",
+  settings_theme_subtitle: "داكن افتراضيًا. الوضع الفاتح يتبع جهازك ما لم تختر بنفسك.",
+  settings_theme_aria: "اختيار المظهر",
+  settings_theme_system: "النظام",
+  settings_theme_dark: "داكن",
+  settings_theme_light: "فاتح"
+});

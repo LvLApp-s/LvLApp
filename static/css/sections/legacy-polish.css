@@ -120,7 +120,7 @@
 }
 
 .page-header {
-  background: var(--lvl-black-78);
+  background: var(--chrome-blur);
 }
 
 .home-header .header-top {
@@ -969,7 +969,7 @@ button {
   flex-direction: column;
   align-items: center;
   border-right: 0;
-  background: var(--lvl-black);
+  background: var(--bg-color);
   transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   overflow-y: auto;
   overflow-x: hidden;
@@ -1128,7 +1128,7 @@ button {
     position: sticky;
     top: 0;
     z-index: 100;
-    background: var(--lvl-black-85);
+    background: var(--chrome-blur);
     backdrop-filter: blur(12px);
     padding: 12px 16px;
     border-bottom: 1px solid var(--border-color);
@@ -1166,7 +1166,7 @@ button {
   .right-rail-wrapper rection: column !important;
     align-items: stretch !important;
     justify-content: flex-start !important;
-    background: var(--lvl-black) !important;
+    background: var(--bg-color) !important;
     border-right: 1px solid var(--border-color) !important;
     border-top: 0 !important;
     padding: 16px !important;
@@ -1226,13 +1226,14 @@ button {
   appearance: auto;
   background-color: var(--lvl-surface-raised);
   color: var(--text-primary);
-  color-scheme: dark;
+  /* Inherited from :root, so the native dropdown follows the app theme. */
+  color-scheme: inherit;
 }
 
 .form-group select option,
 .auth-form select option {
   background-color: var(--lvl-surface-overlay);
-  color: var(--lvl-light-surface);
+  color: var(--text-primary);
 }
 
 .form-group select:focus,

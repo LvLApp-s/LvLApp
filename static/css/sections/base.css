@@ -203,6 +203,9 @@
   --shell-main: 760px;
   --shell-main-wide: 920px;
   --shell-right: 350px;
+  /* Desktop sticky header: min-height plus its 1px bottom border. Anything
+     that sticks below it offsets by this. */
+  --topbar-height: 65px;
   --mobile-header-height: 52px;
   --mobile-nav-height: 56px;
   --safe-top: env(safe-area-inset-top, 0px);
@@ -217,6 +220,11 @@
   --shadow-md: 0 8px 24px var(--lvl-black-45);
   --shadow-lg: 0 18px 48px var(--lvl-black-58);
   --overlay-scrim: var(--lvl-black-62);
+  /* Translucent sticky chrome (headers, bottom navigation) sitting over the
+     page behind a blur. One token per theme instead of a black ramp that only
+     works on a black page. */
+  --chrome-blur: rgba(0, 0, 0, 0.82);
+  --chrome-blur-strong: rgba(0, 0, 0, 0.94);
 
   /* --- Motion --------------------------------------------------------- */
   /* Interface transitions stay in the 150-250ms band with one easing pair. */
@@ -236,6 +244,8 @@
   --z-toast: 120;
   --z-alert: 140;
 
+  color-scheme: dark;
+
   /* --- Aliases used throughout the sections --------------------------- */
   --line-default: 1px solid var(--border-color);
   --bg-color: var(--lvl-surface-base);
@@ -250,6 +260,172 @@
   --error-color: var(--lvl-danger);
   --success-color: var(--lvl-success);
   --warning-color: var(--lvl-warning);
+}
+
+/* ---------------------------------------------------------------------------
+   Light theme.
+
+   The whole product is drawn from the token layer above, so daylight mode is
+   the same design with the primitives flipped: surfaces and text swap ends,
+   the white overlay ramp becomes an ink ramp, and elevation loses the heavy
+   black it needs on a black background. Sections never need a light variant
+   of their own.
+
+   The theme is always explicit on <html> (script.js resolves "system" through
+   matchMedia before first paint), so there is one block here rather than a
+   duplicate under prefers-color-scheme.
+   --------------------------------------------------------------------------- */
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  /* --- Neutrals and surfaces ------------------------------------------ */
+  --lvl-text-primary: #0f1419;
+  --lvl-text-secondary: #536471;
+  --lvl-text-tertiary: #6e767d;
+  --lvl-text-inverse: #ffffff;
+  --lvl-border: #e3e8ec;
+  --lvl-border-strong: #cdd7de;
+
+  --lvl-surface-base: #ffffff;
+  --lvl-surface-raised: #f7f9f9;
+  --lvl-surface-overlay: #ffffff;
+  --lvl-surface-hover: #eef3f6;
+  --lvl-surface-inverse: #0f1419;
+  --lvl-light-surface: #eff3f4;
+
+  /* Progression tints, same hues at daylight weight. */
+  --lvl-tint-cool: #eaf2ff;
+  --lvl-tint-violet: #f3edff;
+  --lvl-tint-amber: #fff6e3;
+  --lvl-tint-crimson: #ffecf1;
+
+  /* --- Semantic colour ------------------------------------------------- */
+  /* The solid "primary" surface (compose button, primary actions) is ink on
+     white here, mirroring the near-white button on black. */
+  --lvl-primary: #0f1419;
+  --lvl-primary-hover: #272c30;
+  --lvl-female: #0f1419;
+  --lvl-success: #00795a;
+  --lvl-danger: #d81b2a;
+  --lvl-danger-hover: #b8141f;
+  --lvl-warning: #a36c00;
+  --lvl-scrollbar: #b9c4cc;
+
+  /* --- Alpha ramps ----------------------------------------------------- */
+  /* Same alphas, ink instead of white: every hover, divider and scrim that
+     used a white veil now uses a dark one. */
+  --lvl-primary-softer: rgba(15, 20, 25, 0.04);
+  --lvl-primary-soft: rgba(15, 20, 25, 0.06);
+  --lvl-primary-soft-12: rgba(15, 20, 25, 0.08);
+  --lvl-primary-soft-15: rgba(15, 20, 25, 0.1);
+  --lvl-primary-soft-16: rgba(15, 20, 25, 0.1);
+  --lvl-primary-soft-18: rgba(15, 20, 25, 0.12);
+  --lvl-primary-soft-20: rgba(15, 20, 25, 0.14);
+  --lvl-primary-soft-28: rgba(15, 20, 25, 0.2);
+  --lvl-primary-soft-35: rgba(15, 20, 25, 0.26);
+  --lvl-primary-soft-38: rgba(15, 20, 25, 0.28);
+  --lvl-primary-border: rgba(15, 20, 25, 0.32);
+  --lvl-primary-border-55: rgba(15, 20, 25, 0.42);
+  --lvl-primary-border-62: rgba(15, 20, 25, 0.5);
+  --lvl-primary-border-70: rgba(15, 20, 25, 0.58);
+  --lvl-primary-solid-96: rgba(15, 20, 25, 0.96);
+  --lvl-female-soft: rgba(15, 20, 25, 0.06);
+  --lvl-female-soft-38: rgba(15, 20, 25, 0.28);
+
+  --lvl-white-02: rgba(15, 20, 25, 0.02);
+  --lvl-white-03: rgba(15, 20, 25, 0.03);
+  --lvl-white-04: rgba(15, 20, 25, 0.04);
+  --lvl-white-05: rgba(15, 20, 25, 0.05);
+  --lvl-white-08: rgba(15, 20, 25, 0.07);
+  --lvl-white-12: rgba(15, 20, 25, 0.1);
+  --lvl-white-14: rgba(15, 20, 25, 0.12);
+  --lvl-white-16: rgba(15, 20, 25, 0.13);
+  --lvl-white-18: rgba(15, 20, 25, 0.14);
+  --lvl-white-22: rgba(15, 20, 25, 0.18);
+
+  --lvl-danger-text-soft: #8c1119;
+  --lvl-success-text-soft: #00543d;
+  --lvl-primary-text-soft: #0b5299;
+  --lvl-muted-bluegrey: #5b6b7a;
+
+  --lvl-success-soft-10: rgba(0, 121, 90, 0.08);
+  --lvl-success-soft: rgba(0, 121, 90, 0.1);
+  --lvl-success-border: rgba(0, 121, 90, 0.4);
+  --lvl-danger-softer: rgba(216, 27, 42, 0.05);
+  --lvl-danger-soft-10: rgba(216, 27, 42, 0.08);
+  --lvl-danger-soft: rgba(216, 27, 42, 0.1);
+  --lvl-danger-border-light: rgba(216, 27, 42, 0.35);
+  --lvl-danger-border: rgba(216, 27, 42, 0.4);
+  --lvl-danger-border-strong: rgba(216, 27, 42, 0.55);
+  --lvl-warning-soft: rgba(163, 108, 0, 0.1);
+  --lvl-warning-soft-34: rgba(163, 108, 0, 0.28);
+  --lvl-warning-soft-46: rgba(163, 108, 0, 0.38);
+  --lvl-warning-border: rgba(163, 108, 0, 0.45);
+
+  --lvl-brand-soft: rgba(3, 140, 254, 0.1);
+  --lvl-brand-softer: rgba(3, 140, 254, 0.06);
+  --lvl-brand-border: rgba(3, 140, 254, 0.42);
+
+  /* --- Elevation -------------------------------------------------------- */
+  /* Pure black shadows read as dirt on white, so elevation is ink at low
+     alpha instead. */
+  --shadow-sm: 0 1px 2px rgba(15, 20, 25, 0.08);
+  --shadow-md: 0 8px 24px rgba(15, 20, 25, 0.12);
+  --shadow-lg: 0 18px 48px rgba(15, 20, 25, 0.18);
+  --overlay-scrim: rgba(15, 20, 25, 0.4);
+
+  /* --- Aliases ---------------------------------------------------------- */
+  --hover-bg: rgba(15, 20, 25, 0.05);
+  --chrome-blur: rgba(255, 255, 255, 0.86);
+  --chrome-blur-strong: rgba(255, 255, 255, 0.94);
+}
+
+/* ---------------------------------------------------------------------------
+   Media surfaces stay dark in every theme.
+
+   Video is letterboxed against black and its overlay controls are drawn for
+   that, so the clip player keeps the dark token set even in daylight mode --
+   the same choice Instagram and YouTube make. These values match the dark
+   defaults, so nothing changes for the dark theme.
+   --------------------------------------------------------------------------- */
+
+.timeline-reels,
+.reel-player-container,
+.home-reel-video-wrap {
+  /* Inheritance passes computed colours, not tokens, so the scope has to set
+     its own text colour for descendants to pick the dark one up. */
+  color: var(--text-primary);
+  color-scheme: dark;
+  --lvl-text-primary: #e7e9ea;
+  --lvl-text-secondary: #8b949c;
+  --lvl-text-tertiary: #71767b;
+  --lvl-text-inverse: #0f1419;
+  --lvl-border: #23272b;
+  --lvl-border-strong: #333639;
+  --lvl-surface-base: #000000;
+  --lvl-surface-raised: #0b0d10;
+  --lvl-surface-overlay: #14171a;
+  --lvl-surface-hover: #1c2024;
+  --lvl-primary: #e7e9ea;
+  --lvl-primary-hover: #d7d9da;
+  --lvl-primary-soft: rgba(231, 233, 234, 0.1);
+  --lvl-primary-soft-20: rgba(231, 233, 234, 0.2);
+  --lvl-primary-border: rgba(231, 233, 234, 0.45);
+  --lvl-white-05: rgba(255, 255, 255, 0.05);
+  --lvl-white-08: rgba(255, 255, 255, 0.08);
+  --lvl-white-12: rgba(255, 255, 255, 0.12);
+  --lvl-white-16: rgba(255, 255, 255, 0.16);
+  --lvl-white-22: rgba(255, 255, 255, 0.22);
+
+  --bg-color: var(--lvl-surface-base);
+  --text-primary: var(--lvl-text-primary);
+  --text-secondary: var(--lvl-text-secondary);
+  --text-muted: var(--lvl-text-tertiary);
+  --border-color: var(--lvl-border);
+  --accent-color: var(--lvl-primary);
+  --accent-hover: var(--lvl-primary-hover);
+  --hover-bg: var(--lvl-white-05);
 }
 
 /* ---------------------------------------------------------------------------

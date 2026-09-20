@@ -4,7 +4,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#000000" data-theme-color>
+  {% if viewer %}<meta name="csrf-token" content="{{ csrf_token() }}">{% endif %}
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -15,6 +16,19 @@
   <link rel="apple-touch-icon" href="{{ static_asset('assets/icon-192.png') }}">
   <link rel="stylesheet" href="{{ static_asset('css/styles.css') }}">
   <link rel="stylesheet" href="{{ static_asset('css/gender.css') }}">
+  <script>
+    /* Theme before first paint: a stored choice, or the operating system's.
+       Inline on purpose -- deferring this would flash the wrong theme. */
+    (function () {
+      var stored = null;
+      try { stored = window.localStorage.getItem('lvl_theme'); } catch (e) { stored = null; }
+      var resolved = stored === 'light' || stored === 'dark'
+        ? stored
+        : (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+      document.documentElement.setAttribute('data-theme', resolved);
+      document.documentElement.setAttribute('data-theme-choice', stored || 'system');
+    })();
+  </script>
   <script src="{{ static_asset('js/i18n.js') }}"></script>
   <script src="{{ static_asset('js/script.js') }}&cb=2" defer></script>
   <script src="{{ static_asset('js/share.js') }}" defer></script>
@@ -198,7 +212,11 @@
              role="dialog" aria-label="Alerts" data-i18n-aria="nav_alerts" hidden>
           <div class="popover-header">
             <h2 data-i18n="nav_alerts">Alerts</h2>
-            <a class="popover-header-link" href="{{ url_for('notifications') }}" data-i18n="see_all">See all</a>
+            <div class="popover-header-actions">
+              <button type="button" class="popover-header-button" data-mark-all-read
+                      data-i18n="notif_mark_all_read">Mark all read</button>
+              <a class="popover-header-link" href="{{ url_for('notifications') }}" data-i18n="see_all">See all</a>
+            </div>
           </div>
           <div class="popover-body" data-notifications-list>
             <p class="popover-loading" data-i18n="loading">Loading…</p>

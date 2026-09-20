@@ -3,7 +3,7 @@
 .page-header {
   position: sticky;
   top: 0;
-  background-color: var(--lvl-black-65);
+  background-color: var(--chrome-blur);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-color);
   z-index: 10;
@@ -140,7 +140,7 @@
   background: var(--accent-color);
   border: none;
   border-radius: var(--radius-sm);
-  color: var(--lvl-black);
+  color: var(--lvl-text-inverse);
   cursor: pointer;
   font-size: 16px;
   padding: 7px 11px;
@@ -377,8 +377,8 @@
   padding: 4px 12px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-pill);
-  background: var(--lvl-white);
-  color: var(--lvl-black);
+  background: var(--accent-color);
+  color: var(--lvl-text-inverse);
   font: inherit;
   font-size: 13px;
   font-weight: 900;
@@ -421,7 +421,7 @@
   border-radius: var(--radius-xl);
   overflow: hidden;
   border: 1px solid var(--border-color);
-  background-color: var(--lvl-black);
+  background-color: var(--lvl-surface-raised);
   display: flex;
   justify-content: center;
 }

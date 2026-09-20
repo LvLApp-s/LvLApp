@@ -54,6 +54,16 @@
   </div>
 </form>
 
+{% if posts and page == 1 %}
+<div class="feed-updates" data-feed-updates
+     data-since="{{ posts[0].timeline_created_at or posts[0].created_at }}"
+     data-feed="{{ mode }}">
+  <button type="button" class="feed-updates-pill" data-feed-updates-pill hidden>
+    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+    <span data-feed-updates-label data-i18n="feed_new_posts">New posts</span>
+  </button>
+</div>
+{% endif %}
 <section class="feed" aria-label="Timeline" data-i18n-aria="timeline_aria">
   {% if not posts %}
     <div class="empty-state">

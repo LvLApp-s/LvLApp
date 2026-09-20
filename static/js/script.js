@@ -62,8 +62,176 @@ document.addEventListener('DOMContentLoaded', () => {
         'autoplay_next_reels',
         'notification_sounds_enabled',
         'sidebar-menu-open',
-        'lvl_install_prompt_dismissed'
+        'lvl_install_prompt_dismissed',
+        'lvl_theme'
     ];
+
+    /* --- Scroll memory -------------------------------------------------- */
+    /* Opening a post and coming back used to drop the reader at the top of
+       the timeline. Positions are kept per URL in sessionStorage (this tab
+       only, cleared when it closes) and restored on a back/forward entry. */
+
+    const SCROLL_KEY_PREFIX = 'lvl_scroll:';
+
+    function sessionGet(key) {
+        try { return window.sessionStorage.getItem(key); } catch (_) { return null; }
+    }
+
+    function sessionSet(key, value) {
+        try { window.sessionStorage.setItem(key, value); } catch (_) { /* ignore */ }
+    }
+
+    function scrollKey() {
+        return SCROLL_KEY_PREFIX + window.location.pathname + window.location.search;
+    }
+
+    function cameBackHere() {
+        try {
+            const entries = performance.getEntriesByType('navigation');
+            if (entries && entries.length) return entries[0].type === 'back_forward';
+            return performance.navigation && performance.navigation.type === 2;
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function initScrollMemory() {
+        // Only long, scrollable surfaces: the reels player owns its own scroll.
+        const timeline = document.querySelector('.timeline');
+        if (!timeline || document.querySelector('.reel-player-container')) return;
+
+        if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+
+        let pending = null;
+        const remember = () => {
+            pending = null;
+            sessionSet(scrollKey(), String(Math.round(window.scrollY)));
+        };
+        window.addEventListener('scroll', () => {
+            if (pending !== null) return;
+            pending = window.setTimeout(remember, 250);
+        }, { passive: true });
+        window.addEventListener('pagehide', remember);
+        document.addEventListener('visibilitychange', () => { if (document.hidden) remember(); });
+
+        if (!cameBackHere()) return;
+        const stored = Number(sessionGet(scrollKey()));
+        if (!Number.isFinite(stored) || stored <= 0) return;
+
+        // Images and embeds settle after first paint, so the target is
+        // re-applied a few times instead of once.
+        let attempts = 0;
+        const restore = () => {
+            window.scrollTo({ top: stored, behavior: 'auto' });
+            attempts += 1;
+            if (attempts < 6) window.setTimeout(restore, 120);
+        };
+        requestAnimationFrame(restore);
+        window.addEventListener('load', restore, { once: true });
+    }
+
+    /* --- Theme ----------------------------------------------------------- */
+    /* Three choices, one of which is "follow the system". The resolved value
+       lives in data-theme (the stylesheet reads it) and the raw choice in
+       data-theme-choice (the settings control reads it). */
+
+    const THEME_KEY = 'lvl_theme';
+    const THEME_COLORS = { dark: '#000000', light: '#ffffff' };
+
+    function systemTheme() {
+        return window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    }
+
+    function storedThemeChoice() {
+        const stored = safeStorageGet(THEME_KEY);
+        return stored === 'light' || stored === 'dark' ? stored : 'system';
+    }
+
+    function applyTheme(choice) {
+        const resolved = choice === 'light' || choice === 'dark' ? choice : systemTheme();
+        document.documentElement.setAttribute('data-theme', resolved);
+        document.documentElement.setAttribute('data-theme-choice', choice);
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', THEME_COLORS[resolved] || THEME_COLORS.dark);
+        document.dispatchEvent(new CustomEvent('lvl:themechange', { detail: { choice, resolved } }));
+        return resolved;
+    }
+
+    function initTheme() {
+        applyTheme(storedThemeChoice());
+
+        // Follow the system in real time while the choice is "system".
+        if (window.matchMedia) {
+            const query = window.matchMedia('(prefers-color-scheme: light)');
+            const onChange = () => { if (storedThemeChoice() === 'system') applyTheme('system'); };
+            if (query.addEventListener) query.addEventListener('change', onChange);
+            else if (query.addListener) query.addListener(onChange);
+        }
+
+        const controls = document.querySelectorAll('[data-theme-option]');
+        if (!controls.length) return;
+
+        const sync = () => {
+            const choice = storedThemeChoice();
+            controls.forEach((control) => {
+                const active = control.dataset.themeOption === choice;
+                control.classList.toggle('active', active);
+                control.setAttribute('aria-pressed', active ? 'true' : 'false');
+            });
+        };
+
+        controls.forEach((control) => {
+            control.addEventListener('click', () => {
+                const choice = control.dataset.themeOption;
+                if (choice === 'system') safeStorageRemove(THEME_KEY);
+                else safeStorageSet(THEME_KEY, choice);
+                applyTheme(choice);
+                sync();
+            });
+        });
+
+        sync();
+    }
+
+    /* --- New posts pill -------------------------------------------------- */
+
+    const FEED_UPDATES_INTERVAL = 60000;
+
+    function initFeedUpdates() {
+        const root = document.querySelector('[data-feed-updates]');
+        if (!root) return;
+        const pill = root.querySelector('[data-feed-updates-pill]');
+        const label = root.querySelector('[data-feed-updates-label]');
+        const since = root.dataset.since;
+        if (!pill || !since) return;
+
+        const show = (count) => {
+            if (count <= 0) return;
+            if (label) {
+                label.textContent = count === 1
+                    ? translateUi('feed_new_post_one', '1 new post')
+                    : `${count} ${translateUi('feed_new_posts_many', 'new posts')}`;
+            }
+            pill.hidden = false;
+            requestAnimationFrame(() => pill.classList.add('is-visible'));
+        };
+
+        const check = () => {
+            const url = `/api/feed/updates?since=${encodeURIComponent(since)}&feed=${encodeURIComponent(root.dataset.feed || 'all')}`;
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then((res) => res.json())
+                .then((result) => { if (result && result.success) show(Number(result.count) || 0); })
+                .catch(() => { /* a failed poll is not worth a message */ });
+        };
+
+        pill.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            window.location.reload();
+        });
+
+        // Polling pauses while the tab is hidden, like every other live check.
+        startVisiblePolling(check, FEED_UPDATES_INTERVAL);
+    }
 
     function safeStorageGet(key) {
         try { return window.localStorage.getItem(key); } catch (_) { return null; }
@@ -335,6 +503,10 @@ document.addEventListener('DOMContentLoaded', () => {
     initWebBackButton();
     initSwipeBack();
     initPopovers();
+    initMarkAllRead();
+    initTheme();
+    initScrollMemory();
+    initFeedUpdates();
     initHomeReelPanel();
     initCommunityTimeline();
     initReelsFeed();
@@ -3259,6 +3431,75 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         window.addEventListener('resize', reanchor);
         window.addEventListener('scroll', reanchor, { passive: true, capture: true });
+    }
+
+    // The CSRF token lives in a meta tag so any script can post without
+    // borrowing a hidden input from whatever form happens to be rendered.
+    function csrfToken() {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? meta.getAttribute('content') || '' : '';
+    }
+
+    function setNotificationsBadge(count) {
+        const safe = Math.max(0, Number(count) || 0);
+        document.querySelectorAll('[data-live-badge="notifications"]').forEach((badge) => {
+            badge.hidden = safe <= 0;
+            badge.textContent = safe > 99 ? '99+' : String(safe);
+        });
+        document.querySelectorAll('.mobile-header-unread-dot').forEach((dot) => {
+            if (safe <= 0) dot.remove();
+        });
+    }
+
+    function markAllNotificationsRead(button) {
+        const body = new URLSearchParams({ ajax: '1', csrf_token: csrfToken() });
+        if (button) button.disabled = true;
+
+        return fetch('/mark_notifications_read', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-Token': csrfToken(),
+            },
+            body: body.toString(),
+        })
+            .then((res) => res.json())
+            .then((result) => {
+                if (!result || !result.success) throw new Error('failed');
+                setNotificationsBadge(result.unread_notifications || 0);
+                document.querySelectorAll('.popover-row.is-unread, .notification-item.unread')
+                    .forEach((row) => row.classList.remove('is-unread', 'unread'));
+                document.querySelectorAll('.notif-unread-indicator').forEach((dot) => dot.remove());
+                showFeedback(translateUi('notif_marked_read', 'All alerts marked as read.'), 'success');
+                return true;
+            })
+            .catch(() => {
+                if (button) button.disabled = false;
+                showAppToast(translateUi('action_failed', 'Something went wrong.'), 'error');
+                return false;
+            });
+    }
+
+    function initMarkAllRead() {
+        document.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-mark-all-read]');
+            if (!button) return;
+            event.preventDefault();
+            markAllNotificationsRead(button);
+        });
+
+        // The Alerts page keeps its plain form for no-JS use; with JS it stops
+        // reloading the page.
+        document.querySelectorAll('.notif-mark-read-form').forEach((form) => {
+            form.addEventListener('submit', (event) => {
+                event.preventDefault();
+                const button = form.querySelector('button');
+                markAllNotificationsRead(button).then((ok) => {
+                    if (ok) form.querySelectorAll('button').forEach((el) => { el.disabled = true; });
+                });
+            });
+        });
     }
 
     function popoverMessage(popover, listSelector, key, fallback) {

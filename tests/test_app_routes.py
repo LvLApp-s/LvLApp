@@ -6277,3 +6277,158 @@ class LevelProgressTests(unittest.TestCase):
         self.assertIn('colour', tier['description'].lower())
         twenty = next(t for t in zapp.LEVEL_REWARD_TIERS if t['level'] == 20)
         self.assertNotIn('color', twenty['description'].lower())
+
+
+class FeedUpdatesApiTests(unittest.TestCase):
+    """The "new posts" pill only needs a count, and never counts your own."""
+
+    def setUp(self):
+        zapp.app.config.update(TESTING=True, WTF_CSRF_ENABLED=False)
+        self.client = zapp.app.test_client()
+        self.viewer = {"id": 7, "username": "demo", "display_name": "Demo"}
+
+    def fake_supabase(self, count, follows=None, recorder=None):
+        class Table:
+            def __init__(self, name):
+                self.name = name
+            def select(self, *a, **k): return self
+            def is_(self, *a, **k): return self
+            def gt(self, column, value):
+                if recorder is not None:
+                    recorder['gt'] = (column, value)
+                return self
+            def neq(self, column, value):
+                if recorder is not None:
+                    recorder['neq'] = (column, value)
+                return self
+            def in_(self, column, values):
+                if recorder is not None:
+                    recorder['in_'] = (column, list(values))
+                return self
+            def eq(self, *a, **k): return self
+            def limit(self, *a, **k): return self
+            def execute(self):
+                if self.name == 'follows':
+                    return SimpleNamespace(data=follows or [], count=None)
+                return SimpleNamespace(data=[], count=count)
+
+        class Supabase:
+            def table(self, name): return Table(name)
+        return Supabase()
+
+    def test_requires_authentication(self):
+        with patch.object(zapp, "get_current_user", return_value=None):
+            self.assertEqual(self.client.get("/api/feed/updates?since=x").status_code, 401)
+
+    def test_since_is_required(self):
+        with patch.object(zapp, "get_current_user", return_value=self.viewer):
+            self.assertEqual(self.client.get("/api/feed/updates").status_code, 400)
+
+    def test_counts_newer_posts_from_other_people(self):
+        seen = {}
+        with patch.object(zapp, "get_current_user", return_value=self.viewer), \
+             patch.object(zapp, "supabase", self.fake_supabase(3, recorder=seen)):
+            payload = self.client.get("/api/feed/updates?since=2026-09-19T10:00:00").get_json()
+
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["count"], 3)
+        self.assertEqual(seen["gt"], ("created_at", "2026-09-19T10:00:00"))
+        self.assertEqual(seen["neq"], ("user_id", 7))
+
+    def test_following_feed_is_limited_to_followed_accounts(self):
+        seen = {}
+        follows = [{"following_id": 8}, {"following_id": 9}]
+        with patch.object(zapp, "get_current_user", return_value=self.viewer), \
+             patch.object(zapp, "supabase", self.fake_supabase(2, follows=follows, recorder=seen)):
+            payload = self.client.get("/api/feed/updates?since=t&feed=following").get_json()
+
+        self.assertEqual(payload["count"], 2)
+        self.assertEqual(seen["in_"], ("user_id", [8, 9]))
+
+    def test_following_feed_with_no_follows_is_zero(self):
+        with patch.object(zapp, "get_current_user", return_value=self.viewer), \
+             patch.object(zapp, "supabase", self.fake_supabase(5, follows=[])):
+            payload = self.client.get("/api/feed/updates?since=t&feed=following").get_json()
+
+        self.assertEqual(payload["count"], 0)
+
+
+class ThemeAndFrontendAffordanceTests(unittest.TestCase):
+    """Light theme, mark-all-read, the new-posts pill and scroll memory."""
+
+    def setUp(self):
+        zapp.app.config.update(TESTING=True, WTF_CSRF_ENABLED=False)
+        self.viewer = {"id": 7, "username": "demo", "display_name": "Demo User",
+                       "profile_photo_url": "", "level": 3}
+
+    def layout(self):
+        with zapp.app.test_request_context("/"):
+            return zapp.render_template("index.html", viewer=self.viewer, posts=[], mode="all",
+                                        highlights=[], page=1, has_next=False)
+
+    # --- theme -------------------------------------------------------------
+
+    def test_light_theme_flips_the_token_layer(self):
+        css = Path("static/css/sections/base.css").read_text(encoding="utf-8")
+        self.assertIn(':root[data-theme="light"]', css)
+        light = css.split(':root[data-theme="light"] {', 1)[1].split('\n}', 1)[0]
+        for token in ('--lvl-surface-base', '--lvl-text-primary', '--lvl-border',
+                      '--lvl-white-05', '--shadow-md', '--overlay-scrim'):
+            with self.subTest(token=token):
+                self.assertIn(token, light)
+
+    def test_media_surfaces_stay_dark_in_both_themes(self):
+        css = Path("static/css/sections/base.css").read_text(encoding="utf-8")
+        self.assertIn('.timeline-reels,', css)
+        scope = css.split('.reel-player-container,', 1)[1].split('\n}', 1)[0]
+        self.assertIn('color-scheme: dark', scope)
+
+    def test_theme_is_resolved_before_first_paint(self):
+        layout = Path("templates/layout.html").read_text(encoding="utf-8")
+        head = layout.split('</head>', 1)[0]
+        self.assertIn("localStorage.getItem('lvl_theme')", head)
+        # The bootstrap must run before the deferred bundle, or the page paints
+        # the wrong theme first.
+        self.assertLess(head.index("lvl_theme"), head.index("js/script.js"))
+
+    def test_settings_offers_system_light_and_dark(self):
+        template = Path("templates/settings.html").read_text(encoding="utf-8")
+        for choice in ('system', 'dark', 'light'):
+            with self.subTest(choice=choice):
+                self.assertIn(f'data-theme-option="{choice}"', template)
+
+    # --- alerts ------------------------------------------------------------
+
+    def test_alerts_popover_can_mark_everything_read(self):
+        html = self.layout()
+        popover = html.split('id="notifications-popover"', 1)[1].split('</div>', 1)[0]
+        self.assertIn('data-mark-all-read', html.split('id="notifications-popover"', 1)[1][:600])
+        self.assertIn('popover-header', popover)
+        self.assertIn('name="csrf-token"', html)
+
+    # --- feed --------------------------------------------------------------
+
+    def test_new_posts_pill_is_rendered_with_its_anchor(self):
+        with zapp.app.test_request_context("/"):
+            html = zapp.render_template("index.html", viewer=self.viewer, mode="all",
+                                        posts=[{"id": 1, "content": "hi", "created_at": "2026-09-19T10:00:00",
+                                                "user": self.viewer, "like_count": 0, "comment_count": 0,
+                                                "repost_count": 0}],
+                                        highlights=[], page=1, has_next=False)
+        self.assertIn('data-feed-updates', html)
+        self.assertIn('data-since="2026-09-19T10:00:00"', html)
+        self.assertIn('data-feed-updates-pill', html)
+
+    def test_pill_is_absent_on_later_pages(self):
+        with zapp.app.test_request_context("/"):
+            html = zapp.render_template("index.html", viewer=self.viewer, mode="all",
+                                        posts=[{"id": 1, "content": "hi", "created_at": "2026-09-19T10:00:00",
+                                                "user": self.viewer, "like_count": 0, "comment_count": 0,
+                                                "repost_count": 0}],
+                                        highlights=[], page=2, has_next=False)
+        self.assertNotIn('data-feed-updates', html)
+
+    def test_scroll_position_is_remembered(self):
+        js = Path("static/js/script.js").read_text(encoding="utf-8")
+        self.assertIn("history.scrollRestoration = 'manual'", js)
+        self.assertIn("back_forward", js)

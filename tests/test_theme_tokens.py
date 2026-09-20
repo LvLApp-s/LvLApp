@@ -25,11 +25,28 @@ class ThemeTokenTests(unittest.TestCase):
         self.assertTrue(profile_color_unlocked(PROFILE_COLOR_UNLOCK_LEVEL))
 
     def test_stylesheet_colors_are_centralized_in_root_tokens(self):
+        """Colour literals belong to a token block and nowhere else.
+
+        A token block is `:root`, a theme variant of it (`:root[data-theme=
+        "light"]`), or the documented media scope that keeps the clip player
+        dark in every theme. Everything else has to go through a var().
+        """
         root = Path(__file__).resolve().parents[1]
         css = "\n".join(path.read_text(encoding="utf-8") for path in sorted((root / "static" / "css").glob("**/*.css")))
-        css_without_root = re.sub(r":root\s*\{.*?\}", "", css, flags=re.S)
+        css_without_tokens = re.sub(r":root[^{]*\{.*?\n\}", "", css, flags=re.S)
+        css_without_tokens = re.sub(r"\.timeline-reels,.*?\n\}", "", css_without_tokens, flags=re.S)
 
-        self.assertNotRegex(css_without_root, r"#[0-9A-Fa-f]{3,8}")
+        self.assertNotRegex(css_without_tokens, r"#[0-9A-Fa-f]{3,8}")
+
+    def test_light_theme_is_a_token_block_not_a_second_stylesheet(self):
+        """Daylight mode must stay a flip of the primitives: no section may
+        carry its own [data-theme="light"] rules."""
+        root = Path(__file__).resolve().parents[1]
+        for path in sorted((root / "static" / "css").glob("**/*.css")):
+            if path.name == "base.css":
+                continue
+            with self.subTest(path=path.relative_to(root)):
+                self.assertNotIn('data-theme', path.read_text(encoding="utf-8"))
 
     def test_stylesheet_manifest_imports_focused_sections(self):
         root = Path(__file__).resolve().parents[1]

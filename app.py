@@ -198,7 +198,7 @@ ATTACHMENT_CONTENT_TYPES = {
     'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'txt': 'text/plain',
 }
-ASSET_VERSION = "139"
+ASSET_VERSION = "140"
 HOME_REEL_PREVIEW_LIMIT = 12
 HOME_MEDIA_PREVIEW_LIMIT = 12
 
@@ -6767,6 +6767,44 @@ def get_recent_conversations(viewer_id, limit=8):
                               'last_message_at': thread['last_message_at'],
                               'unread_count': thread['unread_count']})
     return conversations
+
+
+@app.route('/api/feed/updates')
+def api_feed_updates():
+    """How many posts arrived above what the reader is looking at.
+
+    Only the count: the pill says "new posts", and tapping it reloads the
+    timeline. The reader's own posts never count, because publishing already
+    puts them at the top.
+    """
+    viewer = get_current_user()
+    if not viewer:
+        return jsonify({'success': False, 'error': 'Authentication required.'}), 401
+
+    since = (request.args.get('since') or '').strip()
+    if not since:
+        return jsonify({'success': False, 'error': 'A since timestamp is required.'}), 400
+
+    feed = 'following' if request.args.get('feed') == 'following' else 'all'
+
+    try:
+        query = (supabase.table('posts')
+                 .select('id', count='exact')
+                 .is_('deleted_at', 'null')
+                 .gt('created_at', since)
+                 .neq('user_id', viewer['id']))
+
+        if feed == 'following':
+            follows_res = supabase.table('follows').select('following_id').eq('follower_id', viewer['id']).execute()
+            following_ids = [row['following_id'] for row in (follows_res.data or []) if row.get('following_id')]
+            if not following_ids:
+                return jsonify({'success': True, 'count': 0})
+            query = query.in_('user_id', following_ids)
+
+        res = query.limit(1).execute()
+        return jsonify({'success': True, 'count': max(0, res.count or 0)})
+    except Exception as exc:
+        return jsonify({'success': False, 'error': handle_db_error(exc)}), 400
 
 
 @app.route('/api/conversations')
