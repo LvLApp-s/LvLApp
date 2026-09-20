@@ -422,6 +422,8 @@
   --lvl-white-12: rgba(255, 255, 255, 0.12);
   --lvl-white-16: rgba(255, 255, 255, 0.16);
   --lvl-white-22: rgba(255, 255, 255, 0.22);
+  --chrome-blur: rgba(0, 0, 0, 0.82);
+  --chrome-blur-strong: rgba(0, 0, 0, 0.94);
 
   --bg-color: var(--lvl-surface-base);
   --text-primary: var(--lvl-text-primary);
