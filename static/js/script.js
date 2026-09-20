@@ -496,7 +496,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initFeedback();
     initCookieConsent();
     initXpToasts();
-    initGenderPreview();
     initNewChatPanel();
     initServiceWorker();
     initInstallPrompt();
@@ -1986,33 +1985,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Could not read XP toast data:', error);
         }
-    }
-
-    function initGenderPreview() {
-        const genderInputs = document.querySelectorAll('input[name="gender"][data-avatar-url]');
-        const preview = document.querySelector('[data-gender-preview]');
-        const avatar = document.querySelector('[data-gender-avatar]');
-        const swatch = document.querySelector('[data-gender-swatch]');
-
-        if (!genderInputs.length || !preview || !avatar || !swatch) return;
-
-        const updatePreview = () => {
-            const selected = document.querySelector('input[name="gender"][data-avatar-url]:checked');
-
-            if (!selected) {
-                preview.hidden = true;
-                return;
-            }
-
-            avatar.src = selected.dataset.avatarUrl || '';
-            swatch.style.setProperty('--preview-color', selected.dataset.themeColor || getThemeToken('--lvl-primary'));
-            preview.hidden = false;
-        };
-
-        genderInputs.forEach(input => {
-            input.addEventListener('change', updatePreview);
-        });
-        updatePreview();
     }
 
     // --- Feedback ----------------------------------------------------------

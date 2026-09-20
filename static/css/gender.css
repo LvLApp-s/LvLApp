@@ -67,82 +67,104 @@
   pointer-events: none;
 }
 
-.gender-option span {
+/* Direct child only. The option nests a span for the translated label inside
+   this one, and a descendant selector styled that too -- giving every label
+   its own bordered box inside the button. */
+.gender-option > span {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
+  gap: 10px;
   min-height: var(--control-xl);
+  padding: 8px 12px;
+  /* Matches the text inputs above it: same border colour, same corner. */
   border: 1px solid var(--lvl-border-strong);
   border-radius: var(--radius-xs);
   color: var(--text-primary);
   font-size: 16px;
   font-weight: 700;
   cursor: pointer;
-  transition: border-color 0.2s, background-color 0.2s;
+  transition: border-color var(--duration-fast) var(--ease-standard),
+              background-color var(--duration-fast) var(--ease-standard);
 }
 
-.gender-option span b {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--icon-sm);
-  height: var(--icon-sm);
+/* The avatar the choice actually sets, so both options can be compared
+   without picking one first. */
+.gender-option-avatar {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
   border-radius: var(--radius-round);
-  font-size: 18px;
+  background-color: var(--lvl-surface-hover);
+  object-fit: cover;
+}
+
+.gender-option-label {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* The symbol reads as punctuation next to the word, not as a second icon
+   competing with the avatar. */
+.gender-option-glyph {
+  color: var(--text-secondary);
+  font-size: 17px;
+  font-weight: 400;
   line-height: 1;
 }
 
-.male-option span b {
-  color: var(--lvl-primary);
-  background-color: color-mix(in srgb, var(--lvl-primary) 14%, transparent);
+/* Only the selected option shows a tick, so the state is legible without
+   relying on a faint background wash. */
+.gender-option-check {
+  flex: 0 0 auto;
+  color: var(--accent-color);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity var(--duration-fast) var(--ease-standard),
+              transform var(--duration-fast) var(--ease-standard);
 }
 
-.female-option span b {
-  color: var(--lvl-female);
-  background-color: color-mix(in srgb, var(--lvl-female) 14%, transparent);
+.gender-option:hover > span {
+  border-color: var(--text-secondary);
+  background-color: var(--hover-bg);
 }
 
-.male-option input:checked + span {
-  border-color: var(--lvl-primary);
-  background-color: color-mix(in srgb, var(--lvl-primary) 12%, transparent);
+.gender-option input:checked + span {
+  border-color: var(--accent-color);
+  background-color: color-mix(in srgb, var(--accent-color) 12%, transparent);
 }
 
-.female-option input:checked + span {
-  border-color: var(--lvl-female);
-  background-color: color-mix(in srgb, var(--lvl-female) 12%, transparent);
+.gender-option input:checked + span .gender-option-glyph {
+  color: var(--text-primary);
 }
 
-.male-option input:focus-visible + span {
-  border-color: var(--lvl-primary);
+.gender-option input:checked + span .gender-option-check {
+  opacity: 1;
+  transform: scale(1);
 }
 
-.female-option input:focus-visible + span {
-  border-color: var(--lvl-female);
+/* Keyboard users land on the hidden radio, so the ring has to be drawn here. */
+.gender-option input:focus-visible + span {
+  border-color: var(--accent-color);
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
 }
 
-.gender-preview {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+@media (max-width: 380px) {
+  .gender-options {
+    grid-template-columns: 1fr;
+  }
 }
 
-.gender-preview[hidden] {
-  display: none;
-}
+@media (prefers-reduced-motion: reduce) {
+  .gender-option-check {
+    transform: none;
+    transition: opacity var(--duration-fast) var(--ease-standard);
+  }
 
-.gender-preview img {
-  width: var(--control-md);
-  height: var(--control-md);
-  border-radius: var(--radius-round);
-  object-fit: cover;
-  background-color: var(--lvl-white);
-}
-
-.gender-preview span {
-  width: var(--swatch-md);
-  height: var(--swatch-md);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-round);
-  background-color: var(--preview-color, var(--accent-color));
+  .gender-option input:checked + span .gender-option-check {
+    transform: none;
+  }
 }
