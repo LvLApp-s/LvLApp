@@ -2337,19 +2337,19 @@ class AppRouteTests(unittest.TestCase):
         self.assertIn("/auth", response.location)
 
     def test_reels_renders_authenticated_page(self):
+        """The clips page rail carries Trending and nothing else: the media
+        panel repeated what the feed already shows."""
         viewer = {"id": 7, "username": "demo", "display_name": "Demo User", "profile_photo_url": ""}
-        media_post = dict(self.sample_post(post_id=44), image_url="/static/assets/icon-512.png")
         with patch.object(zapp, "get_current_user", return_value=viewer), \
              patch.object(zapp, "get_reels", return_value=([self.sample_reel()], False)), \
              patch.object(zapp, "get_community_highlights", return_value=[]), \
-             patch.object(zapp, "get_home_media_preview", return_value=[media_post]) as media_preview:
+             patch.object(zapp, "get_home_media_preview", return_value=[]) as media_preview:
             html = self.client.get("/reels").data.decode()
 
-        media_preview.assert_called_once_with(7)
+        media_preview.assert_not_called()
         self.assertIn("Clips", html)
         self.assertIn('data-reels-feed', html)
-        self.assertIn('data-home-media-panel', html)
-        self.assertIn('aria-label="Non-reel media"', html)
+        self.assertNotIn('data-home-media-panel', html)
         self.assertNotIn('data-home-reel-panel', html)
         self.assertIn('mobile-reels-upload-cta', html)
         self.assertIn('mobile-reel-upload-action', html)
@@ -6110,12 +6110,13 @@ class RailAndPopoverTests(unittest.TestCase):
                 tag = html.split(f'id="{pid}"', 1)[1].split('>', 1)[0]
                 self.assertIn('hidden', tag)
 
-    def test_messages_trigger_still_links_to_the_page(self):
-        """Without JS the rail item must still navigate; with JS it opens the
-        dock instead."""
+    def test_messages_rail_item_opens_the_inbox(self):
+        """Like Instagram, the rail item goes to the inbox page; the dock at
+        the bottom right is the quick surface."""
         rail = self.rail()
-        anchor = rail.split('data-msg-dock-toggle', 1)[0].rsplit('<a', 1)[1]
+        anchor = rail.split('data-i18n="nav_messages"', 1)[0].rsplit('<a', 1)[1]
         self.assertIn('href="/messages"', anchor)
+        self.assertNotIn('data-msg-dock-toggle', rail)
 
     def test_clip_panel_has_no_play_button_overlay(self):
         markup = Path("templates/_home_reel_panel.html").read_text(encoding="utf-8")
@@ -6511,12 +6512,15 @@ class MessageDockTests(unittest.TestCase):
         self.assertIn('data-msg-chat-receiver', form)
         self.assertIn('name="ajax" value="1"', form)
 
-    def test_rail_messages_item_opens_the_dock(self):
+    def test_only_the_pill_opens_the_dock(self):
+        """The rail navigates to the inbox; the dock is opened from its own
+        pill, so the two entry points do not fight over one surface."""
         html = self.layout()
         rail = html.split('<nav class="nav-list"', 1)[1].split('</nav>', 1)[0]
-        self.assertIn('data-msg-dock-toggle', rail)
+        self.assertNotIn('data-msg-dock-toggle', rail)
         self.assertIn('href="/messages"', rail)
-        # The old rail popover is gone; one messages surface, not two.
+        self.assertIn('data-msg-dock-toggle', html.split('class="msg-dock"', 1)[1])
+        # The old rail popover is gone; one quick messages surface, not two.
         self.assertNotIn('data-messages-popover', html)
 
     def test_dock_is_hidden_on_phones(self):
@@ -6535,3 +6539,42 @@ class MessageDockTests(unittest.TestCase):
         source = Path("app.py").read_text(encoding="utf-8")
         payload = source.split("'conversations': [{", 1)[1].split('}]', 1)[0]
         self.assertIn("'id': row.get('id')", payload)
+
+
+
+class RightRailCompositionTests(unittest.TestCase):
+    """Which panels each page's rail carries."""
+
+    def setUp(self):
+        zapp.app.config.update(TESTING=True, WTF_CSRF_ENABLED=False)
+        self.viewer = {"id": 7, "username": "demo", "display_name": "Demo User",
+                       "profile_photo_url": "", "level": 3}
+        self.highlight = {"id": 8, "username": "ada", "display_name": "Ada", "level": 4,
+                          "profile_photo_url": "", "is_following": False}
+
+    def render(self, template, **context):
+        with zapp.app.test_request_context("/"):
+            return zapp.render_template(template, viewer=self.viewer, **context)
+
+    def test_saved_carries_the_home_rail(self):
+        """Saved used to show an empty leaderboard and the Quick loops filler;
+        it now mirrors the home page: real members plus the clip carousel."""
+        html = self.render("bookmarks.html", tab="posts", posts=[], reels=[], page=1,
+                           has_next=False, highlights=[self.highlight],
+                           home_reels=[{"id": 1, "video_url": "/x.mp4", "caption": "hi",
+                                        "author": self.highlight, "like_count": 0,
+                                        "comment_count": 0, "view_count": 0}])
+        self.assertIn('class="community-highlights', html)
+        self.assertIn('data-home-reel-panel', html)
+        self.assertNotIn('engagement-panel', html)
+
+    def test_a_trending_only_page_still_gets_a_rail(self):
+        """The rail's render test ignored trends, so the clips page -- whose
+        only panel is Trending -- rendered no rail at all."""
+        trending = [{"id": 3, "content": "hello", "like_count": 1, "comment_count": 0,
+                     "user": self.highlight}]
+        html = self.render("reels.html", reels=[], page=1, has_next=False,
+                           table_ready=True, tab="for-you", trending_posts=trending)
+        self.assertIn('class="right-rail"', html)
+        self.assertIn('trending-panel', html)
+        self.assertNotIn('data-home-media-panel', html)

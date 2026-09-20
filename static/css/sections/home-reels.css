@@ -257,10 +257,11 @@
 }
 
 @media (min-width: 1281px) {
-  /* The shell's own columns apply; this page only needs the rail back. */
+  /* The shell's own columns apply; this page only needs the rail back, so
+     it must not restate a left column the rail no longer uses. */
   .app-shell:has(.timeline-messages):has(.home-reel-panel) {
     grid-template-columns:
-      var(--shell-left-expanded)
+      var(--shell-left-collapsed)
       minmax(0, var(--shell-main-max))
       var(--shell-right) !important;
   }
@@ -275,20 +276,4 @@
     border-right: 1px solid var(--border-color);
   }
 
-  .app-shell:has(.timeline-reels):has(.home-media-panel) {
-    grid-template-columns:
-      var(--shell-left-expanded)
-      minmax(0, var(--shell-main-max))
-      var(--shell-right) !important;
-  }
-
-  .app-shell:has(.timeline-reels):has(.home-media-panel) .right-rail-wrapper {
-    display: block !important;
-  }
-
-  .app-shell:has(.timeline-reels):has(.home-media-panel) .timeline-reels {
-    width: 100%;
-    max-width: none;
-    border-right: 1px solid var(--border-color);
-  }
 }

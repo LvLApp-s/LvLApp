@@ -198,7 +198,7 @@ ATTACHMENT_CONTENT_TYPES = {
     'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'txt': 'text/plain',
 }
-ASSET_VERSION = "144"
+ASSET_VERSION = "145"
 HOME_REEL_PREVIEW_LIMIT = 12
 HOME_MEDIA_PREVIEW_LIMIT = 12
 
@@ -3107,8 +3107,7 @@ def reels():
                            has_next=has_next,
                            table_ready=table_ready,
                            tab=tab,
-                           trending_posts=explore.get('trending_posts', []),
-                           home_media=get_home_media_preview(viewer['id']))
+                           trending_posts=explore.get('trending_posts', []))
 
 def validate_reel_details(viewer_id, caption, visibility, community_id, communities):
     caption = (caption or '').strip()
@@ -4446,6 +4445,10 @@ def bookmarks():
                            reels=reels,
                            page=page,
                            has_next=has_next,
+                           # Saved shares the home page's rail: the leaderboard
+                           # with real members, and the clip carousel.
+                           highlights=get_community_highlights(),
+                           home_reels=get_home_reel_preview(viewer['id']),
                            title_i18n="bookmarks_title")
 
 @app.route('/community/<slug>/post', methods=['POST'])

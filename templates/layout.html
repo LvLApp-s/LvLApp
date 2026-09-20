@@ -72,7 +72,6 @@
           <span class="nav-label" data-i18n="nav_community">Community</span>
         </a>
         <a class="{% if active_page == 'messages' %}active{% endif %}" href="{{ url_for('messages') }}"
-           data-msg-dock-toggle aria-expanded="false" aria-controls="msg-dock-panel"
            aria-label="Messages" title="Messages" data-i18n-aria="nav_messages" data-i18n-title="nav_messages">
           <span class="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M4 4h16v12H7.8L4 19.35V4Zm2 2v8.93L7.04 14H18V6H6Z"/></svg>
@@ -223,7 +222,11 @@
 {% if viewer %}
   </main>
   <div class="right-rail-wrapper">
-    {% if show_highlights or (home_reels is defined and home_reels) or (home_media is defined and home_media) %}
+    {# The rail renders when any of its panels has something to show. Trends
+       were missing from this test, so a page whose only panel was Trending
+       (the clips page) rendered no rail at all. #}
+    {% if show_highlights or (show_trends is defined and show_trends and trending_posts)
+          or (home_reels is defined and home_reels) or (home_media is defined and home_media) %}
     <aside class="right-rail">
       {% if show_highlights %}
        <div class="community-highlights panel lb-panel">
@@ -305,7 +308,7 @@
       {% if home_media is defined and home_media %}
         {% include "_home_media_panel.html" %}
       {% endif %}
-      {% if show_highlights and active_page not in ['home', 'reels'] %}
+      {% if show_highlights and active_page not in ['home', 'reels', 'bookmarks'] %}
         {% include "_engagement_panel.html" %}
       {% endif %}
     </aside>
