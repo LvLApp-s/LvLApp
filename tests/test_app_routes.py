@@ -1517,7 +1517,10 @@ class AppRouteTests(unittest.TestCase):
              patch.object(zapp, "get_reels", return_value=(reels, False)) as get_reels:
             html = self.client.get("/").data.decode()
 
-        get_reels.assert_called_once_with(7, limit=50, page=1)
+        # Same batch as before; the rail additionally opts out of the three
+        # viewer-specific lookups, because it prints public counts only.
+        get_reels.assert_called_once_with(7, limit=50, page=1,
+                                          include_viewer_state=False)
         self.assertIn('data-i18n="leaderboard_title"', html)
         self.assertNotIn("<h2>Community Highlights</h2>", html)
         self.assertIn('data-home-reel-slides tabindex="0"', html)

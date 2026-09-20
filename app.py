@@ -2447,7 +2447,8 @@ def get_home_reel_preview(viewer_id, limit=HOME_REEL_PREVIEW_LIMIT):
     diversification helper so clips, trending and media behave consistently.
     """
     try:
-        home_reels_data, _ = get_reels(viewer_id, limit=REEL_CANDIDATE_POOL, page=1)
+        home_reels_data, _ = get_reels(viewer_id, limit=REEL_CANDIDATE_POOL, page=1,
+                                       include_viewer_state=False)
         if not home_reels_data:
             return get_demo_reels(limit)
 
@@ -2670,7 +2671,16 @@ def toggle_reel_bookmark_record(viewer_id, reel_id):
                 _save_local_reel_bookmarks(data)
                 return True
 
-def enrich_reels(reels, viewer_id):
+def enrich_reels(reels, viewer_id, include_viewer_state=True):
+    """Attach counts, and optionally this viewer's own relationship to each clip.
+
+    The three viewer-specific lookups -- did you like it, did you save it, do
+    you follow the author -- are three more round trips. A surface that only
+    prints the public counts, like the side rail, asks for them and throws
+    them away, so it can pass include_viewer_state=False. The flags are still
+    set on every clip, just to their empty values, so the shape of a clip does
+    not change with the caller.
+    """
     if not reels:
         return []
     apply_forced_user_levels(reels)
@@ -2692,13 +2702,14 @@ def enrich_reels(reels, viewer_id):
         except Exception:
             like_counts = {}
 
-        try:
-            viewer_likes_res = supabase.table('reel_likes').select('reel_id').eq('user_id', viewer_id).in_('reel_id', reel_ids).execute()
-            viewer_liked_ids = {row['reel_id'] for row in viewer_likes_res.data or []}
-        except Exception:
-            viewer_liked_ids = set()
+        if include_viewer_state:
+            try:
+                viewer_likes_res = supabase.table('reel_likes').select('reel_id').eq('user_id', viewer_id).in_('reel_id', reel_ids).execute()
+                viewer_liked_ids = {row['reel_id'] for row in viewer_likes_res.data or []}
+            except Exception:
+                viewer_liked_ids = set()
 
-        if viewer_id:
+        if viewer_id and include_viewer_state:
             viewer_bookmarked_reel_ids = get_viewer_bookmarked_reel_ids(viewer_id, reel_ids)
 
         try:
@@ -2718,7 +2729,7 @@ def enrich_reels(reels, viewer_id):
         except Exception:
             view_counts = {}
 
-    if author_ids:
+    if author_ids and include_viewer_state:
         try:
             follows_res = supabase.table('follows').select('following_id').eq('follower_id', viewer_id).in_('following_id', list(author_ids)).execute()
             followed_author_ids = {row['following_id'] for row in follows_res.data or []}
@@ -2741,7 +2752,7 @@ def enrich_reels(reels, viewer_id):
         reel['is_demo'] = False
     return reels
 
-def get_reels(viewer_id, limit=8, page=1, tab='for_you'):
+def get_reels(viewer_id, limit=8, page=1, tab='for_you', include_viewer_state=True):
     offset = (page - 1) * limit
     select_query = '*, user:users!reels_user_id_fkey(*), community:communities!reels_community_id_fkey(*)'
     query = supabase.table('reels').select(select_query).eq('status', 'active').is_('deleted_at', 'null')
@@ -2762,7 +2773,7 @@ def get_reels(viewer_id, limit=8, page=1, tab='for_you'):
     res = query.range(offset, offset + limit).execute()
     rows = res.data if res and res.data else []
     visible = visible_reel_filter(rows, viewer_id)
-    return enrich_reels(visible[:limit], viewer_id), len(visible) > limit
+    return enrich_reels(visible[:limit], viewer_id, include_viewer_state), len(visible) > limit
 
 def get_reel_by_id(reel_id, viewer_id=None):
     select_query = '*, user:users!reels_user_id_fkey(*), community:communities!reels_community_id_fkey(*)'

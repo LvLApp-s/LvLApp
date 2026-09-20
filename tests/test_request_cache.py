@@ -155,3 +155,81 @@ class ForcedLevelCacheTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class ReelViewerStateTests(unittest.TestCase):
+    """The side rail prints public counts, so it must not pay for private ones."""
+
+    def setUp(self):
+        self.tables = []
+
+        class Recorder:
+            def __init__(self, tables, name):
+                self.tables = tables
+                self.name = name
+
+            def __getattr__(self, attr):
+                def chain(*args, **kwargs):
+                    return self
+                return chain
+
+            def execute(inner):
+                inner.tables.append(inner.name)
+                return type('Res', (), {'data': []})()
+
+        class FakeDB:
+            def __init__(self, tables):
+                self.tables = tables
+
+            def table(self, name):
+                return Recorder(self.tables, name)
+
+        self.db = FakeDB(self.tables)
+        self.reels = [{'id': 1, 'user_id': 2, 'user': {'id': 2}, 'view_count': 0}]
+
+    def enrich(self, **kwargs):
+        with zapp.app.test_request_context('/'), patch.object(zapp, 'supabase', self.db):
+            return zapp.enrich_reels([dict(r) for r in self.reels], viewer_id=1, **kwargs)
+
+    def test_opting_out_skips_the_viewer_lookups(self):
+        self.enrich(include_viewer_state=True)
+        with_state = list(self.tables)
+        self.tables.clear()
+        self.enrich(include_viewer_state=False)
+        without_state = list(self.tables)
+        self.assertLess(len(without_state), len(with_state),
+                        "opting out saved nothing")
+        self.assertNotIn('reel_bookmarks', without_state)
+        self.assertNotIn('follows', without_state)
+
+    def test_public_counts_are_still_fetched(self):
+        self.enrich(include_viewer_state=False)
+        self.assertIn('reel_likes', self.tables, "the rail still shows a like count")
+        self.assertIn('reel_comments', self.tables, "the rail still shows a comment count")
+
+    def test_a_clip_keeps_the_same_shape_either_way(self):
+        """Templates read these keys unconditionally; a missing one is a 500."""
+        rich = self.enrich(include_viewer_state=True)[0]
+        plain = self.enrich(include_viewer_state=False)[0]
+        self.assertEqual(set(rich), set(plain))
+        for key in ('viewer_liked', 'viewer_bookmarked', 'author_followed'):
+            with self.subTest(key=key):
+                self.assertIs(plain[key], False)
+
+    def test_viewer_state_is_on_by_default(self):
+        """Every other caller -- the clips page above all -- must keep it."""
+        import inspect
+        signature = inspect.signature(zapp.enrich_reels)
+        self.assertIs(signature.parameters['include_viewer_state'].default, True)
+        self.assertIs(inspect.signature(zapp.get_reels)
+                      .parameters['include_viewer_state'].default, True)
+
+    def test_the_rail_template_reads_no_viewer_state(self):
+        """If the rail ever starts showing a like or follow state, this opt-out
+        becomes wrong -- fail here rather than render it blank."""
+        from pathlib import Path
+        panel = (Path(zapp.__file__).parent / 'templates' / '_home_reel_panel.html')
+        markup = panel.read_text(encoding='utf-8')
+        for key in ('viewer_liked', 'viewer_bookmarked', 'author_followed', 'is_owner'):
+            with self.subTest(key=key):
+                self.assertNotIn(key, markup)
