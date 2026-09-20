@@ -100,14 +100,6 @@
         {% endif %}
       </a>
       {% endif %}
-      <nav class="rail-footer" aria-label="About LvL" data-i18n-aria="rail_about_aria">
-        <a href="{{ url_for('contact') }}" data-i18n="rail_link_contact">Contact</a>
-        <a href="{{ url_for('request_verification') }}" data-i18n="rail_link_verify">Verification</a>
-        <a href="{{ url_for('careers') }}" data-i18n="rail_link_careers">Careers</a>
-        <a href="{{ url_for('terms') }}" data-i18n="rail_link_terms">Terms</a>
-        <a href="{{ url_for('privacy') }}" data-i18n="rail_link_privacy">Privacy</a>
-        <span class="rail-footer-note">© {{ current_year }} LvL</span>
-      </nav>
       <div class="account-row" data-account-row>
         <a class="mini-profile" href="{{ url_for('profile', username=viewer.username) }}">
           <img class="avatar small-avatar" src="{{ viewer.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="" aria-hidden="true" />

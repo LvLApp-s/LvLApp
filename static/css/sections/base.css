@@ -348,11 +348,13 @@ a:hover {
     var(--shell-left-expanded)
     minmax(0, var(--shell-main))
     var(--shell-right);
-  justify-content: center;
+  /* The shell is pinned to the left edge: the rail starts at x=0 and the
+     leftover width stays on the right instead of being split in two. */
+  justify-content: start;
   align-items: stretch;
   width: 100%;
   min-height: 100vh;
-  margin-inline: auto;
+  margin-inline: 0;
   background: var(--bg-color);
 }
 
@@ -381,6 +383,18 @@ a:hover {
 
 .app-shell:not(:has(.right-rail)) .right-rail-wrapper {
   display: none;
+}
+
+/* Very wide screens: the shell is left-anchored, so give the extra width to
+   the feed (up to the readable maximum) instead of leaving it beside the
+   right rail. */
+@media (min-width: 1600px) {
+  .app-shell {
+    grid-template-columns:
+      var(--shell-left-expanded)
+      minmax(0, var(--shell-main-wide))
+      var(--shell-right);
+  }
 }
 
 /* Tablet and small laptop: collapse the rail to icons, keep the right rail. */

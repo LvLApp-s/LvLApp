@@ -897,10 +897,8 @@
 /* --- Left rail: account row ---------------------------------------------- */
 
 .account-row {
-  /* The rail's bottom cluster ends here. The slack above is shared by
-     .rail-progress and .rail-footer, so the column reads as three evenly
-     spaced groups instead of one block of dead space. */
-  margin-top: var(--space-4);
+  /* Closes the rail: the account block always sits at the bottom edge. */
+  margin-top: auto;
   display: flex;
   align-items: center;
   gap: var(--space-1);
@@ -976,12 +974,11 @@
 }
 
 /* --- Left rail: level standing ------------------------------------------- */
-/* LvL's one differentiator, on every page instead of only the profile. The
-   `margin-top: auto` here and on .rail-footer splits the rail's leftover
-   height into two even gaps rather than one long empty stretch. */
+/* LvL's one differentiator, on every page instead of only the profile. It
+   belongs with the navigation block at the top of the rail, so the only
+   empty stretch left is the one above the account row. */
 
 .rail-progress {
-  margin-top: auto;
   display: grid;
   gap: var(--space-3);
   width: 100%;
@@ -1119,42 +1116,9 @@
   .left-rail .rail-progress-identity,
   .left-rail .rail-progress-track,
   .left-rail .rail-progress-next,
-  .left-rail .rail-progress-reward,
-  .left-rail .rail-footer {
+  .left-rail .rail-progress-reward {
     display: none;
   }
-}
-
-/* --- Left rail: about links ---------------------------------------------- */
-/* The pages that used to hang off the removed LvL Guide keep a home here. */
-
-.rail-footer {
-  margin-top: auto;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
-  padding: 0 var(--space-3);
-}
-
-.rail-footer a,
-.rail-footer-note {
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--text-secondary);
-  text-decoration: none;
-}
-
-.rail-footer a:hover {
-  color: var(--text-primary);
-  text-decoration: underline;
-}
-
-.rail-footer-note {
-  white-space: nowrap;
-}
-
-.left-rail:not(.menu-open) .rail-footer {
-  display: none;
 }
 
 /* --- Top bar actions ------------------------------------------------------ */

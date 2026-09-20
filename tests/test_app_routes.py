@@ -4496,6 +4496,14 @@ class AppRouteTests(unittest.TestCase):
         self.assertIn("/messages?u=demo", html)
         self.assertIn('data-home-reel-panel', html)
 
+    def test_settings_legal_card_lists_every_about_page(self):
+        """Contact, verification and careers left the rail, so Settings is
+        now the one place that links to all of them."""
+        template = Path("templates/settings.html").read_text(encoding="utf-8")
+        for endpoint in ("terms", "privacy", "contact", "request_verification", "careers"):
+            with self.subTest(endpoint=endpoint):
+                self.assertIn(f"url_for('{endpoint}')", template)
+
     def test_settings_template_includes_account_delete_form(self):
         fake_user = {
             "id": 7,
@@ -6034,17 +6042,13 @@ class RailAndPopoverTests(unittest.TestCase):
                 self.assertIn(item, html.split('id="account-menu"', 1)[1])
         self.assertIn('role="menu"', html.split('id="account-menu"', 1)[0][-200:] + menu)
 
-    def test_rail_bottom_cluster_shares_the_leftover_height(self):
-        """The rail no longer ends in one long empty stretch: the slack is
-        split between the level card and the about links, and the account row
-        closes the column."""
+    def test_account_row_closes_the_rail(self):
         css = Path("static/css/sections/components.css").read_text(encoding="utf-8")
-        for selector in ('\n.rail-progress {', '\n.rail-footer {'):
-            with self.subTest(selector=selector):
-                block = css.split(selector, 1)[1].split('}', 1)[0]
-                self.assertIn('margin-top: auto', block)
         account = css.split('\n.account-row {', 1)[1].split('}', 1)[0]
-        self.assertNotIn('margin-top: auto', account)
+        self.assertIn('margin-top: auto', account)
+        # The level card rides with the navigation block, not the bottom edge.
+        card = css.split('\n.rail-progress {', 1)[1].split('}', 1)[0]
+        self.assertNotIn('margin-top: auto', card)
 
     def test_rail_shows_the_viewer_level_standing(self):
         html = self.layout()
@@ -6057,12 +6061,25 @@ class RailAndPopoverTests(unittest.TestCase):
         self.assertIn('href="/profile/demo"', rail.split('class="rail-progress"', 1)[0][-200:]
                       + rail.split('class="rail-progress"', 1)[1][:200])
 
-    def test_rail_footer_keeps_the_extracted_pages_reachable(self):
+    def test_rail_carries_no_legal_link_list(self):
+        """The about pages are reachable from Settings; the rail stays a
+        navigation column."""
         rail = self.layout().split('<aside class="left-rail', 1)[1].split('</aside>', 1)[0]
-        footer = rail.split('class="rail-footer"', 1)[1].split('</nav>', 1)[0]
-        for href in ('/contact', '/request_verification', '/careers', '/terms', '/privacy'):
+        self.assertNotIn('rail-footer', rail)
+        for href in ('/terms', '/privacy', '/careers'):
             with self.subTest(href=href):
-                self.assertIn(f'href="{href}"', footer)
+                self.assertNotIn(f'href="{href}"', rail)
+
+    def test_unread_badges_disappear_at_zero(self):
+        """`.nav-badge` sets a display, so it needs its own [hidden] rule."""
+        css = Path("static/css/sections/notification-badge.css").read_text(encoding="utf-8")
+        self.assertIn('.nav-badge[hidden]', css)
+
+    def test_shell_is_anchored_to_the_left_edge(self):
+        css = Path("static/css/sections/base.css").read_text(encoding="utf-8")
+        shell = css.split('\n.app-shell {', 1)[1].split('}', 1)[0]
+        self.assertIn('justify-content: start', shell)
+        self.assertNotIn('margin-inline: auto', shell)
 
     def test_expanded_rail_breakpoint_matches_the_stylesheet(self):
         """Labels are only shown once the rail is wide enough to hold them."""

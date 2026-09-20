@@ -32,6 +32,13 @@
   pointer-events: none;
 }
 
+/* `.nav-badge` sets a display, which outranks the global `[hidden]` rule at
+   equal specificity, so a zero count still painted a red dot. */
+.nav-badge[hidden],
+.mobile-notif-badge[hidden] {
+  display: none;
+}
+
 .mobile-notif-badge {
   position: absolute;
   top: 4px;
