@@ -3679,12 +3679,59 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
         }
 
+        function sharedCard(message) {
+            // A shared clip or post is a card, not a pasted link -- the same
+            // card the Messages page renders, so both surfaces match.
+            const reel = message.shared_reel;
+            const post = message.shared_post;
+            if (!reel && !post) return null;
+
+            const card = document.createElement('div');
+            const author = (reel || post).user || {};
+            const avatar = escapeHTML(author.profile_photo_url || '/static/assets/default-male-avatar.svg');
+            const name = escapeHTML(author.display_name || author.username || '');
+
+            if (reel) {
+                card.className = 'shared-reel-card msg-dock-shared';
+                card.innerHTML =
+                    `<a class="shared-reel-link" href="/reels#reel-${escapeHTML(String(reel.id))}">` +
+                    `<video class="shared-reel-video" src="${escapeHTML(reel.video_url || '')}" preload="metadata" muted playsinline loop></video>` +
+                    `<div class="shared-reel-author"><img class="shared-reel-avatar" src="${avatar}" alt=""><span>${name}</span></div>` +
+                    '<div class="shared-reel-play"><svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>' +
+                    (reel.caption ? `<div class="shared-reel-caption">${escapeHTML(reel.caption)}</div>` : '') +
+                    '</a>';
+                const video = card.querySelector('video');
+                card.addEventListener('mouseenter', () => { if (video) video.play().catch(() => {}); });
+                card.addEventListener('mouseleave', () => { if (video) video.pause(); });
+                return card;
+            }
+
+            card.className = 'shared-post-card msg-dock-shared';
+            card.innerHTML =
+                `<a class="shared-post-link" href="/post/${escapeHTML(String(post.id))}">` +
+                `<div class="shared-post-author-row"><img class="shared-post-avatar" src="${avatar}" alt=""><strong>${name}</strong></div>` +
+                (post.content ? `<p class="shared-post-content">${escapeHTML(post.content)}</p>` : '') +
+                (post.image_url ? `<img class="shared-post-image" src="${escapeHTML(post.image_url)}" alt="" loading="lazy">` : '') +
+                '</a>';
+            return card;
+        }
+
         function appendBubble(message, viewerId) {
             const id = Number(message.id) || 0;
             if (id && id <= lastMessageId) return;
             if (id) lastMessageId = id;
 
+            const empty = log.querySelector('.msg-dock-empty, .msg-dock-error, .popover-loading');
+            if (empty) empty.remove();
+
             const outgoing = String(message.sender_id) === String(viewerId);
+            const card = sharedCard(message);
+            if (card) {
+                card.classList.add(outgoing ? 'msg-dock-shared-out' : 'msg-dock-shared-in');
+                log.appendChild(card);
+                return;
+            }
+
             const bubble = document.createElement('div');
             bubble.className = `msg-dock-bubble ${outgoing ? 'msg-dock-bubble-out' : 'msg-dock-bubble-in'}`;
             if (message.content) bubble.textContent = message.content;
@@ -3695,8 +3742,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 image.loading = 'lazy';
                 bubble.appendChild(image);
             }
-            const empty = log.querySelector('.msg-dock-empty, .msg-dock-error, .popover-loading');
-            if (empty) empty.remove();
             log.appendChild(bubble);
         }
 

@@ -213,6 +213,42 @@
   border-radius: var(--radius-md);
 }
 
+/* A shared clip or post arrives as the same card the Messages page renders;
+   it only needs the dock's alignment and a size that fits the window. */
+
+.msg-dock-shared {
+  max-width: 78%;
+}
+
+.msg-dock-shared-in {
+  align-self: flex-start;
+}
+
+.msg-dock-shared-out {
+  align-self: flex-end;
+}
+
+.msg-dock-log .shared-reel-card {
+  width: 168px;
+  height: 226px;
+  max-width: 100%;
+  max-height: none;
+}
+
+.msg-dock-log .shared-post-card {
+  padding: var(--space-4);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--lvl-surface-raised);
+}
+
+.msg-dock-log .shared-post-image {
+  display: block;
+  width: 100%;
+  margin-top: var(--space-3);
+  border-radius: var(--radius-sm);
+}
+
 .msg-dock-empty,
 .msg-dock-error {
   margin: auto;

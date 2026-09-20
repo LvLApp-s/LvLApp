@@ -6633,3 +6633,53 @@ class ClipPlayerTests(unittest.TestCase):
         self.assertIn('.right-rail:has(.trending-panel)', css)
         panel = css.split('\n.trending-panel {', 1)[1].split('\n}', 1)[0]
         self.assertIn('flex: 1 1 auto', panel)
+
+
+class SharedClipInMessagesTests(unittest.TestCase):
+    """A shared clip is a card in every messages surface, not a pasted link."""
+
+    def setUp(self):
+        zapp.app.config.update(TESTING=True, WTF_CSRF_ENABLED=False)
+        self.client = zapp.app.test_client()
+        self.viewer = {"id": 7, "username": "demo", "display_name": "Demo"}
+
+    def test_dock_renders_the_card_instead_of_the_url(self):
+        js = Path("static/js/script.js").read_text(encoding="utf-8")
+        dock = js.split('function initMessageDock()', 1)[1]
+        self.assertIn('function sharedCard(message)', dock)
+        self.assertIn('shared-reel-card', dock)
+        self.assertIn('shared-post-card', dock)
+        # The card replaces the bubble rather than sitting next to the link.
+        self.assertIn('if (card) {', dock)
+
+    def test_sending_a_clip_returns_it_as_a_card(self):
+        """Without this the sender saw a raw link until the next reload."""
+        source = Path("app.py").read_text(encoding="utf-8")
+        send = source.split("@app.route('/send_message'", 1)[1].split("@app.route", 1)[0]
+        self.assertIn('attach_shared_posts([res.data[0]])', send)
+
+    def test_a_clip_link_in_a_message_resolves_to_the_clip(self):
+        captured = {}
+
+        class Table:
+            def __init__(self, name):
+                self.name = name
+            def select(self, *a, **k): return self
+            def in_(self, column, values):
+                captured[self.name] = list(values)
+                return self
+            def execute(self):
+                if self.name == 'reels':
+                    return SimpleNamespace(data=[{"id": 3, "video_url": "/x.mp4", "caption": "hi",
+                                                  "user": {"display_name": "Ada"}}])
+                return SimpleNamespace(data=[])
+
+        class Supabase:
+            def table(self, name): return Table(name)
+
+        messages = [{"id": 1, "content": "Check this out! https://lvlapp.vercel.app/reels#reel-3"}]
+        with patch.object(zapp, "supabase", Supabase()):
+            attached = zapp.attach_shared_posts(messages)
+
+        self.assertEqual(captured.get('reels'), [3])
+        self.assertEqual(attached[0]['shared_reel']['id'], 3)

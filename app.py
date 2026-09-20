@@ -198,7 +198,7 @@ ATTACHMENT_CONTENT_TYPES = {
     'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'txt': 'text/plain',
 }
-ASSET_VERSION = "146"
+ASSET_VERSION = "147"
 HOME_REEL_PREVIEW_LIMIT = 12
 HOME_MEDIA_PREVIEW_LIMIT = 12
 
@@ -5084,7 +5084,10 @@ def send_message():
                     create_notification(receiver_id, viewer['id'], 'message', message_id=msg_id)
                     streak_count, streak_xp = update_streak(viewer['id'], receiver_id)
                     if request.form.get('ajax') == '1':
-                        return jsonify({'success': True, 'message': res.data[0], 'streak': streak_count, 'streak_xp': streak_xp})
+                        # A shared clip or post has to come back as a card, or
+                        # the sender sees a raw link until they reload.
+                        sent = attach_shared_posts([res.data[0]])[0]
+                        return jsonify({'success': True, 'message': sent, 'streak': streak_count, 'streak_xp': streak_xp})
             except Exception as e:
                 if request.form.get('ajax') == '1':
                     return jsonify({'success': False, 'error': handle_db_error(e)}), 400
