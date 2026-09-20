@@ -23,7 +23,7 @@
       {% endif %}
       {% for conv in conversations %}
         <a href="{{ url_for('messages', u=conv.username) }}" class="conversation-item {% if target_username == conv.username %}active{% endif %} {% if not conv.is_read and conv.id != viewer.id %}unread{% endif %}">
-          <img class="avatar small-avatar" src="{{ conv.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" />
+          <img class="avatar small-avatar" src="{{ conv.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" loading="lazy" decoding="async" />
           <div class="conv-info">
             <div class="conv-header">
               <strong>{{ conv.display_name }}</strong>{{ verified_badge(conv, size='sm') }}
@@ -86,7 +86,7 @@
                 <a href="{{ url_for('reels') }}#reel-{{ msg.shared_reel.id }}" class="shared-reel-link">
                   <video src="{{ msg.shared_reel.video_url }}" class="shared-reel-video" preload="metadata" muted playsinline loop onmouseover="this.play()" onmouseout="this.pause()"></video>
                   <div class="shared-reel-author">
-                    <img class="shared-reel-avatar" src="{{ msg.shared_reel.user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="">
+                    <img class="shared-reel-avatar" src="{{ msg.shared_reel.user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="" loading="lazy" decoding="async">
                     <span>{{ msg.shared_reel.user.display_name }}</span>
                   </div>
                   <div class="shared-reel-play">
@@ -102,13 +102,13 @@
               <div class="shared-post-card">
                 <a href="{{ url_for('post', id=msg.shared_post.id) }}" class="shared-post-link">
                   <div class="shared-post-author-row">
-                    <img class="shared-post-avatar" src="{{ msg.shared_post.user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="">
+                    <img class="shared-post-avatar" src="{{ msg.shared_post.user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="" loading="lazy" decoding="async">
                     <strong>{{ msg.shared_post.user.display_name }}</strong>
                     <span class="shared-post-handle">@{{ msg.shared_post.user.username }}</span>
                   </div>
                   <p class="shared-post-content">{{ msg.shared_post.content }}</p>
                   {% if msg.shared_post.image_url %}
-                    <img class="shared-post-image" src="{{ msg.shared_post.image_url }}" alt="">
+                    <img class="shared-post-image" src="{{ msg.shared_post.image_url }}" alt="" loading="lazy" decoding="async">
                   {% endif %}
                 </a>
               </div>
@@ -231,7 +231,7 @@
               {% endif %}
               {% for person in message_people %}
                 <a href="{{ url_for('messages', u=person.username) }}" class="user-select-item">
-                  <img class="avatar small-avatar" src="{{ person.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" />
+                  <img class="avatar small-avatar" src="{{ person.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" loading="lazy" decoding="async" />
                   <div class="user-select-info">
                     <strong>{{ person.display_name }}</strong>
                     <span>@{{ person.username }}</span>
@@ -254,7 +254,7 @@
             {% endif %}
             {% for u in all_users %}
               <a href="{{ url_for('messages', u=u.username) }}" class="user-select-item">
-                <img class="avatar small-avatar" src="{{ u.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" />
+                <img class="avatar small-avatar" src="{{ u.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" loading="lazy" decoding="async" />
                 <div class="user-select-info">
                   <strong>{{ u.display_name }}</strong>
                   <span>@{{ u.username }}</span>
@@ -288,7 +288,7 @@
       {% endif %}
       {% for u in all_users %}
         <a href="{{ url_for('messages', u=u.username) }}" class="user-select-item">
-          <img class="avatar small-avatar" src="{{ u.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" />
+          <img class="avatar small-avatar" src="{{ u.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" loading="lazy" decoding="async" />
           <div class="user-select-info">
             <strong>{{ u.display_name }}</strong>
             <span>@{{ u.username }}</span>

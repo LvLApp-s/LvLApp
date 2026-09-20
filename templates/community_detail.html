@@ -84,7 +84,7 @@
       {% endif %}
       {% for member in members %}
         <a class="mini-user-row" href="{{ url_for('profile', username=member.user.username) }}">
-          <img class="avatar small-avatar" src="{{ member.user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" />
+          <img class="avatar small-avatar" src="{{ member.user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" loading="lazy" decoding="async" />
           <span>
             <strong>{{ member.user.display_name }}</strong>
             <small>@{{ member.user.username }} · <span data-i18n="community_role_{{ member.role }}">{{ member.role }}</span></small>

@@ -21,7 +21,7 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="target_user_id" value="{{ u.id }}">
         <button type="submit" class="user-select-item">
-          <img class="avatar small-avatar" src="{{ u.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" />
+          <img class="avatar small-avatar" src="{{ u.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" loading="lazy" decoding="async" />
           <div class="user-select-info">
             <strong>{{ u.display_name }}</strong>
             <span>@{{ u.username }}</span>

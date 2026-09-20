@@ -24,6 +24,13 @@ document.addEventListener('DOMContentLoaded', () => {
         info: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.6h.01"/></svg>'
     };
 
+    // How often a visible tab asks the server for its badge counts. This is
+    // the app's idle load: one round trip per reader, per interval, for a
+    // number that rarely moves, so it stays well clear of the feed's own
+    // refresh. It lives up here because initLiveStatusBadges() runs before the
+    // point in this file where the rest of that feature is defined.
+    const LIVE_STATUS_INTERVAL = 20000;
+
     // Polling that respects tab visibility. A backgrounded tab should not keep
     // waking serverless functions; it catches up with one fetch on return.
     function startVisiblePolling(task, intervalMs) {
@@ -2363,7 +2370,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         refresh();
-        startVisiblePolling(refresh, 8000);
+        startVisiblePolling(refresh, LIVE_STATUS_INTERVAL);
     }
 
     document.querySelectorAll('[data-post-menu-toggle]').forEach((toggle) => {

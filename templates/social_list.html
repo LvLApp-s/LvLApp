@@ -30,7 +30,7 @@
         {% for user in users %}
           <article class="person-row">
             <a class="person-main" href="{{ url_for('profile', username=user.username) }}">
-              <img class="avatar" src="{{ user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" data-i18n-alt="avatar_alt">
+              <img class="avatar" src="{{ user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" data-i18n-alt="avatar_alt" loading="lazy" decoding="async">
               <span>
                 <strong>{{ user.display_name or user.username }}</strong>{{ verified_badge(user, size='sm') }}
                 <small>

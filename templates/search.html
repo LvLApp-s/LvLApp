@@ -33,7 +33,7 @@
         {% for user in suggested_users %}
           <div class="user-result-card">
             <a href="{{ url_for('profile', username=user.username) }}">
-              <img class="avatar" src="{{ user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" />
+              <img class="avatar" src="{{ user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" loading="lazy" decoding="async" />
             </a>
             <div class="user-result-info">
               <div class="user-result-header">
@@ -76,7 +76,7 @@
           {% for user in users %}
             <div class="user-result-card">
               <a href="{{ url_for('profile', username=user.username) }}">
-                <img class="avatar" src="{{ user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" />
+                <img class="avatar" src="{{ user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" loading="lazy" decoding="async" />
               </a>
               <div class="user-result-info">
                 <div class="user-result-header">

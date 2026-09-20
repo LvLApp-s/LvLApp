@@ -6,6 +6,14 @@ from app_theme import PROFILE_COLOR_UNLOCK_LEVEL, LEVEL_COLOR_UNLOCKS, THEME_COL
 
 
 COLOR_LITERAL_RE = re.compile(r"#[0-9A-Fa-f]{3,8}")
+# static/css/bundle.css is generated from the sections by tools/build_css.py,
+# so linting it would just double-report whatever the sources say.
+GENERATED = {"bundle.css"}
+
+
+def stylesheets(root):
+    return [p for p in sorted((root / "static" / "css").glob("**/*.css"))
+            if p.name not in GENERATED]
 NEUTRAL_COLORS = {"#000", "#000000", "#fff", "#ffffff"}
 INLINE_BOX_STYLE_RE = re.compile(r'style="[^"]*(?:border-radius|border:|padding:|gap:|height:|background:)', re.I)
 
@@ -32,7 +40,7 @@ class ThemeTokenTests(unittest.TestCase):
         dark in every theme. Everything else has to go through a var().
         """
         root = Path(__file__).resolve().parents[1]
-        css = "\n".join(path.read_text(encoding="utf-8") for path in sorted((root / "static" / "css").glob("**/*.css")))
+        css = "\n".join(path.read_text(encoding="utf-8") for path in stylesheets(root))
         css_without_tokens = re.sub(r":root[^{]*\{.*?\n\}", "", css, flags=re.S)
         css_without_tokens = re.sub(r"\.timeline-reels,.*?\n\}", "", css_without_tokens, flags=re.S)
 
@@ -42,7 +50,7 @@ class ThemeTokenTests(unittest.TestCase):
         """Daylight mode must stay a flip of the primitives: no section may
         carry its own [data-theme="light"] rules."""
         root = Path(__file__).resolve().parents[1]
-        for path in sorted((root / "static" / "css").glob("**/*.css")):
+        for path in stylesheets(root):
             if path.name == "base.css":
                 continue
             with self.subTest(path=path.relative_to(root)):
@@ -74,7 +82,7 @@ class ThemeTokenTests(unittest.TestCase):
 
     def test_border_radius_uses_design_tokens(self):
         root = Path(__file__).resolve().parents[1]
-        css_paths = sorted((root / "static" / "css").glob("**/*.css"))
+        css_paths = stylesheets(root)
 
         for path in css_paths:
             with self.subTest(path=path.relative_to(root)):

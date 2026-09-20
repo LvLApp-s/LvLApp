@@ -11,7 +11,10 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-STYLESHEETS = sorted((ROOT / "static" / "css").glob("**/*.css"))
+# bundle.css is generated from these by tools/build_css.py; tests/test_css_bundle.py
+# checks it separately, so the structural guards look at the sources only.
+STYLESHEETS = [p for p in sorted((ROOT / "static" / "css").glob("**/*.css"))
+               if p.name != "bundle.css"]
 
 # `  .some-class other: value;` -- a selector where a property should be.
 SELECTOR_IN_DECLARATION_RE = re.compile(
