@@ -1160,10 +1160,9 @@ button {
     top: 0 !important;
     left: 0 !important;
     bottom: 0 !important;
-    width
-
-
-  .right-rail-wrapper rection: column !important;
+    width: 280px !important;
+    height: 100vh !important;
+    flex-direction: column !important;
     align-items: stretch !important;
     justify-content: flex-start !important;
     background: var(--bg-color) !important;
@@ -1267,10 +1266,11 @@ button {
     margin-inline: auto;
   }
 
+  /* The app shell's grid column owns this width; a second declaration here
+     only fought it (and pinned the rail to 380px on wide screens). */
   .right-rail-wrapper,
   .right-rail.community-highlights {
     display: block;
-    width: var(--shell-right);
   }
 
 }
@@ -1283,9 +1283,11 @@ button {
 
 .premium-composer .composer-footer,
 .composer .composer-actions {
- 
+  margin-top: 8px;
+  padding-top: 8px;
+}
 
-  .right-rail.community-highlights evel panel */
+/* Profile banner level panel */
 .profile-banner {
   position: relative;
   z-index: 1;
@@ -1310,9 +1312,12 @@ button {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  height: 1
+  height: 100%;
+  padding: 24px;
+}
 
-  .right-rail-wrapper h: auto;
+.profile-banner-level-card {
+  width: auto;
   min-width: 140px;
   padding: 10px 14px;
   border: 1px solid rgba(255, 255, 255, 0.16);
@@ -1424,7 +1429,6 @@ button {
 
 
   .right-rail.community-highlights {
-    width: 380px;
     padding-inline: 18px;
   }
 
@@ -1478,9 +1482,12 @@ button {
   min-width: 0;
 }
 
-.profile-a
+.profile-actions form {
+  margin: 0;
+}
 
-  .right-rail.community-highlights ems: center;
+.profile-names h1 {
+  align-items: center;
   gap: 10px;
   min-width: 0;
   line-height: 1.2;

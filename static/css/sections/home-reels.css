@@ -32,26 +32,18 @@
   position: relative;
   display: grid;
   gap: 14px;
-  max-height: min(62vh, 560px);
+  max-height: min(72vh, 660px);
   overflow-y: auto;
   overscroll-behavior: contain;
   scroll-snap-type: y mandatory;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-color) transparent;
-  padding-right: 4px;
+  /* No scrollbar gutter: it left the clip 4px narrower than the card above
+     it, which read as a gap down the right edge of the rail. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .home-reel-slides::-webkit-scrollbar {
-  width: 5px;
-}
-
-.home-reel-slides::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.home-reel-slides::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: var(--radius-round);
+  display: none;
 }
 
 .home-reel-slide {
@@ -74,7 +66,9 @@
   background: var(--lvl-surface-raised);
   aspect-ratio: 9 / 16;
   width: 100%;
-  max-height: 340px;
+  /* Follows the viewport so the clip fills the rail instead of leaving a
+     band of empty rail under it. */
+  max-height: min(52vh, 460px);
 }
 
 /* The frame is the play/pause control now. */
@@ -269,7 +263,6 @@
 
   .app-shell:has(.timeline-messages):has(.home-reel-panel) .right-rail-wrapper {
     display: block !important;
-    width: var(--shell-right) !important;
   }
 
   .app-shell:has(.timeline-messages):has(.home-reel-panel) .timeline-messages {
@@ -285,7 +278,6 @@
 
   .app-shell:has(.timeline-reels):has(.home-media-panel) .right-rail-wrapper {
     display: block !important;
-    width: var(--shell-right) !important;
   }
 
   .app-shell:has(.timeline-reels):has(.home-media-panel) .timeline-reels {

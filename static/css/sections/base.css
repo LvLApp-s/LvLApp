@@ -202,7 +202,8 @@
   --shell-left-collapsed: 88px;
   --shell-main: 760px;
   --shell-main-wide: 920px;
-  --shell-right: 350px;
+  --shell-right: 380px;
+  --shell-right-wide: 420px;
   /* Desktop sticky header: min-height plus its 1px bottom border. Anything
      that sticks below it offsets by this. */
   --topbar-height: 65px;
@@ -569,7 +570,7 @@ a:hover {
     grid-template-columns:
       var(--shell-left-expanded)
       minmax(0, var(--shell-main-wide))
-      var(--shell-right);
+      var(--shell-right-wide);
   }
 }
 
@@ -794,7 +795,8 @@ a:hover {
 }
 
 .right-rail {
-  width: var(--shell-right);
+  /* The grid column is the single source of truth for this width. */
+  width: 100%;
   padding: 0 20px;
   position: sticky;
   top: 0;
