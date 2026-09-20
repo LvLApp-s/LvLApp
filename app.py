@@ -2870,7 +2870,28 @@ def get_community_timeline_context(viewer, requested_tab=None, limit=POSTS_PER_P
         'counts': {key: len(value) for key, value in feeds.items()}
     }
 
-def get_explore_context(viewer):
+EXPLORE_PARTS = ('metrics', 'recent_members', 'popular_users',
+                 'trending_posts', 'communities', 'activity_items')
+
+
+def get_explore_context(viewer, parts=None):
+    """Build only the parts of the explore data the caller is going to render.
+
+    The whole context costs around ten round trips, five of them exact counts
+    over entire tables, and most callers show a slice of it: the clips page
+    wants trending posts and nothing else, messages wants three lists and no
+    counts. Passing `parts` skips the queries behind everything else. Every
+    key is still present, at its empty value, so a caller reading a part it
+    did not ask for gets an empty list rather than a KeyError.
+    """
+    wanted = set(EXPLORE_PARTS if parts is None else parts)
+    unknown = wanted - set(EXPLORE_PARTS)
+    if unknown:
+        raise ValueError(f"unknown explore parts: {sorted(unknown)}")
+    # The activity feed is built from these two, so asking for it asks for them.
+    if 'activity_items' in wanted:
+        wanted |= {'trending_posts', 'recent_members'}
+
     context = {
         'metrics': {'users': 0, 'profiles': 0, 'posts': 0, 'comments': 0, 'likes': 0, 'follows': 0, 'messages': 0, 'notifications': 0, 'communities': 0},
         'recent_members': [],
@@ -2879,33 +2900,38 @@ def get_explore_context(viewer):
         'communities': [],
         'activity_items': []
     }
-    try:
-        users_count = supabase.table('users').select('id', count='exact').execute()
-        posts_count = supabase.table('posts').select('id', count='exact').is_('deleted_at', 'null').execute()
-        follows_count = supabase.table('follows').select('follower_id', count='exact').execute()
-        likes_count = supabase.table('likes').select('user_id', count='exact').execute()
-        comments_count = supabase.table('comments').select('id', count='exact').execute()
-        context['metrics'].update({
-            'users': users_count.count if users_count else 0,
-            'profiles': users_count.count if users_count else 0,
-            'posts': posts_count.count if posts_count else 0,
-            'follows': follows_count.count if follows_count else 0,
-            'likes': likes_count.count if likes_count else 0,
-            'comments': comments_count.count if comments_count else 0
-        })
-    except Exception:
-        pass
+    if 'metrics' in wanted:
+        try:
+            users_count = supabase.table('users').select('id', count='exact').execute()
+            posts_count = supabase.table('posts').select('id', count='exact').is_('deleted_at', 'null').execute()
+            follows_count = supabase.table('follows').select('follower_id', count='exact').execute()
+            likes_count = supabase.table('likes').select('user_id', count='exact').execute()
+            comments_count = supabase.table('comments').select('id', count='exact').execute()
+            context['metrics'].update({
+                'users': users_count.count if users_count else 0,
+                'profiles': users_count.count if users_count else 0,
+                'posts': posts_count.count if posts_count else 0,
+                'follows': follows_count.count if follows_count else 0,
+                'likes': likes_count.count if likes_count else 0,
+                'comments': comments_count.count if comments_count else 0
+            })
+        except Exception:
+            pass
 
-    try:
-        recent_res = supabase.table('users').select('*').order('created_at', desc=True).limit(8).execute()
-        context['recent_members'] = apply_forced_user_levels(recent_res.data if recent_res and recent_res.data else [])
-    except Exception:
-        pass
+    if 'recent_members' in wanted:
+        try:
+            recent_res = supabase.table('users').select('*').order('created_at', desc=True).limit(8).execute()
+            context['recent_members'] = apply_forced_user_levels(recent_res.data if recent_res and recent_res.data else [])
+        except Exception:
+            pass
 
-    context['popular_users'] = get_popular_users(viewer['id'], 5)
-    context['trending_posts'] = get_trending_posts(viewer['id'], 20)
-    context['communities'] = get_communities(6)
-    context['metrics']['communities'] = len(context['communities'])
+    if 'popular_users' in wanted:
+        context['popular_users'] = get_popular_users(viewer['id'], 5)
+    if 'trending_posts' in wanted:
+        context['trending_posts'] = get_trending_posts(viewer['id'], 20)
+    if 'communities' in wanted:
+        context['communities'] = get_communities(6)
+        context['metrics']['communities'] = len(context['communities'])
 
     for post in context['trending_posts'][:3]:
         context['activity_items'].append({
@@ -3173,7 +3199,7 @@ def reels():
     if tab not in {'for_you', 'following'}:
         tab = 'for_you'
         
-    explore = get_explore_context(viewer)
+    explore = get_explore_context(viewer, parts=('trending_posts',))
     table_ready = True
     try:
         reels_list, has_next = get_reels(viewer['id'], limit=8, page=page, tab=tab)
@@ -6611,7 +6637,7 @@ def messages():
         all_users = []
         has_older_messages = False
 
-    explore = get_explore_context(viewer)
+    explore = get_explore_context(viewer, parts=('communities', 'trending_posts', 'popular_users'))
 
     return render_template('messages.html',
                            viewer=viewer,
