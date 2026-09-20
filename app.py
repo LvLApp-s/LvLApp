@@ -2,6 +2,7 @@ import os
 import json
 import math
 import random
+import time
 import threading
 import re
 import secrets
@@ -10,7 +11,7 @@ import hashlib
 import hmac
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
-from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory, jsonify, get_flashed_messages, abort, Response
+from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory, jsonify, get_flashed_messages, abort, Response, g, has_app_context
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import HTTPException
 from dotenv import load_dotenv
@@ -199,6 +200,47 @@ ATTACHMENT_CONTENT_TYPES = {
     'txt': 'text/plain',
 }
 ASSET_VERSION = "148"
+
+# --- Per-request query cache ------------------------------------------------
+#
+# Rendering one page asks Supabase the same question several times: which
+# accounts has this viewer blocked, and which account is pinned to a forced
+# level. Each repeat is a separate HTTPS round trip from the serverless
+# function to the database, so on a page with a feed and a sidebar the
+# duplicates add up to real waiting.
+#
+# The answers cannot change midway through a single request, so they are
+# memoised on flask.g and thrown away when the request ends. A handler that
+# writes to the underlying table clears the entry it invalidated, which keeps
+# a read later in that same request honest.
+
+
+def request_cached(key, produce):
+    """Return produce()'s value once per request, keyed by `key`."""
+    if not has_app_context():
+        return produce()
+    cache = getattr(g, '_lvl_query_cache', None)
+    if cache is None:
+        cache = {}
+        g._lvl_query_cache = cache
+    if key not in cache:
+        cache[key] = produce()
+    return cache[key]
+
+
+def clear_request_cache(prefix=None):
+    """Drop memoised answers a write has just invalidated."""
+    if not has_app_context():
+        return
+    cache = getattr(g, '_lvl_query_cache', None)
+    if not cache:
+        return
+    if prefix is None:
+        cache.clear()
+        return
+    for key in [k for k in cache if isinstance(k, tuple) and k and k[0] == prefix]:
+        del cache[key]
+
 HOME_REEL_PREVIEW_LIMIT = 12
 HOME_MEDIA_PREVIEW_LIMIT = 12
 
@@ -709,7 +751,32 @@ def apply_forced_user_levels(value, _seen=None):
             apply_forced_user_levels(nested, _seen)
     return value
 
+FORCED_LEVEL_USERS_TTL = 300
+_forced_level_users_cache = {'at': 0.0, 'users': None}
+
+
 def get_forced_level_users():
+    """The accounts pinned to a forced level, as four alias lookups.
+
+    Those four queries are four round trips, and they run for every page that
+    renders the leaderboard -- which is every page. The answer is a fixed set
+    of aliases that changes only when someone takes or gives up one of those
+    names, so it is held briefly in the function instance's memory. A warm
+    instance then serves most requests without asking at all, and a rename
+    shows up within FORCED_LEVEL_USERS_TTL seconds.
+    """
+    now = time.time()
+    cached = _forced_level_users_cache
+    if cached['users'] is not None and now - cached['at'] < FORCED_LEVEL_USERS_TTL:
+        return list(cached['users'])
+
+    users = request_cached(('forced_level_users',), _fetch_forced_level_users)
+    _forced_level_users_cache['users'] = list(users)
+    _forced_level_users_cache['at'] = now
+    return list(users)
+
+
+def _fetch_forced_level_users():
     forced_users = {}
     queries = [
         ('username', 'sin'),
@@ -1567,19 +1634,31 @@ def get_user_safety_state(viewer_id, target_user_id):
     state['interaction_blocked'] = state['blocked'] or state['blocked_by']
     return state
 
-def blocked_user_ids_for_viewer(viewer_id, candidate_ids=None, include_mutes=True):
-    if not viewer_id:
-        return set()
-    candidate_set = {value for value in (candidate_ids or []) if value and value != viewer_id}
-    hidden_ids = set()
-    try:
+def safety_action_rows(viewer_id, include_mutes=True):
+    """Every block (and optionally mute) either side of this viewer.
+
+    The rows do not depend on which candidates the caller is filtering, so one
+    request asks for them once however many lists it renders.
+    """
+    def fetch():
         query = supabase.table('user_safety_actions').select('actor_id,target_user_id,action_type').or_(f"actor_id.eq.{viewer_id},target_user_id.eq.{viewer_id}")
         if include_mutes:
             query = query.in_('action_type', ['block', 'mute'])
         else:
             query = query.eq('action_type', 'block')
         res = query.execute()
-        for row in res.data or []:
+        return list(res.data or [])
+
+    return request_cached(('safety_actions', viewer_id, bool(include_mutes)), fetch)
+
+
+def blocked_user_ids_for_viewer(viewer_id, candidate_ids=None, include_mutes=True):
+    if not viewer_id:
+        return set()
+    candidate_set = {value for value in (candidate_ids or []) if value and value != viewer_id}
+    hidden_ids = set()
+    try:
+        for row in safety_action_rows(viewer_id, include_mutes):
             actor_id = row.get('actor_id')
             target_id = row.get('target_user_id')
             action_type = row.get('action_type')
@@ -5791,6 +5870,7 @@ def admin_dashboard():
                     try:
                         log_admin_action(viewer['username'], 'dismiss_report', report_id)
                         supabase.table('user_safety_actions').delete().eq('id', report_id).execute()
+                        clear_request_cache('safety_actions')
                         flash("Report dismissed successfully.", "success")
                     except Exception as exc:
                         flash(f"Error dismissing report: {exc}", "error")
@@ -5802,6 +5882,7 @@ def admin_dashboard():
                     try:
                         log_admin_action(viewer['username'], 'delete_post_global', post_id)
                         supabase.table('user_safety_actions').delete().eq('post_id', post_id).execute()
+                        clear_request_cache('safety_actions')
                         supabase.table('posts').delete().eq('id', post_id).execute()
                         flash("Post removed successfully.", "success")
                     except Exception as exc:
@@ -5936,6 +6017,7 @@ def admin_dashboard():
                     try:
                         log_admin_action(viewer['username'], 'delete_user_global', user_id)
                         supabase.table('user_safety_actions').delete().or_(f"actor_id.eq.{user_id},target_user_id.eq.{user_id}").execute()
+                        clear_request_cache('safety_actions')
                         supabase.table('posts').delete().eq('user_id', user_id).execute()
                         supabase.table('messages').delete().or_(f"sender_id.eq.{user_id},receiver_id.eq.{user_id}").execute()
                         supabase.table('verification_requests').delete().eq('user_id', user_id).execute()
@@ -6354,11 +6436,13 @@ def safety_action():
         active = True
         if existing_res.data and action_type in {'block', 'mute'}:
             supabase.table('user_safety_actions').delete().eq('id', existing_res.data[0]['id']).execute()
+            clear_request_cache('safety_actions')
             label = {'block': 'unblocked', 'mute': 'unmuted'}[action_type]
             active = False
         else:
             if not existing_res.data:
                 supabase.table('user_safety_actions').insert(payload).execute()
+                clear_request_cache('safety_actions')
             if action_type == 'block':
                 first = min(viewer['id'], target_user_id)
                 second = max(viewer['id'], target_user_id)
