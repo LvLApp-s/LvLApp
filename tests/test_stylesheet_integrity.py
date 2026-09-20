@@ -73,11 +73,17 @@ class ShellWidthTests(unittest.TestCase):
                 for block in re.findall(r"\.right-rail[^{]*\{([^}]*)\}", text):
                     self.assertNotRegex(block, r"(?<!max-)(?<!min-)width:\s*(?:\d+px|var\(--shell-right)")
 
-    def test_wide_screens_get_a_wider_rail(self):
+    def test_the_rail_grows_with_the_window(self):
+        """A left-anchored shell must not leave a dead strip on the right, so
+        the rail scales with the viewport between a floor and a ceiling."""
         base = (ROOT / "static" / "css" / "sections" / "base.css").read_text(encoding="utf-8")
-        self.assertIn("--shell-right-wide", base)
-        wide = base.split("@media (min-width: 1600px) {", 1)[1].split("\n}", 1)[0]
-        self.assertIn("var(--shell-right-wide)", wide)
+        self.assertRegex(base, r"--shell-right:\s*clamp\(")
+
+    def test_the_feed_takes_the_space_the_rails_do_not(self):
+        base = (ROOT / "static" / "css" / "sections" / "base.css").read_text(encoding="utf-8")
+        shell = base.split("\n.app-shell {", 1)[1].split("\n}", 1)[0]
+        self.assertIn("minmax(0, var(--shell-main-max))", shell)
+        self.assertIn("justify-content: start", shell)
 
     def test_clip_panel_has_no_scrollbar_gutter(self):
         """The gutter made the clip 4px narrower than the card above it."""

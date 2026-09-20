@@ -202,8 +202,12 @@
   --shell-left-collapsed: 88px;
   --shell-main: 760px;
   --shell-main-wide: 920px;
-  --shell-right: 380px;
-  --shell-right-wide: 420px;
+  /* Past this the feed stops growing: a post column wider than this reads
+     like a spreadsheet row. */
+  --shell-main-max: 1200px;
+  /* The rail grows with the window instead of stopping at a fixed width, so
+     a left-anchored shell has no dead strip on the right. */
+  --shell-right: clamp(380px, 28vw, 560px);
   /* Desktop sticky header: min-height plus its 1px bottom border. Anything
      that sticks below it offsets by this. */
   --topbar-height: 65px;
@@ -521,12 +525,12 @@ a:hover {
 
 .app-shell {
   display: grid;
+  /* The feed takes whatever the two rails do not: the shell always spans the
+     window, so there is nothing left over at either edge. */
   grid-template-columns:
     var(--shell-left-expanded)
-    minmax(0, var(--shell-main))
+    minmax(0, var(--shell-main-max))
     var(--shell-right);
-  /* The shell is pinned to the left edge: the rail starts at x=0 and the
-     leftover width stays on the right instead of being split in two. */
   justify-content: start;
   align-items: stretch;
   width: 100%;
@@ -539,7 +543,7 @@ a:hover {
 .app-shell:not(:has(.right-rail)) {
   grid-template-columns:
     var(--shell-left-expanded)
-    minmax(0, var(--shell-main-wide))
+    minmax(0, var(--shell-main-max))
     0;
 }
 
@@ -560,18 +564,6 @@ a:hover {
 
 .app-shell:not(:has(.right-rail)) .right-rail-wrapper {
   display: none;
-}
-
-/* Very wide screens: the shell is left-anchored, so give the extra width to
-   the feed (up to the readable maximum) instead of leaving it beside the
-   right rail. */
-@media (min-width: 1600px) {
-  .app-shell {
-    grid-template-columns:
-      var(--shell-left-expanded)
-      minmax(0, var(--shell-main-wide))
-      var(--shell-right-wide);
-  }
 }
 
 /* Tablet and small laptop: collapse the rail to icons, keep the right rail. */
@@ -597,12 +589,11 @@ a:hover {
 
 /* Narrow laptop / split screen: drop the right rail entirely. */
 @media (max-width: 1099px) {
-  /* Cap the feed so it stays readable once the right rail is gone. */
   .app-shell,
   .app-shell:not(:has(.right-rail)) {
     grid-template-columns:
       var(--shell-left-collapsed)
-      minmax(0, var(--shell-main-wide))
+      minmax(0, 1fr)
       0;
   }
 

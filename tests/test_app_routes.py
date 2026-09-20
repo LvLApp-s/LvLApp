@@ -6075,11 +6075,14 @@ class RailAndPopoverTests(unittest.TestCase):
         css = Path("static/css/sections/notification-badge.css").read_text(encoding="utf-8")
         self.assertIn('.nav-badge[hidden]', css)
 
-    def test_shell_is_anchored_to_the_left_edge(self):
+    def test_shell_is_anchored_to_the_left_edge_and_fills_the_window(self):
         css = Path("static/css/sections/base.css").read_text(encoding="utf-8")
         shell = css.split('\n.app-shell {', 1)[1].split('}', 1)[0]
         self.assertIn('justify-content: start', shell)
         self.assertNotIn('margin-inline: auto', shell)
+        # The feed is elastic, so the rails and the feed together span the
+        # viewport instead of ending in an empty strip.
+        self.assertIn('minmax(0, var(--shell-main-max))', shell)
 
     def test_expanded_rail_breakpoint_matches_the_stylesheet(self):
         """Labels are only shown once the rail is wide enough to hold them."""

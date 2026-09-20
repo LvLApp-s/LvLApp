@@ -67,8 +67,9 @@
   aspect-ratio: 9 / 16;
   width: 100%;
   /* Follows the viewport so the clip fills the rail instead of leaving a
-     band of empty rail under it. */
-  max-height: min(52vh, 460px);
+     band of empty rail under it, and stays portrait now that the rail is
+     wider. */
+  max-height: min(64vh, 620px);
 }
 
 /* The frame is the play/pause control now. */
@@ -256,9 +257,12 @@
 }
 
 @media (min-width: 1281px) {
+  /* The shell's own columns apply; this page only needs the rail back. */
   .app-shell:has(.timeline-messages):has(.home-reel-panel) {
-    grid-template-columns: auto minmax(0, 760px) var(--shell-right) !important;
-    max-width: 1385px !important;
+    grid-template-columns:
+      var(--shell-left-expanded)
+      minmax(0, var(--shell-main-max))
+      var(--shell-right) !important;
   }
 
   .app-shell:has(.timeline-messages):has(.home-reel-panel) .right-rail-wrapper {
@@ -266,14 +270,16 @@
   }
 
   .app-shell:has(.timeline-messages):has(.home-reel-panel) .timeline-messages {
-    width: 760px !important;
-    max-width: 760px !important;
+    width: 100% !important;
+    max-width: none !important;
     border-right: 1px solid var(--border-color);
   }
 
   .app-shell:has(.timeline-reels):has(.home-media-panel) {
-    grid-template-columns: auto minmax(0, 760px) var(--shell-right) !important;
-    max-width: 1385px !important;
+    grid-template-columns:
+      var(--shell-left-expanded)
+      minmax(0, var(--shell-main-max))
+      var(--shell-right) !important;
   }
 
   .app-shell:has(.timeline-reels):has(.home-media-panel) .right-rail-wrapper {
@@ -281,12 +287,8 @@
   }
 
   .app-shell:has(.timeline-reels):has(.home-media-panel) .timeline-reels {
-    width: 760px;
-    max-width: 760px;
+    width: 100%;
+    max-width: none;
     border-right: 1px solid var(--border-color);
-  }
-
-  .app-shell:has(.timeline-reels):has(.home-media-panel) .reels-page {
-    max-width: 760px;
   }
 }
