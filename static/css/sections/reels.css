@@ -118,8 +118,7 @@
 .reel-video-frame {
   background: var(--lvl-black);
   position: relative;
-  /* One portrait stage, as tall as the viewport allows. */
-  width: min(calc(var(--max-reel-height) * 9 / 16), 460px, 100%);
+  width: 100%;
   height: auto;
   max-height: var(--max-reel-height);
   aspect-ratio: 9 / 16;
@@ -281,16 +280,43 @@
   text-decoration: none;
 }
 
+/* --- Stage: video plus the action column beside it ------------------------ */
+/* Instagram's web player keeps the actions next to the clip rather than on
+   top of it, so nothing covers the picture. On a phone the video is
+   full-bleed and the column goes back to overlaying it. */
+
+.reel-stage {
+  position: relative;
+  display: block;
+  /* The stage owns the portrait size; the frame fills it. */
+  width: min(calc(var(--max-reel-height) * 9 / 16), 460px, 100%);
+  max-width: 100%;
+}
+
+/* Anchored outside the video rather than laid out beside it, so the clip
+   itself stays centred in the column. */
 .reel-actions {
   position: absolute;
-  right: 10px;
-  bottom: 12px;
+  inset-inline-start: 100%;
+  inset-block-end: var(--space-8);
   z-index: 4;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
-  width: 44px;
+  gap: var(--space-9);
+  width: 48px;
+  margin-inline-start: var(--space-6);
+}
+
+/* The sound toggle stays on the video, bottom right, as it does there. */
+.reel-mute-float {
+  position: absolute;
+  right: var(--space-5);
+  bottom: var(--space-5);
+  z-index: 5;
+  border-radius: var(--radius-round);
+  background: var(--lvl-black-45) !important;
+  backdrop-filter: blur(6px);
 }
 
 .reel-actions form {
@@ -1186,12 +1212,28 @@
     padding: 0;
   }
 
+  .reel-stage {
+    display: block;
+    width: 100%;
+  }
+
   .reel-video-frame {
     width: 100%;
     height: calc(100dvh - 64px - var(--reels-mobile-header) - var(--mobile-nav-clearance));
     max-height: none;
     border: 0;
     border-radius: 0;
+  }
+
+  /* No room beside the video on a phone, so the column overlays it again. */
+  .reel-actions {
+    position: absolute;
+    inset-inline-start: auto;
+    inset-inline-end: var(--space-4);
+    inset-block-end: var(--space-9);
+    width: 44px;
+    gap: var(--space-6);
+    margin-inline-start: 0;
   }
 
   .reel-video {

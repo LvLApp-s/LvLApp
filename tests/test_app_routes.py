@@ -6578,3 +6578,58 @@ class RightRailCompositionTests(unittest.TestCase):
         self.assertIn('class="right-rail"', html)
         self.assertIn('trending-panel', html)
         self.assertNotIn('data-home-media-panel', html)
+
+
+class ClipPlayerTests(unittest.TestCase):
+    """The clip player follows Reels: one portrait stage, actions beside it."""
+
+    def setUp(self):
+        zapp.app.config.update(TESTING=True, WTF_CSRF_ENABLED=False)
+        self.viewer = {"id": 7, "username": "demo", "display_name": "Demo User",
+                       "profile_photo_url": "", "level": 3}
+
+    def card(self):
+        reel = {"id": 5, "video_url": "/x.mp4", "caption": "hi", "like_count": 2,
+                "comment_count": 1, "view_count": 9, "viewer_liked": False,
+                "viewer_bookmarked": False, "is_owner": False, "is_demo": False,
+                "author": {"id": 8, "username": "ada", "display_name": "Ada", "level": 4,
+                           "profile_photo_url": ""}}
+        with zapp.app.test_request_context("/"):
+            return zapp.render_template("_reel_card.html", reel=reel, viewer=self.viewer)
+
+    def test_actions_sit_outside_the_video(self):
+        """They used to overlay the picture; on the web Reels keeps them in a
+        column beside it."""
+        html = self.card()
+        frame = html.split('<div class="reel-video-frame">', 1)[1].split('<aside class="reel-actions"', 1)[0]
+        self.assertIn('reel-stage', html)
+        self.assertNotIn('<aside class="reel-actions"', frame)
+        self.assertIn('reel-mute-float', frame)
+
+    def test_stage_stays_portrait_for_every_clip(self):
+        """A landscape source used to reshape the stage into a wide box."""
+        js = Path("static/js/script.js").read_text(encoding="utf-8")
+        self.assertNotIn('adjustAspectRatio', js)
+        css = Path("static/css/sections/reels.css").read_text(encoding="utf-8")
+        stage = css.split('\n.reel-stage {', 1)[1].split('\n}', 1)[0]
+        self.assertIn('9 / 16', css.split('.reel-video-frame {', 1)[1].split('}', 1)[0])
+        self.assertIn('width: min(', stage)
+
+    def test_video_fills_the_stage(self):
+        css = Path("static/css/sections/reels.css").read_text(encoding="utf-8")
+        video = css.split('\n.reel-video {', 1)[1].split('\n}', 1)[0]
+        self.assertIn('object-fit: cover', video)
+
+    def test_double_tap_like_is_bound_to_the_surface_that_receives_clicks(self):
+        """`.reel-play-toggle` covers the video, so binding the tap logic to
+        the video alone meant double-tap-to-like never fired."""
+        js = Path("static/js/script.js").read_text(encoding="utf-8")
+        self.assertIn("const tapSurface = card.querySelector('[data-reel-play]') || video", js)
+        self.assertIn('tapSurface.addEventListener', js)
+        self.assertIn('triggerClipDoubleTapBurst', js)
+
+    def test_trending_panel_fills_a_rail_it_owns(self):
+        css = Path("static/css/sections/components.css").read_text(encoding="utf-8")
+        self.assertIn('.right-rail:has(.trending-panel)', css)
+        panel = css.split('\n.trending-panel {', 1)[1].split('\n}', 1)[0]
+        self.assertIn('flex: 1 1 auto', panel)

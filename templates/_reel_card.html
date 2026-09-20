@@ -6,6 +6,7 @@
          data-reel-id="{{ reel.id }}"
          data-autoplay-next="{{ 'true' if reel.autoplay_next else 'false' }}"
          {% if not is_demo %}data-view-url="{{ url_for('record_reel_view', reel_id=reel.id) }}"{% endif %}>
+  <div class="reel-stage">
   <div class="reel-video-frame">
     <video class="reel-video"
            data-reel-video
@@ -20,6 +21,10 @@
     <button class="reel-play-toggle" type="button" data-reel-play aria-label="Play or pause clip" data-i18n-aria="reel_play_pause_aria">
       <span data-reel-play-icon data-i18n="reel_play">Play</span>
     </button>
+      <button class="reel-action-button reel-action-mute reel-mute-float" type="button" data-reel-mute aria-label="Toggle sound" data-i18n-aria="reel_toggle_sound">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+        <span data-reel-mute-icon class="sr-only" data-i18n="reel_muted">Muted</span>
+      </button>
     <div class="reel-overlay">
       <div class="reel-meta">
         <div class="reel-author">
@@ -62,11 +67,44 @@
         {% endif %}
       </div>
     </div>
+    <div class="share-modal-overlay" data-share-modal hidden>
+      <div class="share-modal-content panel">
+        <div class="share-modal-header">
+        <strong style="white-space: nowrap;" data-i18n="reel_share_send_to">Send to</strong>
+        <input type="text" class="share-search-input" data-share-search placeholder="Search..." data-i18n-placeholder="reel_share_search">
+        <button type="button" class="close-share-modal" data-close-share aria-label="Close" data-i18n-aria="nav_close">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </div>
+        <div class="share-friends-list" data-share-friends-list>
+          <p class="loading-friends" data-i18n="reel_share_loading_friends">Loading friends...</p>
+        </div>
+      </div>
+    </div>
+    {% if not is_demo %}
+    <div class="reel-comment-panel" data-reel-comment-panel aria-label="Clip comments" data-i18n-aria="reel_comments_aria">
+      <div class="reel-comment-panel-header">
+        <strong data-i18n="reel_comments">Comments</strong>
+        <button class="reel-comment-panel-close" type="button" data-reel-comment-close aria-label="Close comments" data-i18n-aria="reel_close_comments">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </div>
+      <div class="reel-comment-list" data-reel-comment-list>
+        <p class="reel-comment-empty" data-i18n="reel_loading_comments">Loading comments…</p>
+      </div>
+      <form class="reel-comment-submit-form" data-reel-comment-form
+            action="{{ url_for('add_reel_comment', reel_id=reel.id) }}" method="post"
+            data-viewer-name="{{ viewer.display_name }}"
+            data-viewer-username="{{ viewer.username }}"
+            data-viewer-avatar="{{ viewer.profile_photo_url or '' }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input class="reel-comment-input" type="text" name="comment" maxlength="280" placeholder="Add a comment…" data-i18n-placeholder="reel_comment_placeholder" autocomplete="off">
+        <button class="reel-comment-post-btn" type="submit" data-i18n="reel_comment_post">Post</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
     <aside class="reel-actions" aria-label="Clip actions" data-i18n-aria="reel_actions_aria">
-      <button class="reel-action-button reel-action-mute" type="button" data-reel-mute aria-label="Toggle sound" data-i18n-aria="reel_toggle_sound">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
-        <span data-reel-mute-icon class="sr-only" data-i18n="reel_muted">Muted</span>
-      </button>
       {% if not is_demo %}
         <form action="{{ url_for('toggle_reel_like', reel_id=reel.id) }}" method="post" class="reel-like-form" data-reel-like-form>
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -135,41 +173,5 @@
         </button>
       {% endif %}
     </aside>
-    <div class="share-modal-overlay" data-share-modal hidden>
-      <div class="share-modal-content panel">
-        <div class="share-modal-header">
-        <strong style="white-space: nowrap;" data-i18n="reel_share_send_to">Send to</strong>
-        <input type="text" class="share-search-input" data-share-search placeholder="Search..." data-i18n-placeholder="reel_share_search">
-        <button type="button" class="close-share-modal" data-close-share aria-label="Close" data-i18n-aria="nav_close">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-        </button>
-      </div>
-        <div class="share-friends-list" data-share-friends-list>
-          <p class="loading-friends" data-i18n="reel_share_loading_friends">Loading friends...</p>
-        </div>
-      </div>
-    </div>
-    {% if not is_demo %}
-    <div class="reel-comment-panel" data-reel-comment-panel aria-label="Clip comments" data-i18n-aria="reel_comments_aria">
-      <div class="reel-comment-panel-header">
-        <strong data-i18n="reel_comments">Comments</strong>
-        <button class="reel-comment-panel-close" type="button" data-reel-comment-close aria-label="Close comments" data-i18n-aria="reel_close_comments">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-        </button>
-      </div>
-      <div class="reel-comment-list" data-reel-comment-list>
-        <p class="reel-comment-empty" data-i18n="reel_loading_comments">Loading comments…</p>
-      </div>
-      <form class="reel-comment-submit-form" data-reel-comment-form
-            action="{{ url_for('add_reel_comment', reel_id=reel.id) }}" method="post"
-            data-viewer-name="{{ viewer.display_name }}"
-            data-viewer-username="{{ viewer.username }}"
-            data-viewer-avatar="{{ viewer.profile_photo_url or '' }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input class="reel-comment-input" type="text" name="comment" maxlength="280" placeholder="Add a comment…" data-i18n-placeholder="reel_comment_placeholder" autocomplete="off">
-        <button class="reel-comment-post-btn" type="submit" data-i18n="reel_comment_post">Post</button>
-      </form>
-    </div>
-    {% endif %}
   </div>
 </article>

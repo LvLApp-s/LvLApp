@@ -205,9 +205,14 @@
 /* Secondary to the feed: separated by lines and spacing, not by cards with
    their own borders. */
 
+/* On a page whose rail carries Trending alone (the clips page), the panel
+   takes the rail's remaining height instead of stopping short and leaving a
+   black band below it. */
 .trending-panel {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
+  min-height: 0;
   min-width: 0;
 }
 
@@ -220,10 +225,22 @@
 
 .trending-list {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
+  min-height: 0;
   max-height: 420px;
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+
+/* The rail is a column, so a panel can only grow if the rail lets it. */
+.right-rail:has(.trending-panel) {
+  display: flex;
+  flex-direction: column;
+}
+
+.right-rail:has(.trending-panel) .trending-list {
+  max-height: none;
 }
 
 .trending-row + .trending-row {

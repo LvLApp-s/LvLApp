@@ -2672,32 +2672,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
 
                 if (video) {
-                    const adjustAspectRatio = () => {
-                        const aspect = video.videoWidth / video.videoHeight;
-                        const frame = card.querySelector('.reel-video-frame');
-                        if (frame && aspect) {
-                            if (aspect > 1.2) {
-                                frame.style.aspectRatio = '16 / 9';
-                                frame.style.width = 'min(560px, 100%)';
-                            } else if (aspect < 0.8) {
-                                frame.style.aspectRatio = '9 / 16';
-                                frame.style.width = 'min(calc(var(--max-reel-height) * 9 / 16), 420px, 100%)';
-                            } else {
-                                frame.style.aspectRatio = '1 / 1';
-                                frame.style.width = 'min(480px, 100%)';
-                            }
-                        }
-                    };
-
-                    if (video.readyState >= 1) {
-                        adjustAspectRatio();
-                    } else {
-                        video.addEventListener('loadedmetadata', adjustAspectRatio);
-                    }
+                    // The stage stays 9:16 whatever the source is, the way Reels
+                    // and TikTok do; .reel-video covers it. It used to reshape
+                    // itself to the video, so a landscape clip turned the player
+                    // into a wide box that read as a video player, not a clip.
 
                     let lastTapTime = 0;
                     let singleTapTimer = null;
-                    video.addEventListener('click', (e) => {
+                    // `.reel-play-toggle` covers the video, so it is what a
+                    // click actually lands on; binding the tap logic to the
+                    // video alone meant double-tap-to-like never fired on a
+                    // pointer device.
+                    const tapSurface = card.querySelector('[data-reel-play]') || video;
+                    tapSurface.addEventListener('click', (e) => {
                         const currentCommentPanel = card.querySelector('[data-reel-comment-panel]');
                         const currentShareModal = card.querySelector('[data-share-modal]');
                         const commentOpen = (currentCommentPanel && currentCommentPanel.classList.contains('is-open')) || commentsAreOpen();
@@ -2788,7 +2775,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
 
-                if (playButton) playButton.addEventListener('click', togglePlay);
+                // The tap handler above already toggles play on a single tap
+                // (and likes on a double tap); a second listener here would
+                // toggle twice per click.
                 if (video) applySoundPreference(card);
                 if (muteButton && video) {
                     muteButton.addEventListener('click', () => {
