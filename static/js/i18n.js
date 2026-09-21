@@ -85,7 +85,7 @@ const TRANSLATIONS = {
     /* Search */
     search_placeholder:"Search LvL",search_no_results:"No results found",search_results_for:"Results for",
     /* General */
-    leaderboard_title:"Leaderboard",leaderboard_empty:"No community members yet.",trending_title:"Trending Posts",follow_btn:"Follow",unfollow_btn:"Unfollow",back:"Go back",no_bio:"No bio yet.",mobile_switch_account:"Switch account",mobile_add_account:"Add account",mobile_logout:"Log out",open_post:"Open post",open_clip:"Open clip",joined:"Joined",location_label:"Location",website_label:"Website",
+    leaderboard_title:"Leaderboard",leaderboard_empty:"No community members yet.",leaderboard_error:"The leaderboard could not be loaded. Refresh to try again.",trending_title:"Trending Posts",follow_btn:"Follow",unfollow_btn:"Unfollow",back:"Go back",no_bio:"No bio yet.",mobile_switch_account:"Switch account",mobile_add_account:"Add account",mobile_logout:"Log out",open_post:"Open post",open_clip:"Open clip",joined:"Joined",location_label:"Location",website_label:"Website",
     /* Safety */
     unblock_to_interact:"Unblock to interact.",cant_interact:"You can't interact with this user.",
     /* Added keys */
@@ -266,7 +266,7 @@ const TRANSLATIONS = {
     /* Arama */
     search_placeholder:"LvL'de ara",search_no_results:"Sonuç bulunamadı",search_results_for:"Arama sonuçları:",
     /* Genel */
-    leaderboard_title:"Lider Tablosu",leaderboard_empty:"Henüz topluluk üyesi yok.",trending_title:"Trend Gönderiler",follow_btn:"Takip Et",unfollow_btn:"Takibi Bırak",back:"Geri dön",no_bio:"Henüz bio yok.",mobile_switch_account:"Hesap değiştir",mobile_add_account:"Hesap ekle",mobile_logout:"Çıkış yap",open_post:"Gönderiyi aç",open_clip:"Klibi aç",joined:"Katıldı",location_label:"Konum",website_label:"Web Sitesi",
+    leaderboard_title:"Lider Tablosu",leaderboard_empty:"Henüz topluluk üyesi yok.",leaderboard_error:"Lider tablosu yüklenemedi. Yenileyip tekrar deneyin.",trending_title:"Trend Gönderiler",follow_btn:"Takip Et",unfollow_btn:"Takibi Bırak",back:"Geri dön",no_bio:"Henüz bio yok.",mobile_switch_account:"Hesap değiştir",mobile_add_account:"Hesap ekle",mobile_logout:"Çıkış yap",open_post:"Gönderiyi aç",open_clip:"Klibi aç",joined:"Katıldı",location_label:"Konum",website_label:"Web Sitesi",
     /* Güvenlik */
     unblock_to_interact:"Etkileşim için engeli kaldırın.",cant_interact:"Bu kullanıcıyla etkileşime giremezsiniz.",
     /* Added keys */
@@ -445,7 +445,7 @@ const TRANSLATIONS = {
     /* البحث */
     search_placeholder:"بحث...",search_no_results:"لا توجد نتائج",search_results_for:"نتائج البحث عن",
     /* عام */
-    leaderboard_title:"المتصدرون",leaderboard_empty:"لا يوجد أعضاء.",trending_title:"الرائجة",follow_btn:"متابعة",unfollow_btn:"إلغاء",back:"رجوع",no_bio:"لا توجد نبذة.",mobile_switch_account:"تبديل",mobile_add_account:"إضافة حساب",mobile_logout:"خروج",open_post:"فتح المنشور",open_clip:"فتح المقطع",joined:"انضم",location_label:"الموقع",website_label:"الموقع الإلكتروني",
+    leaderboard_title:"المتصدرون",leaderboard_empty:"لا يوجد أعضاء.",leaderboard_error:"تعذّر تحميل قائمة المتصدرين. حدّث الصفحة وحاول مجددًا.",trending_title:"الرائجة",follow_btn:"متابعة",unfollow_btn:"إلغاء",back:"رجوع",no_bio:"لا توجد نبذة.",mobile_switch_account:"تبديل",mobile_add_account:"إضافة حساب",mobile_logout:"خروج",open_post:"فتح المنشور",open_clip:"فتح المقطع",joined:"انضم",location_label:"الموقع",website_label:"الموقع الإلكتروني",
     /* الأمان */
     unblock_to_interact:"أزل الحجب للتفاعل.",cant_interact:"لا يمكنك التفاعل مع هذا المستخدم.",
     /* Added keys */

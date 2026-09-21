@@ -111,3 +111,70 @@ class _null:
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class HonestEmptyStateTests(unittest.TestCase):
+    """"Empty" and "could not load" must not look the same.
+
+    They rendered the same sentence -- "no community members yet" -- so a
+    failed lookup was reported to the reader as an empty community, and the
+    fault stayed invisible on the page it broke.
+    """
+
+    def setUp(self):
+        zapp.app.config.update(TESTING=True)
+        zapp._forced_level_users_cache.update({'at': 0.0, 'users': None})
+        self.client = zapp.app.test_client()
+        with self.client.session_transaction() as session:
+            session['user_id'] = 1
+
+    def test_people_are_listed_when_there_are_people(self):
+        with patch.object(zapp, 'supabase', FakeDB()):
+            html = self.client.get('/settings').data.decode()
+        self.assertIn('class="lb-row"', html)
+        self.assertNotIn('No community members yet', html)
+        self.assertNotIn('could not be loaded', html)
+
+    # The viewer is loaded from the same table, so these patch the leaderboard
+    # itself rather than breaking the whole client and landing on /auth.
+    VIEWER = {'id': 1, 'username': 'me', 'display_name': 'Me', 'level': 1,
+              'gender': 'Male', 'profile_photo_url': None, 'bio': ''}
+
+    def render_with(self, highlights_side_effect):
+        with patch.object(zapp, 'supabase', FakeDB()), \
+             patch.object(zapp, 'get_current_user', return_value=dict(self.VIEWER)), \
+             patch.object(zapp, 'get_home_reel_preview', return_value=[]), \
+             patch.object(zapp, 'get_community_highlights',
+                          side_effect=highlights_side_effect):
+            return self.client.get('/settings').data.decode()
+
+    def test_a_genuinely_empty_community_says_so(self):
+        html = self.render_with(lambda: [])
+        self.assertIn('No community members yet', html)
+        self.assertNotIn('could not be loaded', html)
+
+    def test_a_failed_lookup_says_that_instead(self):
+        def fails():
+            zapp.note_leaderboard_failure('query')
+            return []
+
+        html = self.render_with(fails)
+        self.assertIn('could not be loaded', html)
+        self.assertNotIn('No community members yet', html)
+
+    def test_the_flag_does_not_leak_into_the_next_request(self):
+        """It lives on flask.g, so a failure must not mark a later page."""
+        def fails():
+            zapp.note_leaderboard_failure('query')
+            return []
+
+        self.render_with(fails)
+        html = self.render_with(lambda: [])
+        self.assertNotIn('could not be loaded', html)
+        self.assertIn('No community members yet', html)
+
+    def test_the_message_is_translated_everywhere(self):
+        i18n = (ROOT_JS := __import__('pathlib').Path(zapp.__file__).resolve().parent
+                / 'static' / 'js' / 'i18n.js').read_text(encoding='utf-8')
+        self.assertEqual(i18n.count('leaderboard_error:'), 3,
+                         'the message is missing from a language')

@@ -255,6 +255,12 @@
              </article>
            {% endfor %}
            </div>
+         {% elif leaderboard_failed %}
+           {# Empty and "could not load" are different things. Saying the
+              community is empty when the lookup failed hides the fault. #}
+           <p class="community-highlight-empty" data-i18n="leaderboard_error">
+             The leaderboard could not be loaded. Refresh to try again.
+           </p>
          {% else %}
            <p class="community-highlight-empty" data-i18n="leaderboard_empty">No community members yet.</p>
          {% endif %}

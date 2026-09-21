@@ -199,7 +199,7 @@ ATTACHMENT_CONTENT_TYPES = {
     'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'txt': 'text/plain',
 }
-ASSET_VERSION = "152"
+ASSET_VERSION = "153"
 
 # --- Per-request query cache ------------------------------------------------
 #
@@ -355,6 +355,11 @@ def inject_helpers():
         'level_progress': level_progress,
         'current_year': datetime.now().year,
     }
+
+@app.context_processor
+def inject_leaderboard_state():
+    return {'leaderboard_failed': leaderboard_failed()}
+
 
 @app.context_processor
 def inject_unread_count():
@@ -2082,6 +2087,22 @@ def unique_ids(rows, key):
             values.append(value)
     return values
 
+def note_leaderboard_failure(stage):
+    """Remember that the leaderboard failed, so the panel can say so.
+
+    An empty list and a failed lookup look identical to the template, and it
+    used to render "no community members yet" for both -- which is a lie when
+    the members exist and something else went wrong, and it hides the fault
+    from whoever is looking at the page.
+    """
+    if has_app_context():
+        g.leaderboard_error = stage
+
+
+def leaderboard_failed():
+    return bool(getattr(g, 'leaderboard_error', None)) if has_app_context() else False
+
+
 def get_community_highlights():
     """The leaderboard shown in the right rail.
 
@@ -2098,6 +2119,7 @@ def get_community_highlights():
         users = merge_forced_level_users(res.data if res and res.data else [], limit=20)
     except Exception:
         app.logger.exception("Leaderboard query failed")
+        note_leaderboard_failure('query')
         return []
 
     viewer_id = session.get('user_id')
@@ -2109,6 +2131,7 @@ def get_community_highlights():
     except Exception:
         # Showing someone the viewer blocked is worse than showing nobody.
         app.logger.exception("Leaderboard block filter failed")
+        note_leaderboard_failure('safety')
         return []
 
     try:
