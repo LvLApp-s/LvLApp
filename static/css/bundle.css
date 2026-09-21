@@ -3179,27 +3179,34 @@ label.has-success input {
               opacity var(--duration-base) var(--ease-standard);
 }
 
+/* is-adjusting is set while the thumb is held. A drag that wanders off the
+   pill -- which is easy, it is 30px tall -- would otherwise end the hover and
+   collapse the track out from under the pointer mid-drag. */
 .media-volume:hover,
-.media-volume:focus-within {
+.media-volume:focus-within,
+.media-volume.is-adjusting {
   gap: var(--space-3);
   padding-inline-end: var(--space-4);
 }
 
 .media-volume-end:hover,
-.media-volume-end:focus-within {
+.media-volume-end:focus-within,
+.media-volume-end.is-adjusting {
   padding-inline: var(--space-4) 0;
 }
 
 .media-volume:hover .media-volume-track,
-.media-volume:focus-within .media-volume-track {
+.media-volume:focus-within .media-volume-track,
+.media-volume.is-adjusting .media-volume-track {
   max-width: 96px;
   opacity: 1;
 }
 
 /* A pointer that only grazes the corner should not pop the slider open, so
-   the level waits for the pointer to settle. */
+   the level waits for the pointer to settle. Not while dragging: that has to
+   answer immediately. */
 @media (hover: hover) {
-  .media-volume:hover .media-volume-track {
+  .media-volume:hover:not(.is-adjusting) .media-volume-track {
     transition-delay: 90ms;
   }
 }
@@ -13919,19 +13926,16 @@ button {
   transform: scale(0.92) !important;
 }
 
-.reel-action-button.reel-action-mute.active,
-.reel-action-mute.active {
-  color: var(--lvl-warning) !important;
-  background: transparent !important;
-  border: none !important;
+/* Which icon is showing says whether the sound is on. It used to be carried
+   by colour alone -- a yellow speaker with two glows, pulsing forever over
+   the video -- because there was only one icon to show. */
+.reel-action-mute .reel-icon-sound,
+.reel-action-mute.active .reel-icon-muted {
+  display: none;
 }
 
-.reel-action-button.reel-action-mute.active svg,
-.reel-action-mute.active svg {
-  stroke: var(--lvl-warning) !important;
-  filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.95)) drop-shadow(0 0 20px rgba(250, 204, 21, 0.5)) !important;
-  color: var(--lvl-warning) !important;
-  animation: reelSoundWave 1.4s ease-in-out infinite alternate;
+.reel-action-mute.active .reel-icon-sound {
+  display: block;
 }
 
 .reel-action-button.reel-action-like.active {
@@ -15070,25 +15074,6 @@ button {
 
 .reel-action-button {
   transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.22s ease;
-}
-
-@keyframes reelSoundWave {
-  0% {
-    transform: scale(1) rotate(0deg);
-  }
-
-  30% {
-    transform: scale(1.12) rotate(-4deg);
-  }
-
-  70% {
-    transform: scale(1.06) rotate(4deg);
-  }
-
-  100% {
-    transform: scale(1.14) rotate(0deg);
-  }
-
 }
 
 .reel-action-button.reel-action-like.active,
@@ -16600,15 +16585,10 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 /* Sound on. The background alone used to carry this, which meant a muted
    clip and a playing one differed only by a shade in the corner -- readers
    assumed sound was on when it was not. The icon now says which it is. */
-/* Sound on: the wrapper carries the state so the speaker and the level it
-   opens read as one control. */
-.media-volume:has(.home-reel-mute-btn.active) {
-  background: var(--lvl-primary);
-}
-
-.home-reel-mute-btn.active {
-  color: var(--lvl-text-inverse);
-}
+/* Sound on is said by the icon, not by the surface. Filling the control with
+   the brand colour turned the whole pill into a bright lozenge sitting on top
+   of the clip -- the loudest thing on screen, for a state the reader is not
+   being asked to act on. The pill stays the same dark disc either way. */
 
 .home-reel-mute-btn .home-reel-icon-sound {
   display: none;

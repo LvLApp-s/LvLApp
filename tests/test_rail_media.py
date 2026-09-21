@@ -130,7 +130,8 @@ class VolumeControlStyleTests(unittest.TestCase):
     def test_holding_the_pointer_on_it_opens_the_level(self):
         body = rule("components.css",
                     ".media-volume:hover .media-volume-track,\n"
-                    ".media-volume:focus-within .media-volume-track")
+                    ".media-volume:focus-within .media-volume-track,\n"
+                    ".media-volume.is-adjusting .media-volume-track")
         self.assertIsNotNone(body)
         self.assertRegex(body, r"max-width:\s*\d+px")
 
@@ -190,6 +191,86 @@ class VolumeControlBehaviourTests(unittest.TestCase):
     def test_the_slider_does_not_pause_the_clip(self):
         body = volume_handler()
         self.assertIn("event.stopPropagation()", body)
+
+
+class QuietSoundStateTests(unittest.TestCase):
+    """Sound on is said by the icon, not by shouting.
+
+    The rail filled the whole control with the brand colour, which put a
+    bright lozenge on top of the clip; the clips feed had no second icon at
+    all, so its only way to say "on" was a yellow speaker with two glows,
+    pulsing forever. Both are gone, and both surfaces now swap between a
+    speaker and a crossed speaker on the same dark disc.
+    """
+
+    def test_the_rail_control_does_not_fill_with_colour(self):
+        self.assertNotIn(".media-volume:has(.home-reel-mute-btn.active)",
+                         css("home-reels.css"))
+        body = rule("home-reels.css", ".home-reel-mute-btn.active")
+        if body is not None:
+            self.assertNotRegex(body, r"background")
+
+    def test_nothing_repaints_the_pill_when_the_sound_is_on(self):
+        for name in ("components.css", "home-reels.css", "reels.css"):
+            for selector, decls in re.findall(r"([^{}]*\.media-volume[^{]*)\{([^}]*)\}",
+                                              css(name)):
+                if ".active" in selector or ":has(" in selector:
+                    with self.subTest(section=name, selector=selector.strip()):
+                        self.assertNotRegex(decls, r"background")
+
+    def test_the_clips_feed_speaker_has_two_icons(self):
+        markup = template("_reel_card.html")
+        self.assertIn('class="reel-icon-muted"', markup)
+        self.assertIn('class="reel-icon-sound"', markup)
+
+    def test_the_clips_feed_swaps_them_on_state(self):
+        hidden = rule("reels.css",
+                      ".reel-action-mute .reel-icon-sound,\n"
+                      ".reel-action-mute.active .reel-icon-muted")
+        self.assertIsNotNone(hidden)
+        self.assertRegex(hidden, r"display:\s*none")
+        shown = rule("reels.css", ".reel-action-mute.active .reel-icon-sound")
+        self.assertIsNotNone(shown)
+        self.assertRegex(shown, r"display:\s*block")
+
+    def test_the_clips_feed_speaker_neither_glows_nor_pulses(self):
+        text = css("reels.css")
+        self.assertNotIn("reel-action-mute.active svg", text)
+        self.assertNotIn("reelSoundWave", text, "the animation has no users left")
+
+
+class DraggingAloneIsEnoughTests(unittest.TestCase):
+    """Lowering and muting have to be possible with the handle alone."""
+
+    def test_the_control_stays_open_for_the_whole_drag(self):
+        """The pill is 30px tall, so a drag leaves it easily, and losing the
+        hover halfway would collapse the track under the pointer."""
+        handler = volume_handler()
+        self.assertIn("control.classList.add('is-adjusting')", handler)
+        self.assertIn("window.addEventListener('pointerup', release)", handler)
+        self.assertIn("window.addEventListener('pointercancel', release)", handler)
+
+    def test_the_open_delay_does_not_apply_mid_drag(self):
+        block = re.search(r"@media \(hover: hover\) \{(.*?)\n\}", css("components.css"), re.S)
+        self.assertIsNotNone(block)
+        self.assertIn(":not(.is-adjusting)", block.group(1))
+
+    def test_dragging_to_the_bottom_keeps_the_level_it_started_from(self):
+        """Otherwise muting by dragging left the clip at the few percent the
+        pointer passed through on the way down, and tapping the speaker
+        brought it back almost silent."""
+        handler = volume_handler()
+        zero = handler[handler.index("if (level === 0) {"):handler.index("} else {")]
+        self.assertIn("video.volume = levelBeforeDrag", zero)
+        self.assertIn("video.muted = true", zero)
+
+    def test_the_starting_level_is_captured_by_pointer_and_by_keyboard(self):
+        handler = volume_handler()
+        self.assertIn("slider.addEventListener('pointerdown', rememberLevel)", handler)
+        self.assertIn("slider.addEventListener('keydown', rememberLevel)", handler)
+
+    def test_almost_nothing_is_not_remembered_as_the_level(self):
+        self.assertIn("video.volume > 0.05", volume_handler())
 
 
 if __name__ == '__main__':

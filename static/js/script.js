@@ -2057,14 +2057,28 @@ document.addEventListener('DOMContentLoaded', () => {
             video.volume = readStoredVolume();
             paint();
 
+            // Where the level stood when this interaction began. Dragging the
+            // handle to the bottom means "off", not "set it to the last few
+            // percent the pointer passed through on the way down" -- without
+            // this, muting by dragging and then tapping the speaker brought
+            // the clip back at 5% and read as broken.
+            let levelBeforeDrag = video.volume;
+            const rememberLevel = () => {
+                if (!video.muted && video.volume > 0.05) levelBeforeDrag = video.volume;
+            };
+            slider.addEventListener('pointerdown', rememberLevel);
+            slider.addEventListener('keydown', rememberLevel);
+
             slider.addEventListener('input', () => {
                 const level = Math.min(1, Math.max(0, Number(slider.value) / 100));
                 if (level === 0) {
-                    // Silence is the muted flag. The level underneath is left
-                    // where it was, so unmuting returns to it instead of
-                    // playing at zero and looking broken.
+                    // Silence is the muted flag, not a level of zero: the clip
+                    // keeps a volume underneath so unmuting has something to
+                    // return to.
                     video.muted = true;
+                    video.volume = levelBeforeDrag;
                     delete video.dataset.userUnmuted;
+                    storeVolume(levelBeforeDrag);
                 } else {
                     video.volume = level;
                     video.muted = false;
@@ -2082,6 +2096,15 @@ document.addEventListener('DOMContentLoaded', () => {
             ['click', 'pointerdown', 'dblclick'].forEach((type) => {
                 slider.addEventListener(type, (event) => event.stopPropagation());
             });
+
+            // Hold the control open for the whole drag. The pill is 30px tall,
+            // so a drag easily leaves it, and losing the hover halfway would
+            // collapse the track under the pointer.
+            const holdOpen = () => control.classList.add('is-adjusting');
+            const release = () => control.classList.remove('is-adjusting');
+            slider.addEventListener('pointerdown', holdOpen);
+            window.addEventListener('pointerup', release);
+            window.addEventListener('pointercancel', release);
         });
     }
 

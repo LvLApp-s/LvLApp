@@ -773,27 +773,34 @@
               opacity var(--duration-base) var(--ease-standard);
 }
 
+/* is-adjusting is set while the thumb is held. A drag that wanders off the
+   pill -- which is easy, it is 30px tall -- would otherwise end the hover and
+   collapse the track out from under the pointer mid-drag. */
 .media-volume:hover,
-.media-volume:focus-within {
+.media-volume:focus-within,
+.media-volume.is-adjusting {
   gap: var(--space-3);
   padding-inline-end: var(--space-4);
 }
 
 .media-volume-end:hover,
-.media-volume-end:focus-within {
+.media-volume-end:focus-within,
+.media-volume-end.is-adjusting {
   padding-inline: var(--space-4) 0;
 }
 
 .media-volume:hover .media-volume-track,
-.media-volume:focus-within .media-volume-track {
+.media-volume:focus-within .media-volume-track,
+.media-volume.is-adjusting .media-volume-track {
   max-width: 96px;
   opacity: 1;
 }
 
 /* A pointer that only grazes the corner should not pop the slider open, so
-   the level waits for the pointer to settle. */
+   the level waits for the pointer to settle. Not while dragging: that has to
+   answer immediately. */
 @media (hover: hover) {
-  .media-volume:hover .media-volume-track {
+  .media-volume:hover:not(.is-adjusting) .media-volume-track {
     transition-delay: 90ms;
   }
 }

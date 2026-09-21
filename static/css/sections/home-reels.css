@@ -149,15 +149,10 @@
 /* Sound on. The background alone used to carry this, which meant a muted
    clip and a playing one differed only by a shade in the corner -- readers
    assumed sound was on when it was not. The icon now says which it is. */
-/* Sound on: the wrapper carries the state so the speaker and the level it
-   opens read as one control. */
-.media-volume:has(.home-reel-mute-btn.active) {
-  background: var(--lvl-primary);
-}
-
-.home-reel-mute-btn.active {
-  color: var(--lvl-text-inverse);
-}
+/* Sound on is said by the icon, not by the surface. Filling the control with
+   the brand colour turned the whole pill into a bright lozenge sitting on top
+   of the clip -- the loudest thing on screen, for a state the reader is not
+   being asked to act on. The pill stays the same dark disc either way. */
 
 .home-reel-mute-btn .home-reel-icon-sound {
   display: none;

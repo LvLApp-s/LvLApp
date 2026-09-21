@@ -364,19 +364,16 @@
   transform: scale(0.92) !important;
 }
 
-.reel-action-button.reel-action-mute.active,
-.reel-action-mute.active {
-  color: var(--lvl-warning) !important;
-  background: transparent !important;
-  border: none !important;
+/* Which icon is showing says whether the sound is on. It used to be carried
+   by colour alone -- a yellow speaker with two glows, pulsing forever over
+   the video -- because there was only one icon to show. */
+.reel-action-mute .reel-icon-sound,
+.reel-action-mute.active .reel-icon-muted {
+  display: none;
 }
 
-.reel-action-button.reel-action-mute.active svg,
-.reel-action-mute.active svg {
-  stroke: var(--lvl-warning) !important;
-  filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.95)) drop-shadow(0 0 20px rgba(250, 204, 21, 0.5)) !important;
-  color: var(--lvl-warning) !important;
-  animation: reelSoundWave 1.4s ease-in-out infinite alternate;
+.reel-action-mute.active .reel-icon-sound {
+  display: block;
 }
 
 .reel-action-button.reel-action-like.active {
@@ -1515,25 +1512,6 @@
 
 .reel-action-button {
   transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.22s ease;
-}
-
-@keyframes reelSoundWave {
-  0% {
-    transform: scale(1) rotate(0deg);
-  }
-
-  30% {
-    transform: scale(1.12) rotate(-4deg);
-  }
-
-  70% {
-    transform: scale(1.06) rotate(4deg);
-  }
-
-  100% {
-    transform: scale(1.14) rotate(0deg);
-  }
-
 }
 
 .reel-action-button.reel-action-like.active,

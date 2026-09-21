@@ -25,7 +25,12 @@
          opens towards the middle of the clip because it sits on the right. #}
       <div class="media-volume media-volume-end reel-mute-float" data-volume-control>
         <button class="reel-action-button reel-action-mute media-volume-toggle" type="button" data-reel-mute data-volume-toggle aria-label="Toggle sound" data-i18n-aria="reel_toggle_sound">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+          {# Two icons, swapped by CSS on .active, the way the rail's control
+             does it. The state used to be carried by colour alone -- a glowing
+             yellow speaker over the video -- so it needed to shout to be read
+             at all. A speaker with a cross says it quietly. #}
+          <svg class="reel-icon-muted" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M22 9l-6 6"/><path d="M16 9l6 6"/></svg>
+          <svg class="reel-icon-sound" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
           <span data-reel-mute-icon class="sr-only" data-i18n="reel_muted">Muted</span>
         </button>
         <span class="media-volume-track">
