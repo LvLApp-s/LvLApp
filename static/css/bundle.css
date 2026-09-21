@@ -15647,41 +15647,148 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   white-space: nowrap;
 }
 
-.engagement-panel {
+/* --- How you level up ----------------------------------------------------
+   Replaces a panel of shortcuts to places the rail already goes. Three parts
+   in decreasing urgency: where you stand, what the next level unlocks, and
+   how to earn the XP to get there. */
+
+.levelup-panel {
   display: grid;
-  gap: 12px;
+  gap: var(--space-5);
 }
 
-.engagement-panel h2 {
+.levelup-panel h2 {
   margin: 0;
 }
 
-.engagement-actions {
+.levelup-standing {
   display: grid;
-  gap: 8px;
+  gap: var(--space-3);
 }
 
-.engagement-actions a {
-  display: grid;
-  gap: 3px;
-  padding: 12px;
+.levelup-standing-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.levelup-standing-head strong {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.levelup-percent {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.levelup-track {
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--lvl-white-08);
+}
+
+.levelup-track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent-color);
+  transition: width var(--duration-slow, 600ms) var(--ease-standard);
+}
+
+.levelup-remaining {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.levelup-remaining b {
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The next thing worth climbing for. */
+.levelup-reward {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   background: var(--lvl-white-04);
-  color: var(--text-primary);
+  color: var(--accent-color);
+  text-decoration: none;
+  transition: border-color var(--duration-fast) var(--ease-standard),
+              background-color var(--duration-fast) var(--ease-standard);
+}
+
+.levelup-reward:hover,
+.levelup-reward:focus-visible {
+  border-color: var(--accent-color);
+  background: var(--lvl-primary-soft);
   text-decoration: none;
 }
 
-.engagement-actions a:hover,
-.engagement-actions a:focus-visible {
-  border-color: var(--accent-color);
-  background: var(--lvl-primary-soft);
+.levelup-reward svg {
+  flex: 0 0 auto;
 }
 
-.engagement-actions span {
+.levelup-reward-copy {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.levelup-reward-copy strong {
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.levelup-reward-copy small {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+/* Eight short rows, so the label and the points read as one line each. */
+.levelup-rules {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.levelup-rules li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--border-color);
   color: var(--text-secondary);
   font-size: 13px;
-  line-height: 1.35;
+}
+
+.levelup-rules li:first-child {
+  border-top: 0;
+}
+
+.levelup-rules b {
+  flex: 0 0 auto;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .levelup-track i {
+    transition: none;
+  }
 }
 
 /* Leaderboard: stable alignment for long names and variable follow labels. */

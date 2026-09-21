@@ -199,7 +199,7 @@ ATTACHMENT_CONTENT_TYPES = {
     'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'txt': 'text/plain',
 }
-ASSET_VERSION = "155"
+ASSET_VERSION = "156"
 
 # --- Per-request query cache ------------------------------------------------
 #
@@ -353,6 +353,7 @@ def inject_helpers():
         'min_age': MIN_AGE,
         'terms_version': TERMS_VERSION,
         'level_progress': level_progress,
+        'xp_rules': XP_REWARD_RULES,
         'current_year': datetime.now().year,
     }
 
@@ -813,15 +814,27 @@ def merge_forced_level_users(users, limit=None):
     users.sort(key=lambda item: (parse_int(item.get('level')) or 1, item.get('display_name') or item.get('username') or ''), reverse=True)
     return users[:limit] if limit else users
 
+# What earns XP, in the order someone is likely to do it. The whole product
+# is built on levelling and nothing anywhere said how to climb, so this list
+# sat here unused; the rail panel renders it. `key` is the translation key --
+# the labels below are the English fallback.
 XP_REWARD_RULES = [
-    {'label': 'Daily login', 'points': 5, 'description': 'Open LvL once per day.'},
-    {'label': 'Create a post', 'points': 10, 'description': 'Share a normal profile post.'},
-    {'label': 'Create a community post', 'points': 8, 'description': 'Start a post inside a community.'},
-    {'label': 'Write a comment', 'points': 6, 'description': 'Reply to another post.'},
-    {'label': 'Receive a comment', 'points': 4, 'description': 'Someone comments on your post.'},
-    {'label': 'Give a like', 'points': 1, 'description': 'Like another post.'},
-    {'label': 'Receive a like', 'points': 2, 'description': 'Someone likes your post.'},
-    {'label': 'Repost', 'points': 5, 'description': 'Share another post again.'},
+    {'key': 'xp_rule_daily_login', 'label': 'Daily login', 'points': 5,
+     'description': 'Open LvL once per day.'},
+    {'key': 'xp_rule_create_post', 'label': 'Create a post', 'points': 10,
+     'description': 'Share a normal profile post.'},
+    {'key': 'xp_rule_community_post', 'label': 'Create a community post', 'points': 8,
+     'description': 'Start a post inside a community.'},
+    {'key': 'xp_rule_write_comment', 'label': 'Write a comment', 'points': 6,
+     'description': 'Reply to another post.'},
+    {'key': 'xp_rule_receive_comment', 'label': 'Receive a comment', 'points': 4,
+     'description': 'Someone comments on your post.'},
+    {'key': 'xp_rule_give_like', 'label': 'Give a like', 'points': 1,
+     'description': 'Like another post.'},
+    {'key': 'xp_rule_receive_like', 'label': 'Receive a like', 'points': 2,
+     'description': 'Someone likes your post.'},
+    {'key': 'xp_rule_repost', 'label': 'Repost', 'points': 5,
+     'description': 'Share another post again.'},
 ]
 
 LEVEL_REWARD_TIERS = [

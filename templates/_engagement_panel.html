@@ -1,21 +1,54 @@
-<div class="engagement-panel panel">
-  <h2 data-i18n="quick_loops">Quick loops</h2>
-  <div class="engagement-actions">
-    <a href="{{ url_for('reels') }}">
-      <strong data-i18n="nav_clips">Clips</strong>
-      <span data-i18n="quick_clips_desc">Watch, like, and comment.</span>
-    </a>
-    <a href="{{ url_for('community') }}">
-      <strong data-i18n="nav_community">Community</strong>
-      <span data-i18n="quick_community_desc">Find posts from groups and active people.</span>
-    </a>
-    <a href="{{ url_for('activity') }}">
-      <strong data-i18n="profile_activity">Activity</strong>
-      <span data-i18n="quick_activity_desc">Review your likes, replies, posts, and reposts.</span>
-    </a>
-    <a href="{{ url_for('bookmarks') }}">
-      <strong data-i18n="nav_bookmarks">Bookmarks</strong>
-      <span data-i18n="quick_bookmarks_desc">Revisit the posts and clips you saved.</span>
-    </a>
+{#
+  How levelling works.
+
+  This replaced a panel of shortcuts to Clips, Community, Activity and Saved --
+  the same four destinations the left rail already offers, two centimetres to
+  the left, on nine pages. The whole product is built on levels and nothing
+  anywhere said how to climb, so the rail now answers that instead of
+  repeating the navigation.
+
+  Everything here is already computed: level_progress() is a template helper
+  and carries the next unlock, and xp_rules is XP_REWARD_RULES, which had sat
+  in app.py unused.
+#}
+{% set standing = level_progress(viewer) %}
+{% if standing %}
+<div class="levelup-panel panel">
+  <span class="panel-kicker" data-i18n="levelup_kicker">Levels</span>
+  <h2 data-i18n="levelup_title">How you level up</h2>
+
+  <div class="levelup-standing">
+    <div class="levelup-standing-head">
+      <strong>LvL {{ standing.level }}</strong>
+      <span class="levelup-percent">{{ standing.percent|round(0)|int }}%</span>
+    </div>
+    <div class="levelup-track" role="progressbar"
+         aria-valuenow="{{ standing.percent|round(0)|int }}" aria-valuemin="0" aria-valuemax="100">
+      <i style="width: {{ standing.percent|round(1) }}%;"></i>
+    </div>
+    <small class="levelup-remaining">
+      <b>{{ '{:,}'.format(standing.needed) }}</b> XP
+      <span data-i18n="levelup_to_next">to LvL</span> {{ standing.next_level }}
+    </small>
   </div>
+
+  {% if standing.reward %}
+    <a class="levelup-reward" href="{{ url_for('settings') }}">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13M3 12h18"/><path d="M12 8S10.5 3 8 3a2.5 2.5 0 0 0 0 5h4Zm0 0s1.5-5 4-5a2.5 2.5 0 0 1 0 5h-4Z"/></svg>
+      <span class="levelup-reward-copy">
+        <strong>{{ standing.reward.label }}</strong>
+        <small><span data-i18n="levelup_unlocks_at">Unlocks at LvL</span> {{ standing.reward.level }}</small>
+      </span>
+    </a>
+  {% endif %}
+
+  <ul class="levelup-rules" role="list">
+    {% for rule in xp_rules %}
+      <li>
+        <span data-i18n="{{ rule.key }}">{{ rule.label }}</span>
+        <b>+{{ rule.points }}</b>
+      </li>
+    {% endfor %}
+  </ul>
 </div>
+{% endif %}
