@@ -9,23 +9,39 @@
   overflow: hidden;
 }
 
+/* A rail panel's heading, not a page title. At 20/800 it was the loudest
+   thing in the rail and it cost height the clip below it could use. */
 .lb-panel h2 {
-  margin: 0 0 12px;
-  font-size: 20px;
-  font-weight: 800;
+  margin: 0 0 10px;
+  font-size: 17px;
+  font-weight: 700;
   line-height: 1.2;
 }
 
-/* scrollable list – 2.5 rows visible as hint */
+/* Two and a bit rows visible, the rest a scroll away. Tied to the window so
+   a tall screen shows more of both this and the clip under it, rather than
+   this one keeping a fixed 268px and the clip taking whatever is left. */
 .lb-list {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: 268px;
+  /* The floor is three rows plus their gaps: the podium is the point of the
+     panel, so the medals never sit below the fold however short the window
+     is. Above that it follows the window, so a tall screen shows more of
+     this and of the clip under it. */
+  max-height: clamp(204px, 23vh, 268px);
   overflow-y: auto;
   overflow-x: hidden;
   scroll-behavior: smooth;
   padding-right: 2px;
+}
+
+/* A short window cannot hold the whole podium and a clip worth watching. The
+   list gives way first, because it scrolls and the clip does not. */
+@media (max-height: 820px) {
+  .lb-list {
+    max-height: clamp(138px, 18vh, 190px);
+  }
 }
 
 .lb-row {
@@ -73,11 +89,29 @@
   border: 1px solid var(--border-color);
 }
 
+/* Two lines, not three. The handle and the level badge were stacked one
+   under the other, which made every row 85px tall -- so the panel needed
+   most of the rail to show the top three at all. Side by side they still
+   read as a pair and the row loses a whole line. */
 .lb-identity {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  display: grid;
+  grid-template-columns: minmax(0, auto) auto;
+  align-items: center;
+  gap: 2px var(--space-2);
   min-width: 0;
+}
+
+.lb-name {
+  grid-column: 1 / -1;
+}
+
+.lb-handle {
+  grid-column: 1;
+}
+
+.lb-level-badge {
+  grid-column: 2;
+  justify-self: start;
 }
 
 .lb-name {

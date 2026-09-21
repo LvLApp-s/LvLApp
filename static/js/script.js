@@ -2925,6 +2925,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const muteButton = card.querySelector('[data-reel-mute]');
                 const muteLabel = card.querySelector('[data-reel-mute-icon]');
 
+                // The speaker reads the video, not the last click on it.
+                // Setting it only where the click is handled meant anything
+                // else that changed the sound -- the volume slider beside it
+                // -- left the icon saying "muted" while the clip played.
+                if (video) {
+                    video.addEventListener('volumechange', () => {
+                        updateMuteControl(muteButton, muteLabel, video.muted);
+                    });
+                }
+
                 const togglePlay = () => {
                     if (!video) return;
                     if (video.readyState === 0) video.load();
@@ -4216,15 +4226,26 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (muteBtn && video) {
+                // The speaker reads the video, not the last click on it.
+                // Setting it only here meant anything else that changed the
+                // sound -- the volume slider beside it -- left the icon
+                // saying "muted" while the clip played.
+                const syncMuteButton = () => {
+                    muteBtn.classList.toggle('active', !video.muted);
+                    const muteKey = video.muted ? 'home_unmute_aria' : 'home_mute_aria';
+                    muteBtn.dataset.i18nAria = muteKey;
+                    muteBtn.setAttribute('aria-label',
+                        translateUi(muteKey, video.muted ? 'Unmute' : 'Mute'));
+                };
+
+                video.addEventListener('volumechange', syncMuteButton);
+                syncMuteButton();
+
                 muteBtn.addEventListener('click', (event) => {
                     event.stopPropagation();
                     video.muted = !video.muted;
                     if (video.muted) delete video.dataset.userUnmuted;
                     else video.dataset.userUnmuted = '1';
-                    muteBtn.classList.toggle('active', !video.muted);
-                    const muteKey = video.muted ? 'home_unmute_aria' : 'home_mute_aria';
-                    muteBtn.dataset.i18nAria = muteKey;
-                    muteBtn.setAttribute('aria-label', translateUi(muteKey, video.muted ? 'Unmute' : 'Mute'));
                 });
             }
         });

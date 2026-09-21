@@ -2659,9 +2659,12 @@ label.has-success input {
   flex-direction: column;
 }
 
-/* Everything except the clips panel is sized by its content. */
+/* Sized by their content, so the clips panel below them takes the rest.
+   Trending is deliberately not in this list: it is a long list that scrolls
+   inside its own box, so it needs the rail to bound its height. Pinning it to
+   its content height let it grow past the rail and the list stopped scrolling
+   at all. */
 .right-rail > .community-highlights,
-.right-rail > .trending-panel,
 .right-rail > .levelup-panel,
 .right-rail > .home-media-panel {
   flex: 0 0 auto;
@@ -2669,6 +2672,36 @@ label.has-success input {
 
 .right-rail:has(.trending-panel) .trending-list {
   max-height: none;
+}
+
+/* The list is taller than the rail, so it scrolls inside its own box. It
+   carries .custom-scrollbar, which hides the bar entirely -- with nothing at
+   the edge there was no sign the list went on, and no handle to drag. A thin
+   one, only while the pointer is in the panel. */
+.right-rail .trending-list {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color var(--duration-base) var(--ease-standard);
+}
+
+.right-rail .trending-panel:hover .trending-list,
+.right-rail .trending-list:focus-within {
+  scrollbar-color: var(--lvl-white-22) transparent;
+}
+
+.right-rail .trending-list::-webkit-scrollbar {
+  display: block;
+  width: 6px;
+}
+
+.right-rail .trending-list::-webkit-scrollbar-thumb {
+  border-radius: var(--radius-pill);
+  background: transparent;
+  transition: background var(--duration-base) var(--ease-standard);
+}
+
+.right-rail .trending-panel:hover .trending-list::-webkit-scrollbar-thumb {
+  background: var(--lvl-white-22);
 }
 
 .trending-row + .trending-row {
@@ -15744,23 +15777,39 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   overflow: hidden;
 }
 
+/* A rail panel's heading, not a page title. At 20/800 it was the loudest
+   thing in the rail and it cost height the clip below it could use. */
 .lb-panel h2 {
-  margin: 0 0 12px;
-  font-size: 20px;
-  font-weight: 800;
+  margin: 0 0 10px;
+  font-size: 17px;
+  font-weight: 700;
   line-height: 1.2;
 }
 
-/* scrollable list – 2.5 rows visible as hint */
+/* Two and a bit rows visible, the rest a scroll away. Tied to the window so
+   a tall screen shows more of both this and the clip under it, rather than
+   this one keeping a fixed 268px and the clip taking whatever is left. */
 .lb-list {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: 268px;
+  /* The floor is three rows plus their gaps: the podium is the point of the
+     panel, so the medals never sit below the fold however short the window
+     is. Above that it follows the window, so a tall screen shows more of
+     this and of the clip under it. */
+  max-height: clamp(204px, 23vh, 268px);
   overflow-y: auto;
   overflow-x: hidden;
   scroll-behavior: smooth;
   padding-right: 2px;
+}
+
+/* A short window cannot hold the whole podium and a clip worth watching. The
+   list gives way first, because it scrolls and the clip does not. */
+@media (max-height: 820px) {
+  .lb-list {
+    max-height: clamp(138px, 18vh, 190px);
+  }
 }
 
 .lb-row {
@@ -15808,11 +15857,29 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   border: 1px solid var(--border-color);
 }
 
+/* Two lines, not three. The handle and the level badge were stacked one
+   under the other, which made every row 85px tall -- so the panel needed
+   most of the rail to show the top three at all. Side by side they still
+   read as a pair and the row loses a whole line. */
 .lb-identity {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  display: grid;
+  grid-template-columns: minmax(0, auto) auto;
+  align-items: center;
+  gap: 2px var(--space-2);
   min-width: 0;
+}
+
+.lb-name {
+  grid-column: 1 / -1;
+}
+
+.lb-handle {
+  grid-column: 1;
+}
+
+.lb-level-badge {
+  grid-column: 2;
+  justify-self: start;
 }
 
 .lb-name {
@@ -16444,7 +16511,7 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 .home-reel-slide {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-3);
   min-height: 0;
   scroll-snap-align: start;
   scroll-snap-stop: always;

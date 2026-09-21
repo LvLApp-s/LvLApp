@@ -50,9 +50,10 @@ class RailFillsItsHeightTests(unittest.TestCase):
                             "the clip")
 
     def test_the_other_panels_are_sized_by_their_content(self):
+        # Trending is deliberately absent: it is a scrolling list, so it needs
+        # the rail to bound its height rather than growing past it.
         body = rule("components.css",
                     ".right-rail > .community-highlights,\n"
-                    ".right-rail > .trending-panel,\n"
                     ".right-rail > .levelup-panel,\n"
                     ".right-rail > .home-media-panel")
         self.assertIsNotNone(body)

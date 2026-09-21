@@ -253,9 +253,12 @@
   flex-direction: column;
 }
 
-/* Everything except the clips panel is sized by its content. */
+/* Sized by their content, so the clips panel below them takes the rest.
+   Trending is deliberately not in this list: it is a long list that scrolls
+   inside its own box, so it needs the rail to bound its height. Pinning it to
+   its content height let it grow past the rail and the list stopped scrolling
+   at all. */
 .right-rail > .community-highlights,
-.right-rail > .trending-panel,
 .right-rail > .levelup-panel,
 .right-rail > .home-media-panel {
   flex: 0 0 auto;
@@ -263,6 +266,36 @@
 
 .right-rail:has(.trending-panel) .trending-list {
   max-height: none;
+}
+
+/* The list is taller than the rail, so it scrolls inside its own box. It
+   carries .custom-scrollbar, which hides the bar entirely -- with nothing at
+   the edge there was no sign the list went on, and no handle to drag. A thin
+   one, only while the pointer is in the panel. */
+.right-rail .trending-list {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color var(--duration-base) var(--ease-standard);
+}
+
+.right-rail .trending-panel:hover .trending-list,
+.right-rail .trending-list:focus-within {
+  scrollbar-color: var(--lvl-white-22) transparent;
+}
+
+.right-rail .trending-list::-webkit-scrollbar {
+  display: block;
+  width: 6px;
+}
+
+.right-rail .trending-list::-webkit-scrollbar-thumb {
+  border-radius: var(--radius-pill);
+  background: transparent;
+  transition: background var(--duration-base) var(--ease-standard);
+}
+
+.right-rail .trending-panel:hover .trending-list::-webkit-scrollbar-thumb {
+  background: var(--lvl-white-22);
 }
 
 .trending-row + .trending-row {

@@ -60,7 +60,7 @@
 .home-reel-slide {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-3);
   min-height: 0;
   scroll-snap-align: start;
   scroll-snap-stop: always;

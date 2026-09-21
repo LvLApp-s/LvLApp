@@ -73,8 +73,14 @@ class ShellWidthTests(unittest.TestCase):
                 continue
             with self.subTest(path=path.relative_to(ROOT)):
                 text = path.read_text(encoding="utf-8")
-                for block in re.findall(r"\.right-rail[^{]*\{([^}]*)\}", text):
-                    self.assertNotRegex(block, r"(?<!max-)(?<!min-)width:\s*(?:\d+px|var\(--shell-right)")
+                for selector, block in re.findall(r"(\.right-rail[^{]*)\{([^}]*)\}", text):
+                    # A scrollbar's width is the scrollbar's, not the rail's.
+                    if "::-webkit-scrollbar" in selector:
+                        continue
+                    with self.subTest(selector=selector.strip()):
+                        self.assertNotRegex(
+                            block,
+                            r"(?<!max-)(?<!min-)width:\s*(?:\d+px|var\(--shell-right)")
 
     def test_the_rail_grows_with_the_window(self):
         """A left-anchored shell must not leave a dead strip on the right, so
