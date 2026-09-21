@@ -199,7 +199,7 @@ ATTACHMENT_CONTENT_TYPES = {
     'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'txt': 'text/plain',
 }
-ASSET_VERSION = "149"
+ASSET_VERSION = "150"
 
 # --- Per-request query cache ------------------------------------------------
 #
@@ -3188,7 +3188,25 @@ def index():
                            has_next=len(posts) == POSTS_PER_PAGE,
                            home_reels=get_home_reel_preview(viewer['id']))
 
+
+# --- Legacy /reels paths ----------------------------------------------------
+# The product calls these Clips everywhere, so the canonical path is /clips.
+# Links people already shared, and anything still pointing at the old path,
+# are redirected rather than 404'd. Function names are unchanged, so every
+# url_for in the templates builds the new path without being touched.
+
+
 @app.route('/reels')
+def reels_legacy():
+    return redirect(url_for('reels', **request.args), code=301)
+
+
+@app.route('/reels/upload')
+def reel_upload_legacy():
+    return redirect(url_for('reel_upload'), code=301)
+
+
+@app.route('/clips')
 def reels():
     viewer = get_current_user()
     if not viewer:
@@ -3348,7 +3366,7 @@ def api_reel_complete_upload():
             return jsonify({'success': False, 'error': "Reels database table is not ready. Run database/migrations/002_reels.sql in Supabase."}), 400
         return jsonify({'success': False, 'error': handle_db_error(exc, "Could not finish that video upload.")}), 400
 
-@app.route('/reels/upload', methods=['GET', 'POST'])
+@app.route('/clips/upload', methods=['GET', 'POST'])
 def reel_upload():
     viewer = get_current_user()
     if not viewer:
@@ -3392,7 +3410,7 @@ def reel_upload():
                            max_video_bytes=MAX_VIDEO_BYTES,
                            highlights=[])
 
-@app.route('/reels/<int:reel_id>/like', methods=['POST'])
+@app.route('/clips/<int:reel_id>/like', methods=['POST'])
 def toggle_reel_like(reel_id):
     viewer = get_current_user()
     if not viewer:
@@ -3448,7 +3466,7 @@ def toggle_reel_bookmark(reel_id):
         flash(handle_db_error(exc), 'error')
         return redirect(safe_redirect_url())
 
-@app.route('/reels/<int:reel_id>/comment', methods=['POST'])
+@app.route('/clips/<int:reel_id>/comment', methods=['POST'])
 def add_reel_comment(reel_id):
     viewer = get_current_user()
     if not viewer:
@@ -3502,7 +3520,7 @@ def add_reel_comment(reel_id):
         flash(handle_db_error(exc), "error")
     return redirect(url_for('reels'))
 
-@app.route('/reels/<int:reel_id>/view', methods=['POST'])
+@app.route('/clips/<int:reel_id>/view', methods=['POST'])
 def record_reel_view(reel_id):
     viewer = get_current_user()
     if not viewer:
@@ -3519,7 +3537,7 @@ def record_reel_view(reel_id):
     except Exception as exc:
         return jsonify({'success': False, 'error': handle_db_error(exc)}), 400
 
-@app.route('/reels/<int:reel_id>/delete', methods=['POST'])
+@app.route('/clips/<int:reel_id>/delete', methods=['POST'])
 def delete_reel(reel_id):
     viewer = get_current_user()
     if not viewer:
@@ -3904,6 +3922,18 @@ def privacy():
     return render_template('privacy.html', viewer=get_current_user())
 
 
+def onboarding_form_data(form):
+    """The answers to re-render, with whitespace-only ones treated as blank.
+
+    A value of " " satisfies the browser's `required` attribute but not the
+    server, so echoing it back would show a field that looks filled in and
+    keeps failing.
+    """
+    return {key: (value.strip() if isinstance(value, str) else value)
+            for key, value in form.items()
+            if key not in ('csrf_token', 'password', 'password_confirm')}
+
+
 @app.route('/auth/oauth/onboarding', methods=['GET', 'POST'])
 def oauth_onboarding():
     profile = session.get('pending_oauth_profile')
@@ -3924,23 +3954,29 @@ def oauth_onboarding():
 
         nickname, nickname_error = validate_username_format(request.form.get('nickname', ''))
 
+        # Hand back what was typed, not the Google profile the form opened
+        # with. A field holding only spaces passes the browser's `required`
+        # check and fails here, and without this every other answer -- the
+        # birthday above all, which carried no value at all -- was wiped.
+        def retry(message):
+            flash(message, "error")
+            return render_template('oauth_onboarding.html', profile=profile,
+                                   suggested_nickname=oauth_suggested_username(profile),
+                                   form_data=onboarding_form_data(request.form))
+
         if not all([first_name, last_name, email, gender]) or not request.form.get('nickname', '').strip():
-            flash("All fields are required to finish social registration.", "error")
-            return render_template('oauth_onboarding.html', profile=profile, suggested_nickname=oauth_suggested_username(profile))
+            return retry("All fields are required to finish social registration.")
 
         if nickname_error:
-            flash(nickname_error, "error")
-            return render_template('oauth_onboarding.html', profile=profile, suggested_nickname=oauth_suggested_username(profile))
+            return retry(nickname_error)
 
         birthday_value, birthday_error = validate_birthday(birthday, required=True)
         if birthday_error:
-            flash(birthday_error, "error")
-            return render_template('oauth_onboarding.html', profile=profile, suggested_nickname=oauth_suggested_username(profile))
+            return retry(birthday_error)
 
         terms_error = terms_acceptance_error(accepted_terms)
         if terms_error:
-            flash(terms_error, "error")
-            return render_template('oauth_onboarding.html', profile=profile, suggested_nickname=oauth_suggested_username(profile))
+            return retry(terms_error)
 
         existing_user = first_oauth_user_match({**profile, 'email': email})
         if existing_user:

@@ -216,6 +216,14 @@
   /* The rail grows with the window instead of stopping at a fixed width, so
      a left-anchored shell has no dead strip on the right. */
   --shell-right: clamp(380px, 30vw, 600px);
+
+  /* How strongly the Community hero's wash covers its artwork. The image is
+     drawn for a dark field, so daylight needs a heavier veil -- expressed as
+     tokens rather than a second rule, because a section must not carry its
+     own theme block. */
+  --hero-veil-near: 88%;
+  --hero-veil-mid: 30%;
+  --hero-veil-far: 0%;
   /* Desktop sticky header: min-height plus its 1px bottom border. Anything
      that sticks below it offsets by this. */
   --topbar-height: 65px;
@@ -306,6 +314,10 @@
   --lvl-surface-hover: #eef3f6;
   --lvl-surface-inverse: #0f1419;
   --lvl-light-surface: #eff3f4;
+
+  --hero-veil-near: 94%;
+  --hero-veil-mid: 62%;
+  --hero-veil-far: 40%;
 
   /* Progression tints, same hues at daylight weight. */
   --lvl-tint-cool: #eaf2ff;
@@ -498,6 +510,14 @@
   display: none;
 }
 
+html {
+  /* Always reserve room for the scrollbar. Without this, anything that makes
+     the page taller -- opening the achievements panel, loading a feed -- makes
+     the scrollbar appear, narrows the viewport, and shifts every element left
+     by its width. */
+  scrollbar-gutter: stable;
+}
+
 body {
   background-color: var(--bg-color);
   color: var(--text-primary);
@@ -662,11 +682,41 @@ a:hover {
   align-items: center;
 }
 
+/* The labels ride the width change rather than blinking in and out.
+   display:none cannot be transitioned, so the rail used to resize smoothly
+   while its contents appeared all at once. Clipping them to zero width keeps
+   the icons centred in the collapsed rail and lets the text slide open. */
+.left-rail .brand-text,
+.left-rail .nav-label,
+.left-rail .mini-profile div,
+.left-rail .logout-link {
+  overflow: hidden;
+  white-space: nowrap;
+  /* Close to the widest label ("Community" is 94px). A much larger ceiling
+     would be crossed in the first few frames, so the text would snap to full
+     width while the rail was still opening. */
+  max-width: 110px;
+  opacity: 1;
+  transition: max-width var(--duration-base) var(--ease-standard),
+              opacity var(--duration-base) var(--ease-standard);
+}
+
 .left-rail:not(.menu-open) .brand-text,
 .left-rail:not(.menu-open) .nav-label,
 .left-rail:not(.menu-open) .mini-profile div,
 .left-rail:not(.menu-open) .logout-link {
-  display: none;
+  max-width: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .left-rail .brand-text,
+  .left-rail .nav-label,
+  .left-rail .mini-profile div,
+  .left-rail .logout-link {
+    transition: none;
+  }
 }
 
 .sidebar-top {
@@ -814,7 +864,10 @@ a:hover {
 .right-rail {
   /* The grid column is the single source of truth for this width. */
   width: 100%;
-  padding: 0 20px;
+  /* Top space so the first panel does not start hard against the edge; the
+     rail is sticky, so this is padding rather than a margin that would
+     collapse. */
+  padding: var(--space-10) 20px 0;
   position: sticky;
   top: 0;
   height: 100vh;
@@ -3349,9 +3402,44 @@ label.has-success input {
   justify-content: center;
 }
 
-.left-rail:not(.menu-open) .mini-profile-identity,
+/* Same reason as the rail labels: the identity clips to nothing, and the
+   menu button -- a fixed square that would squash rather than clip -- fades
+   and gives up its width. */
+.left-rail .mini-profile-identity {
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: 130px;
+  opacity: 1;
+  transition: max-width var(--duration-base) var(--ease-standard),
+              opacity var(--duration-base) var(--ease-standard);
+}
+
+.left-rail:not(.menu-open) .mini-profile-identity {
+  max-width: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.left-rail .account-more {
+  transition: width var(--duration-base) var(--ease-standard),
+              opacity var(--duration-fast) var(--ease-standard);
+}
+
 .left-rail:not(.menu-open) .account-more {
-  display: none;
+  width: 0;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .left-rail .mini-profile-identity,
+  .left-rail .account-more {
+    transition: none;
+  }
 }
 
 /* --- Feed: new posts pill ------------------------------------------------ */
@@ -4248,7 +4336,9 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
 }
 
 .profile-info-container {
-  padding: 0 16px 16px;
+  /* The main column starts flush against the left rail, so this padding is
+     the only gap the profile gets. 16px read as cramped next to the rail. */
+  padding: 0 24px 16px;
   position: relative;
   z-index: 10;
 }
@@ -4503,6 +4593,16 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
 
 .pprogress-inline-header:hover {
   background: rgba(255, 255, 255, 0.02);
+}
+
+/* GENEL İLERLEME is an eyebrow for Başarımlar. On one line the two just read
+   as two labels; stacking them makes the smaller one label the larger. */
+.pprogress-inline-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-width: 0;
 }
 
 .pprogress-inline-left {
@@ -8655,18 +8755,10 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   line-height: 14px;
 }
 
-.nav-label {
-  display: none;
-}
-
-.left-rail.menu-open .nav-label {
-  display: inline;
-}
-
-.left-rail:not(.menu-open) .nav-label,
-.left-rail:not(.menu-open) .brand-text {
-  display: none;
-}
+/* The rail's labels are shown and hidden in base.css by clipping their width
+   and fading them, so they move with the rail instead of appearing all at
+   once. display cannot be transitioned, so toggling it here defeated that --
+   these three rules are deliberately gone rather than overridden. */
 
 .left-rail:not(.menu-open) .compose-link {
   margin-top: auto;
@@ -8822,12 +8914,15 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   box-shadow: inset 0 0 0 1px var(--lvl-white-08);
 }
 
+/* An eyebrow labels the heading below it; it should not compete with it.
+   Accent colour at weight 800 made every panel open with two shouted lines. */
 .panel-kicker {
   display: block;
   margin-bottom: 4px;
-  color: var(--accent-color);
-  font-size: 12px;
-  font-weight: 800;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -9596,9 +9691,10 @@ button {
   gap: 10px;
 }
 
+/* The avatar keeps the size it has in the collapsed rail. Shrinking it on
+   expand made it pop smaller the moment the rail was hovered, which read as
+   the whole rail jumping. */
 .left-rail.menu-open .mini-profile .avatar {
-  width: 36px;
-  height: 36px;
   flex-shrink: 0;
 }
 
@@ -9646,21 +9742,16 @@ button {
     padding: 4px 8px;
     margin-top: 2px;
   }
-  .left-rail.menu-open .mini-profile .avatar {
-    width: 32px;
-    height: 32px;
-  }
   .left-rail.menu-open .logout-link {
     padding: 4px 8px;
     font-size: 11px;
   }
 }
 
-.left-rail:not(.menu-open) .nav-label,
-.left-rail:not(.menu-open) .mini-profile div,
-.left-rail:not(.menu-open) .logout-link {
-  display: none !important;
-}
+/* Hiding these is base.css's job now -- it clips their width so they move
+   with the rail. An !important display here could not be transitioned and
+   simply won, which is why the rail resized smoothly while its labels
+   blinked. */
 
 
 @media (max-width: 767px) {
@@ -9793,11 +9884,6 @@ button {
     align-items: stretch;
   }
 
-  .left-rail:not(.menu-open) .nav-label,
-  .left-rail:not(.menu-open) .mini-profile div,
-  .left-rail:not(.menu-open) .logout-link {
-    display: none !important;
-  }
 
   .left-rail:not(.menu-open) {
     margin-left: auto;
@@ -10207,16 +10293,28 @@ button {
 /* Body / collapsible */
 .pprogress-body {
   overflow: hidden;
+  /* visibility is listed so the collapsed rule can delay it; on the way open
+     it flips immediately, which is what the 0s here means. */
   transition: max-height 0.38s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.28s ease;
+              opacity 0.28s ease,
+              visibility 0s;
   max-height: 3000px;
   opacity: 1;
+  visibility: visible;
 }
 
 .pprogress-body.is-collapsed {
   max-height: 0 !important;
   opacity: 0;
   pointer-events: none;
+  /* profile.css also sets visibility: hidden here. Untransitioned it snaps at
+     once, so the cards blanked out and an empty box then slid shut. Holding it
+     until the collapse has finished lets the text fade as the panel closes,
+     and it still leaves the tab order once shut. */
+  visibility: hidden;
+  transition: max-height 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.28s ease,
+              visibility 0s 0.38s;
 }
 
 /* Achievement grid */
@@ -10400,10 +10498,40 @@ button {
   line-height: 1.2;
 }
 
+/* The action beside a heading. It keeps the accent colour -- now the only
+   coloured thing in the row, since the eyebrow went grey -- and holds off the
+   global a:hover underline, which cut through the word. */
 .section-heading a {
+  padding: var(--space-1) var(--space-4);
+  border-radius: var(--radius-pill);
   color: var(--accent-color);
   text-decoration: none;
+  font-weight: 600;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.section-heading a:hover,
+.section-heading a:focus-visible {
+  background: color-mix(in srgb, var(--accent-color) 14%, transparent);
+  text-decoration: none;
+}
+
+/* Inside a room card the name leads and the description supports it; both
+   were arriving at the same weight, so the strip read as a wall of bold. */
+.community-space-card strong {
+  display: block;
+  font-size: 14px;
   font-weight: 700;
+  line-height: 1.2;
+}
+
+.community-space-card small {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.3;
 }
 
 .mini-user-row,
@@ -12542,13 +12670,50 @@ button {
 /* ===== sections/community-timeline.css ===== */
 /* Community timeline tabs and panes */
 /* LvL community timeline redesign */
+/* The Community hero. The artwork sits to the right, behind the Create group
+   button rather than the heading. The url() is root-absolute on purpose: this
+   file is concatenated into static/css/bundle.css one directory up, so a path
+   relative to sections/ would resolve from the wrong place once served.
+   A gradient runs over it from the text side so the copy keeps its contrast;
+   how heavy that gradient is comes from tokens, which is how the light theme
+   dims artwork drawn for a dark field. */
 .community-timeline-header {
+  position: relative;
   align-items: center;
   gap: var(--space-7);
+  overflow: hidden;
+  isolation: isolate;
+  padding-block: var(--space-11);
+  border-radius: var(--radius-xl);
+  background-color: var(--lvl-surface-raised);
+  background-image:
+    linear-gradient(90deg,
+      var(--lvl-surface-raised) 0%,
+      color-mix(in srgb, var(--lvl-surface-raised) var(--hero-veil-near), transparent) 42%,
+      color-mix(in srgb, var(--lvl-surface-raised) var(--hero-veil-mid), transparent) 72%,
+      color-mix(in srgb, var(--lvl-surface-raised) var(--hero-veil-far), transparent) 100%),
+    url("/static/assets/community-hero.svg");
+  background-repeat: no-repeat, no-repeat;
+  background-position: center, right center;
+  background-size: cover, cover;
+}
+
+.community-timeline-header > * {
+  position: relative;
+  z-index: 1;
 }
 
 .community-timeline-header p {
   max-width: 620px;
+}
+
+@media (max-width: 767px) {
+  /* On a phone the text fills the width, so the artwork would sit under it. */
+  .community-timeline-header {
+    padding-block: var(--space-9);
+    background-size: cover, 160% auto;
+    background-position: center, right -40% top -20%;
+  }
 }
 
 .community-hub {
@@ -12641,9 +12806,12 @@ button {
 }
 
 .community-timeline-tabs a.active {
+  /* The rounded, tinted pill already reads as selected. The inset underline
+     it used to carry cut across that shape's bottom corners and said the same
+     thing twice. */
   background: color-mix(in srgb, var(--accent-color) 18%, transparent);
   color: var(--text-primary);
-  box-shadow: inset 0 -3px 0 var(--accent-color);
+  font-weight: 700;
 }
 
 .community-timeline-tabs strong {
@@ -12688,16 +12856,23 @@ button {
   background: color-mix(in srgb, var(--accent-color) 10%, var(--lvl-surface-raised));
 }
 
+/* These held text characters -- an arrow, a hash, a star -- drawn white on a
+   solid accent chip. Fonts that lack the glyph rendered an empty box, and the
+   filled chip read as a placeholder even when they did resolve. Real icons on
+   a tinted surface say what the card is. */
 .community-lens-card > span {
   grid-area: icon;
   width: var(--control-md);
   height: var(--control-md);
   display: grid;
   place-items: center;
-  border-radius: var(--radius-xs);
-  color: var(--lvl-white);
-  font-weight: 900;
-  background: var(--accent-color);
+  border-radius: var(--radius-sm);
+  color: var(--accent-color);
+  background: color-mix(in srgb, var(--accent-color) 14%, transparent);
+}
+
+.community-lens-card:hover > span {
+  background: color-mix(in srgb, var(--accent-color) 22%, transparent);
 }
 
 .community-lens-card strong {
@@ -15815,8 +15990,24 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   cursor: pointer;
 }
 
+/* Sound on. The background alone used to carry this, which meant a muted
+   clip and a playing one differed only by a shade in the corner -- readers
+   assumed sound was on when it was not. The icon now says which it is. */
 .home-reel-mute-btn.active {
   background: var(--lvl-primary);
+  color: var(--lvl-text-inverse);
+}
+
+.home-reel-mute-btn .home-reel-icon-sound {
+  display: none;
+}
+
+.home-reel-mute-btn.active .home-reel-icon-sound {
+  display: block;
+}
+
+.home-reel-mute-btn.active .home-reel-icon-muted {
+  display: none;
 }
 
 .home-reel-info {
@@ -16096,7 +16287,12 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   padding: var(--space-4) var(--space-8);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-pill);
-  background: var(--lvl-surface-overlay);
+  /* The rail's clip sits directly behind this corner, and that clip is the
+     point of the panel. Translucent with a blur, the pill stays readable
+     without blacking out the video; hovering it makes it solid. */
+  background: color-mix(in srgb, var(--lvl-surface-overlay) 72%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   color: var(--text-primary);
   font-size: 15px;
   font-weight: 700;
@@ -16106,7 +16302,8 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
               transform var(--duration-fast) var(--ease-standard);
 }
 
-.msg-dock-pill:hover {
+.msg-dock-pill:hover,
+.msg-dock-pill:focus-visible {
   background: var(--lvl-surface-hover);
   transform: translateY(-1px);
 }

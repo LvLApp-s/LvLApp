@@ -69,3 +69,30 @@ class CssBundleTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BundleRelativeUrlTests(unittest.TestCase):
+    """A url() relative to sections/ breaks the moment it is bundled.
+
+    The sections live in static/css/sections/, but the file the page actually
+    loads is static/css/bundle.css, one directory up. A relative path is
+    resolved against the served file, so "../../assets/x.svg" silently points
+    outside static/ and the asset 404s -- with no error anywhere except a
+    missing background.
+    """
+
+    def test_no_section_uses_a_relative_asset_url(self):
+        pattern = re.compile(r'url\(\s*["\']?(?!data:|#|/|https?:)([^"\')]+)')
+        for path in sorted((CSS / "sections").glob("*.css")):
+            for match in pattern.findall(path.read_text(encoding="utf-8")):
+                with self.subTest(section=path.name, url=match):
+                    self.fail(f"{path.name} loads {match!r} relative to sections/; "
+                              f"use a /static/... path so it survives bundling")
+
+    def test_every_asset_a_section_links_exists(self):
+        pattern = re.compile(r'url\(\s*["\']?(/static/[^"\')]+)')
+        for path in sorted((CSS / "sections").glob("*.css")):
+            for match in pattern.findall(path.read_text(encoding="utf-8")):
+                target = ROOT / match.lstrip("/").split("?")[0]
+                with self.subTest(section=path.name, asset=match):
+                    self.assertTrue(target.is_file(), f"{match} does not exist")

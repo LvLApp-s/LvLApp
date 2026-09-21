@@ -69,15 +69,15 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label>
         <span data-i18n="auth_first_name">First name</span>
-        <input name="first_name" maxlength="60" autocomplete="given-name" value="{{ profile.first_name or '' }}" required>
+        <input name="first_name" maxlength="60" autocomplete="given-name" value="{{ form_data.get('first_name') if form_data else (profile.first_name or '') }}" required>
       </label>
       <label>
         <span data-i18n="auth_last_name">Last name</span>
-        <input name="last_name" maxlength="60" autocomplete="family-name" value="{{ profile.last_name or '' }}" required>
+        <input name="last_name" maxlength="60" autocomplete="family-name" value="{{ form_data.get('last_name') if form_data else (profile.last_name or '') }}" required>
       </label>
       <label class="field-with-status">
         <span data-i18n="auth_nickname">Nickname</span>
-        <input name="nickname" pattern="[A-Za-z0-9_]{3,24}" minlength="3" maxlength="24" autocomplete="username" autocapitalize="none" spellcheck="false" value="{{ suggested_nickname or '' }}" required
+        <input name="nickname" pattern="[A-Za-z0-9_]{3,24}" minlength="3" maxlength="24" autocomplete="username" autocapitalize="none" spellcheck="false" value="{{ form_data.get('nickname') if form_data else (suggested_nickname or '') }}" required
                data-username-check aria-describedby="oauth-nickname-status">
         <small class="field-status" id="oauth-nickname-status" data-username-status role="status" aria-live="polite"></small>
       </label>
@@ -88,14 +88,14 @@
       <label>
         <span data-i18n="auth_birthday">Birthday</span>
         {% set limits = birthday_limits() %}
-        <input type="date" name="birthday" min="{{ limits.min.isoformat() }}" max="{{ limits.max.isoformat() }}" autocomplete="bday" required>
+        <input type="date" name="birthday" min="{{ limits.min.isoformat() }}" max="{{ limits.max.isoformat() }}" autocomplete="bday" required value="{{ form_data.get('birthday', '') if form_data else '' }}">
         <small class="field-hint" data-i18n="auth_age_hint">You must be at least 16 years old.</small>
       </label>
       <fieldset class="gender-field">
         <legend data-i18n="auth_gender">Gender</legend>
         <div class="gender-options">
           <label class="gender-option male-option">
-            <input type="radio" name="gender" value="Male" data-avatar-url="{{ url_for('static', filename='assets/default-male-avatar.svg') }}" data-theme-color="{{ theme_colors.primary }}" required>
+            <input type="radio" name="gender" value="Male" data-avatar-url="{{ url_for('static', filename='assets/default-male-avatar.svg') }}" data-theme-color="{{ theme_colors.primary }}" required{% if form_data and form_data.get('gender') == 'Male' %} checked{% endif %}>
             <span class="gender-option-body">
               <img class="gender-option-avatar" src="{{ url_for('static', filename='assets/default-male-avatar.svg') }}" alt="" aria-hidden="true">
               <span class="gender-option-label">
@@ -106,7 +106,7 @@
             </span>
           </label>
           <label class="gender-option female-option">
-            <input type="radio" name="gender" value="Female" data-avatar-url="{{ url_for('static', filename='assets/default-female-avatar.svg') }}" data-theme-color="{{ theme_colors.female }}" required>
+            <input type="radio" name="gender" value="Female" data-avatar-url="{{ url_for('static', filename='assets/default-female-avatar.svg') }}" data-theme-color="{{ theme_colors.female }}" required{% if form_data and form_data.get('gender') == 'Female' %} checked{% endif %}>
             <span class="gender-option-body">
               <img class="gender-option-avatar" src="{{ url_for('static', filename='assets/default-female-avatar.svg') }}" alt="" aria-hidden="true">
               <span class="gender-option-label">
@@ -119,7 +119,7 @@
         </div>
       </fieldset>
       <label class="checkbox-row terms-row">
-        <input type="checkbox" name="accept_terms" value="1" required data-terms-checkbox>
+        <input type="checkbox" name="accept_terms" value="1" required data-terms-checkbox{% if form_data and form_data.get('accept_terms') %} checked{% endif %}>
         <span class="terms-text">
           <span data-i18n="auth_terms_prefix">I agree to the</span>
           <a class="inline-link" href="{{ url_for('terms') }}" target="_blank" rel="noopener" data-i18n="auth_terms_link">Terms &amp; Conditions</a>

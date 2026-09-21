@@ -1021,9 +1021,44 @@
   justify-content: center;
 }
 
-.left-rail:not(.menu-open) .mini-profile-identity,
+/* Same reason as the rail labels: the identity clips to nothing, and the
+   menu button -- a fixed square that would squash rather than clip -- fades
+   and gives up its width. */
+.left-rail .mini-profile-identity {
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: 130px;
+  opacity: 1;
+  transition: max-width var(--duration-base) var(--ease-standard),
+              opacity var(--duration-base) var(--ease-standard);
+}
+
+.left-rail:not(.menu-open) .mini-profile-identity {
+  max-width: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.left-rail .account-more {
+  transition: width var(--duration-base) var(--ease-standard),
+              opacity var(--duration-fast) var(--ease-standard);
+}
+
 .left-rail:not(.menu-open) .account-more {
-  display: none;
+  width: 0;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .left-rail .mini-profile-identity,
+  .left-rail .account-more {
+    transition: none;
+  }
 }
 
 /* --- Feed: new posts pill ------------------------------------------------ */

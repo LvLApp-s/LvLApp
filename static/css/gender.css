@@ -1,6 +1,11 @@
 .avatar {
   width: var(--control-lg);
   height: var(--control-lg);
+  /* .avatar is used both as a wrapper around an <img> and directly on one.
+     In the second case there was no object-fit, so the browser stretched the
+     photo to the square instead of filling it -- a portrait came out squashed
+     top and bottom. .avatar img below covers the wrapper case. */
+  object-fit: cover;
   display: inline-flex;
   align-items: center;
   justify-content: center;

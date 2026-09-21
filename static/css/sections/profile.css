@@ -10,7 +10,9 @@
 }
 
 .profile-info-container {
-  padding: 0 16px 16px;
+  /* The main column starts flush against the left rail, so this padding is
+     the only gap the profile gets. 16px read as cramped next to the rail. */
+  padding: 0 24px 16px;
   position: relative;
   z-index: 10;
 }
@@ -265,6 +267,16 @@
 
 .pprogress-inline-header:hover {
   background: rgba(255, 255, 255, 0.02);
+}
+
+/* GENEL İLERLEME is an eyebrow for Başarımlar. On one line the two just read
+   as two labels; stacking them makes the smaller one label the larger. */
+.pprogress-inline-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-width: 0;
 }
 
 .pprogress-inline-left {

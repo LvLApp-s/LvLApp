@@ -1442,14 +1442,14 @@ class AppRouteTests(unittest.TestCase):
         self.assertIn("/admin/users/level", routes)
         self.assertIn("/setup-health", routes)
         self.assertIn("/level-guide", routes)
-        self.assertIn("/reels", routes)
+        self.assertIn("/clips", routes)
         self.assertIn("/auth/oauth/<provider>", routes)
         self.assertIn("/auth/oauth/callback", routes)
         self.assertIn("/auth/oauth/onboarding", routes)
         self.assertIn("/forgot-password", routes)
         self.assertIn("/reset-password/<token>", routes)
-        self.assertIn("/reels/upload", routes)
-        self.assertIn("/reels/<int:reel_id>/like", routes)
+        self.assertIn("/clips/upload", routes)
+        self.assertIn("/clips/<int:reel_id>/like", routes)
         self.assertIn("/delete_post", routes)
         self.assertIn("/delete_message", routes)
         self.assertIn("/delete_account", routes)
@@ -1529,7 +1529,7 @@ class AppRouteTests(unittest.TestCase):
         self.assertNotIn('data-home-reel-counter', html)
 
     def test_home_media_preview_falls_back_to_demo_batch(self):
-        with zapp.app.test_request_context("/reels"), \
+        with zapp.app.test_request_context("/clips"), \
              patch.object(zapp, "supabase", object()):
             media = zapp.get_home_media_preview(7)
 
@@ -1580,7 +1580,7 @@ class AppRouteTests(unittest.TestCase):
         reel["user"] = reel["author"]
         zapp.apply_forced_user_levels(reel)
 
-        with zapp.app.test_request_context("/reels"):
+        with zapp.app.test_request_context("/clips"):
             html = zapp.render_template("_reel_card.html", viewer={"id": 7, "display_name": "Viewer", "username": "viewer"}, reel=reel)
 
         self.assertIn("reel-level-badge", html)
@@ -2334,7 +2334,7 @@ class AppRouteTests(unittest.TestCase):
 
     def test_reels_redirects_unauthenticated_users(self):
         with patch.object(zapp, "get_current_user", return_value=None):
-            response = self.client.get("/reels")
+            response = self.client.get("/clips")
 
         self.assertEqual(response.status_code, 302)
         self.assertIn("/auth", response.location)
@@ -2347,7 +2347,7 @@ class AppRouteTests(unittest.TestCase):
              patch.object(zapp, "get_reels", return_value=([self.sample_reel()], False)), \
              patch.object(zapp, "get_community_highlights", return_value=[]), \
              patch.object(zapp, "get_home_media_preview", return_value=[]) as media_preview:
-            html = self.client.get("/reels").data.decode()
+            html = self.client.get("/clips").data.decode()
 
         media_preview.assert_not_called()
         self.assertIn("Clips", html)
@@ -2365,7 +2365,7 @@ class AppRouteTests(unittest.TestCase):
              patch.object(zapp, "get_reels", return_value=([], False)), \
              patch.object(zapp, "get_community_highlights", return_value=[]), \
              patch.object(zapp, "get_home_media_preview", return_value=[]):
-            html = self.client.get("/reels").data.decode()
+            html = self.client.get("/clips").data.decode()
 
         self.assertIn("No real clips yet", html)
         self.assertNotIn("Demo reel", html)
@@ -2376,7 +2376,7 @@ class AppRouteTests(unittest.TestCase):
              patch.object(zapp, "get_reels", side_effect=RuntimeError("reels relation does not exist")), \
              patch.object(zapp, "get_community_highlights", return_value=[]), \
              patch.object(zapp, "get_home_media_preview", return_value=[]):
-            html = self.client.get("/reels").data.decode()
+            html = self.client.get("/clips").data.decode()
 
         self.assertIn("Demo reel", html)
         self.assertIn("Reels database table is not ready", html)
@@ -2385,7 +2385,7 @@ class AppRouteTests(unittest.TestCase):
         viewer = {"id": 7, "username": "demo", "display_name": "Demo User", "profile_photo_url": ""}
         with patch.object(zapp, "get_current_user", return_value=viewer), \
              patch.object(zapp, "get_reel_upload_communities", return_value=[]):
-            html = self.client.get("/reels/upload").data.decode()
+            html = self.client.get("/clips/upload").data.decode()
 
         self.assertIn("Upload Clip", html)
         self.assertIn('enctype="multipart/form-data"', html)
@@ -2397,7 +2397,7 @@ class AppRouteTests(unittest.TestCase):
         viewer = {"id": 7, "username": "demo", "display_name": "Demo User", "profile_photo_url": ""}
         with patch.object(zapp, "get_current_user", return_value=viewer), \
              patch.object(zapp, "get_reel_upload_communities", return_value=[]):
-            response = self.client.post("/reels/upload", data={
+            response = self.client.post("/clips/upload", data={
                 "csrf_token": self.csrf(),
                 "caption": "no file",
                 "visibility": "public",
@@ -2411,7 +2411,7 @@ class AppRouteTests(unittest.TestCase):
         viewer = {"id": 7, "username": "demo", "display_name": "Demo User", "profile_photo_url": ""}
         with patch.object(zapp, "get_current_user", return_value=viewer), \
              patch.object(zapp, "get_reel_upload_communities", return_value=[]):
-            response = self.client.post("/reels/upload", data={
+            response = self.client.post("/clips/upload", data={
                 "csrf_token": self.csrf(),
                 "caption": "bad file",
                 "visibility": "public",
@@ -2450,7 +2450,7 @@ class AppRouteTests(unittest.TestCase):
              patch.object(zapp, "upload_video_to_storage", return_value=("https://cdn.example.com/reel.mp4", "reels/7/reel.mp4")), \
              patch.object(zapp, "award_xp") as award_xp, \
              patch.object(zapp, "supabase", fake):
-            response = self.client.post("/reels/upload", data={
+            response = self.client.post("/clips/upload", data={
                 "csrf_token": self.csrf(),
                 "caption": "mock upload",
                 "visibility": "public",
@@ -2562,7 +2562,7 @@ class AppRouteTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.get_json()
         self.assertTrue(data["success"])
-        self.assertEqual(data["redirect_url"], "/reels")
+        self.assertEqual(data["redirect_url"], "/clips")
         self.assertEqual(fake.reels.inserted["video_url"], f"https://cdn.example.test/{storage_path}")
         self.assertEqual(fake.reels.inserted["storage_path"], storage_path)
         self.assertEqual(fake.reels.inserted["caption"], "direct upload")
@@ -2634,7 +2634,7 @@ class AppRouteTests(unittest.TestCase):
         with patch.object(zapp, "get_current_user", return_value={"id": 7, "username": "demo"}), \
              patch.object(zapp, "get_reel_by_id", return_value=self.sample_reel()), \
              patch.object(zapp, "supabase", fake):
-            response = self.client.post("/reels/1/like", data={"csrf_token": "token", "ajax": "1"})
+            response = self.client.post("/clips/1/like", data={"csrf_token": "token", "ajax": "1"})
 
         payload = response.get_json()
         self.assertTrue(payload["success"])
@@ -2642,12 +2642,12 @@ class AppRouteTests(unittest.TestCase):
         self.assertEqual(payload["count"], 1)
         self.assertEqual(fake.inserted, {"reel_id": 1, "user_id": 7})
 
-    def test_layout_contains_reels_navigation(self):
+    def test_layout_contains_clips_navigation(self):
         viewer = {"id": 7, "username": "demo", "display_name": "Demo User", "profile_photo_url": ""}
         with zapp.app.test_request_context("/"):
             html = zapp.render_template("index.html", viewer=viewer, posts=[], mode="all", highlights=[], page=1, has_next=False)
 
-        self.assertIn('/reels', html)
+        self.assertIn('/clips', html)
         self.assertIn('Clips', html)
         # The rail ships collapsed; `menu-open` is the hovered state.
         self.assertIn('<aside class="left-rail">', html)
@@ -2755,7 +2755,7 @@ class AppRouteTests(unittest.TestCase):
 
     def test_reels_template_does_not_render_bottom_pagination_buttons(self):
         viewer = {"id": 7, "username": "demo", "display_name": "Demo User", "profile_photo_url": ""}
-        with zapp.app.test_request_context("/reels"):
+        with zapp.app.test_request_context("/clips"):
             html = zapp.render_template(
                 "reels.html",
                 viewer=viewer,
@@ -2787,7 +2787,7 @@ class AppRouteTests(unittest.TestCase):
 
     def test_reels_header_only_shows_for_you_and_following_tabs(self):
         viewer = {"id": 7, "username": "demo", "display_name": "Demo User", "profile_photo_url": ""}
-        with zapp.app.test_request_context("/reels"):
+        with zapp.app.test_request_context("/clips"):
             html = zapp.render_template(
                 "reels.html",
                 viewer=viewer,
@@ -2815,7 +2815,7 @@ class AppRouteTests(unittest.TestCase):
         with patch.object(zapp, "get_current_user", return_value={"id": 7, "username": "demo"}), \
              patch.object(zapp, "get_reels", return_value=([], False)) as fake_get_reels, \
              patch.object(zapp, "render_template", side_effect=fake_render):
-            response = self.client.get("/reels?tab=discovery")
+            response = self.client.get("/clips?tab=discovery")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(captured_context["tab"], "for_you")
@@ -2873,7 +2873,7 @@ class AppRouteTests(unittest.TestCase):
         shortcuts = {shortcut["name"]: shortcut["url"] for shortcut in manifest["shortcuts"]}
 
         self.assertEqual(shortcuts["Home"], "/")
-        self.assertEqual(shortcuts["Reels"], "/reels")
+        self.assertEqual(shortcuts["Clips"], "/clips")
         self.assertEqual(shortcuts["Messages"], "/messages")
         self.assertEqual(shortcuts["Notifications"], "/notifications")
         self.assertEqual(shortcuts["Profile"], "/profile")
@@ -4969,14 +4969,14 @@ class AppRouteTests(unittest.TestCase):
         non_owner = FakeSupabase({"id": 42, "user_id": 8})
         with patch.object(zapp, "get_current_user", return_value=viewer), \
              patch.object(zapp, "supabase", non_owner):
-            response = self.client.post("/reels/42/delete", data={"csrf_token": token})
+            response = self.client.post("/clips/42/delete", data={"csrf_token": token})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(non_owner.updates, [])
 
         owned = FakeSupabase({"id": 42, "user_id": 7})
         with patch.object(zapp, "get_current_user", return_value=viewer), \
              patch.object(zapp, "supabase", owned):
-            response = self.client.post("/reels/42/delete", data={"csrf_token": token})
+            response = self.client.post("/clips/42/delete", data={"csrf_token": token})
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(len(owned.updates), 1)
@@ -6028,7 +6028,7 @@ class RailAndPopoverTests(unittest.TestCase):
 
     def test_rail_keeps_only_primary_destinations(self):
         rail = self.rail()
-        for present in ('href="/"', 'href="/reels"', 'href="/community"',
+        for present in ('href="/"', 'href="/clips"', 'href="/community"',
                         'href="/messages"', 'href="/bookmarks"'):
             with self.subTest(present=present):
                 self.assertIn(present, rail)

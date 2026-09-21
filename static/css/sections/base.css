@@ -208,6 +208,14 @@
   /* The rail grows with the window instead of stopping at a fixed width, so
      a left-anchored shell has no dead strip on the right. */
   --shell-right: clamp(380px, 30vw, 600px);
+
+  /* How strongly the Community hero's wash covers its artwork. The image is
+     drawn for a dark field, so daylight needs a heavier veil -- expressed as
+     tokens rather than a second rule, because a section must not carry its
+     own theme block. */
+  --hero-veil-near: 88%;
+  --hero-veil-mid: 30%;
+  --hero-veil-far: 0%;
   /* Desktop sticky header: min-height plus its 1px bottom border. Anything
      that sticks below it offsets by this. */
   --topbar-height: 65px;
@@ -298,6 +306,10 @@
   --lvl-surface-hover: #eef3f6;
   --lvl-surface-inverse: #0f1419;
   --lvl-light-surface: #eff3f4;
+
+  --hero-veil-near: 94%;
+  --hero-veil-mid: 62%;
+  --hero-veil-far: 40%;
 
   /* Progression tints, same hues at daylight weight. */
   --lvl-tint-cool: #eaf2ff;
@@ -490,6 +502,14 @@
   display: none;
 }
 
+html {
+  /* Always reserve room for the scrollbar. Without this, anything that makes
+     the page taller -- opening the achievements panel, loading a feed -- makes
+     the scrollbar appear, narrows the viewport, and shifts every element left
+     by its width. */
+  scrollbar-gutter: stable;
+}
+
 body {
   background-color: var(--bg-color);
   color: var(--text-primary);
@@ -654,11 +674,41 @@ a:hover {
   align-items: center;
 }
 
+/* The labels ride the width change rather than blinking in and out.
+   display:none cannot be transitioned, so the rail used to resize smoothly
+   while its contents appeared all at once. Clipping them to zero width keeps
+   the icons centred in the collapsed rail and lets the text slide open. */
+.left-rail .brand-text,
+.left-rail .nav-label,
+.left-rail .mini-profile div,
+.left-rail .logout-link {
+  overflow: hidden;
+  white-space: nowrap;
+  /* Close to the widest label ("Community" is 94px). A much larger ceiling
+     would be crossed in the first few frames, so the text would snap to full
+     width while the rail was still opening. */
+  max-width: 110px;
+  opacity: 1;
+  transition: max-width var(--duration-base) var(--ease-standard),
+              opacity var(--duration-base) var(--ease-standard);
+}
+
 .left-rail:not(.menu-open) .brand-text,
 .left-rail:not(.menu-open) .nav-label,
 .left-rail:not(.menu-open) .mini-profile div,
 .left-rail:not(.menu-open) .logout-link {
-  display: none;
+  max-width: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .left-rail .brand-text,
+  .left-rail .nav-label,
+  .left-rail .mini-profile div,
+  .left-rail .logout-link {
+    transition: none;
+  }
 }
 
 .sidebar-top {
@@ -806,7 +856,10 @@ a:hover {
 .right-rail {
   /* The grid column is the single source of truth for this width. */
   width: 100%;
-  padding: 0 20px;
+  /* Top space so the first panel does not start hard against the edge; the
+     rail is sticky, so this is padding rather than a margin that would
+     collapse. */
+  padding: var(--space-10) 20px 0;
   position: sticky;
   top: 0;
   height: 100vh;

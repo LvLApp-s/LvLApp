@@ -102,18 +102,10 @@
   line-height: 14px;
 }
 
-.nav-label {
-  display: none;
-}
-
-.left-rail.menu-open .nav-label {
-  display: inline;
-}
-
-.left-rail:not(.menu-open) .nav-label,
-.left-rail:not(.menu-open) .brand-text {
-  display: none;
-}
+/* The rail's labels are shown and hidden in base.css by clipping their width
+   and fading them, so they move with the rail instead of appearing all at
+   once. display cannot be transitioned, so toggling it here defeated that --
+   these three rules are deliberately gone rather than overridden. */
 
 .left-rail:not(.menu-open) .compose-link {
   margin-top: auto;
@@ -269,12 +261,15 @@
   box-shadow: inset 0 0 0 1px var(--lvl-white-08);
 }
 
+/* An eyebrow labels the heading below it; it should not compete with it.
+   Accent colour at weight 800 made every panel open with two shouted lines. */
 .panel-kicker {
   display: block;
   margin-bottom: 4px;
-  color: var(--accent-color);
-  font-size: 12px;
-  font-weight: 800;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -1043,9 +1038,10 @@ button {
   gap: 10px;
 }
 
+/* The avatar keeps the size it has in the collapsed rail. Shrinking it on
+   expand made it pop smaller the moment the rail was hovered, which read as
+   the whole rail jumping. */
 .left-rail.menu-open .mini-profile .avatar {
-  width: 36px;
-  height: 36px;
   flex-shrink: 0;
 }
 
@@ -1093,21 +1089,16 @@ button {
     padding: 4px 8px;
     margin-top: 2px;
   }
-  .left-rail.menu-open .mini-profile .avatar {
-    width: 32px;
-    height: 32px;
-  }
   .left-rail.menu-open .logout-link {
     padding: 4px 8px;
     font-size: 11px;
   }
 }
 
-.left-rail:not(.menu-open) .nav-label,
-.left-rail:not(.menu-open) .mini-profile div,
-.left-rail:not(.menu-open) .logout-link {
-  display: none !important;
-}
+/* Hiding these is base.css's job now -- it clips their width so they move
+   with the rail. An !important display here could not be transitioned and
+   simply won, which is why the rail resized smoothly while its labels
+   blinked. */
 
 
 @media (max-width: 767px) {
@@ -1240,11 +1231,6 @@ button {
     align-items: stretch;
   }
 
-  .left-rail:not(.menu-open) .nav-label,
-  .left-rail:not(.menu-open) .mini-profile div,
-  .left-rail:not(.menu-open) .logout-link {
-    display: none !important;
-  }
 
   .left-rail:not(.menu-open) {
     margin-left: auto;
@@ -1654,16 +1640,28 @@ button {
 /* Body / collapsible */
 .pprogress-body {
   overflow: hidden;
+  /* visibility is listed so the collapsed rule can delay it; on the way open
+     it flips immediately, which is what the 0s here means. */
   transition: max-height 0.38s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.28s ease;
+              opacity 0.28s ease,
+              visibility 0s;
   max-height: 3000px;
   opacity: 1;
+  visibility: visible;
 }
 
 .pprogress-body.is-collapsed {
   max-height: 0 !important;
   opacity: 0;
   pointer-events: none;
+  /* profile.css also sets visibility: hidden here. Untransitioned it snaps at
+     once, so the cards blanked out and an empty box then slid shut. Holding it
+     until the collapse has finished lets the text fade as the panel closes,
+     and it still leaves the tab order once shut. */
+  visibility: hidden;
+  transition: max-height 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.28s ease,
+              visibility 0s 0.38s;
 }
 
 /* Achievement grid */

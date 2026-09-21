@@ -118,8 +118,24 @@
   cursor: pointer;
 }
 
+/* Sound on. The background alone used to carry this, which meant a muted
+   clip and a playing one differed only by a shade in the corner -- readers
+   assumed sound was on when it was not. The icon now says which it is. */
 .home-reel-mute-btn.active {
   background: var(--lvl-primary);
+  color: var(--lvl-text-inverse);
+}
+
+.home-reel-mute-btn .home-reel-icon-sound {
+  display: none;
+}
+
+.home-reel-mute-btn.active .home-reel-icon-sound {
+  display: block;
+}
+
+.home-reel-mute-btn.active .home-reel-icon-muted {
+  display: none;
 }
 
 .home-reel-info {

@@ -1,12 +1,49 @@
 /* Community timeline tabs and panes */
 /* LvL community timeline redesign */
+/* The Community hero. The artwork sits to the right, behind the Create group
+   button rather than the heading. The url() is root-absolute on purpose: this
+   file is concatenated into static/css/bundle.css one directory up, so a path
+   relative to sections/ would resolve from the wrong place once served.
+   A gradient runs over it from the text side so the copy keeps its contrast;
+   how heavy that gradient is comes from tokens, which is how the light theme
+   dims artwork drawn for a dark field. */
 .community-timeline-header {
+  position: relative;
   align-items: center;
   gap: var(--space-7);
+  overflow: hidden;
+  isolation: isolate;
+  padding-block: var(--space-11);
+  border-radius: var(--radius-xl);
+  background-color: var(--lvl-surface-raised);
+  background-image:
+    linear-gradient(90deg,
+      var(--lvl-surface-raised) 0%,
+      color-mix(in srgb, var(--lvl-surface-raised) var(--hero-veil-near), transparent) 42%,
+      color-mix(in srgb, var(--lvl-surface-raised) var(--hero-veil-mid), transparent) 72%,
+      color-mix(in srgb, var(--lvl-surface-raised) var(--hero-veil-far), transparent) 100%),
+    url("/static/assets/community-hero.svg");
+  background-repeat: no-repeat, no-repeat;
+  background-position: center, right center;
+  background-size: cover, cover;
+}
+
+.community-timeline-header > * {
+  position: relative;
+  z-index: 1;
 }
 
 .community-timeline-header p {
   max-width: 620px;
+}
+
+@media (max-width: 767px) {
+  /* On a phone the text fills the width, so the artwork would sit under it. */
+  .community-timeline-header {
+    padding-block: var(--space-9);
+    background-size: cover, 160% auto;
+    background-position: center, right -40% top -20%;
+  }
 }
 
 .community-hub {
@@ -99,9 +136,12 @@
 }
 
 .community-timeline-tabs a.active {
+  /* The rounded, tinted pill already reads as selected. The inset underline
+     it used to carry cut across that shape's bottom corners and said the same
+     thing twice. */
   background: color-mix(in srgb, var(--accent-color) 18%, transparent);
   color: var(--text-primary);
-  box-shadow: inset 0 -3px 0 var(--accent-color);
+  font-weight: 700;
 }
 
 .community-timeline-tabs strong {
@@ -146,16 +186,23 @@
   background: color-mix(in srgb, var(--accent-color) 10%, var(--lvl-surface-raised));
 }
 
+/* These held text characters -- an arrow, a hash, a star -- drawn white on a
+   solid accent chip. Fonts that lack the glyph rendered an empty box, and the
+   filled chip read as a placeholder even when they did resolve. Real icons on
+   a tinted surface say what the card is. */
 .community-lens-card > span {
   grid-area: icon;
   width: var(--control-md);
   height: var(--control-md);
   display: grid;
   place-items: center;
-  border-radius: var(--radius-xs);
-  color: var(--lvl-white);
-  font-weight: 900;
-  background: var(--accent-color);
+  border-radius: var(--radius-sm);
+  color: var(--accent-color);
+  background: color-mix(in srgb, var(--accent-color) 14%, transparent);
+}
+
+.community-lens-card:hover > span {
+  background: color-mix(in srgb, var(--accent-color) 22%, transparent);
 }
 
 .community-lens-card strong {

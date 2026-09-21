@@ -34,7 +34,12 @@
   padding: var(--space-4) var(--space-8);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-pill);
-  background: var(--lvl-surface-overlay);
+  /* The rail's clip sits directly behind this corner, and that clip is the
+     point of the panel. Translucent with a blur, the pill stays readable
+     without blacking out the video; hovering it makes it solid. */
+  background: color-mix(in srgb, var(--lvl-surface-overlay) 72%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   color: var(--text-primary);
   font-size: 15px;
   font-weight: 700;
@@ -44,7 +49,8 @@
               transform var(--duration-fast) var(--ease-standard);
 }
 
-.msg-dock-pill:hover {
+.msg-dock-pill:hover,
+.msg-dock-pill:focus-visible {
   background: var(--lvl-surface-hover);
   transform: translateY(-1px);
 }

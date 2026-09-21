@@ -31,6 +31,83 @@ document.addEventListener('DOMContentLoaded', () => {
     // point in this file where the rest of that feature is defined.
     const LIVE_STATUS_INTERVAL = 20000;
 
+    /* --- Prefetch on intent ------------------------------------------------
+     *
+     * The profile tabs, the rail and the feed tabs are ordinary links, so
+     * every switch is a fresh page load: the server re-renders, and the
+     * browser tears down and rebuilds the page. Nothing can start until the
+     * click happens.
+     *
+     * Hovering a link, or touching it, is a reliable signal that it is about
+     * to be clicked -- and it happens a few hundred milliseconds early. Asking
+     * the browser to fetch the page then means the response is usually already
+     * in its cache by the time the click lands, so the navigation is a cache
+     * hit instead of a round trip.
+     *
+     * This only ever fetches pages the reader was about to open anyway. It
+     * stays off when the device asks us to save data or reports a slow link,
+     * skips anything that is not a plain same-origin GET, and never asks for
+     * the same URL twice.
+     */
+
+    const PREFETCH_LIMIT = 12;
+    const prefetched = new Set();
+
+    function prefetchingIsWelcome() {
+        const conn = navigator.connection;
+        if (!conn) return true;
+        if (conn.saveData) return false;
+        return !/(^|-)2g$/.test(conn.effectiveType || '');
+    }
+
+    function worthPrefetching(link) {
+        if (!link || prefetched.size >= PREFETCH_LIMIT) return false;
+        if (link.target && link.target !== '_self') return false;
+        if (link.hasAttribute('download') || link.dataset.noPrefetch === 'true') return false;
+        let url;
+        try {
+            url = new URL(link.href, location.href);
+        } catch (error) {
+            return false;
+        }
+        if (url.origin !== location.origin) return false;
+        // A fragment on the page we are already on navigates nothing.
+        if (url.pathname === location.pathname && url.search === location.search) return false;
+        // Anything that changes state must never be fetched speculatively.
+        if (/\/(logout|delete|remove)(\/|$)/.test(url.pathname)) return false;
+        return !prefetched.has(url.href);
+    }
+
+    function prefetch(link) {
+        if (!prefetchingIsWelcome() || !worthPrefetching(link)) return;
+        const href = new URL(link.href, location.href).href;
+        prefetched.add(href);
+        const hint = document.createElement('link');
+        hint.rel = 'prefetch';
+        hint.as = 'document';
+        hint.href = href;
+        document.head.appendChild(hint);
+    }
+
+    function initPrefetch() {
+        const selector = [
+            '.profile-tabs a',
+            '.nav-list a',
+            '.feed-tabs a',
+            '.community-timeline-tabs a',
+            '.reels-tabs a',
+        ].join(', ');
+
+        const onIntent = (event) => {
+            const link = event.target.closest && event.target.closest(selector);
+            if (link) prefetch(link);
+        };
+
+        document.addEventListener('pointerenter', onIntent, true);
+        document.addEventListener('focusin', onIntent);
+        document.addEventListener('touchstart', onIntent, { passive: true });
+    }
+
     // Polling that respects tab visibility. A backgrounded tab should not keep
     // waking serverless functions; it catches up with one fetch on return.
     function startVisiblePolling(task, intervalMs) {
@@ -511,6 +588,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initPopovers();
     initMessageDock();
     initMarkAllRead();
+    initPrefetch();
     initTheme();
     initScrollMemory();
     initFeedUpdates();
@@ -1864,7 +1942,7 @@ document.addEventListener('DOMContentLoaded', () => {
             bodyHtml = `
                 <div class="shared-post-label" data-i18n="messages_shared_clip">${escapeHTML(t.messages_shared_clip || 'Shared a clip:')}</div>
                 <div class="shared-post-card" style="position: relative; overflow: hidden; border-radius: 8px; padding: 0;">
-                    <a href="/reels#reel-${escapeHTML(String(message.shared_reel.id))}" class="shared-post-link" style="display: block; position: relative; padding: 0;">
+                    <a href="/clips#reel-${escapeHTML(String(message.shared_reel.id))}" class="shared-post-link" style="display: block; position: relative; padding: 0;">
                         <div class="shared-post-author-row" style="position: absolute; top: 12px; left: 12px; z-index: 2; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.8); margin: 0;">
                             <img class="shared-post-avatar" src="${escapeHTML(reelAuthor.profile_photo_url || '/static/assets/default-male-avatar.svg')}" alt="" style="border: 2px solid white;">
                             <strong>${escapeHTML(reelAuthor.display_name || '')}</strong>
@@ -2208,7 +2286,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const notificationUrl = (notification) => {
             if (notification.post_id) return `/post/${encodeURIComponent(String(notification.post_id))}`;
-            if (notification.reel_id) return notification.reel_url || `/reels#reel-${encodeURIComponent(String(notification.reel_id))}`;
+            if (notification.reel_id) return notification.reel_url || `/clips#reel-${encodeURIComponent(String(notification.reel_id))}`;
             if (notification.type === 'message') return notification.message_url || (notification.actor_username ? `/messages?u=${encodeURIComponent(notification.actor_username)}` : '/messages');
             if (notification.actor_username) return `/profile/${encodeURIComponent(notification.actor_username)}`;
             return '';
@@ -3244,7 +3322,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 allow_downloads: !!(allowDownloads && allowDownloads.checked),
                 autoplay_next: !!(autoplayNext && autoplayNext.checked)
             });
-            window.location.assign(completed.redirect_url || '/reels');
+            window.location.assign(completed.redirect_url || '/clips');
         };
 
         form.addEventListener('submit', async (event) => {
@@ -3673,7 +3751,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (reel) {
                 card.className = 'shared-reel-card msg-dock-shared';
                 card.innerHTML =
-                    `<a class="shared-reel-link" href="/reels#reel-${escapeHTML(String(reel.id))}">` +
+                    `<a class="shared-reel-link" href="/clips#reel-${escapeHTML(String(reel.id))}">` +
                     `<video class="shared-reel-video" src="${escapeHTML(reel.video_url || '')}" preload="metadata" muted playsinline loop></video>` +
                     `<div class="shared-reel-author"><img class="shared-reel-avatar" src="${avatar}" alt=""><span>${name}</span></div>` +
                     '<div class="shared-reel-play"><svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>' +
