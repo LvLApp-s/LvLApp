@@ -309,13 +309,17 @@
 }
 
 /* The sound toggle stays on the video, bottom right, as it does there. */
+/* The wrapper is the floating control now -- speaker plus level -- so it
+   carries the position and the surface. It is no longer a .reel-action-button,
+   so the blanket `background: transparent !important` on those does not
+   reach it and this needs no !important of its own. */
 .reel-mute-float {
   position: absolute;
-  right: var(--space-5);
+  inset-inline-end: var(--space-5);
   bottom: var(--space-5);
   z-index: 5;
-  border-radius: var(--radius-round);
-  background: var(--lvl-black-45) !important;
+  border-radius: var(--radius-pill);
+  background: var(--lvl-black-45);
   backdrop-filter: blur(6px);
 }
 

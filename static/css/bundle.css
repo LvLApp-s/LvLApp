@@ -2652,9 +2652,19 @@ label.has-success input {
 }
 
 /* The rail is a column, so a panel can only grow if the rail lets it. */
-.right-rail:has(.trending-panel) {
+/* A column, so the last panel can take the height the ones above it leave
+   rather than stopping at a guessed maximum with black page beneath it. */
+.right-rail {
   display: flex;
   flex-direction: column;
+}
+
+/* Everything except the clips panel is sized by its content. */
+.right-rail > .community-highlights,
+.right-rail > .trending-panel,
+.right-rail > .levelup-panel,
+.right-rail > .home-media-panel {
+  flex: 0 0 auto;
 }
 
 .right-rail:has(.trending-panel) .trending-list {
@@ -3097,6 +3107,144 @@ label.has-success input {
 
 .careers-position-desc {
   margin-top: var(--space-2);
+}
+
+/* --- Media volume --------------------------------------------------------
+   One control, two gestures, the way a phone app does it: a tap on the
+   speaker mutes or unmutes, and holding the pointer on it opens the level
+   beside it. The track stays in the layout and is clipped to zero width so
+   it can slide rather than blink in -- display:none cannot be transitioned.
+   ------------------------------------------------------------------------ */
+
+.media-volume {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  border-radius: var(--radius-pill);
+  background: var(--lvl-black-52);
+  transition: gap var(--duration-base) var(--ease-standard),
+              padding var(--duration-base) var(--ease-standard);
+}
+
+/* Sitting against the right edge, so it opens towards the middle. */
+.media-volume-end {
+  flex-direction: row-reverse;
+}
+
+.media-volume-toggle {
+  flex: 0 0 auto;
+}
+
+.media-volume-track {
+  display: flex;
+  align-items: center;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-width var(--duration-base) var(--ease-standard),
+              opacity var(--duration-base) var(--ease-standard);
+}
+
+.media-volume:hover,
+.media-volume:focus-within {
+  gap: var(--space-3);
+  padding-inline-end: var(--space-4);
+}
+
+.media-volume-end:hover,
+.media-volume-end:focus-within {
+  padding-inline: var(--space-4) 0;
+}
+
+.media-volume:hover .media-volume-track,
+.media-volume:focus-within .media-volume-track {
+  max-width: 96px;
+  opacity: 1;
+}
+
+/* A pointer that only grazes the corner should not pop the slider open, so
+   the level waits for the pointer to settle. */
+@media (hover: hover) {
+  .media-volume:hover .media-volume-track {
+    transition-delay: 90ms;
+  }
+}
+
+.media-volume-slider {
+  width: 84px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.media-volume-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(to right,
+    var(--lvl-white) 0 var(--volume-fill, 100%),
+    var(--lvl-white-22) var(--volume-fill, 100%) 100%);
+}
+
+.media-volume-slider::-moz-range-track {
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--lvl-white-22);
+}
+
+.media-volume-slider::-moz-range-progress {
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--lvl-white);
+}
+
+.media-volume-slider::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  margin-top: -4px;
+  border: 0;
+  border-radius: var(--radius-round);
+  background: var(--lvl-white);
+  box-shadow: 0 1px 4px var(--lvl-black-62);
+}
+
+.media-volume-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 0;
+  border-radius: var(--radius-round);
+  background: var(--lvl-white);
+  box-shadow: 0 1px 4px var(--lvl-black-62);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .media-volume,
+  .media-volume-track {
+    transition: none;
+  }
+}
+
+/* No hover on a touch screen, so the level is always out. */
+@media (hover: none) {
+  .media-volume-track {
+    max-width: 84px;
+    opacity: 1;
+  }
+
+  .media-volume {
+    gap: var(--space-3);
+    padding-inline-end: var(--space-4);
+  }
+
+  .media-volume-end {
+    padding-inline: var(--space-4) 0;
+  }
 }
 
 /* --- Empty state ---------------------------------------------------------- */
@@ -13683,13 +13831,17 @@ button {
 }
 
 /* The sound toggle stays on the video, bottom right, as it does there. */
+/* The wrapper is the floating control now -- speaker plus level -- so it
+   carries the position and the surface. It is no longer a .reel-action-button,
+   so the blanket `background: transparent !important` on those does not
+   reach it and this needs no !important of its own. */
 .reel-mute-float {
   position: absolute;
-  right: var(--space-5);
+  inset-inline-end: var(--space-5);
   bottom: var(--space-5);
   z-index: 5;
-  border-radius: var(--radius-round);
-  background: var(--lvl-black-45) !important;
+  border-radius: var(--radius-pill);
+  background: var(--lvl-black-45);
   backdrop-filter: blur(6px);
 }
 
@@ -16232,11 +16384,16 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 /* ===== sections/home-reels.css ===== */
 /* Desktop Home reels panel */
 /* ─── Home Reel Panel (right rail compact player) ────────────────────────── */
+/* The panel takes whatever height the rail has left rather than a guessed
+   one. On a page where it is the only panel that is most of the rail, which
+   is where the clip used to stop short and leave a band of black beneath it;
+   on a page with a leaderboard above it, it is what remains. */
 .home-reel-panel {
   margin-top: 16px;
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - 228px);
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .home-reel-panel-header {
@@ -16260,11 +16417,17 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   white-space: nowrap;
 }
 
+/* One clip per screenful. Each slide is exactly as tall as this box, so a
+   snap moves to the next whole clip instead of leaving one cut across the
+   top or bottom edge -- you never scroll within a clip to see the rest of
+   it. */
 .home-reel-slides {
   position: relative;
   display: grid;
-  gap: 14px;
-  max-height: min(72vh, 660px);
+  grid-auto-rows: 100%;
+  gap: 0;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   scroll-snap-type: y mandatory;
@@ -16279,8 +16442,12 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 }
 
 .home-reel-slide {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-height: 0;
   scroll-snap-align: start;
+  scroll-snap-stop: always;
   opacity: 0.68;
   transform: scale(0.985);
   transition: opacity 0.15s ease, transform 0.15s ease;
@@ -16291,17 +16458,22 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   transform: scale(1);
 }
 
+/* The frame takes the slide's remaining height. It used to be sized by a
+   9:16 ratio capped at 620px, which on a tall rail stopped short and left
+   black underneath, and on a short one made the slide taller than the box it
+   scrolls in so the author row sat half off the bottom. The ratio is a
+   minimum now, not a ceiling. */
 .home-reel-video-wrap {
   position: relative;
   border-radius: var(--radius-md);
   overflow: hidden;
   background: var(--lvl-surface-raised);
-  aspect-ratio: 9 / 16;
   width: 100%;
-  /* Follows the viewport so the clip fills the rail instead of leaving a
-     band of empty rail under it, and stays portrait now that the rail is
-     wider. */
-  max-height: min(64vh, 620px);
+  flex: 1 1 auto;
+  /* A floor for a very short rail, so the frame never collapses to the height
+     of its own controls. Everything above this comes from the space the slide
+     has left. */
+  min-height: 180px;
 }
 
 /* The frame is the play/pause control now. */
@@ -16335,16 +16507,22 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 }
 
 /* Bottom-left, not bottom-right: the message dock is fixed to the window's
-   bottom-right corner and was sitting straight on top of this control. */
-.home-reel-mute-btn {
+   bottom-right corner and was sitting straight on top of this control. The
+   position belongs to the wrapper now, which holds the speaker and the level
+   together. */
+.home-reel-video-wrap > .media-volume {
   position: absolute;
   bottom: 8px;
   inset-inline-start: 8px;
+  z-index: 2;
+}
+
+.home-reel-mute-btn {
   width: 30px;
   height: 30px;
   border-radius: var(--radius-round);
   border: none;
-  background: var(--lvl-black-52);
+  background: transparent;
   color: var(--lvl-white);
   display: flex;
   align-items: center;
@@ -16355,8 +16533,13 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 /* Sound on. The background alone used to carry this, which meant a muted
    clip and a playing one differed only by a shade in the corner -- readers
    assumed sound was on when it was not. The icon now says which it is. */
-.home-reel-mute-btn.active {
+/* Sound on: the wrapper carries the state so the speaker and the level it
+   opens read as one control. */
+.media-volume:has(.home-reel-mute-btn.active) {
   background: var(--lvl-primary);
+}
+
+.home-reel-mute-btn.active {
   color: var(--lvl-text-inverse);
 }
 
@@ -16373,7 +16556,8 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 }
 
 .home-reel-info {
-  padding: 8px 2px 4px;
+  flex: 0 0 auto;
+  padding: 0 2px 4px;
 }
 
 .home-reel-author {

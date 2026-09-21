@@ -161,7 +161,7 @@ class OtherOptimisticCandidatesTests(unittest.TestCase):
     """
 
     def test_the_shared_action_handler_still_waits_for_the_server(self):
-        start = SCRIPT.index("const ajaxForms = document.querySelectorAll('.ajax-action-form');")
+        start = SCRIPT.index("function bindAjaxActionForms(")
         body = SCRIPT[start:start + 3000]
         response_at = body.index('const result = await response.json();')
         for action in ('like', 'repost', 'bookmark', 'follow', 'mute'):

@@ -91,12 +91,20 @@ class RenderedRankTests(unittest.TestCase):
 
 
 class SharedMacroTests(unittest.TestCase):
-    def test_both_leaderboards_use_the_macro(self):
-        for name in ('layout.html', 'community.html'):
+    def test_every_leaderboard_uses_the_macro(self):
+        # The rail's rows live in their own partial now, so the API can render
+        # exactly what the page renders when the panel repairs itself.
+        for name in ('_leaderboard_rows.html', 'community.html'):
             text = (ROOT / 'templates' / name).read_text(encoding='utf-8')
             with self.subTest(template=name):
                 self.assertIn('leaderboard_rank(loop.index)', text)
                 self.assertIn('_leaderboard_rank.html', text)
+
+    def test_the_rail_draws_its_rows_from_that_partial(self):
+        """Not from a second copy of the list that would drift from it."""
+        layout = (ROOT / 'templates' / 'layout.html').read_text(encoding='utf-8')
+        self.assertIn('{% include "_leaderboard_rows.html" %}', layout)
+        self.assertNotIn('class="lb-row"', layout)
 
     def test_no_leaderboard_writes_its_own_rank(self):
         """The community page used to number its rows by hand."""

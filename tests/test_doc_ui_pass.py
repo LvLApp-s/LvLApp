@@ -53,11 +53,19 @@ class RailSectionSeparationTests(unittest.TestCase):
         self.assertRegex(body, r"align-items:\s*center")
 
     def test_the_mute_control_is_clear_of_the_dock(self):
-        """The dock is fixed bottom-right; this control used to be there too."""
-        body = rule("home-reels.css", ".home-reel-mute-btn")
+        """The dock is fixed bottom-right; this control used to be there too.
+
+        The position belongs to the wrapper now -- speaker plus level -- so
+        the whole control has to sit on the other side, not just the button.
+        """
+        body = rule("home-reels.css", ".home-reel-video-wrap > .media-volume")
         self.assertIsNotNone(body)
         self.assertRegex(body, r"inset-inline-start:\s*8px")
         self.assertNotRegex(body, r"\bright:\s*8px")
+        button = rule("home-reels.css", ".home-reel-mute-btn")
+        self.assertIsNotNone(button)
+        self.assertNotRegex(button, r"position:\s*absolute",
+                            "two things positioning the same control")
 
 
 class CommunityEmptyStateTests(unittest.TestCase):

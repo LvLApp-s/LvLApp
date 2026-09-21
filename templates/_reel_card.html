@@ -21,10 +21,18 @@
     <button class="reel-play-toggle" type="button" data-reel-play aria-label="Play or pause clip" data-i18n-aria="reel_play_pause_aria">
       <span data-reel-play-icon data-i18n="reel_play">Play</span>
     </button>
-      <button class="reel-action-button reel-action-mute reel-mute-float" type="button" data-reel-mute aria-label="Toggle sound" data-i18n-aria="reel_toggle_sound">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
-        <span data-reel-mute-icon class="sr-only" data-i18n="reel_muted">Muted</span>
-      </button>
+      {# Same control as the rail's: click to mute, hover to set the level. It
+         opens towards the middle of the clip because it sits on the right. #}
+      <div class="media-volume media-volume-end reel-mute-float" data-volume-control>
+        <button class="reel-action-button reel-action-mute media-volume-toggle" type="button" data-reel-mute data-volume-toggle aria-label="Toggle sound" data-i18n-aria="reel_toggle_sound">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+          <span data-reel-mute-icon class="sr-only" data-i18n="reel_muted">Muted</span>
+        </button>
+        <span class="media-volume-track">
+          <input class="media-volume-slider" type="range" min="0" max="100" step="1" value="100"
+                 aria-label="Volume" data-i18n-aria="media_volume_aria" data-volume-slider>
+        </span>
+      </div>
     <div class="reel-overlay">
       <div class="reel-meta">
         <div class="reel-author">

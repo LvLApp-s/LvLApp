@@ -1,0 +1,32 @@
+{% from "_verified_badge.html" import verified_badge with context %}
+{% from "_leaderboard_rank.html" import leaderboard_rank with context %}
+{# The rail's rows. Extracted so /api/leaderboard can render exactly the same
+   markup: the panel repairs itself by asking for these rather than by the
+   script rebuilding a second copy of this list that would drift from it. #}
+<div class="lb-list custom-scrollbar" role="list">
+{% for h in highlights %}
+  <article class="lb-row" role="listitem">
+    {{ leaderboard_rank(loop.index) }}
+    <a href="{{ url_for('profile', username=h.username) }}" class="lb-person">
+      <img class="lb-avatar" src="{{ h.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="{{ h.display_name }}" loading="lazy">
+      <div class="lb-identity">
+        <strong class="lb-name">
+          {{ h.display_name }}
+          {{ verified_badge(h, size='sm') }}
+        </strong>
+        <span class="lb-handle">@{{ h.username }}</span>
+        <span class="lb-level-badge" style="--badge-color: {{ h.badge_color or theme_colors.muted }};">Lvl {{ h.level or 1 }}</span>
+      </div>
+    </a>
+    {% if session.get('user_id') and session.get('user_id') != h.id %}
+    <form action="{{ url_for('toggle_follow') }}" method="post" class="ajax-action-form lb-follow-form" data-action="follow">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="target_id" value="{{ h.id }}">
+      <button class="lb-follow-btn {% if h.is_following %}active{% endif %}" type="submit">
+        {% if h.is_following %}<span data-follow-label data-i18n="profile_unfollow">Unfollow</span>{% else %}<span data-follow-label data-i18n="profile_follow">Follow</span>{% endif %}
+      </button>
+    </form>
+    {% endif %}
+  </article>
+{% endfor %}
+</div>

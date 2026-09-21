@@ -246,9 +246,19 @@
 }
 
 /* The rail is a column, so a panel can only grow if the rail lets it. */
-.right-rail:has(.trending-panel) {
+/* A column, so the last panel can take the height the ones above it leave
+   rather than stopping at a guessed maximum with black page beneath it. */
+.right-rail {
   display: flex;
   flex-direction: column;
+}
+
+/* Everything except the clips panel is sized by its content. */
+.right-rail > .community-highlights,
+.right-rail > .trending-panel,
+.right-rail > .levelup-panel,
+.right-rail > .home-media-panel {
+  flex: 0 0 auto;
 }
 
 .right-rail:has(.trending-panel) .trending-list {
@@ -691,6 +701,144 @@
 
 .careers-position-desc {
   margin-top: var(--space-2);
+}
+
+/* --- Media volume --------------------------------------------------------
+   One control, two gestures, the way a phone app does it: a tap on the
+   speaker mutes or unmutes, and holding the pointer on it opens the level
+   beside it. The track stays in the layout and is clipped to zero width so
+   it can slide rather than blink in -- display:none cannot be transitioned.
+   ------------------------------------------------------------------------ */
+
+.media-volume {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  border-radius: var(--radius-pill);
+  background: var(--lvl-black-52);
+  transition: gap var(--duration-base) var(--ease-standard),
+              padding var(--duration-base) var(--ease-standard);
+}
+
+/* Sitting against the right edge, so it opens towards the middle. */
+.media-volume-end {
+  flex-direction: row-reverse;
+}
+
+.media-volume-toggle {
+  flex: 0 0 auto;
+}
+
+.media-volume-track {
+  display: flex;
+  align-items: center;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-width var(--duration-base) var(--ease-standard),
+              opacity var(--duration-base) var(--ease-standard);
+}
+
+.media-volume:hover,
+.media-volume:focus-within {
+  gap: var(--space-3);
+  padding-inline-end: var(--space-4);
+}
+
+.media-volume-end:hover,
+.media-volume-end:focus-within {
+  padding-inline: var(--space-4) 0;
+}
+
+.media-volume:hover .media-volume-track,
+.media-volume:focus-within .media-volume-track {
+  max-width: 96px;
+  opacity: 1;
+}
+
+/* A pointer that only grazes the corner should not pop the slider open, so
+   the level waits for the pointer to settle. */
+@media (hover: hover) {
+  .media-volume:hover .media-volume-track {
+    transition-delay: 90ms;
+  }
+}
+
+.media-volume-slider {
+  width: 84px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.media-volume-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(to right,
+    var(--lvl-white) 0 var(--volume-fill, 100%),
+    var(--lvl-white-22) var(--volume-fill, 100%) 100%);
+}
+
+.media-volume-slider::-moz-range-track {
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--lvl-white-22);
+}
+
+.media-volume-slider::-moz-range-progress {
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--lvl-white);
+}
+
+.media-volume-slider::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  margin-top: -4px;
+  border: 0;
+  border-radius: var(--radius-round);
+  background: var(--lvl-white);
+  box-shadow: 0 1px 4px var(--lvl-black-62);
+}
+
+.media-volume-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 0;
+  border-radius: var(--radius-round);
+  background: var(--lvl-white);
+  box-shadow: 0 1px 4px var(--lvl-black-62);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .media-volume,
+  .media-volume-track {
+    transition: none;
+  }
+}
+
+/* No hover on a touch screen, so the level is always out. */
+@media (hover: none) {
+  .media-volume-track {
+    max-width: 84px;
+    opacity: 1;
+  }
+
+  .media-volume {
+    gap: var(--space-3);
+    padding-inline-end: var(--space-4);
+  }
+
+  .media-volume-end {
+    padding-inline: var(--space-4) 0;
+  }
 }
 
 /* --- Empty state ---------------------------------------------------------- */

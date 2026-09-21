@@ -234,46 +234,28 @@
           or (home_reels is defined and home_reels) or (home_media is defined and home_media) %}
     <aside class="right-rail">
       {% if show_highlights %}
-       <div class="community-highlights panel lb-panel">
+       {# The panel repairs itself. A leaderboard lookup that fails leaves the
+          rail dead on every page it renders on, and the failure has been
+          transient in practice -- the same query answers on the next request.
+          So the failure state carries a retry marker and script.js asks the
+          API once for the rows. If that fails too the honest message stays
+          and the server log still holds the reason. #}
+       <div class="community-highlights panel lb-panel" data-leaderboard-panel
+            data-leaderboard-url="{{ url_for('api_leaderboard') }}">
          <h2 data-i18n="leaderboard_title">Leaderboard</h2>
+         <div data-leaderboard-body>
          {% if highlights %}
-           <div class="lb-list custom-scrollbar" role="list">
-           {% for h in highlights %}
-             <article class="lb-row" role="listitem">
-               {{ leaderboard_rank(loop.index) }}
-               <a href="{{ url_for('profile', username=h.username) }}" class="lb-person">
-                 <img class="lb-avatar" src="{{ h.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="{{ h.display_name }}" loading="lazy">
-                 <div class="lb-identity">
-                   <strong class="lb-name">
-                     {{ h.display_name }}
-                     {{ verified_badge(h, size='sm') }}
-                   </strong>
-                   <span class="lb-handle">@{{ h.username }}</span>
-                   {% set highlight_level_title = level_title(h.level or 1) %}
-                   <span class="lb-level-badge" style="--badge-color: {{ h.badge_color or theme_colors.muted }};">Lvl {{ h.level or 1 }}</span>
-                 </div>
-               </a>
-               {% if session.get('user_id') and session.get('user_id') != h.id %}
-               <form action="{{ url_for('toggle_follow') }}" method="post" class="ajax-action-form lb-follow-form" data-action="follow">
-                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                 <input type="hidden" name="target_id" value="{{ h.id }}">
-                 <button class="lb-follow-btn {% if h.is_following %}active{% endif %}" type="submit">
-                   {% if h.is_following %}<span data-follow-label data-i18n="profile_unfollow">Unfollow</span>{% else %}<span data-follow-label data-i18n="profile_follow">Follow</span>{% endif %}
-                 </button>
-               </form>
-               {% endif %}
-             </article>
-           {% endfor %}
-           </div>
+           {% include "_leaderboard_rows.html" %}
          {% elif leaderboard_failed %}
            {# Empty and "could not load" are different things. Saying the
               community is empty when the lookup failed hides the fault. #}
-           <p class="community-highlight-empty" data-i18n="leaderboard_error">
+           <p class="community-highlight-empty" data-leaderboard-retry data-i18n="leaderboard_error">
              The leaderboard could not be loaded. Refresh to try again.
            </p>
          {% else %}
            <p class="community-highlight-empty" data-i18n="leaderboard_empty">No community members yet.</p>
          {% endif %}
+         </div>
        </div>
       {% endif %}
        {% if show_trends and trending_posts %}

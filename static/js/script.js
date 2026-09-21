@@ -1822,8 +1822,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // AJAX Like/Repost/Mute/Friend Logic
-    const ajaxForms = document.querySelectorAll('.ajax-action-form');
-    ajaxForms.forEach(form => {
+    // Takes a root so markup that arrives after load -- the leaderboard rows
+    // the panel repairs itself with -- gets the same handling as the rest.
+    function bindAjaxActionForms(root) {
+        (root || document).querySelectorAll('.ajax-action-form').forEach(form => {
+        if (form.dataset.ajaxBound === '1') return;
+        form.dataset.ajaxBound = '1';
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -1884,7 +1888,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 delete btn.dataset.pending;
             }
         });
-    });
+        });
+    }
+
+    bindAjaxActionForms();
 
     /* --- High five -------------------------------------------------------
        The control used to be a plain form post: the browser submitted, the
@@ -1962,6 +1969,123 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     initHighFive();
+
+    /* --- Media volume ----------------------------------------------------
+       Every clip could be muted or unmuted and nothing else. There was no way
+       to play one quietly, so the only choice was full volume or silence.
+
+       The speaker keeps its own click handler -- the clips feed and the rail
+       each already own that, and they mean different things by it -- and this
+       only adds the level beside it. The two stay in step through the
+       video's own volumechange event rather than by calling into each other.
+
+       The chosen level is remembered for the next clip and the next visit,
+       which is what makes it feel like a setting rather than a slider.
+       ---------------------------------------------------------------------- */
+    /* --- Leaderboard repair ----------------------------------------------
+       The rail's leaderboard has been rendering its failure state on pages
+       where the same query answers fine a moment later. Rather than leave the
+       panel dead until the reader reloads, it asks the API once for the rows
+       it could not get. The markup comes from the server, from the same
+       partial the page uses, so there is no second copy of the list here to
+       drift out of step. A second failure leaves the message alone.
+       ---------------------------------------------------------------------- */
+    function initLeaderboardRepair() {
+        const panel = document.querySelector('[data-leaderboard-panel]');
+        if (!panel) return;
+        const body = panel.querySelector('[data-leaderboard-body]');
+        const url = panel.dataset.leaderboardUrl;
+        if (!body || !url || !body.querySelector('[data-leaderboard-retry]')) return;
+
+        fetch(url, { headers: { 'Accept': 'application/json' } })
+            .then((response) => (response.ok ? response.json() : null))
+            .then((result) => {
+                if (!result || !result.success || !result.html) return;
+                body.innerHTML = result.html;
+                // The rows carry follow forms and translated labels, so the
+                // two things that decorate them run over the new markup too.
+                bindAjaxActionForms(body);
+                if (window.LvLI18n && window.LvLI18n.applyLanguage) {
+                    window.LvLI18n.applyLanguage(window.LvLI18n.getCurrentLang());
+                }
+            })
+            .catch(() => {
+                /* Still down. The message the server rendered stands. */
+            });
+    }
+
+    initLeaderboardRepair();
+
+    const VOLUME_KEY = 'lvl_media_volume';
+
+    function readStoredVolume() {
+        try {
+            const value = Number(window.localStorage.getItem(VOLUME_KEY));
+            // Zero is never stored -- silence is the muted flag, not a level --
+            // so a zero here is a stale or damaged value and full is the
+            // sensible reading.
+            return Number.isFinite(value) && value > 0 ? Math.min(1, value) : 1;
+        } catch (error) {
+            return 1;
+        }
+    }
+
+    function storeVolume(value) {
+        try {
+            window.localStorage.setItem(VOLUME_KEY, String(value));
+        } catch (error) {
+            /* Private window, blocked storage: the level still works, it just
+               does not survive the page. */
+        }
+    }
+
+    function initVolumeControls() {
+        document.querySelectorAll('[data-volume-control]').forEach((control) => {
+            const slider = control.querySelector('[data-volume-slider]');
+            const frame = control.closest('.home-reel-video-wrap, .reel-video-frame');
+            const video = frame ? frame.querySelector('video') : null;
+            if (!slider || !video) return;
+
+            const paint = () => {
+                const shown = Math.round((video.muted ? 0 : video.volume) * 100);
+                slider.value = String(shown);
+                // The filled part of the track, for the engines that do not
+                // draw one of their own.
+                slider.style.setProperty('--volume-fill', shown + '%');
+            };
+
+            video.volume = readStoredVolume();
+            paint();
+
+            slider.addEventListener('input', () => {
+                const level = Math.min(1, Math.max(0, Number(slider.value) / 100));
+                if (level === 0) {
+                    // Silence is the muted flag. The level underneath is left
+                    // where it was, so unmuting returns to it instead of
+                    // playing at zero and looking broken.
+                    video.muted = true;
+                    delete video.dataset.userUnmuted;
+                } else {
+                    video.volume = level;
+                    video.muted = false;
+                    video.dataset.userUnmuted = '1';
+                    storeVolume(level);
+                }
+                paint();
+            });
+
+            // The speaker's own handler, a keyboard shortcut, or another clip
+            // taking the sound all land here.
+            video.addEventListener('volumechange', paint);
+
+            // The slider sits on the clip's play/pause surface.
+            ['click', 'pointerdown', 'dblclick'].forEach((type) => {
+                slider.addEventListener(type, (event) => event.stopPropagation());
+            });
+        });
+    }
+
+    initVolumeControls();
 
     document.querySelectorAll('[data-copy-url]').forEach((button) => {
         button.addEventListener('click', async () => {

@@ -199,7 +199,7 @@ ATTACHMENT_CONTENT_TYPES = {
     'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'txt': 'text/plain',
 }
-ASSET_VERSION = "157"
+ASSET_VERSION = "158"
 
 # --- Per-request query cache ------------------------------------------------
 #
@@ -2135,7 +2135,11 @@ def get_community_highlights(limit=LEADERBOARD_RAIL_LIMIT, offset=0):
     is logged rather than disguised as an empty leaderboard.
     """
     try:
-        query = supabase.table('users').select('*').order('level', desc=True)
+        # id breaks level ties. Without it Postgres is free to return rows in
+        # any order among equal levels, which it does differently from one
+        # request to the next: ranks shuffled between page loads, and a person
+        # could show up on two pages of the list or on neither.
+        query = supabase.table('users').select('*').order('level', desc=True).order('id')
         if offset:
             # range() is inclusive at both ends.
             query = query.range(offset, offset + limit - 1)
@@ -5488,6 +5492,30 @@ def setup_health():
                            checks=get_setup_health(),
                            highlights=get_community_highlights())
 
+@app.route('/api/leaderboard')
+def api_leaderboard():
+    """The rail's rows, for a panel that failed to render them server-side.
+
+    It answers with the same partial the page uses rather than with rows the
+    script would have to build a second copy of this list from, so the two
+    cannot drift apart. A lookup that fails here says so and the panel keeps
+    the message it already shows -- this repairs a transient failure, it does
+    not paper over a persistent one.
+    """
+    viewer = get_current_user()
+    if not viewer:
+        return jsonify({'success': False}), 401
+
+    people = get_community_highlights()
+    if not people:
+        return jsonify({'success': False,
+                        'empty': not leaderboard_failed()}), 200
+
+    return jsonify({'success': True,
+                    'html': render_template('_leaderboard_rows.html',
+                                            viewer=viewer, highlights=people)})
+
+
 @app.route('/leaderboard')
 def leaderboard():
     """The whole membership, ranked by level.
@@ -7232,16 +7260,15 @@ def community():
     if not viewer:
         return redirect(url_for('auth'))
 
-    explore = get_explore_context(viewer)
+    # The page renders the lens strip's counts and the room list. The rail
+    # beside it is the Clips panel alone now, so the trending query -- and the
+    # three lists nothing here reads -- are no longer worth their round trips.
+    explore = get_explore_context(viewer, parts=('metrics', 'communities'))
     timeline_context = get_community_timeline_context(viewer, request.args.get('tab'))
     return render_template('community.html',
                            viewer=viewer,
                            metrics=explore['metrics'],
-                           recent_members=explore['recent_members'],
-                           popular_users=explore['popular_users'],
-                           trending_posts=explore['trending_posts'],
                            communities=explore['communities'],
-                           activity_items=explore['activity_items'],
                            community_tabs=timeline_context['tabs'],
                            active_tab=timeline_context['active_tab'],
                            timeline_feeds=timeline_context['feeds'],
