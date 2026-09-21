@@ -588,6 +588,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initPopovers();
     initMessageDock();
     initMarkAllRead();
+    initCommunityNameAvailability();
     initPrefetch();
     initTheme();
     initScrollMemory();
@@ -4152,6 +4153,70 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (value === lastQuery) return;
                 lastQuery = value;
                 // Debounced: one request after typing settles, not per keystroke.
+                timer = window.setTimeout(() => check(value), 450);
+            });
+        });
+    }
+
+    function initCommunityNameAvailability() {
+        const inputs = document.querySelectorAll('[data-community-name-check]');
+        if (!inputs.length) return;
+
+        inputs.forEach((input) => {
+            const field = input.closest('label') || input.parentElement;
+            const status = field ? field.querySelector('[data-community-name-status]') : null;
+            if (!status) return;
+
+            // On the edit form the community's own name is not a clash.
+            const original = (input.value || '').trim().toLowerCase();
+            const excludeId = input.dataset.communityId || '';
+            let timer = null;
+            let pending = null;
+            let lastQuery = '';
+
+            const check = (value) => {
+                if (pending) pending.abort();
+                pending = new AbortController();
+                setFieldStatus(status, 'checking', translateUi('community_name_checking', 'Checking availability...'));
+
+                const params = new URLSearchParams({ name: value });
+                if (excludeId) params.set('exclude_id', excludeId);
+
+                fetch(`/api/community-name-available?${params.toString()}`, {
+                    signal: pending.signal,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                    .then((res) => res.json())
+                    .then((result) => {
+                        if ((input.value || '').trim().toLowerCase() !== value) return;
+                        if (result.status === 'invalid') {
+                            setFieldStatus(status, 'invalid', result.error || translateUi('community_name_invalid', 'That name cannot be used.'));
+                        } else if (result.available) {
+                            setFieldStatus(status, 'available', translateUi('community_name_available', 'That name is free.'));
+                        } else {
+                            setFieldStatus(status, 'taken', translateUi('community_name_taken', 'A community already uses that name.'));
+                        }
+                    })
+                    .catch((error) => {
+                        if (error && error.name === 'AbortError') return;
+                        // The form still checks on submit, and the database is
+                        // the authority, so silence is safe here.
+                        setFieldStatus(status, '', '');
+                    });
+            };
+
+            input.addEventListener('input', () => {
+                const value = (input.value || '').trim().toLowerCase();
+                window.clearTimeout(timer);
+                if (pending) { pending.abort(); pending = null; }
+
+                if (!value) { setFieldStatus(status, '', ''); return; }
+                if (value === original) {
+                    setFieldStatus(status, 'available', translateUi('community_name_current', 'This is the current name.'));
+                    return;
+                }
+                if (value === lastQuery) return;
+                lastQuery = value;
                 timer = window.setTimeout(() => check(value), 450);
             });
         });

@@ -14,9 +14,14 @@
 <section class="community-form-shell">
   <form class="premium-form community-form" action="{{ form_action }}" method="post">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label class="form-group">
+    <label class="form-group field-with-status">
       <span data-i18n="community_form_name">Name</span>
-      <input name="name" maxlength="80" value="{{ community.name if community else '' }}" required>
+      <input name="name" maxlength="80" value="{{ community.name if community else '' }}" required
+             data-community-name-check
+             {% if community %}data-community-id="{{ community.id }}"{% endif %}
+             aria-describedby="community-name-status">
+      <small class="field-status" id="community-name-status" data-community-name-status
+             role="status" aria-live="polite"></small>
     </label>
 
     {% if not community %}

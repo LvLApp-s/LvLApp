@@ -199,7 +199,7 @@ ATTACHMENT_CONTENT_TYPES = {
     'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'txt': 'text/plain',
 }
-ASSET_VERSION = "150"
+ASSET_VERSION = "151"
 
 # --- Per-request query cache ------------------------------------------------
 #
@@ -7093,6 +7093,71 @@ def community():
                            highlights=get_community_highlights(),
                            home_reels=get_home_reel_preview(viewer['id']))
 
+def community_name_is_taken(name, exclude_id=None):
+    """Case-insensitive community name lookup.
+
+    The unique index on lower(name) is the final authority -- this is a
+    pre-check so the form can refuse early with a clear message, and so the
+    availability endpoint can answer while someone is still typing.
+
+    The name is matched with ilike, where % and _ are wildcards, so a name
+    containing either would otherwise match rows it should not: a community
+    called "A_" would report "AB" as a clash. They are escaped here.
+    """
+    name = (name or '').strip()
+    if not name or not supabase:
+        return False
+    pattern = name.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+    try:
+        res = supabase.table('communities').select('id').ilike('name', pattern).limit(5).execute()
+        rows = res.data or []
+        if exclude_id is not None:
+            rows = [row for row in rows if row.get('id') != exclude_id]
+        return bool(rows)
+    except Exception:
+        # Never block on a lookup failure; the unique index still protects the
+        # database, and the insert path turns that into a readable message.
+        return False
+
+
+def community_name_conflict(exc):
+    """True when the database refused a write because the name is taken."""
+    message = str(exc).lower()
+    return 'communities_name_lower' in message or (
+        'duplicate key' in message and 'name' in message)
+
+
+@app.route('/api/community-name-available')
+def api_community_name_available():
+    """UX-only availability hint while the name is being typed.
+
+    Returns a boolean and the name that was asked about, nothing else. The
+    unique index remains the authority; this only lets the form say so before
+    the reader has filled in the rest of it.
+    """
+    viewer = get_current_user()
+    if not viewer:
+        return jsonify({'status': 'unknown', 'available': True}), 401
+
+    name = (request.args.get('name') or '').strip()
+    exclude_id = parse_int(request.args.get('exclude_id'))
+
+    if not name:
+        return jsonify({'status': 'empty', 'available': False, 'name': name})
+    if len(name) > 80:
+        return jsonify({'status': 'invalid', 'available': False, 'name': name,
+                        'error': 'Community name must be 80 characters or less.'})
+    if not supabase:
+        return jsonify({'status': 'unknown', 'available': True, 'name': name})
+
+    taken = community_name_is_taken(name, exclude_id=exclude_id)
+    return jsonify({
+        'status': 'taken' if taken else 'available',
+        'available': not taken,
+        'name': name,
+    })
+
+
 @app.route('/communities/new', methods=['GET', 'POST'])
 def create_community():
     viewer = get_current_user()
@@ -7119,8 +7184,7 @@ def create_community():
                 flash("That community URL is already taken.", "error")
                 return redirect(url_for('create_community'))
 
-            existing_name = supabase.table('communities').select('id').ilike('name', name).execute()
-            if existing_name and existing_name.data:
+            if community_name_is_taken(name):
                 flash("A community with that name already exists. Please choose a unique name.", "error")
                 return redirect(url_for('create_community'))
 
@@ -7140,7 +7204,13 @@ def create_community():
                 }).execute()
                 flash("Community created.", "success")
                 return redirect(url_for('community_detail', slug=slug))
-        except Exception:
+        except Exception as exc:
+            # Two people can pass the check above at the same moment; the
+            # database settles it, and this turns that into the same message
+            # rather than a server error.
+            if community_name_conflict(exc):
+                flash("A community with that name already exists. Please choose a unique name.", "error")
+                return redirect(url_for('create_community'))
             flash(community_tables_message(), "error")
 
     return render_template('community_form.html',
@@ -7196,6 +7266,12 @@ def edit_community(slug):
             flash("Community name is required and must be 80 characters or less.", "error")
             return redirect(url_for('edit_community', slug=slug))
 
+        # Renaming had no uniqueness check at all, so an existing community
+        # could simply be renamed onto another one's name.
+        if community_name_is_taken(name, exclude_id=community_item['id']):
+            flash("A community with that name already exists. Please choose a unique name.", "error")
+            return redirect(url_for('edit_community', slug=slug))
+
         try:
             supabase.table('communities').update({
                 'name': name,
@@ -7204,7 +7280,10 @@ def edit_community(slug):
             }).eq('id', community_item['id']).execute()
             flash("Community updated.", "success")
             return redirect(url_for('community_detail', slug=slug))
-        except Exception:
+        except Exception as exc:
+            if community_name_conflict(exc):
+                flash("A community with that name already exists. Please choose a unique name.", "error")
+                return redirect(url_for('edit_community', slug=slug))
             flash(community_tables_message(), "error")
 
     return render_template('community_form.html',
