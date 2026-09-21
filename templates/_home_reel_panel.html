@@ -1,9 +1,8 @@
 <div class="home-reel-panel panel" data-home-reel-panel>
+  {# "VIDEOS" over "Clips" was the same word twice, and it pushed the heading
+     off the line its action sits on. One heading, one action, one row. #}
   <div class="home-reel-panel-header">
-    <div>
-      <span class="panel-kicker" data-i18n="videos_kicker">Videos</span>
-      <h2 data-i18n="nav_clips">Clips</h2>
-    </div>
+    <h2 data-i18n="nav_clips">Clips</h2>
     <a href="{{ url_for('reels') }}" class="home-reel-see-all" data-i18n="see_all">See all →</a>
   </div>
   <div class="home-reel-slides" data-home-reel-slides tabindex="0" aria-label="Home reels" data-i18n-aria="home_reels_aria">

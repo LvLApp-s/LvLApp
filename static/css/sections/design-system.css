@@ -124,6 +124,14 @@
   border-bottom: 1px solid var(--border-color);
 }
 
+/* The page header is the only one of those flow surfaces that sticks, so it
+   is the one that needs a surface of its own. Left transparent it let the
+   feed scroll straight through it, which read as a blurred smear of avatars
+   and buttons sitting in the middle of the chrome. */
+.page-header {
+  background: var(--chrome-blur-strong);
+}
+
 /* A card inside a card is border-on-border noise. */
 .community-highlights.panel .panel,
 .community-members-panel .community-card,

@@ -2222,8 +2222,19 @@ class AppRouteTests(unittest.TestCase):
                 highlights=[],
             )
 
-        self.assertIn("What this timeline means", empty_html)
-        self.assertIn("This is the middle timeline", empty_html)
+        # The nested "What this timeline means" card was removed: it repeated
+        # the heading and the section description above it, in a box inside a
+        # box. The empty state is one heading, one sentence, one action.
+        self.assertNotIn("What this timeline means", empty_html)
+        self.assertNotIn("This is the middle timeline", empty_html)
+        self.assertNotIn("community-empty-explainer", empty_html)
+        self.assertIn("Follow people to fill this timeline", empty_html)
+        self.assertIn("Search for members or open profiles", empty_html)
+        # All three panes render; each empty one carries exactly one heading
+        # and one sentence.
+        panes = len(zapp.COMMUNITY_TIMELINE_TABS)
+        self.assertEqual(empty_html.count("community-empty-title"), panes)
+        self.assertEqual(empty_html.count("community-empty-text"), panes)
 
     def test_community_route_defaults_to_following_timeline(self):
         viewer = {"id": 7, "username": "viewer", "display_name": "Viewer", "profile_photo_url": ""}

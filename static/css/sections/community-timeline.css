@@ -9,6 +9,11 @@
    dims artwork drawn for a dark field. */
 .community-timeline-header {
   position: relative;
+  /* .page-header is sticky and offsets itself below the top bar. This header
+     opts out of that, so it has to drop the offset with it: a `top` left on a
+     relatively positioned box shifts it down without moving anything else,
+     which pushed the hero over the cards below it. */
+  top: auto;
   align-items: center;
   gap: var(--space-7);
   overflow: hidden;
@@ -66,10 +71,15 @@
 }
 
 .community-hub-hero h2,
+/* Still the section's primary heading, just no longer shouting: it sat at
+   the global h2 size and weight above a muted eyebrow and a muted sentence,
+   so three lines of the same block all fought to be read first. */
 .community-feed-header h2 {
   margin: var(--space-1) 0 var(--space-2);
   color: var(--text-primary);
-  line-height: 1.05;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 .community-hub-hero p,
@@ -109,9 +119,13 @@
   font-size: 22px;
 }
 
+/* The row sticks below the page chrome. It used to stick at top: 0, which is
+   where the top bar already sits: with a lower z-index it slid underneath and
+   came to rest half-hidden, which is why the selector looked cut in two and
+   the hero read through the blur behind it. */
 .community-timeline-tabs {
   position: sticky;
-  top: 0;
+  top: var(--sticky-top);
   z-index: 6;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -298,33 +312,36 @@
   white-space: nowrap;
 }
 
+/* Sized by what is in it. The old 64px block was there to fill the panel
+   whatever it held, which made an empty tab feel heavier than a full one and
+   moved everything below it once posts arrived. */
 .community-empty-state {
   display: grid;
   justify-items: center;
   gap: var(--space-5);
   margin: 0;
-  padding: 64px 20px;
+  padding: var(--space-12) var(--space-9);
   border: 0;
   border-radius: 0;
 }
 
-.community-empty-explainer {
-  display: grid;
-  gap: var(--space-2);
-  width: min(100%, 520px);
-  padding: var(--space-5);
-  border: var(--line-default);
-  border-radius: var(--radius-sm);
-  background: var(--lvl-white-03);
-  text-align: left;
+/* The heading led at the global h2 size, which on a mostly empty panel read
+   as a page title rather than a prompt. Semibold at a heading size the panel
+   can carry, with the sentence under it as ordinary body copy. */
+.community-empty-state .community-empty-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.25;
 }
 
-.community-empty-explainer strong {
-  color: var(--text-primary);
-}
-
-.community-empty-explainer span {
+.community-empty-state .community-empty-text {
+  max-width: 46ch;
+  margin: 0;
   color: var(--text-secondary);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.5;
 }
 
 .community-empty-state .outline-button {
@@ -379,6 +396,15 @@
   color: var(--text-secondary);
 }
 
+/* Two rooms can legitimately carry the same name, so the card says which is
+   which rather than the list quietly collapsing them into one. */
+.community-space-discriminator {
+  margin-inline-start: var(--space-2);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 400;
+}
+
 @media (max-width: 900px) {
   .community-hub {
     padding: var(--space-5);
@@ -427,8 +453,9 @@
     font-size: 18px;
   }
 
+  /* The offset comes from --sticky-top, which is the phone header's height
+     here. Pinning it back to 0 put the row under that header. */
   .community-timeline-tabs {
-    top: 0;
     gap: var(--space-1);
     padding: var(--space-2);
     border-radius: 0;

@@ -1,9 +1,16 @@
 /* Timeline, composer, posts, empty and flash states */
 /* Timeline */
+/* Parks below the top bar, not under it. At top: 0 the header pinned into
+   the same 69px the bar occupies: its title row was hidden behind the bar and
+   the band below it covered the posts scrolling past, so the feed appeared to
+   pass behind a strip of nothing. */
 .page-header {
   position: sticky;
-  top: 0;
-  background-color: var(--chrome-blur);
+  top: var(--sticky-top);
+  /* Opaque enough that the feed passing underneath does not read through it
+     as a second, blurred layer of avatars and buttons. Same token the top bar
+     uses, so the two pieces of chrome match. */
+  background-color: var(--chrome-blur-strong);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-color);
   z-index: 10;
@@ -11,8 +18,11 @@
   flex-direction: column;
 }
 
+/* Vertical only. The inline inset already comes from .page-header, so
+   repeating it here pushed the first row -- the page title -- 16px further in
+   than the tabs beneath it and than every avatar in the feed. */
 .page-header > div:first-child {
-  padding: 12px 16px;
+  padding: 12px 0;
 }
 
 .page-header h1 {

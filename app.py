@@ -199,7 +199,7 @@ ATTACHMENT_CONTENT_TYPES = {
     'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'txt': 'text/plain',
 }
-ASSET_VERSION = "156"
+ASSET_VERSION = "157"
 
 # --- Per-request query cache ------------------------------------------------
 #
@@ -260,7 +260,6 @@ COMMUNITY_TIMELINE_TABS = [
         'description': 'See what the people already connected to you are sharing.',
         'empty_title': 'No follower posts yet',
         'empty_text': 'When someone who follows you posts, it will appear here.',
-        'empty_help': 'This tab is for seeing your audience from the other side: people who follow you, even if you do not follow them back.',
         'empty_action_label': 'Search members',
         'empty_action_url': 'search'
     },
@@ -272,7 +271,6 @@ COMMUNITY_TIMELINE_TABS = [
         'description': 'Your main community timeline, focused on accounts you chose.',
         'empty_title': 'Follow people to fill this timeline',
         'empty_text': 'Search for members or open profiles and follow them to build this feed.',
-        'empty_help': 'This is the middle timeline and should feel like your chosen feed: accounts you intentionally follow.',
         'empty_action_label': 'Find people',
         'empty_action_url': 'search'
     },
@@ -284,7 +282,6 @@ COMMUNITY_TIMELINE_TABS = [
         'description': 'Group posts and public threads ranked by activity and relevance.',
         'empty_title': 'No community threads yet',
         'empty_text': 'Join or create a community, then start a thread.',
-        'empty_help': 'This tab is for shared rooms and topic threads, separate from personal follower/following feeds.',
         'empty_action_label': 'Create group',
         'empty_action_url': 'create_community'
     }
@@ -2177,6 +2174,28 @@ def get_community_highlights(limit=LEADERBOARD_RAIL_LIMIT, offset=0):
             user.setdefault('is_following', False)
         return users
 
+def flag_ambiguous_names(rows):
+    """Mark rows that share a display name with another row in the same list.
+
+    Two communities really can carry the same name. The unique index on
+    lower(name) only binds rows written after the migration that added it, so
+    pairs created before it are still there -- separate records, separate
+    slugs, separate members. They are not a repeated render and not a join
+    fanning out: the query returns one row per community and the template
+    draws one card per row. Collapsing them by name would hide a real room,
+    so each row is flagged instead and the card says which one it is.
+    """
+    rows = rows or []
+    counts = {}
+    for row in rows:
+        key = (row.get('name') or '').strip().casefold()
+        counts[key] = counts.get(key, 0) + 1
+    for row in rows:
+        key = (row.get('name') or '').strip().casefold()
+        row['name_is_ambiguous'] = counts.get(key, 0) > 1
+    return rows
+
+
 def get_communities(limit=6):
     try:
         res = supabase.table('communities').select('*, owner:users!communities_owner_id_fkey(*)').order('created_at', desc=True).limit(limit).execute()
@@ -2184,7 +2203,7 @@ def get_communities(limit=6):
         apply_forced_user_levels(communities)
         for item in communities:
             item['member_count'] = item.get('member_count', 0)
-        return communities
+        return flag_ambiguous_names(communities)
     except Exception:
         return []
 
@@ -6525,23 +6544,47 @@ def profile(username):
 
 @app.route('/profile/<username>/high-five', methods=['POST'])
 def high_five_profile(username):
+    """Send a high-five.
+
+    Answers JSON when the page asks for it with ajax=1, so the button can
+    settle where it stands instead of the browser posting, following a
+    redirect and re-rendering the whole profile -- which is why the reader
+    used to wait five or six seconds with nothing happening. The plain form
+    POST still works and still redirects, so the control keeps working without
+    JavaScript.
+
+    update_streak is idempotent within a calendar day, so a second send that
+    slips past the client's own guard cannot double-count the streak.
+    """
+    wants_json = request.form.get('ajax') == '1'
+
+    def answer(ok, message, category, status=200, **extra):
+        if wants_json:
+            payload = {'success': ok, 'message': message}
+            payload.update(extra)
+            return jsonify(payload), status
+        flash(message, category)
+        return redirect(url_for('profile', username=username))
+
     viewer = get_current_user()
     if not viewer:
+        if wants_json:
+            return jsonify({'success': False, 'message': 'Sign in to high-five.'}), 401
         return redirect(url_for('auth'))
 
     try:
         res = supabase.table('users').select('id, username, display_name').eq('username', username).execute()
         if not res.data:
+            if wants_json:
+                return jsonify({'success': False, 'message': 'Profile not found.'}), 404
             flash("Profile not found.", "error")
             return redirect(url_for('index'))
 
         target = res.data[0]
         if target['id'] == viewer['id']:
-            flash("You cannot high-five yourself.", "info")
-            return redirect(url_for('profile', username=username))
+            return answer(False, "You cannot high-five yourself.", "info", status=400)
         if interaction_blocked(viewer['id'], target['id']):
-            flash("You cannot interact with this user.", "error")
-            return redirect(url_for('profile', username=username))
+            return answer(False, "You cannot interact with this user.", "error", status=403)
 
         streak_count, streak_xp = update_streak(viewer['id'], target['id'])
         try:
@@ -6551,13 +6594,14 @@ def high_five_profile(username):
 
         if streak_count > 1:
             extra = f" {streak_xp} XP bonus." if streak_xp else ""
-            flash(f"High-five sent. You have a {streak_count}-day high-five streak with {target['display_name']}.{extra}", "success")
+            message = (f"High-five sent. You have a {streak_count}-day high-five streak "
+                       f"with {target['display_name']}.{extra}")
         else:
-            flash(f"High-five sent to {target['display_name']}. Come back tomorrow to build the streak.", "success")
+            message = (f"High-five sent to {target['display_name']}. "
+                       f"Come back tomorrow to build the streak.")
+        return answer(True, message, "success", streak=streak_count, xp=streak_xp)
     except Exception as e:
-        flash(handle_db_error(e), "error")
-
-    return redirect(url_for('profile', username=username))
+        return answer(False, handle_db_error(e), "error", status=500)
 
 @app.route('/profile/<username>/<list_type>')
 def profile_social_list(username, list_type):

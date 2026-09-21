@@ -180,6 +180,21 @@
   transform: rotate(20deg) scale(0.95);
 }
 
+/* Sent. This is the state the button takes on the click, before the request
+   has finished, so the reader gets an answer in the same frame rather than
+   after a round trip. It is a settled state, not a second animation: the
+   response has nothing left to show. */
+.profile-high-five-button.is-sent {
+  border-color: var(--lvl-warning);
+  background: rgba(245, 158, 11, 0.28);
+  cursor: default;
+}
+
+.profile-high-five-button.is-sent .profile-high-five-svg {
+  animation: highFiveSlap 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 1;
+  filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.75));
+}
+
 .high-five-sparkles {
   position: absolute;
   inset: -6px;
@@ -188,8 +203,18 @@
   transition: opacity 0.2s ease;
 }
 
-.profile-high-five-button:hover .high-five-sparkles {
+.profile-high-five-button:hover .high-five-sparkles,
+.profile-high-five-button.is-sent .high-five-sparkles {
   opacity: 1;
+}
+
+/* The click has already been answered, so hovering it again says nothing. */
+.profile-high-five-button.is-sent:hover {
+  transform: none;
+}
+
+.profile-high-five-button.is-sent:hover .profile-high-five-svg {
+  animation: none;
 }
 
 .high-five-sparkles .sparkle {

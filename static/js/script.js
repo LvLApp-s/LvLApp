@@ -96,6 +96,13 @@ document.addEventListener('DOMContentLoaded', () => {
             '.feed-tabs a',
             '.community-timeline-tabs a',
             '.reels-tabs a',
+            // Opening a post from the feed is the most-travelled move in the
+            // product and it was the one route not hinted. Measured on
+            // home -> post -> home: one document request per step, no
+            // duplicate API calls, so the document itself is the whole cost
+            // -- which is exactly what a prefetch removes.
+            '.post-action-link',
+            '.trending-link',
         ].join(', ');
 
         const onIntent = (event) => {
@@ -1878,6 +1885,83 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    /* --- High five -------------------------------------------------------
+       The control used to be a plain form post: the browser submitted, the
+       server wrote the streak and redirected, and the whole profile rendered
+       again before anything on screen moved -- five or six seconds in which
+       the click looked like it had not registered, and long enough that
+       people clicked again.
+
+       The button answers on the click now and the request finishes behind it.
+       What is NOT guessed: the streak count. It only rises once a day and
+       only if yesterday counted, which the page cannot know, so the number
+       waits for the server and is reconciled from the response rather than
+       animated twice. A failure puts the button back exactly as it was and
+       says so, instead of leaving a success the server never granted.
+       -------------------------------------------------------------------- */
+    function initHighFive() {
+        const form = document.querySelector('.profile-high-five-form');
+        if (!form) return;
+        const button = form.querySelector('.profile-high-five-button');
+        if (!button) return;
+
+        let inFlight = false;
+
+        function applyStreak(count) {
+            if (typeof count !== 'number' || count < 1) return;
+            document.querySelectorAll('[data-profile-streak-count]').forEach((el) => {
+                el.textContent = String(count);
+            });
+        }
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            /* One send per view. The server is idempotent for the day, but a
+               second request still costs a round trip and a second toast. */
+            if (inFlight || button.dataset.sent === '1') return;
+            inFlight = true;
+
+            const before = {
+                className: button.className,
+                title: button.getAttribute('title'),
+            };
+
+            button.dataset.sent = '1';
+            button.classList.add('is-sent');
+            button.setAttribute('title', translateUi('profile_high_five_sent', 'High-five sent'));
+
+            const body = new FormData(form);
+            body.append('ajax', '1');
+
+            try {
+                const response = await fetch(form.action, { method: 'POST', body });
+                const result = await response.json();
+                if (!result || !result.success) {
+                    throw new Error((result && result.message) || 'high five failed');
+                }
+                applyStreak(result.streak);
+                showXpToasts(result.xp_toasts || []);
+                if (result.message) showAppToast(result.message, 'success');
+            } catch (error) {
+                button.className = before.className;
+                if (before.title === null) {
+                    button.removeAttribute('title');
+                } else {
+                    button.setAttribute('title', before.title);
+                }
+                delete button.dataset.sent;
+                const detail = error && error.message && error.message !== 'high five failed'
+                    ? error.message
+                    : translateUi('high_five_failed', 'High-five did not send. Try again.');
+                showAppToast(detail);
+            } finally {
+                inFlight = false;
+            }
+        });
+    }
+
+    initHighFive();
 
     document.querySelectorAll('[data-copy-url]').forEach((button) => {
         button.addEventListener('click', async () => {

@@ -51,9 +51,11 @@
    keyboard focus is on the rail, so the rail starts as an icon column. #}
     <aside class="left-rail">
       <div class="sidebar-top desktop-only">
-        <a class="brand brand-logo" href="{{ url_for('index') }}" aria-label="LvL home" data-i18n-aria="brand_home_aria">
+        {# The icon already reads "LvL", so the wordmark beside it said the same
+           thing twice. It carries the product name instead. #}
+        <a class="brand brand-logo" href="{{ url_for('index') }}" aria-label="LvLapp home" data-i18n-aria="brand_home_aria">
           <img src="{{ static_asset('assets/icon-192.png') }}" alt="" aria-hidden="true">
-          <span class="brand-text">LvL</span>
+          <span class="brand-text">LvLapp</span>
         </a>
       </div>
       <nav class="nav-list" aria-label="Primary" data-i18n-aria="nav_primary_aria">

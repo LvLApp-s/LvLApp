@@ -228,8 +228,17 @@
   --hero-veil-far: 0%;
   /* Desktop sticky header: min-height plus its 1px bottom border. Anything
      that sticks below it offsets by this. */
-  --topbar-height: 65px;
-  --mobile-header-height: 52px;
+  /* What the bar actually renders at: its 48px search control plus 10px of
+     padding either side plus the 1px rule underneath. The token used to say
+     65px, four short, so anything parked at this offset came to rest just
+     under the bar's own edge. */
+  --topbar-height: 69px;
+  /* Measured, not guessed: the phone header renders 56px tall. */
+  --mobile-header-height: 56px;
+  /* How far down the page's own chrome reaches. Anything else that sticks to
+     the top of the timeline parks below this instead of sliding under the
+     bar. */
+  --sticky-top: var(--topbar-height);
   --mobile-nav-height: 56px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -237,6 +246,13 @@
   --safe-right: env(safe-area-inset-right, 0px);
   /* Total space a fixed bottom element must clear on mobile. */
   --mobile-nav-clearance: calc(var(--mobile-nav-height) + var(--safe-bottom));
+  /* The message dock is fixed to the window's bottom-right corner. Anything
+     that scrolls behind it reserves this much room so its last item can be
+     read and clicked rather than sitting under the pill. */
+  --dock-clearance: calc(var(--control-md) + var(--space-7) * 2);
+  /* The lane the dock occupies at the right of the window. Wide enough for
+     the pill at its longest translated label plus its inset. */
+  --dock-gutter: 180px;
 
   /* --- Elevation ------------------------------------------------------ */
   --shadow-sm: 0 1px 2px var(--lvl-black-32);
@@ -581,11 +597,14 @@ a:hover {
   background: var(--bg-color);
 }
 
-/* No right rail on this page: give the space back to the timeline. */
+/* No right rail on this page: give the space back to the timeline. Capped at
+   --shell-main-max it stopped short of the window and left a band of dead
+   page beside it, as if a column were still reserved for a rail that is not
+   rendered. Pages that need a narrower measure set their own. */
 .app-shell:not(:has(.right-rail)) {
   grid-template-columns:
     var(--shell-left-collapsed)
-    minmax(0, var(--shell-main-max))
+    minmax(0, 1fr)
     0;
 }
 
@@ -647,6 +666,11 @@ a:hover {
 
 /* Phone: single column with room for the fixed bottom navigation. */
 @media (max-width: 767px) {
+  /* The desktop bar is hidden here; the phone header is the sticky chrome. */
+  :root {
+    --sticky-top: var(--mobile-header-height);
+  }
+
   .app-shell {
     display: block;
     max-width: none;
@@ -877,13 +901,25 @@ a:hover {
   background-color: var(--bg-color);
 }
 
+/* The message dock floats over the window's bottom-right corner. On a page
+   with a right rail it lands on the rail, which reserves room for it. With no
+   rail there is nothing under it but the page itself, so the content column
+   stops short of the dock's lane rather than running beneath it and putting
+   form controls under the pill. The dock is hidden on phones, so this only
+   applies from tablet up. */
+@media (min-width: 768px) {
+  .app-shell:not(:has(.right-rail)) .timeline {
+    padding-inline-end: var(--dock-gutter);
+  }
+}
+
 .right-rail {
   /* The grid column is the single source of truth for this width. */
   width: 100%;
   /* Top space so the first panel does not start hard against the edge; the
      rail is sticky, so this is padding rather than a margin that would
-     collapse. */
-  padding: var(--space-10) 20px 0;
+     collapse. The bottom keeps the message dock's area free. */
+  padding: var(--space-10) 20px var(--dock-clearance);
   position: sticky;
   top: 0;
   height: 100vh;

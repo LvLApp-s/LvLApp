@@ -116,15 +116,19 @@
 }
 
 .page-header {
-  background: var(--chrome-blur);
+  background: var(--chrome-blur-strong);
 }
 
+/* The title belongs to the feed, so it starts where the feed starts. It was
+   centred in the column, which left it floating with no relationship to
+   anything below it. The inline inset comes from .page-header's own padding
+   -- the row adds none of its own, so the title lands on exactly the line the
+   composer, the tabs and every post avatar sit on. */
 .home-header .header-top {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: 16px;
-  padding: 16px;
 }
 
 .page-header h1 {
@@ -267,12 +271,14 @@
 
 /* An eyebrow labels the heading below it; it should not compete with it.
    Accent colour at weight 800 made every panel open with two shouted lines. */
+/* An eyebrow, not a second heading: small, muted and medium weight, so the
+   title under it is unmistakably the one to read first. */
 .panel-kicker {
   display: block;
   margin-bottom: 4px;
   color: var(--text-secondary);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }

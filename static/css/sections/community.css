@@ -68,6 +68,7 @@
 
 .section-heading h3 {
   font-size: 18px;
+  font-weight: 600;
   line-height: 1.2;
 }
 
@@ -94,7 +95,7 @@
 .community-space-card strong {
   display: block;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.2;
 }
 

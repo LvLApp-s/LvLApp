@@ -78,35 +78,32 @@
   transition: 0.2s;
 }
 
+/* Three real tracks, placed explicitly. The search sits in the middle one so
+   it stays centred on the page; the actions sit in the last one so the bell
+   lands on the bar's right edge instead of hugging the search box. The side
+   tracks are flexible, so the two can never overlap however narrow the
+   timeline gets -- there is no fixed-width spacer standing in for the back
+   button that used to live here. */
 .app-topbar {
   position: sticky;
   top: 0;
   z-index: 90;
   display: grid;
-  grid-template-columns: var(--control-lg) minmax(180px, 640px) auto;
-  justify-content: center;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 3fr) minmax(0, 1fr);
   align-items: center;
   gap: 10px;
   min-height: calc(var(--topbar-height) - 1px);
-  padding: 10px 14px;
+  padding: 10px var(--space-6);
   border-bottom: 1px solid var(--border-color);
-  background: var(--chrome-blur);
+  /* Opaque enough that page content passing beneath it does not read through
+     as a second layer of text. The blur stays, so the bar still belongs to
+     the page rather than floating over it. */
+  background: var(--chrome-blur-strong);
   backdrop-filter: blur(16px);
 }
 
-.app-topbar::after {
-  content: none;
-}
-
-/* The first grid column is empty. It balances the actions on the right so
-   the search field stays centred; it used to hold a back button. */
-.app-topbar::before {
-  content: "";
-  width: var(--control-lg);
-  height: 1px;
-}
-
 .topbar-search {
+  grid-column: 2;
   justify-self: center;
   width: min(100%, 520px);
   min-height: var(--control-lg);
@@ -142,7 +139,8 @@
 }
 
 .topbar-actions {
-  justify-self: start;
+  grid-column: 3;
+  justify-self: end;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -204,30 +202,25 @@
 }
 
 @media (max-width: 767px) {
+  /* Two tracks here: the phone header above already carries the brand, so the
+     search takes the row and the actions close it on the right. */
   .app-topbar {
     top: 61px;
-    grid-template-columns: var(--control-md) minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 6px;
     min-height: 58px;
     padding: 8px 10px;
   }
 
-  .app-topbar::after {
-    content: "";
-    width: var(--control-md);
-    height: 1px;
-  }
-
-  .app-topbar::before {
-    width: var(--control-md);
-  }
-
   .topbar-search {
+    grid-column: 1;
+    justify-self: stretch;
     min-height: var(--control-md);
     padding-inline: 10px;
   }
 
   .topbar-actions {
+    grid-column: 2;
     justify-self: end;
     display: inline-flex;
     gap: 6px;
@@ -245,12 +238,7 @@
 
 @media (max-width: 420px) {
   .app-topbar {
-    grid-template-columns: 38px minmax(0, 1fr) auto;
     padding-inline: 8px;
-  }
-
-  .app-topbar::before {
-    width: 38px;
   }
 
   .topbar-action {

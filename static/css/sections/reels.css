@@ -509,8 +509,15 @@
   font-weight: 800;
 }
 
+/* No right rail on this page, so the shell hands the whole width to the
+   timeline. The form takes a readable measure out of the middle of it rather
+   than stretching across the window or clinging to the left edge beside a
+   column that is not there. The bottom keeps the message dock clear of the
+   submit row. */
 .reel-upload-page {
-  padding: 16px;
+  width: min(100%, 720px);
+  margin-inline: auto;
+  padding: 16px 16px var(--dock-clearance);
 }
 
 .reel-upload-form {
@@ -547,14 +554,31 @@
   pointer-events: none;
 }
 
-.reel-file-picker span {
+/* Direct child only. As `.reel-file-picker span` this also caught every span
+   inside the hint underneath, so the file-format line rendered at weight 900
+   and the whole picker read as one shout. */
+.reel-file-picker > span {
   font-size: 18px;
-  font-weight: 900;
+  font-weight: 600;
 }
 
 .reel-file-picker small,
 .form-field small {
   color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.reel-file-picker small span,
+.form-field small span {
+  font-weight: inherit;
+}
+
+/* The input is visually hidden, so the frame has to carry the focus ring or
+   there is nothing to see when the picker is tabbed to. */
+.reel-file-picker:focus-within {
+  outline: 2px solid var(--lvl-brand);
+  outline-offset: 2px;
 }
 
 .reel-preview {
@@ -576,8 +600,8 @@
   gap: 8px;
 }
 
-.form-field span {
-  font-weight: 800;
+.form-field > span {
+  font-weight: 500;
 }
 
 .form-field textarea,
@@ -590,6 +614,12 @@
   background: var(--lvl-surface-raised);
   color: var(--text-primary);
   font: inherit;
+  font-weight: 400;
+}
+
+.form-field textarea:focus-visible,
+.form-field select:focus-visible {
+  border-color: var(--accent-color);
 }
 
 .form-field textarea {
@@ -608,21 +638,27 @@
   gap: 10px;
 }
 
+/* Same padding, border and radius as the fields above it, and the weight of
+   a control label rather than a heading. */
 .reel-toggle-list label {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px;
+  padding: 12px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   background: var(--lvl-white-03);
-  font-weight: 800;
+  font-weight: 500;
+}
+
+.reel-toggle-list label:focus-within {
+  border-color: var(--accent-color);
 }
 
 .reel-upload-message {
   min-height: 20px;
   color: var(--success-color);
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .reel-upload-message.error {

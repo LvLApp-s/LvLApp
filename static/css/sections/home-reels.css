@@ -9,8 +9,9 @@
 
 .home-reel-panel-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
+  gap: var(--space-4);
   margin-bottom: 12px;
 }
 
@@ -25,7 +26,6 @@
   color: var(--lvl-primary);
   text-decoration: none;
   white-space: nowrap;
-  margin-top: 4px;
 }
 
 .home-reel-slides {
@@ -102,10 +102,12 @@
   pointer-events: none;
 }
 
+/* Bottom-left, not bottom-right: the message dock is fixed to the window's
+   bottom-right corner and was sitting straight on top of this control. */
 .home-reel-mute-btn {
   position: absolute;
   bottom: 8px;
-  right: 8px;
+  inset-inline-start: 8px;
   width: 30px;
   height: 30px;
   border-radius: var(--radius-round);

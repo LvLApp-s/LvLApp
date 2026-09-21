@@ -52,6 +52,18 @@
   color: inherit;
 }
 
+/* The row already answers the pointer with a background change. Without this
+   the global `a:hover { text-decoration: underline }` fires as well, so the
+   name and handle picked up an underline at the same time and the row read
+   like an old-style text link. Scoped to this component on purpose: the
+   global rule stays for ordinary links. The keyboard indicator is the
+   :focus-visible outline, which is untouched. */
+.lb-person:hover,
+.lb-person:focus,
+.lb-row:hover .lb-person {
+  text-decoration: none;
+}
+
 .lb-avatar {
   width: 40px;
   height: 40px;

@@ -121,13 +121,13 @@
               {% endfor %}
             </section>
           {% else %}
+            {# One heading, one sentence, one action. The card that used to sit
+               in here ("What this timeline means") repeated what the heading
+               and the section description already said, three times over, in a
+               box inside a box. #}
             <div class="empty-state community-empty-state">
-              <h2 {% if tab.key == 'followers' %}data-i18n="community_followers_empty_title"{% elif tab.key == 'following' %}data-i18n="community_following_empty_title"{% elif tab.key == 'community' %}data-i18n="community_group_empty_title"{% endif %}>{{ tab.empty_title }}</h2>
-              <p {% if tab.key == 'followers' %}data-i18n="community_followers_empty_text"{% elif tab.key == 'following' %}data-i18n="community_following_empty_text"{% elif tab.key == 'community' %}data-i18n="community_group_empty_text"{% endif %}>{{ tab.empty_text }}</p>
-              <div class="community-empty-explainer">
-                <strong data-i18n="community_empty_explainer_title">What this timeline means</strong>
-                <span {% if tab.key == 'followers' %}data-i18n="community_followers_empty_help"{% elif tab.key == 'following' %}data-i18n="community_following_empty_help"{% elif tab.key == 'community' %}data-i18n="community_group_empty_help"{% endif %}>{{ tab.empty_help }}</span>
-              </div>
+              <h2 class="community-empty-title" {% if tab.key == 'followers' %}data-i18n="community_followers_empty_title"{% elif tab.key == 'following' %}data-i18n="community_following_empty_title"{% elif tab.key == 'community' %}data-i18n="community_group_empty_title"{% endif %}>{{ tab.empty_title }}</h2>
+              <p class="community-empty-text" {% if tab.key == 'followers' %}data-i18n="community_followers_empty_text"{% elif tab.key == 'following' %}data-i18n="community_following_empty_text"{% elif tab.key == 'community' %}data-i18n="community_group_empty_text"{% endif %}>{{ tab.empty_text }}</p>
               {% if tab.empty_action_url %}
                 <a class="outline-button" href="{{ url_for(tab.empty_action_url) }}" {% if tab.key == 'community' %}data-i18n="community_create_group"{% else %}data-i18n="community_empty_action_search"{% endif %}>{{ tab.empty_action_label }}</a>
               {% endif %}
@@ -149,10 +149,14 @@
     {% if communities %}
       <div class="community-space-scroll">
         {% for item in communities %}
-          <a class="community-space-card" href="{{ url_for('community_detail', slug=item.slug) }}" style="--community-color: {{ item.accent_color or theme_colors.primary }};">
+          {# The id is the room's identity here, so two rooms that happen to
+             share a name stay two cards and can be told apart in the DOM. When
+             they do share one, the card shows the slug -- the thing that makes
+             them different -- rather than the list hiding one of them. #}
+          <a class="community-space-card" data-community-id="{{ item.id }}" href="{{ url_for('community_detail', slug=item.slug) }}" style="--community-color: {{ item.accent_color or theme_colors.primary }};">
             <span class="community-card-mark">{{ item.name[:1] }}</span>
             <span>
-              <strong>{{ item.name }}</strong>
+              <strong>{{ item.name }}{% if item.name_is_ambiguous %}<span class="community-space-discriminator">/{{ item.slug }}</span>{% endif %}</strong>
               <small>{% if item.description %}{{ item.description }}{% else %}<span data-i18n="community_default_desc">A community on LvL.</span>{% endif %}</small>
             </span>
           </a>

@@ -170,9 +170,9 @@
         <div>
           {% if streak.is_friend %}
             <strong data-i18n="profile_streak_friend">Friend streak active</strong>
-            <p><span data-i18n="profile_streak_friend_prefix">You are friends because your streak is</span> {{ streak.count }} <span data-i18n="profile_streak_days">days.</span> <span data-i18n="profile_streak_keep">Keep it alive daily.</span></p>
+            <p><span data-i18n="profile_streak_friend_prefix">You are friends because your streak is</span> <span data-profile-streak-count>{{ streak.count }}</span> <span data-i18n="profile_streak_days">days.</span> <span data-i18n="profile_streak_keep">Keep it alive daily.</span></p>
           {% elif streak.count > 0 %}
-            <strong>{{ streak.count }} <span data-i18n="streak_days_high_five">day high-five streak</span></strong>
+            <strong><span data-profile-streak-count>{{ streak.count }}</span> <span data-i18n="streak_days_high_five">day high-five streak</span></strong>
             <p>{{ streak.days_until_friend }} <span data-i18n="profile_streak_days_left">more daily interactions to become friends.</span></p>
           {% else %}
             <strong data-i18n="profile_streak_start">Friendship starts with a streak</strong>

@@ -216,6 +216,18 @@
   min-width: 0;
 }
 
+/* Where one rail section ends and the next begins. Without this the last
+   trending post ran straight into the Clips heading, so the clip underneath
+   read as that post's own media. One hairline and a deliberate gap -- not
+   another card layer. */
+.right-rail .trending-panel + .home-reel-panel,
+.right-rail .trending-panel + .home-media-panel,
+.right-rail .home-reel-panel + .home-media-panel {
+  margin-top: var(--space-10);
+  padding-top: var(--space-10);
+  border-top: 1px solid var(--border-color);
+}
+
 .panel-title {
   margin-bottom: var(--space-4);
   font-size: 15px;
@@ -1357,6 +1369,15 @@
   color: var(--text-primary);
 }
 
+/* The wordmark stays in the layout and is clipped to zero width, so it
+   slides open with the rail rather than snapping in at the end of the
+   animation. display:none cannot be transitioned. The gap has to go with it:
+   flex would otherwise keep 10px beside a zero-width item and the icon would
+   sit off the centre of the collapsed rail. */
+.left-rail:not(.menu-open) .brand.brand-logo {
+  gap: 0;
+}
+
 .left-rail:not(.menu-open) .brand-text {
-  display: none;
+  margin-inline-start: 0;
 }
