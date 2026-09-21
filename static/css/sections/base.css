@@ -213,6 +213,16 @@
      drawn for a dark field, so daylight needs a heavier veil -- expressed as
      tokens rather than a second rule, because a section must not carry its
      own theme block. */
+  /* Leaderboard medals. The palette is otherwise monochrome; these three are
+     the one place colour carries meaning rather than decoration, the way the
+     danger and success colours do. Fourth place down needs no colour. */
+  --rank-gold: #d99a0b;
+  --rank-gold-ink: #1a1206;
+  --rank-silver: #b9bfc6;
+  --rank-silver-ink: #15181c;
+  --rank-bronze: #a4611a;
+  --rank-bronze-ink: #fdf6ee;
+
   --hero-veil-near: 88%;
   --hero-veil-mid: 30%;
   --hero-veil-far: 0%;
@@ -306,6 +316,13 @@
   --lvl-surface-hover: #eef3f6;
   --lvl-surface-inverse: #0f1419;
   --lvl-light-surface: #eff3f4;
+
+  --rank-gold: #c9880a;
+  --rank-gold-ink: #fffaf0;
+  --rank-silver: #9aa2ab;
+  --rank-silver-ink: #ffffff;
+  --rank-bronze: #96581a;
+  --rank-bronze-ink: #fff8f1;
 
   --hero-veil-near: 94%;
   --hero-veil-mid: 62%;

@@ -1,4 +1,5 @@
 {% from "_verified_badge.html" import verified_badge with context %}
+{% from "_leaderboard_rank.html" import leaderboard_rank with context %}
 <!doctype html>
 <html lang="en" dir="ltr">
 <head>
@@ -231,6 +232,7 @@
            <div class="lb-list custom-scrollbar" role="list">
            {% for h in highlights %}
              <article class="lb-row" role="listitem">
+               {{ leaderboard_rank(loop.index) }}
                <a href="{{ url_for('profile', username=h.username) }}" class="lb-person">
                  <img class="lb-avatar" src="{{ h.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="{{ h.display_name }}" loading="lazy">
                  <div class="lb-identity">

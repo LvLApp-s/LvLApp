@@ -1,0 +1,16 @@
+{#
+  The position a member holds on the leaderboard.
+
+  The top three carry a medal so they can be told apart at a glance; from
+  fourth down the number alone is enough and a coloured chip would only add
+  noise. Every leaderboard in the product uses this macro, so they cannot
+  drift apart.
+
+  `position` is the 1-based rank, which the caller takes from loop.index --
+  the list arrives already ordered by level, so the loop index is the rank.
+#}
+{% macro leaderboard_rank(position) -%}
+<span class="lb-rank{% if position <= 3 %} lb-rank-medal{% endif %}"
+      data-rank="{{ position }}"
+      aria-label="Rank {{ position }}">{% if position <= 3 %}{{ position }}{% else %}#{{ position }}{% endif %}</span>
+{%- endmacro %}
