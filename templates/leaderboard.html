@@ -1,0 +1,69 @@
+{% from "_verified_badge.html" import verified_badge with context %}
+{% from "_leaderboard_rank.html" import leaderboard_rank with context %}
+{% extends "layout.html" %}
+{% set active_page = "leaderboard" %}
+{% set title = "Leaderboard" %}
+{% set title_i18n = "leaderboard_title" %}
+
+{% block content %}
+<header class="page-header">
+  <div>
+    <h1 data-i18n="leaderboard_title">Leaderboard</h1>
+    <p data-i18n="leaderboard_page_desc">Everyone on LvL, ordered by level. Earn XP to climb.</p>
+  </div>
+</header>
+
+<section class="panel lb-page-panel" aria-labelledby="leaderboard-heading">
+  <h2 class="sr-only" id="leaderboard-heading" data-i18n="leaderboard_title">Leaderboard</h2>
+
+  {% if people %}
+    <ol class="lb-page-list" role="list" start="{{ rank_offset + 1 }}">
+      {% for person in people %}
+        <li class="lb-row lb-page-row" role="listitem">
+          {{ leaderboard_rank(rank_offset + loop.index) }}
+          <a href="{{ url_for('profile', username=person.username) }}" class="lb-person">
+            <img class="lb-avatar" src="{{ person.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="" aria-hidden="true" loading="lazy">
+            <div class="lb-identity">
+              <strong class="lb-name">
+                {{ person.display_name }}
+                {{ verified_badge(person, size='sm') }}
+              </strong>
+              <span class="lb-handle">@{{ person.username }}</span>
+            </div>
+          </a>
+          <span class="lb-level-badge" style="--badge-color: {{ person.badge_color or theme_colors.muted }};">Lvl {{ person.level or 1 }}</span>
+          {% if session.get('user_id') and session.get('user_id') != person.id %}
+            <form action="{{ url_for('toggle_follow') }}" method="post" class="ajax-action-form lb-follow-form" data-action="follow">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="target_id" value="{{ person.id }}">
+              <button class="lb-follow-btn {% if person.is_following %}active{% endif %}" type="submit">
+                {% if person.is_following %}<span data-follow-label data-i18n="profile_unfollow">Unfollow</span>{% else %}<span data-follow-label data-i18n="profile_follow">Follow</span>{% endif %}
+              </button>
+            </form>
+          {% else %}
+            <span class="lb-you" data-i18n="leaderboard_you">You</span>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ol>
+
+    {% if page > 1 or has_next %}
+      {# Same controls the feed and saved posts use. #}
+      <nav class="pagination-controls" aria-label="Leaderboard pages" data-i18n-aria="leaderboard_pages_aria">
+        {% if page > 1 %}
+          <a class="outline-button" href="{{ url_for('leaderboard', page=page - 1) }}" data-i18n="previous_btn">Previous</a>
+        {% endif %}
+        {% if has_next %}
+          <a class="outline-button" href="{{ url_for('leaderboard', page=page + 1) }}" data-i18n="more_btn">More</a>
+        {% endif %}
+      </nav>
+    {% endif %}
+  {% elif leaderboard_failed %}
+    <p class="community-highlight-empty" data-i18n="leaderboard_error">
+      The leaderboard could not be loaded. Refresh to try again.
+    </p>
+  {% else %}
+    <p class="community-highlight-empty" data-i18n="leaderboard_empty">No community members yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

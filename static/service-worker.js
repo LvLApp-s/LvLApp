@@ -1,5 +1,5 @@
 // Service worker disabled - clear all old caches and unregister
-const ASSET_VERSION = '154';
+const ASSET_VERSION = '155';
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (event) => {
   event.waitUntil(

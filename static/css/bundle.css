@@ -15897,6 +15897,61 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   }
 }
 
+/* --- Leaderboard page ----------------------------------------------------
+   The rail shows a preview of the same list; this is the whole membership,
+   a page at a time. Rows carry more here because there is room: the level
+   badge sits beside the name rather than under it, and the viewer's own row
+   says so instead of offering a follow button. */
+
+.lb-page-panel {
+  padding: var(--space-5);
+}
+
+.lb-page-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lb-page-row {
+  gap: var(--space-5);
+}
+
+.lb-page-row .lb-person {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.lb-page-row .lb-level-badge {
+  flex: 0 0 auto;
+}
+
+.lb-you {
+  flex: 0 0 auto;
+  padding: var(--space-1) var(--space-5);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+@media (max-width: 520px) {
+  /* The level badge and the follow button compete for the same edge on a
+     phone, so the badge moves under the name. */
+  .lb-page-row {
+    flex-wrap: wrap;
+    gap: var(--space-3) var(--space-4);
+  }
+
+  .lb-page-row .lb-person {
+    flex: 1 1 60%;
+  }
+}
+
 /* ===== sections/home-reels.css ===== */
 /* Desktop Home reels panel */
 /* ─── Home Reel Panel (right rail compact player) ────────────────────────── */

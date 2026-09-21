@@ -199,7 +199,7 @@ ATTACHMENT_CONTENT_TYPES = {
     'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'txt': 'text/plain',
 }
-ASSET_VERSION = "154"
+ASSET_VERSION = "155"
 
 # --- Per-request query cache ------------------------------------------------
 #
@@ -2103,10 +2103,20 @@ def leaderboard_failed():
     return bool(getattr(g, 'leaderboard_error', None)) if has_app_context() else False
 
 
-def get_community_highlights():
-    """The leaderboard shown in the right rail.
+LEADERBOARD_RAIL_LIMIT = 10
+LEADERBOARD_PAGE_SIZE = 50
 
-    Only the query that produces the people can empty this panel. The two
+
+def get_community_highlights(limit=LEADERBOARD_RAIL_LIMIT, offset=0):
+    """People ordered by level, highest first.
+
+    Two surfaces use this. The right rail asks for a short preview, which is
+    why the default is small; the leaderboard page walks the whole membership
+    a page at a time. New accounts need nothing added: the order comes from
+    the query, so someone who signs up appears at the position their level
+    earns them.
+
+    Only the query that produces the people can empty the result. The two
     steps after it -- hiding blocked accounts and marking who the viewer
     follows -- decorate that list, and a failure in either used to be caught
     by the outer handler and turned into an empty list, so the rail said "no
@@ -2115,8 +2125,18 @@ def get_community_highlights():
     is logged rather than disguised as an empty leaderboard.
     """
     try:
-        res = supabase.table('users').select('*').order('level', desc=True).limit(20).execute()
-        users = merge_forced_level_users(res.data if res and res.data else [], limit=20)
+        query = supabase.table('users').select('*').order('level', desc=True)
+        if offset:
+            # range() is inclusive at both ends.
+            query = query.range(offset, offset + limit - 1)
+        else:
+            query = query.limit(limit)
+        res = query.execute()
+        rows = res.data if res and res.data else []
+        # The forced-level account is spliced into the ranking rather than
+        # fetched by it, so it belongs on the first page only -- merging it
+        # into every page would repeat it down the list.
+        users = merge_forced_level_users(rows, limit=limit) if not offset else list(rows)
     except Exception:
         app.logger.exception("Leaderboard query failed")
         note_leaderboard_failure('query')
@@ -5435,6 +5455,34 @@ def setup_health():
                            viewer=viewer,
                            checks=get_setup_health(),
                            highlights=get_community_highlights())
+
+@app.route('/leaderboard')
+def leaderboard():
+    """The whole membership, ranked by level.
+
+    The rail shows a preview; this is the full list. It is paged rather than
+    fetched in one go so the query stays bounded however large the community
+    becomes, and the rank continues across pages instead of restarting.
+    """
+    viewer = get_current_user()
+    if not viewer:
+        return redirect(url_for('auth'))
+
+    page = parse_positive_int(request.args.get('page'), default=1, maximum=500)
+    offset = (page - 1) * LEADERBOARD_PAGE_SIZE
+
+    people = get_community_highlights(limit=LEADERBOARD_PAGE_SIZE, offset=offset)
+
+    return render_template('leaderboard.html',
+                           viewer=viewer,
+                           people=people,
+                           page=page,
+                           # The rank someone holds is their position in the
+                           # whole list, not on this page.
+                           rank_offset=offset,
+                           has_next=len(people) == LEADERBOARD_PAGE_SIZE,
+                           home_reels=get_home_reel_preview(viewer['id']))
+
 
 @app.route('/settings', methods=['GET', 'POST'])
 def settings():
