@@ -768,6 +768,8 @@ a:hover {
   display: flex;
   align-items: center;
   gap: 20px;
+  /* Opens with the rail rather than snapping once it is open. */
+  transition: gap var(--duration-base) var(--ease-standard);
   padding: 12px;
   border-radius: var(--radius-pill);
   font-size: 20px;
@@ -791,6 +793,11 @@ a:hover {
   padding: 0;
   justify-content: center;
   margin: 0 auto;
+  /* The label is still in the layout, clipped to zero width so it can slide
+     open with the rail. Flex still puts a gap beside it, which pushed every
+     icon half a gap off the centre of its circle -- and further still on
+     Messages, which also carries a badge. */
+  gap: 0;
 }
 
 .sidebar-toggle-btn {

@@ -173,12 +173,10 @@
         <input id="mobile-global-search-input" type="search" name="q" value="{{ request.args.get('q', '') }}" placeholder="Search" data-i18n-placeholder="search_placeholder">
       </form>
     </div>
-    <header class="app-topbar {% if active_page == 'home' %}topbar-search-only{% endif %}" aria-label="Page tools" data-i18n-aria="nav_page_tools_aria">
-      {% if active_page != 'home' %}
-        <button class="topbar-back-button" type="button" data-web-back aria-label="Go back" title="Back" data-i18n-aria="back" data-i18n-title="back">
-          <svg viewBox="0 0 24 24" aria-hidden="true" width="22" height="22" fill="currentColor"><path d="M20 11v2H7.83l5.59 5.59L12 20 4 12l8-8 1.42 1.41L7.83 11H20Z"/></svg>
-        </button>
-      {% endif %}
+    {# No back control here: the browser's own back button, the swipe gesture
+       and the rail all already go back, and this one only appeared on some
+       pages, so the bar changed shape as you moved around. #}
+    <header class="app-topbar" aria-label="Page tools" data-i18n-aria="nav_page_tools_aria">
       <form class="topbar-search" action="{{ url_for('search') }}" method="get" role="search">
         <label class="sr-only" for="global-search-input" data-i18n="search_placeholder">Search LvL</label>
         <span aria-hidden="true">

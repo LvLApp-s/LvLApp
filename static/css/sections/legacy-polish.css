@@ -73,7 +73,11 @@
   color: var(--lvl-primary-text-soft);
 }
 
-.nav-list a span,
+/* Every rail link wraps its glyph in .nav-icon, so naming that is enough.
+   `.nav-list a span` also matched the label and the unread badge: it forced
+   both into a 24px box, and it out-specified the badge's own
+   `position: absolute`, which put the badge back into the flex row. That is
+   what pushed the icons off the centre of their circles. */
 .nav-icon {
   width: var(--icon-sm);
   height: var(--icon-sm);
@@ -570,7 +574,7 @@ button {
   padding: 0 12px;
 }
 
-.nav-list a span,
+/* .nav-icon only: this also matched the label and the unread badge. */
 .nav-icon {
   flex: 0 0 22px;
   width: 22px;
@@ -1003,7 +1007,7 @@ button {
   font-weight: 600;
 }
 
-.left-rail.menu-open .nav-list a span,
+/* .nav-icon only: this also matched the label and the unread badge. */
 .left-rail.menu-open .nav-icon {
   width: 22px;
   height: 22px;

@@ -2654,10 +2654,11 @@ class AppRouteTests(unittest.TestCase):
         self.assertNotIn('id="sidebar-toggle"', html)
         self.assertNotIn('class="mobile-sidebar-toggle"', html)
         self.assertIn('class="mobile-brand mobile-brand-logo-only" href="/" aria-label="Home"', html)
-        self.assertIn('class="app-topbar topbar-search-only"', html)
-        self.assertIn('topbar-search-only', html)
+        # One bar on every page: search and the alerts bell, no back control.
+        self.assertIn('class="app-topbar"', html)
         self.assertIn('class="topbar-search"', html)
         self.assertNotIn('data-web-back', html)
+        self.assertNotIn('topbar-back-button', html)
         # Alerts moved out of the rail and into the top bar.
         self.assertIn('class="topbar-actions"', html)
         self.assertIn('data-notifications-trigger', html)
@@ -2709,7 +2710,11 @@ class AppRouteTests(unittest.TestCase):
                 page=1,
                 has_next=False,
             )
-        self.assertIn('data-web-back', search_html)
+        # The back control is gone from every page, this one included: the
+        # browser's own back button and the swipe gesture already do this, and
+        # a button that appeared on some pages made the bar change shape.
+        self.assertNotIn('data-web-back', search_html)
+        self.assertNotIn('topbar-back-button', search_html)
         # The alerts bell sits in the top bar on every page, search included.
         self.assertIn('class="topbar-actions"', search_html)
 

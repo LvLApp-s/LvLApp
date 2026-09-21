@@ -199,7 +199,7 @@ ATTACHMENT_CONTENT_TYPES = {
     'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'txt': 'text/plain',
 }
-ASSET_VERSION = "151"
+ASSET_VERSION = "152"
 
 # --- Per-request query cache ------------------------------------------------
 #
@@ -2083,15 +2083,43 @@ def unique_ids(rows, key):
     return values
 
 def get_community_highlights():
+    """The leaderboard shown in the right rail.
+
+    Only the query that produces the people can empty this panel. The two
+    steps after it -- hiding blocked accounts and marking who the viewer
+    follows -- decorate that list, and a failure in either used to be caught
+    by the outer handler and turned into an empty list, so the rail said "no
+    community members yet" when the members were right there and something
+    else had gone wrong. They are handled separately now, and a real failure
+    is logged rather than disguised as an empty leaderboard.
+    """
     try:
         res = supabase.table('users').select('*').order('level', desc=True).limit(20).execute()
         users = merge_forced_level_users(res.data if res and res.data else [], limit=20)
-        viewer_id = session.get('user_id')
-        if viewer_id:
-            users = mark_following_state(filter_blocked_users(users, viewer_id, include_mutes=False), viewer_id)
-        return users
     except Exception:
+        app.logger.exception("Leaderboard query failed")
         return []
+
+    viewer_id = session.get('user_id')
+    if not viewer_id:
+        return users
+
+    try:
+        users = filter_blocked_users(users, viewer_id, include_mutes=False)
+    except Exception:
+        # Showing someone the viewer blocked is worse than showing nobody.
+        app.logger.exception("Leaderboard block filter failed")
+        return []
+
+    try:
+        return mark_following_state(users, viewer_id)
+    except Exception:
+        # The follow buttons fall back to "Follow"; the leaderboard still
+        # shows the people, which is the point of the panel.
+        app.logger.exception("Leaderboard follow state failed")
+        for user in users:
+            user.setdefault('is_following', False)
+        return users
 
 def get_communities(limit=6):
     try:
@@ -7399,10 +7427,15 @@ def post(id):
         post_res = supabase.table('posts').select(select_query).eq('id', id).is_('deleted_at', 'null').execute()
         if post_res.data and post_res.data[0].get('status', 'published') != 'published':
             post_res.data = []
+        # post.html sets show_highlights, so these two "post is gone" paths
+        # rendered the rail with an empty leaderboard reading "no community
+        # members yet" beside the missing-post message.
         if not post_res.data:
-            return render_template('post.html', viewer=viewer, post=None)
+            return render_template('post.html', viewer=viewer, post=None,
+                                   highlights=get_community_highlights())
         if interaction_blocked(viewer['id'], post_res.data[0].get('user_id')):
-            return render_template('post.html', viewer=viewer, post=None)
+            return render_template('post.html', viewer=viewer, post=None,
+                                   highlights=get_community_highlights())
 
         post_data = enrich_posts(post_res.data, viewer['id'])[0]
 

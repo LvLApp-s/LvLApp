@@ -583,7 +583,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initTermsAcceptance();
     initProfilePreview();
     initProfileAvatarModal();
-    initWebBackButton();
     initSwipeBack();
     initPopovers();
     initMessageDock();
@@ -4645,18 +4644,6 @@ function initProgressiveMedia() {
         });
     }, { rootMargin: '320px 0px' });
     document.querySelectorAll('video[preload="none"]').forEach((video) => observer.observe(video));
-}
-
-function initWebBackButton() {
-    document.querySelectorAll('[data-web-back]').forEach((button) => {
-        button.addEventListener('click', () => {
-            if (window.history.length > 1) {
-                window.history.back();
-                return;
-            }
-            window.location.href = '/';
-        });
-    });
 }
 
 function initSwipeBack() {
