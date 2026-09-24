@@ -3,6 +3,7 @@ from datetime import date, datetime
 
 
 MIN_AGE = 16
+COPPA_AGE = 13   # Children's Online Privacy Protection Act threshold
 MAX_AGE = 120
 MIN_PASSWORD_LENGTH = 8
 
@@ -54,6 +55,10 @@ def validate_birthday(value, required=False, today=None):
     if birthday > today:
         return None, "Birthday cannot be in the future."
     if birthday > limits['max']:
+        # Calculate actual age to distinguish under-13 vs under-16
+        age = (today - birthday).days // 365
+        if age < COPPA_AGE:
+            return None, "UNDER_13"
         return None, f"You must be at least {MIN_AGE} years old to use LvL."
     if birthday < limits['min']:
         return None, "Birthday must be a realistic date."

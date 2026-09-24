@@ -14263,9 +14263,10 @@ button {
    reach it and this needs no !important of its own. */
 .reel-mute-float {
   position: absolute !important;
-  right: 20px !important;
-  top: 40px !important;
-  bottom: auto !important;
+  right: 12px !important;
+  left: auto !important;
+  bottom: 320px !important; /* Above the vertical action buttons */
+  top: auto !important;
   z-index: 20 !important;
   border-radius: var(--radius-pill);
   background: var(--lvl-black-45);
@@ -14831,8 +14832,8 @@ button {
   position: absolute;
   inset: auto 0 0 0;
   width: 100%;
-  height: 72%;
-  max-height: 80%;
+  height: 100%;
+  max-height: 100%;
   z-index: 100;
   display: flex;
   flex-direction: column;
@@ -16897,10 +16898,13 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 }
 
 .home-reel-slide {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-height: 0;
+  display: grid;
+  grid-template-areas: "content";
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--lvl-surface-raised);
   scroll-snap-align: start;
   scroll-snap-stop: always;
   opacity: 0.68;
@@ -16919,16 +16923,12 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
    scrolls in so the author row sat half off the bottom. The ratio is a
    minimum now, not a ceiling. */
 .home-reel-video-wrap {
-  position: relative;
+  grid-area: content;
+  width: 100%;
+  height: 100%;
   border-radius: var(--radius-md);
   overflow: hidden;
   background: var(--lvl-surface-raised);
-  width: 100%;
-  flex: 1 1 auto;
-  /* A floor for a very short rail, so the frame never collapses to the height
-     of its own controls. Everything above this comes from the space the slide
-     has left. */
-  min-height: 180px;
 }
 
 /* The frame is the play/pause control now. */
@@ -16967,9 +16967,10 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
    together. */
 .home-reel-video-wrap > .media-volume {
   position: absolute;
-  bottom: 8px;
-  inset-inline-start: 8px;
-  z-index: 2;
+  top: 12px;
+  right: 12px;
+  inset-inline-start: auto;
+  z-index: 10;
 }
 
 .home-reel-mute-btn {
@@ -17006,8 +17007,18 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 }
 
 .home-reel-info {
-  flex: 0 0 auto;
-  padding: 0 2px 4px;
+  grid-area: content;
+  align-self: end;
+  padding: 48px 12px 12px;
+  background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 50%, transparent 100%);
+  color: white;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.home-reel-info > * {
+  pointer-events: auto;
 }
 
 .home-reel-author {
@@ -17020,7 +17031,8 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 
 .home-reel-caption {
   font-size: 0.8rem;
-  color: var(--text-secondary);
+  color: white;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
   margin: 0 0 6px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -17030,9 +17042,11 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 .home-reel-counts {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   font-size: 0.8rem;
-  color: var(--text-secondary);
+  color: white;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  margin-top: 6px;
 }
 
 .home-reel-counts span {

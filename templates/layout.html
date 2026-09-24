@@ -248,39 +248,15 @@
        {% if show_trends and trending_posts %}
          <section class="panel trending-panel" aria-labelledby="trending-heading">
            <h2 class="panel-title" id="trending-heading" data-i18n="trending_title">Trending Posts</h2>
-           <ul class="trending-list custom-scrollbar" role="list">
+           <style>.trending-panel .timeline .post { flex-shrink: 0; }</style>
+<div class="trending-list custom-scrollbar timeline" role="list" style="overflow-y: auto; overflow-x: hidden;">
              {% for tp in trending_posts %}
-               {% set tp_user = tp.user or {} %}
-               <li class="trending-row">
-                 <a class="trending-link" href="{{ url_for('post', id=tp.id) }}">
-                   <span class="trending-identity">
-                     <img class="trending-avatar" src="{{ tp_user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="" aria-hidden="true" loading="lazy">
-                     <span class="trending-name">{{ tp_user.display_name }}</span>
-                     {{ verified_badge(tp_user, size='sm') }}
-                     <span class="trending-handle">@{{ tp_user.username }}</span>
-                   </span>
-                   {% if tp.content %}
-                     <span class="trending-snippet">{{ tp.content }}</span>
-                   {% endif %}
-                   {% if tp.image_url %}
-                     <span class="trending-media">
-                       <img src="{{ tp.image_url }}" alt="" aria-hidden="true" loading="lazy">
-                     </span>
-                   {% endif %}
-                   <span class="trending-stats">
-                     <span class="trending-stat">
-                       <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                       {{ tp.like_count or 0 }}
-                     </span>
-                     <span class="trending-stat">
-                       <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.3 8.9 8.9 0 0 1-3.5-.7L3 21l1.9-5A8.3 8.3 0 0 1 12 3.2a8.4 8.4 0 0 1 9 8.3Z"/></svg>
-                       {{ tp.comment_count or 0 }}
-                     </span>
-                   </span>
-                 </a>
-               </li>
+               <div style="flex-shrink: 0; display: block; border-bottom: 1px solid var(--border-color);">
+                 {% set post = tp %}
+                 {% include "_post_card.html" %}
+               </div>
              {% endfor %}
-           </ul>
+           </div>
          </section>
       {% endif %}
       {% if home_reels is defined and home_reels %}
@@ -460,5 +436,21 @@
 
 {% if viewer %}{% include "_message_dock.html" %}{% endif %}
 {% include "_cookie_consent.html" %}
+{# ── Global message context menu ── #}
+<div id="msg-context-menu" class="msg-ctx-menu" hidden>
+  <button type="button" id="ctx-copy" class="msg-ctx-btn">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+    Mesajı Kopyala
+  </button>
+  <button type="button" id="ctx-delete-me" class="msg-ctx-btn danger" data-delete-type="me" hidden>
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+    Benden Sil
+  </button>
+  <button type="button" id="ctx-delete-all" class="msg-ctx-btn danger" data-delete-type="everyone" hidden>
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+    Herkesten Sil
+  </button>
+</div>
+
 </body>
 </html>

@@ -3086,7 +3086,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // toggle twice per click.
                 if (video) applySoundPreference(card);
                 if (muteButton && video) {
-                    muteButton.addEventListener('click', () => {
+                    muteButton.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
                         soundOn = video.muted;
                         saveSoundPreference();
                         applySoundPreferenceToAll();
@@ -3343,7 +3345,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
             const result = await response.json();
-            listEl.innerHTML = '';
+            // listEl.innerHTML = '';
             if (!result.success) {
                 listEl.innerHTML = `<p class="reel-comment-empty">${escapeHTML(result.error || translateUi('reel_comments_load_error', 'Could not load comments.'))}</p>`;
                 return;
@@ -3367,21 +3369,70 @@ document.addEventListener('DOMContentLoaded', () => {
         if (empty) empty.remove();
         const user = comment.user || {};
         const avatarSrc = user.profile_photo_url || comment._viewerAvatar || '/static/assets/default-male-avatar.svg';
-        const displayName = escapeHTML(user.display_name || comment._viewerName || user.username || 'User');
-        const username = escapeHTML(user.username || comment._viewerUsername || '');
-        const text = escapeHTML(comment.comment || '');
+        const displayName = user.display_name || comment._viewerName || user.username || 'User';
+        const username = user.username || comment._viewerUsername || '';
+        const text = comment.comment || '';
         const time = comment.created_at ? new Date(comment.created_at).toLocaleDateString() : '';
+        
         const item = document.createElement('div');
         item.className = 'reel-comment-item';
-        item.innerHTML = `
-            <img class="avatar reel-comment-avatar" src="${escapeHTML(avatarSrc)}" alt="">
-            <div class="reel-comment-body">
-                <span class="reel-comment-author">${displayName}</span>
-                <span class="reel-comment-handle">@${username}</span>
-                <p class="reel-comment-text">${text}</p>
-                ${time ? `<time class="reel-comment-time">${time}</time>` : ''}
-            </div>
-        `;
+        item.style.display = 'flex';
+        item.style.alignItems = 'flex-start';
+        item.style.gap = '10px';
+
+        const img = document.createElement('img');
+        img.className = 'avatar reel-comment-avatar';
+        img.src = avatarSrc;
+        img.alt = '';
+        img.style.display = 'block';
+        img.style.width = '32px';
+        img.style.height = '32px';
+        img.style.borderRadius = '50%';
+        img.style.objectFit = 'cover';
+        
+        const body = document.createElement('div');
+        body.className = 'reel-comment-body';
+        body.style.flex = '1';
+        body.style.minWidth = '0';
+        body.style.display = 'block';
+        
+        const author = document.createElement('span');
+        author.className = 'reel-comment-author';
+        author.textContent = displayName;
+        author.style.fontWeight = '700';
+        author.style.fontSize = '13px';
+        author.style.color = 'white';
+        
+        const handle = document.createElement('span');
+        handle.className = 'reel-comment-handle';
+        if (username) handle.textContent = ' @' + username;
+        handle.style.fontSize = '12px';
+        handle.style.color = '#aaa';
+        
+        const p = document.createElement('p');
+        p.className = 'reel-comment-text';
+        p.textContent = text;
+        p.style.fontSize = '14px';
+        p.style.color = 'white';
+        p.style.marginTop = '4px';
+        p.style.wordBreak = 'break-word';
+        
+        const timeEl = document.createElement('time');
+        timeEl.className = 'reel-comment-time';
+        timeEl.textContent = time;
+        timeEl.style.fontSize = '11px';
+        timeEl.style.color = '#888';
+        timeEl.style.marginTop = '2px';
+        timeEl.style.display = 'block';
+
+        body.appendChild(author);
+        body.appendChild(handle);
+        body.appendChild(p);
+        if (time) body.appendChild(timeEl);
+        
+        item.appendChild(img);
+        item.appendChild(body);
+        
         listEl.appendChild(item);
         if (scrollToBottom) listEl.scrollTop = listEl.scrollHeight;
     }
@@ -4034,12 +4085,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = sharedCard(message);
             if (card) {
                 card.classList.add(outgoing ? 'msg-dock-shared-out' : 'msg-dock-shared-in');
+                if (id) card.dataset.messageId = id;
                 log.appendChild(card);
                 return;
             }
 
             const bubble = document.createElement('div');
             bubble.className = `msg-dock-bubble ${outgoing ? 'msg-dock-bubble-out' : 'msg-dock-bubble-in'}`;
+            if (id) bubble.dataset.messageId = id;
             if (message.content) bubble.textContent = message.content;
             if (message.attachment_url && (message.attachment_type || '').startsWith('image')) {
                 const image = document.createElement('img');
@@ -4187,6 +4240,94 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!video) return;
             slide.classList.toggle('is-playing', !video.paused);
         };
+
+        slides.forEach((slide) => {
+            const likeForm = slide.querySelector('[data-reel-like-form]');
+            if (likeForm) {
+                likeForm.addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    const btn = likeForm.querySelector('button');
+                    if (btn && btn.dataset.pending === '1') return;
+                    if (btn) btn.dataset.pending = '1';
+                    const formData = new FormData(likeForm);
+                    formData.append('ajax', '1');
+                    try {
+                        const res = await fetch(likeForm.action, { method: 'POST', body: formData, headers: { 'Accept': 'application/json' } });
+                        const data = await res.json();
+                        if (data && data.success) {
+                            if (btn) btn.classList.toggle('active', data.liked);
+                            const countEl = btn.querySelector('[data-reel-like-count]');
+                            if (countEl && typeof data.count !== 'undefined') countEl.textContent = data.count;
+                            const svg = btn.querySelector('svg');
+                            if (svg) svg.setAttribute('fill', data.liked ? 'currentColor' : 'none');
+                        }
+                    } catch (e) {}
+                    if (btn) btn.dataset.pending = '0';
+                });
+            }
+
+            const commentToggle = slide.querySelector('[data-reel-comment-toggle]');
+            const commentPanel = slide.querySelector('[data-reel-comment-panel]');
+            const commentClose = slide.querySelector('[data-reel-comment-close]');
+            
+            if (commentToggle && commentPanel) {
+                let commentsLoaded = false;
+                
+                const openPanel = async () => {
+                    commentPanel.classList.add('is-open');
+                    document.body.classList.add('reel-comments-open');
+                    if (!commentsLoaded) {
+                        commentsLoaded = true;
+                        if (typeof loadReelComments === 'function') {
+                            await loadReelComments(slide, commentPanel, commentToggle);
+                        }
+                    }
+                };
+
+                const closePanel = () => {
+                    commentPanel.classList.remove('is-open');
+                    document.body.classList.remove('reel-comments-open');
+                };
+
+                commentToggle.addEventListener('click', () => {
+                    if (commentPanel.classList.contains('is-open')) closePanel();
+                    else openPanel();
+                });
+
+                if (commentClose) commentClose.addEventListener('click', closePanel);
+
+                const commentForm = commentPanel.querySelector('[data-reel-comment-form]');
+                if (commentForm) {
+                    commentForm.addEventListener('submit', async (event) => {
+                        event.preventDefault();
+                        const input = commentForm.querySelector('input[name="comment"]');
+                        if (!input || !input.value.trim()) return;
+                        if (commentForm.dataset.submitting === '1') return;
+                        commentForm.dataset.submitting = '1';
+                        const formData = new FormData(commentForm);
+                        formData.append('ajax', '1');
+                        try {
+                            const response = await fetch(commentForm.action, { method: 'POST', body: formData, headers: { 'Accept': 'application/json' } });
+                            const result = await response.json();
+                            if (result && result.success) {
+                                input.value = '';
+                                const commentData = result.comment || {};
+                                commentData._viewerName = commentForm.dataset.viewerName;
+                                commentData._viewerUsername = commentForm.dataset.viewerUsername;
+                                commentData._viewerAvatar = commentForm.dataset.viewerAvatar;
+                                
+                                if (typeof appendReelComment === 'function') {
+                                    appendReelComment(commentPanel, commentData, true);
+                                }
+                                const countStr = String(result.count || result.comment_count || '0');
+                                slide.querySelectorAll('[data-reel-comment-count]').forEach(el => el.textContent = countStr);
+                            }
+                        } catch (e) {}
+                        commentForm.dataset.submitting = '0';
+                    });
+                }
+            }
+        });
 
         const togglePlayback = (slide) => {
             const video = getVideo(slide);
@@ -4932,3 +5073,171 @@ function initSwipeBack() {
         }
     }, { passive: true });
 }
+
+// ── Global Message Context Menu (Dock & /messages) ──
+(function initGlobalMessageContextMenu() {
+    const menu = document.getElementById('msg-context-menu');
+    if (!menu) return;
+
+    const btnCopy   = document.getElementById('ctx-copy');
+    const btnDelMe  = document.getElementById('ctx-delete-me');
+    const btnDelAll = document.getElementById('ctx-delete-all');
+
+    let activeWrapper = null;
+    let activeMsgId   = null;
+    let activeText    = '';
+    let isOwn         = false;
+    let holdTimer     = null;
+
+    function getWrapper(el) {
+        // Support both main messages feed and dock messages
+        return el.closest('.message-bubble-wrapper') || el.closest('.msg-dock-bubble') || el.closest('.msg-dock-shared');
+    }
+
+    function getBubble(wrapper) {
+        if (!wrapper) return null;
+        if (wrapper.classList.contains('message-bubble-wrapper')) {
+            return wrapper.querySelector('.message-bubble, .shared-reel-card, .shared-post-card');
+        }
+        return wrapper; // In dock, the wrapper IS the bubble/card
+    }
+
+    function getMsgText(wrapper) {
+        if (!wrapper) return '';
+        if (wrapper.classList.contains('message-bubble-wrapper')) {
+            const tc = wrapper.querySelector('.message-text-content');
+            return tc ? tc.textContent.trim() : '';
+        }
+        // For dock text bubbles
+        if (wrapper.classList.contains('msg-dock-bubble')) {
+            return wrapper.textContent.trim();
+        }
+        return '';
+    }
+
+    function openMenu(wrapper, x, y) {
+        if (!wrapper) return;
+        closeMenu();
+
+        activeWrapper = wrapper;
+        // In dock, bubbles might not have data-message-id unless we set it. Wait, dock doesn't set it! 
+        // If there's no ID, we can't delete. But we can still copy!
+        activeMsgId   = wrapper.dataset.messageId; 
+        activeText    = getMsgText(wrapper);
+        isOwn         = wrapper.classList.contains('own') || wrapper.classList.contains('msg-dock-bubble-out') || wrapper.classList.contains('msg-dock-shared-out');
+
+        // highlight
+        const bubble = getBubble(wrapper);
+        if (bubble) bubble.classList.add('ctx-selected');
+
+        // show/hide buttons
+        if (activeMsgId) {
+            btnDelMe.hidden = false;
+            btnDelAll.hidden = !isOwn;
+        } else {
+            // Can't delete messages in dock if they have no ID
+            btnDelMe.hidden = true;
+            btnDelAll.hidden = true;
+        }
+        
+        // Hide copy if no text
+        if (btnCopy) btnCopy.hidden = !activeText;
+
+        // position
+        menu.removeAttribute('hidden');
+        menu.style.left = '0px';
+        menu.style.top  = '0px';
+        const mw = menu.offsetWidth, mh = menu.offsetHeight;
+        const vw = window.innerWidth,  vh = window.innerHeight;
+        menu.style.left = Math.min(x, vw - mw - 8) + 'px';
+        menu.style.top  = Math.min(y, vh - mh - 8) + 'px';
+    }
+
+    function closeMenu() {
+        menu.setAttribute('hidden', '');
+        if (activeWrapper) {
+            const b = getBubble(activeWrapper);
+            if (b) b.classList.remove('ctx-selected');
+        }
+        activeWrapper = activeMsgId = activeText = null;
+        isOwn = false;
+    }
+
+    document.addEventListener('click', e => {
+        if (!menu.hidden && menu.contains(e.target)) return;
+
+        const wrapper = getWrapper(e.target);
+        if (wrapper) {
+            // Toggle
+            if (!menu.hidden && activeWrapper === wrapper) {
+                closeMenu();
+            } else {
+                openMenu(wrapper, e.clientX || (window.innerWidth / 2), e.clientY || (window.innerHeight / 2));
+            }
+        } else {
+            if (!menu.hidden) closeMenu();
+        }
+    });
+
+    document.addEventListener('contextmenu', e => {
+        const wrapper = getWrapper(e.target);
+        if (!wrapper) return;
+        e.preventDefault();
+        openMenu(wrapper, e.clientX, e.clientY);
+    });
+
+    document.addEventListener('touchstart', e => {
+        const wrapper = getWrapper(e.target);
+        if (!wrapper) return;
+        const t = e.touches[0];
+        holdTimer = setTimeout(() => {
+            openMenu(wrapper, t.clientX, t.clientY);
+        }, 500);
+    }, { passive: true });
+
+    document.addEventListener('touchend',  () => clearTimeout(holdTimer), { passive: true });
+    document.addEventListener('touchmove', () => clearTimeout(holdTimer), { passive: true });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+
+    if (btnCopy) {
+        btnCopy.addEventListener('click', () => {
+            if (activeText) navigator.clipboard?.writeText(activeText).catch(() => {});
+            closeMenu();
+        });
+    }
+
+    async function doDelete(type) {
+        if (!activeMsgId) { closeMenu(); return; }
+        const id = activeMsgId;
+        const CSRF = document.querySelector('input[name="csrf_token"]')?.value || '';
+        closeMenu();
+        if (!CSRF) return;
+        try {
+            const fd = new FormData();
+            fd.append('csrf_token', CSRF);
+            fd.append('message_id', id);
+            fd.append('delete_type', type);
+            fd.append('ajax', '1');
+            const r = await fetch('/delete_message', { method: 'POST', body: fd });
+            if (r.ok) {
+                // Find element everywhere
+                const els = document.querySelectorAll(`[data-message-id="${id}"]`);
+                els.forEach(el => {
+                    if (type === 'everyone') {
+                        const b = el.querySelector('.message-bubble') || el;
+                        b.innerHTML = '<span style="font-style:italic;opacity:.55">Bu mesaj silindi</span>';
+                        el.querySelectorAll('.shared-reel-card,.shared-post-card').forEach(c => c.remove());
+                        el.classList.remove('msg-dock-bubble', 'msg-dock-bubble-in', 'msg-dock-bubble-out');
+                        el.classList.add('msg-dock-empty'); // just a fallback
+                    } else {
+                        el.remove();
+                    }
+                });
+            }
+        } catch {}
+    }
+
+    if (btnDelMe)  btnDelMe.addEventListener('click',  () => doDelete('me'));
+    if (btnDelAll) btnDelAll.addEventListener('click', () => doDelete('everyone'));
+
+})();

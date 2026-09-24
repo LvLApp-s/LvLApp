@@ -24,20 +24,24 @@
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <input type="hidden" name="draft_id" value="" data-draft-id>
   <input type="hidden" name="draft_clear_image" value="0" data-draft-clear-image>
+  <input type="hidden" name="intent" id="composer-intent-input" value="publish">
   <div class="composer-avatar-column">
     <img class="avatar" src="{{ viewer.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" />
   </div>
   <div class="composer-main">
     <textarea name="content" maxlength="280" placeholder="What's happening?" data-i18n-placeholder="composer_placeholder"></textarea>
-    <label class="image-upload-control">
-      <input type="file" name="image" accept="image/png,image/jpeg,image/gif,image/webp">
-      <span data-image-label data-i18n="composer_add_image">Add image</span>
-    </label>
-    <label class="image-upload-control video-upload-control" id="composer-video-label" title="Upload a clip">
-      <input type="file" name="video" id="composer-video-input" accept="video/mp4,video/webm,video/quicktime,video/x-m4v">
-      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-      <span data-video-label data-i18n="composer_add_video">Add clip</span>
-    </label>
+    <div style="display: flex; gap: 12px; align-items: center; margin-top: 8px;">
+      <label class="video-upload-control" title="Görsel Ekle">
+        <input type="file" name="image" accept="image/png,image/jpeg,image/gif,image/webp">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <span data-image-label data-i18n="composer_add_image">Görsel ekle</span>
+      </label>
+      <label class="video-upload-control" id="composer-video-label" title="Klip Ekle">
+        <input type="file" name="video" id="composer-video-input" accept="video/mp4,video/webm,video/quicktime,video/x-m4v">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+        <span data-video-label data-i18n="composer_add_video">Klip Ekle</span>
+      </label>
+    </div>
     <div class="image-upload-preview" data-image-preview hidden>
       <img alt="Selected image preview">
       <button type="button" data-clear-image data-i18n="remove_btn">Remove</button>
@@ -58,10 +62,6 @@
         <span class="draft-status" data-draft-status aria-live="polite"></span>
         <span class="char-count">280 left</span>
         <button type="submit" class="post-submit-btn" id="composer-submit-btn" data-i18n="composer_post_btn">Post</button>
-        <button type="submit" class="post-submit-btn clip-submit-btn" id="composer-clip-btn" name="intent" value="upload_clip" hidden title="Upload as clip">
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-          Upload Clip
-        </button>
       </div>
     </div>
   </div>
@@ -73,9 +73,8 @@
   var videoPreview = document.getElementById('composer-video-preview');
   var videoPlayer = document.getElementById('composer-video-player');
   var videoClear = document.getElementById('composer-video-clear');
-  var clipBtn = document.getElementById('composer-clip-btn');
-  var submitBtn = document.getElementById('composer-submit-btn');
   var videoLabel = document.getElementById('composer-video-label');
+  var intentInput = document.getElementById('composer-intent-input');
 
   if (!videoInput) return;
 
@@ -85,9 +84,7 @@
       var url = URL.createObjectURL(file);
       videoPlayer.src = url;
       videoPreview.hidden = false;
-      // Show upload clip button, hide regular post button
-      if (clipBtn) clipBtn.hidden = false;
-      if (submitBtn) submitBtn.hidden = true;
+      if (intentInput) intentInput.value = 'upload_clip';
       var lbl = videoLabel.querySelector('[data-video-label]');
       if (lbl) lbl.textContent = file.name.length > 22 ? file.name.slice(0, 20) + '...' : file.name;
     }
@@ -98,8 +95,7 @@
       videoInput.value = '';
       videoPlayer.src = '';
       videoPreview.hidden = true;
-      if (clipBtn) clipBtn.hidden = true;
-      if (submitBtn) submitBtn.hidden = false;
+      if (intentInput) intentInput.value = 'publish';
       var lbl = videoLabel.querySelector('[data-video-label]');
       if (lbl) lbl.setAttribute('data-i18n', 'composer_add_video');
       if (lbl) lbl.textContent = 'Add clip';

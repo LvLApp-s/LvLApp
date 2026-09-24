@@ -36,6 +36,36 @@
                    aria-label="Volume" data-i18n-aria="media_volume_aria" data-volume-slider>
           </span>
         </div>
+        
+        <div class="reel-comment-panel" data-reel-comment-panel aria-label="Clip comments" data-i18n-aria="reel_comments_aria" style="z-index: 10;">
+          <div class="reel-comment-panel-header">
+            <strong data-i18n="reel_comments">Comments</strong>
+            <button class="reel-comment-panel-close" type="button" data-reel-comment-close aria-label="Close comments" data-i18n-aria="reel_close_comments">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            </button>
+          </div>
+          <div class="reel-comment-list" data-reel-comment-list>
+            <p class="reel-comment-empty" data-i18n="reel_loading_comments">Loading comments...</p>
+            <div class="reel-comment-item">
+              <img class="avatar reel-comment-avatar" src="/static/assets/default-male-avatar.svg" alt="" style="border: 2px solid green;">
+              <div class="reel-comment-body">
+                  <span class="reel-comment-author">HARDCODED TEST</span>
+                  <span class="reel-comment-handle">@test</span>
+                  <p class="reel-comment-text">If you can see this, CSS is fine.</p>
+                  <time class="reel-comment-time">01.01.2026</time>
+              </div>
+            </div>
+          </div>
+          <form class="reel-comment-submit-form" data-reel-comment-form
+                action="{{ url_for('add_reel_comment', reel_id=reel.id) }}" method="post"
+                data-viewer-name="{{ viewer.display_name if viewer else '' }}"
+                data-viewer-username="{{ viewer.username if viewer else '' }}"
+                data-viewer-avatar="{{ viewer.profile_photo_url if viewer else '' }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input class="reel-comment-input" type="text" name="comment" maxlength="280" placeholder="Add a comment..." data-i18n-placeholder="reel_comment_placeholder" autocomplete="off">
+            <button class="reel-comment-post-btn" type="submit" data-i18n="reel_comment_post">Post</button>
+          </form>
+        </div>
       </div>
       <div class="home-reel-info">
         <div class="home-reel-author">
@@ -47,14 +77,24 @@
         <p class="home-reel-caption">{{ reel.caption }}</p>
         {% endif %}
         <div class="home-reel-counts">
-          <span>
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-            {{ reel.like_count or 0 }}
-          </span>
-          <span>
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
-            {{ reel.comment_count or 0 }}
-          </span>
+          <form action="{{ url_for('toggle_reel_like', reel_id=reel.id) }}" method="post" class="reel-like-form" style="display:inline-block; margin-right: 8px;" data-reel-like-form>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="reel-action-button reel-action-like {% if reel.viewer_liked %}active{% endif %}" type="submit" aria-label="Like clip" data-i18n-aria="reel_like" style="background:none; border:none; color:inherit; cursor:pointer; display:flex; align-items:center; gap:4px; padding:0;">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="{% if reel.viewer_liked %}currentColor{% else %}none{% endif %}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              <span data-reel-like-count>{{ reel.like_count or 0 }}</span>
+            </button>
+          </form>
+          <button class="reel-action-button reel-action-comment" type="button"
+                  data-reel-comment-toggle
+                  {% if not reel.is_demo %}
+                  data-comments-url="{{ url_for('api_reel_comments', reel_id=reel.id) }}"
+                  data-comment-action="{{ url_for('add_reel_comment', reel_id=reel.id) }}"
+                  data-csrf="{{ csrf_token() }}"
+                  {% endif %}
+                  aria-label="View comments" data-i18n-aria="reel_view_comments" style="background:none; border:none; color:inherit; cursor:pointer; display:inline-flex; align-items:center; gap:4px; padding:0;">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span data-reel-comment-count>{{ reel.comment_count or 0 }}</span>
+          </button>
         </div>
       </div>
     </div>

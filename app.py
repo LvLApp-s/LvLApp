@@ -199,7 +199,7 @@ ATTACHMENT_CONTENT_TYPES = {
     'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'txt': 'text/plain',
 }
-ASSET_VERSION = "183"
+ASSET_VERSION = "202"
 
 # --- Per-request query cache ------------------------------------------------
 #
@@ -2353,15 +2353,11 @@ def get_trending_posts(viewer_id, limit=5):
                 (parse_int(post.get('like_count')) or 0)
                 + (parse_int(post.get('comment_count')) or 0)
                 + (parse_int(post.get('repost_count')) or 0)
+                + (parse_int(post.get('bookmark_count')) or 0)
             )
 
-        def score(post):
-            return (engagement_weight(post.get('like_count'),
-                                      post.get('comment_count'),
-                                      post.get('repost_count'))
-                    * (0.35 + 0.65 * recency_weight(post.get('created_at'), half_life_days=2.0)))
-
-        return diversify(enriched, limit, score, session_key='recently_shown_trending')
+        enriched.sort(key=lambda p: p['interaction_score'], reverse=True)
+        return enriched[:limit]
     except Exception:
         return []
 
@@ -4081,6 +4077,8 @@ def oauth_onboarding():
 
         birthday_value, birthday_error = validate_birthday(birthday, required=True)
         if birthday_error:
+            if birthday_error == "UNDER_13":
+                return redirect(url_for('under_13'))
             return retry(birthday_error)
 
         terms_error = terms_acceptance_error(accepted_terms)
@@ -4142,6 +4140,12 @@ def oauth_onboarding():
                 flash(handle_db_error(exc), "error")
 
     return render_template('oauth_onboarding.html', profile=profile, suggested_nickname=oauth_suggested_username(profile))
+
+
+@app.route('/under-13')
+def under_13():
+    return render_template('under_13.html')
+
 
 @app.route('/auth', methods=['GET', 'POST'])
 def auth():
@@ -4219,6 +4223,8 @@ def auth():
 
             birthday_value, birthday_error = validate_birthday(birthday, required=True)
             if birthday_error:
+                if birthday_error == "UNDER_13":
+                    return redirect(url_for('under_13'))
                 flash(birthday_error, "error")
                 return render_template('auth.html', active_tab='register', register_form_data=_reg_form)
 
