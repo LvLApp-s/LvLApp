@@ -33,9 +33,18 @@
       <input type="file" name="image" accept="image/png,image/jpeg,image/gif,image/webp">
       <span data-image-label data-i18n="composer_add_image">Add image</span>
     </label>
+    <label class="image-upload-control video-upload-control" id="composer-video-label" title="Upload a clip">
+      <input type="file" name="video" id="composer-video-input" accept="video/mp4,video/webm,video/quicktime,video/x-m4v">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+      <span data-video-label data-i18n="composer_add_video">Add clip</span>
+    </label>
     <div class="image-upload-preview" data-image-preview hidden>
       <img alt="Selected image preview">
       <button type="button" data-clear-image data-i18n="remove_btn">Remove</button>
+    </div>
+    <div class="video-upload-preview" id="composer-video-preview" hidden>
+      <video id="composer-video-player" controls playsinline muted style="max-height:240px;border-radius:var(--radius-md);width:100%;"></video>
+      <button type="button" id="composer-video-clear" data-i18n="remove_btn" style="margin-top:6px;">Remove clip</button>
     </div>
     <div class="composer-footer">
       <div class="composer-tools composer-draft-tools">
@@ -48,11 +57,56 @@
       <div class="composer-actions">
         <span class="draft-status" data-draft-status aria-live="polite"></span>
         <span class="char-count">280 left</span>
-        <button type="submit" class="post-submit-btn" data-i18n="composer_post_btn">Post</button>
+        <button type="submit" class="post-submit-btn" id="composer-submit-btn" data-i18n="composer_post_btn">Post</button>
+        <button type="submit" class="post-submit-btn clip-submit-btn" id="composer-clip-btn" name="intent" value="upload_clip" hidden title="Upload as clip">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          Upload Clip
+        </button>
       </div>
     </div>
   </div>
 </form>
+
+<script>
+(function () {
+  var videoInput = document.getElementById('composer-video-input');
+  var videoPreview = document.getElementById('composer-video-preview');
+  var videoPlayer = document.getElementById('composer-video-player');
+  var videoClear = document.getElementById('composer-video-clear');
+  var clipBtn = document.getElementById('composer-clip-btn');
+  var submitBtn = document.getElementById('composer-submit-btn');
+  var videoLabel = document.getElementById('composer-video-label');
+
+  if (!videoInput) return;
+
+  videoInput.addEventListener('change', function () {
+    var file = videoInput.files && videoInput.files[0];
+    if (file) {
+      var url = URL.createObjectURL(file);
+      videoPlayer.src = url;
+      videoPreview.hidden = false;
+      // Show upload clip button, hide regular post button
+      if (clipBtn) clipBtn.hidden = false;
+      if (submitBtn) submitBtn.hidden = true;
+      var lbl = videoLabel.querySelector('[data-video-label]');
+      if (lbl) lbl.textContent = file.name.length > 22 ? file.name.slice(0, 20) + '...' : file.name;
+    }
+  });
+
+  if (videoClear) {
+    videoClear.addEventListener('click', function () {
+      videoInput.value = '';
+      videoPlayer.src = '';
+      videoPreview.hidden = true;
+      if (clipBtn) clipBtn.hidden = true;
+      if (submitBtn) submitBtn.hidden = false;
+      var lbl = videoLabel.querySelector('[data-video-label]');
+      if (lbl) lbl.setAttribute('data-i18n', 'composer_add_video');
+      if (lbl) lbl.textContent = 'Add clip';
+    });
+  }
+})();
+</script>
 
 {% if posts and page == 1 %}
 <div class="feed-updates" data-feed-updates

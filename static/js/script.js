@@ -1100,7 +1100,15 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             // trigger on load
             textarea.dispatchEvent(new Event('input'));
-            loadDrafts();
+            loadDrafts().then(() => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const loadDraftId = urlParams.get('draft_id');
+                if (loadDraftId && draftPicker) {
+                    draftPicker.value = loadDraftId;
+                    restoreDraft(loadDraftId);
+                    textarea.focus();
+                }
+            });
         }
     });
 

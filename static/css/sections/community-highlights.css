@@ -516,6 +516,10 @@
   object-fit: cover;
 }
 
+.leaderboard-avatar[src$=".svg"] {
+  object-fit: contain;
+}
+
 .leaderboard-identity {
   display: grid;
   gap: var(--space-1);
@@ -606,9 +610,13 @@
   margin: 0 var(--space-4) var(--space-4);
 }
 
-@media (max-width: 767px) {
-  .community-highlights.panel.community-mobile-leaderboard {
-    display: grid;
+@media (max-width: 900px) {
+  .community-highlights {
+    display: none; /* Desktop sidebar hidden */
+  }
+
+  .community-mobile-leaderboard {
+    display: none !important; /* User requested removal on mobile */
   }
 
   .community-mobile-leaderboard .leaderboard-list {
@@ -616,12 +624,18 @@
   }
 
   .community-mobile-leaderboard .leaderboard-row {
-    grid-template-columns: 26px minmax(0, 1fr);
+    grid-template-columns: 26px minmax(0, 1fr) auto;
   }
 
   .community-mobile-leaderboard .leaderboard-actions {
-    grid-column: 2;
-    grid-template-columns: auto minmax(92px, max-content);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .community-mobile-leaderboard .leaderboard-follow-form {
+    display: none !important;
   }
 }
 

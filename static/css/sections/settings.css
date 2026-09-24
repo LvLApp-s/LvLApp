@@ -192,7 +192,8 @@
 }
 
 .input-icon-wrapper input.has-icon,
-.input-icon-wrapper select.has-icon {
+.input-icon-wrapper select.has-icon,
+.gender-select-wrapper select.has-icon {
   padding-left: 34px;
   width: 100%;
 }
@@ -959,4 +960,9 @@
 }
 [dir="rtl"] .right-rail {
   direction: rtl;
+}
+
+/* Hide reels panel on settings page */
+main:has(.settings-container) + .right-rail-wrapper .home-reel-panel {
+  display: none !important;
 }

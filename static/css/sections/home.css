@@ -118,3 +118,55 @@
   opacity: 0.5;
   cursor: default;
 }
+
+.clip-submit-btn {
+  background: linear-gradient(135deg, #6d28d9, #8b5cf6);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.clip-submit-btn:hover {
+  background: linear-gradient(135deg, #5b21b6, #7c3aed);
+}
+
+.video-upload-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-color);
+  transition: background 0.15s, color 0.15s;
+}
+
+.video-upload-control:hover {
+  background: var(--lvl-surface-hover);
+  color: var(--text-primary);
+}
+
+.video-upload-control input[type="file"] {
+  display: none;
+}
+
+#composer-video-preview {
+  margin: 8px 0;
+}
+
+#composer-video-clear {
+  background: var(--lvl-surface-overlay);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 4px 12px;
+}
+
+#composer-video-clear:hover {
+  color: var(--lvl-red, #ef4444);
+  border-color: var(--lvl-red, #ef4444);
+}

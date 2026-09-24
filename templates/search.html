@@ -22,49 +22,6 @@
     </div>
   </header>
 
-  {% if query == '' %}
-    <div class="search-empty-state">
-      <h2 data-i18n="search_anything_title">Search for anything</h2>
-      <p data-i18n="search_anything_desc">Find people, posts, and more on LvL.</p>
-    </div>
-    {% if suggested_users %}
-      <section class="search-discovery">
-        <h3 data-i18n="search_discover_people">People to discover</h3>
-        {% for user in suggested_users %}
-          <div class="user-result-card">
-            <a href="{{ url_for('profile', username=user.username) }}">
-              <img class="avatar" src="{{ user.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="Avatar" loading="lazy" decoding="async" />
-            </a>
-            <div class="user-result-info">
-              <div class="user-result-header">
-                <div class="user-names">
-                  <a href="{{ url_for('profile', username=user.username) }}"><strong>{{ user.display_name }}</strong></a>{{ verified_badge(user, size='sm') }}
-                  <span>@{{ user.username }}</span>
-                </div>
-                <form action="{{ url_for('toggle_follow') }}" method="post">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <input type="hidden" name="target_id" value="{{ user.id }}">
-                  <button class="outline-button {% if user.is_following %}active{% endif %}" type="submit">
-                    {% if user.is_following %}<span data-follow-label data-i18n="profile_unfollow">Unfollow</span>{% else %}<span data-follow-label data-i18n="profile_follow">Follow</span>{% endif %}
-                  </button>
-                </form>
-              </div>
-              {% if user.bio %}<p class="user-result-bio">{{ user.bio }}</p>{% else %}<p class="user-result-bio" data-i18n="search_new_to_lvl">New to LvL.</p>{% endif %}
-            </div>
-          </div>
-        {% endfor %}
-      </section>
-    {% endif %}
-    
-    {% if recent_posts %}
-      <section class="search-discovery feed">
-        <h3 data-i18n="search_recent_posts">Recent posts</h3>
-        {% for post in recent_posts %}
-          {% include "_post_card.html" %}
-        {% endfor %}
-      </section>
-    {% endif %}
-  {% else %}
     <section class="search-results">
       {% if tab == 'people' %}
         <div class="people-results">
@@ -128,6 +85,5 @@
         </nav>
       {% endif %}
     </section>
-  {% endif %}
 </div>
 {% endblock %}

@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="Default female avatar">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Default female avatar">
   <rect width="160" height="160" rx="80" fill="#FFE0EF"/>
   <path d="M42 82c0-36 17-58 38-58s38 22 38 58c0 27-15 47-38 47S42 109 42 82z" fill="#4B164C"/>
   <circle cx="80" cy="71" r="32" fill="#F4B6A0"/>

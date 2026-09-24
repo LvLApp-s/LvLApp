@@ -12,10 +12,20 @@
       <h1 data-i18n="reel_upload_title">Upload Clip</h1>
       <p data-i18n="reel_upload_desc">Upload a short vertical video for the Clips feed. Public clips can appear in For You, follower clips stay close to your network, and community clips attach to a group.</p>
     </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <button type="button" id="reel-save-draft-btn" class="outline-button small" title="Save caption and settings as a draft">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Save draft
+      </button>
+      <a class="outline-button small" href="{{ url_for('reels') }}" data-i18n="cancel_btn">Cancel</a>
+    </div>
   </header>
+
+  <p id="reel-draft-status" style="color:var(--text-secondary);font-size:13px;margin-bottom:8px;" hidden></p>
 
   <form class="reel-upload-form panel" action="{{ url_for('reel_upload') }}" method="post" enctype="multipart/form-data" data-reel-upload-form data-max-video-bytes="{{ max_video_bytes }}" data-upload-url="{{ url_for('api_reel_upload_url') }}" data-complete-url="{{ url_for('api_reel_complete_upload') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="reel_draft_id" id="reel-draft-id-field" value="">
 
     <div class="reel-upload-grid">
       <label class="reel-file-picker">
@@ -31,14 +41,14 @@
 
     <label class="form-field">
       <span data-i18n="reel_caption">Caption</span>
-      <textarea name="caption" maxlength="220" placeholder="Write a caption" data-i18n-placeholder="reel_caption_placeholder"></textarea>
+      <textarea name="caption" id="reel-caption-field" maxlength="220" placeholder="Write a caption" data-i18n-placeholder="reel_caption_placeholder"></textarea>
       <small><span data-reel-caption-count>220</span> <span data-i18n="reel_characters_left">characters left</span></small>
     </label>
 
     <div class="reel-settings-grid">
       <label class="form-field">
         <span data-i18n="reel_visibility">Visibility</span>
-        <select name="visibility" data-reel-visibility>
+        <select name="visibility" id="reel-visibility-field" data-reel-visibility>
           <option value="public" data-i18n-option="reel_visibility_public">Public</option>
           <option value="followers" data-i18n-option="reel_visibility_followers">Followers</option>
           <option value="community" data-i18n-option="reel_visibility_community">Community</option>
@@ -68,9 +78,60 @@
     <p class="reel-upload-message" data-reel-upload-message></p>
 
     <div class="composer-footer">
-      <a class="outline-button" href="{{ url_for('reels') }}" data-i18n="cancel_btn">Cancel</a>
       <button type="submit" class="post-submit-btn" data-reel-submit data-i18n="reel_upload_submit" disabled>Upload clip</button>
     </div>
   </form>
 </section>
+
+<script>
+(function () {
+  var saveBtn = document.getElementById('reel-save-draft-btn');
+  var statusEl = document.getElementById('reel-draft-status');
+  var captionField = document.getElementById('reel-caption-field');
+  var visibilityField = document.getElementById('reel-visibility-field');
+  var draftIdField = document.getElementById('reel-draft-id-field');
+
+  function showStatus(msg, ok) {
+    if (!statusEl) return;
+    statusEl.textContent = msg;
+    statusEl.style.color = ok ? 'var(--lvl-green, #22c55e)' : 'var(--lvl-red, #ef4444)';
+    statusEl.hidden = false;
+    setTimeout(function () { statusEl.hidden = true; }, 3000);
+  }
+
+  if (saveBtn) {
+    saveBtn.addEventListener('click', function () {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+      var payload = {
+        caption: captionField ? captionField.value : '',
+        visibility: visibilityField ? visibilityField.value : 'public',
+      };
+      var draftId = draftIdField && draftIdField.value ? parseInt(draftIdField.value) : null;
+      if (draftId) payload.draft_id = draftId;
+
+      fetch('{{ url_for("api_save_reel_draft") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
+        body: JSON.stringify(payload),
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.success) {
+          if (draftIdField && data.draft_id) draftIdField.value = data.draft_id;
+          showStatus('Draft saved!', true);
+        } else {
+          showStatus(data.error || 'Could not save draft.', false);
+        }
+      })
+      .catch(function () { showStatus('Could not save draft.', false); })
+      .finally(function () {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Save draft';
+      });
+    });
+  }
+})();
+</script>
 {% endblock %}
+

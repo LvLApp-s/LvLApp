@@ -12,3 +12,6 @@ __pycache__/
 *.pyc
 .venv/
 static/uploads/
+
+.vercel
+.env*

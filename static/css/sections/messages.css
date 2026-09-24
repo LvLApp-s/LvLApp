@@ -1076,7 +1076,7 @@
   border: none !important;
   resize: none !important;
   outline: none !important;
-  color: var(--lvl-white) !important;
+  color: var(--text-primary) !important;
   padding: 6px 4px !important;
   font-family: inherit !important;
   font-size: 15px !important;
@@ -1093,6 +1093,10 @@
   padding: 8px 12px;
   margin-bottom: 8px;
   font-size: 0.9em;
+}
+
+.attachment-preview-box[hidden] {
+  display: none !important;
 }
 
 .preview-filename {
@@ -1328,6 +1332,10 @@
   animation: ctx-pop .12s cubic-bezier(.2,.8,.4,1);
 }
 
+.msg-ctx-menu[hidden] {
+  display: none !important;
+}
+
 @keyframes ctx-pop {
   from {
     opacity: 0;
@@ -1389,3 +1397,9 @@
 
 }
 
+
+/* Hide reels and media panels on messages page */
+main:has(.messages-container) + .right-rail-wrapper .home-reel-panel,
+main:has(.messages-container) + .right-rail-wrapper .home-media-panel {
+  display: none !important;
+}

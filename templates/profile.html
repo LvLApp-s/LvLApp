@@ -205,9 +205,7 @@
         Beğeniler
       </a>
       {% if is_own_profile %}
-      <a href="{{ url_for('bookmarks') }}" data-i18n="nav_bookmarks">
-        Kaydedilenler
-      </a>
+      {# Kaydedilenler yan menüde olduğu için burada gösterilmiyor #}
       {% endif %}
     </nav>
   </section>
@@ -219,6 +217,54 @@
         {% include "_reel_card.html" %}
       {% endfor %}
     </div>
+  {% elif mode == 'replies' %}
+    {% if not posts %}
+      <div class="empty-state">
+        <h2>Henüz yanıt yok</h2>
+        <p>Bu kullanıcı henüz hiç yorum yapmamış.</p>
+      </div>
+    {% else %}
+      <div class="replies-feed">
+        {% for comment in posts %}
+          <article class="reply-card">
+            {% if comment._parent_post %}
+              <a class="reply-card-context" href="{{ url_for('post', id=comment.post_id) }}">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8A8.5 8.5 0 0 1 12.45 20a8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8A8.5 8.5 0 0 1 12 3h.5"/></svg>
+                <span>
+                  {% if comment._parent_post.user %}
+                    @{{ comment._parent_post.user.username }} 
+                  {% endif %}
+                  {% if comment._parent_post.content %}
+                    — {{ comment._parent_post.content|truncate(80) }}
+                  {% else %}
+                    gönderisine yanıt
+                  {% endif %}
+                </span>
+              </a>
+            {% endif %}
+            <div class="reply-card-body">
+              <a class="reply-card-avatar-link" href="{{ url_for('profile', username=profile.username) }}">
+                <img class="avatar small-avatar" src="{{ profile.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="{{ profile.display_name }}" loading="lazy">
+              </a>
+              <div class="reply-card-content">
+                <div class="reply-card-header">
+                  <a class="reply-card-name" href="{{ url_for('profile', username=profile.username) }}">{{ profile.display_name }}</a>
+                  <span class="reply-card-handle">@{{ profile.username }}</span>
+                  <span class="reply-card-time">
+                    · <time datetime="{{ comment.created_at }}" data-relative-time>{{ relative_time(comment.created_at) }}</time>
+                  </span>
+                </div>
+                <p class="reply-card-text">{{ comment.comment }}</p>
+                <a class="reply-card-link" href="{{ url_for('post', id=comment.post_id) }}">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+                  Gönderiyi gör
+                </a>
+              </div>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% endif %}
   {% elif not posts and not reels %}
     <div class="empty-state">
       {% if mode == 'liked' %}
@@ -227,9 +273,6 @@
       {% elif mode == 'clips' %}
         <h2>No clips yet</h2>
         <p>This profile has not uploaded any clips yet.</p>
-      {% elif mode == 'replies' %}
-        <h2>No replies yet</h2>
-        <p>This profile has not replied to any posts yet.</p>
       {% else %}
         <h2 data-i18n="profile_no_posts">No posts</h2>
         <p data-i18n="profile_no_posts_desc">This profile has not posted yet.</p>

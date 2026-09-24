@@ -1,5 +1,12 @@
 {% if post.image_url %}
-  <a class="post-media" href="{{ post.image_url }}" target="_blank" rel="noopener">
-    <img src="{{ post.image_url }}" alt="Post image" loading="lazy" decoding="async">
-  </a>
+  {% if post.image_url.lower().endswith(('.mp4', '.webm', '.mov')) %}
+    <video class="post-media" controls preload="metadata">
+      <source src="{{ post.image_url }}" type="video/{{ post.image_url.split('.')[-1] }}">
+      Your browser does not support the video tag.
+    </video>
+  {% else %}
+    <a class="post-media" href="{{ post.image_url }}" target="_blank" rel="noopener">
+      <img src="{{ post.image_url }}" alt="Post image" loading="lazy" decoding="async">
+    </a>
+  {% endif %}
 {% endif %}

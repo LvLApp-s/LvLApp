@@ -199,7 +199,7 @@ ATTACHMENT_CONTENT_TYPES = {
     'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'txt': 'text/plain',
 }
-ASSET_VERSION = "160"
+ASSET_VERSION = "183"
 
 # --- Per-request query cache ------------------------------------------------
 #
@@ -1550,8 +1550,9 @@ def store_video_locally(payload, folder, extension):
 def upload_image_to_storage(file_storage, folder, max_bytes=MAX_IMAGE_BYTES):
     if not file_storage or not file_storage.filename:
         return None
-    if not allowed_image_file(file_storage.filename):
-        raise ValueError("Images must be JPG, PNG, GIF, or WebP.")
+    is_video = allowed_video_file(file_storage.filename)
+    if not allowed_image_file(file_storage.filename) and not is_video:
+        raise ValueError("Files must be images (JPG, PNG, GIF, WebP) or videos (MP4, WebM, MOV).")
 
     try:
         file_storage.stream.seek(0)
@@ -1560,9 +1561,10 @@ def upload_image_to_storage(file_storage, folder, max_bytes=MAX_IMAGE_BYTES):
     payload = file_storage.read()
     if not payload:
         raise ValueError("Selected image is empty.")
-    if len(payload) > max_bytes:
-        max_megabytes = max(1, max_bytes // (1024 * 1024))
-        raise ValueError(f"Images must be {max_megabytes} MB or smaller.")
+    actual_max_bytes = MAX_VIDEO_BYTES if is_video else max_bytes
+    if len(payload) > actual_max_bytes:
+        max_megabytes = max(1, actual_max_bytes // (1024 * 1024))
+        raise ValueError(f"Files must be {max_megabytes} MB or smaller.")
 
     filename = secure_filename(file_storage.filename)
     extension = filename.rsplit('.', 1)[1].lower()
@@ -4369,6 +4371,42 @@ def create_post():
     sticker = request.form.get('sticker', '').strip()
     allowed_stickers = {'🔥', '👏', '💯', '❤️', '😂', '🎉', '👍', '✨'}
     sticker = sticker if sticker in allowed_stickers else ''
+
+    # Handle clip / video upload from the composer
+    if intent == 'upload_clip':
+        video_file = request.files.get('video')
+        if not video_file or not getattr(video_file, 'filename', ''):
+            flash("Choose a video file to upload as a clip.", "error")
+            return redirect(url_for('index'))
+        try:
+            communities = get_reel_upload_communities(viewer['id'])
+            details = validate_reel_details(
+                viewer['id'],
+                content,  # caption = post text
+                'public',
+                None,
+                communities,
+            )
+            video_url, storage_path = upload_video_to_storage(video_file, f"reels/{viewer['id']}")
+            insert_reel_record(
+                viewer['id'],
+                video_url,
+                storage_path,
+                details,
+                allow_comments=True,
+                allow_downloads=False,
+                autoplay_next=True,
+            )
+            flash("Clip uploaded successfully!", "success")
+        except (ValueError, RuntimeError) as exc:
+            flash(str(exc), "error")
+        except Exception as exc:
+            if reels_table_not_ready(exc):
+                flash("Clips database table is not ready. Run database/migrations/002_reels.sql in Supabase.", "error")
+            else:
+                flash(handle_db_error(exc, "Could not upload that clip."), "error")
+        return redirect(url_for('index'))
+
     image_url = None
     if request.files.get('image'):
         try:
@@ -4382,6 +4420,7 @@ def create_post():
             image_url = (draft.get('image_url') or '').strip() if draft else None
         except Exception:
             image_url = None
+
 
     if content or image_url or gif_url or sticker:
         if len(content) > 280:
@@ -4549,16 +4588,85 @@ def api_publish_post_draft():
     except Exception as exc:
         return jsonify({'success': False, 'error': draft_error_message(exc, "Could not publish post draft.")}), 400
 
+# ─── Reel / Clip draft endpoints ───────────────────────────────────────────
+
+@app.route('/api/reel-drafts')
+def api_reel_drafts():
+    """List saved clip drafts (metadata only, no video file)."""
+    viewer = get_current_user()
+    if not viewer:
+        return jsonify({'success': False, 'error': 'Authentication required.'}), 401
+    try:
+        res = supabase.table('reel_drafts') \
+            .select('id,caption,visibility,created_at,updated_at') \
+            .eq('user_id', viewer['id']) \
+            .order('updated_at', desc=True) \
+            .limit(20) \
+            .execute()
+        return jsonify({'success': True, 'drafts': res.data if res and res.data else []})
+    except Exception as exc:
+        return jsonify({'success': False, 'error': handle_db_error(exc, "Could not load clip drafts.")}), 400
+
+@app.route('/api/reel-drafts/save', methods=['POST'])
+def api_save_reel_draft():
+    """Save or update a clip draft record (no video file stored, just metadata)."""
+    viewer = get_current_user()
+    if not viewer:
+        return jsonify({'success': False, 'error': 'Authentication required.'}), 401
+
+    data = request.get_json(silent=True) or {}
+    draft_id = parse_int(data.get('draft_id') or data.get('id'))
+    caption = (data.get('caption') or '').strip()[:220]
+    visibility = (data.get('visibility') or 'public').strip()
+    if visibility not in REEL_VISIBILITIES:
+        visibility = 'public'
+
+    now = datetime.now(timezone.utc).isoformat()
+    payload = {
+        'user_id': viewer['id'],
+        'caption': caption,
+        'visibility': visibility,
+        'updated_at': now,
+    }
+
+    try:
+        if draft_id:
+            existing = supabase.table('reel_drafts').select('id').eq('id', draft_id).eq('user_id', viewer['id']).execute()
+            if existing.data:
+                supabase.table('reel_drafts').update(payload).eq('id', draft_id).execute()
+                return jsonify({'success': True, 'draft_id': draft_id})
+        payload['created_at'] = now
+        res = supabase.table('reel_drafts').insert(payload).execute()
+        new_id = res.data[0]['id'] if res.data else None
+        return jsonify({'success': True, 'draft_id': new_id})
+    except Exception as exc:
+        return jsonify({'success': False, 'error': handle_db_error(exc, "Could not save clip draft.")}), 400
+
+@app.route('/api/reel-drafts/delete', methods=['POST'])
+def api_delete_reel_draft():
+    viewer = get_current_user()
+    if not viewer:
+        return jsonify({'success': False, 'error': 'Authentication required.'}), 401
+    data = request.get_json(silent=True) or {}
+    draft_id = parse_int(data.get('draft_id') or data.get('id'))
+    if not draft_id:
+        return jsonify({'success': False, 'error': 'Draft id is required.'}), 400
+    try:
+        supabase.table('reel_drafts').delete().eq('id', draft_id).eq('user_id', viewer['id']).execute()
+        return jsonify({'success': True, 'deleted_id': draft_id})
+    except Exception as exc:
+        return jsonify({'success': False, 'error': handle_db_error(exc, "Could not delete clip draft.")}), 400
+
 @app.route('/drafts')
 def drafts():
     viewer = get_current_user()
     if not viewer:
         return redirect(url_for('auth'))
     try:
-        result = supabase.table('posts').select('*').eq('user_id', viewer['id']).eq('status', 'draft').is_('deleted_at', 'null').order('updated_at', desc=True).execute()
+        result = supabase.table('post_drafts').select('*').eq('user_id', viewer['id']).order('updated_at', desc=True).execute()
         items = result.data or []
     except Exception as exc:
-        flash(handle_db_error(exc, "Drafts require migration 011."), "error")
+        flash(handle_db_error(exc, "Could not load drafts."), "error")
         items = []
     return render_template('drafts.html', viewer=viewer, drafts=items)
 
@@ -4605,13 +4713,12 @@ def delete_draft(post_id):
     if not viewer:
         return redirect(url_for('auth'))
     try:
-        result = supabase.table('posts').update({'deleted_at': datetime.now(timezone.utc).isoformat()}).eq('id', post_id).eq('user_id', viewer['id']).eq('status', 'draft').execute()
-        if result.data:
+        if delete_post_draft_for_user(viewer['id'], post_id):
             flash("Draft deleted.", "success")
         else:
             flash("Draft not found.", "error")
     except Exception as exc:
-        flash(handle_db_error(exc, "Draft deletion requires migration 011."), "error")
+        flash(handle_db_error(exc, "Could not delete draft."), "error")
     return redirect(url_for('drafts'))
 
 @app.route('/toggle_bookmark', methods=['POST'])
@@ -5386,13 +5493,13 @@ def delete_message():
             flash("Message not found.", "error")
         else:
             message = msg_res.data[0]
-            if viewer['id'] != message.get('sender_id'):
-                if wants_json:
-                    return jsonify({'success': False, 'error': 'You can only delete your own messages.'}), 403
-                flash("You can only delete your own messages.", "error")
-                return redirect(redirect_url)
-
             if delete_type == 'everyone':
+                if viewer['id'] != message.get('sender_id'):
+                    if wants_json:
+                        return jsonify({'success': False, 'error': 'You can only delete your own messages for everyone.'}), 403
+                    flash("You can only delete your own messages for everyone.", "error")
+                    return redirect(redirect_url)
+
                 created_at_str = message.get('created_at', '')
                 try:
                     created_at = datetime.fromisoformat(created_at_str.replace('Z', '+00:00'))
@@ -5418,9 +5525,18 @@ def delete_message():
                     'attachment_name': None
                 }).eq('id', message_id).execute()
             else:
-                supabase.table('messages').update({
-                    'deleted_by_sender': True
-                }).eq('id', message_id).execute()
+                update_data = {}
+                if viewer['id'] == message.get('sender_id'):
+                    update_data['deleted_by_sender'] = True
+                elif viewer['id'] == message.get('receiver_id'):
+                    update_data['deleted_by_receiver'] = True
+                else:
+                    if wants_json:
+                        return jsonify({'success': False, 'error': 'Not your message.'}), 403
+                    flash("Not your message.", "error")
+                    return redirect(redirect_url)
+                
+                supabase.table('messages').update(update_data).eq('id', message_id).execute()
 
             if wants_json:
                 return jsonify({'success': True, 'message_id': message_id})
@@ -6509,15 +6625,25 @@ def profile(username):
                 else:
                     posts = []
             elif mode == 'replies':
-                comments_res = supabase.table('comments').select('post_id').eq('user_id', profile_user['id']).execute()
-                commented_post_ids = list(set([c['post_id'] for c in comments_res.data if c.get('post_id')])) if (comments_res and comments_res.data) else []
-                if commented_post_ids:
-                    offset = (page - 1) * POSTS_PER_PAGE
-                    posts_res = execute_published_posts(lambda: supabase.table('posts').select(select_query).in_('id', commented_post_ids).is_('deleted_at', 'null').order('created_at', desc=True).range(offset, offset + POSTS_PER_PAGE - 1))
-                    raw_posts = posts_res.data if posts_res and posts_res.data else []
-                    posts = enrich_posts(visible_post_filter(raw_posts, viewer['id']), viewer['id'])
-                else:
-                    posts = []
+                # Fetch the user's own comment rows (with text content and parent post info)
+                offset = (page - 1) * POSTS_PER_PAGE
+                comments_res = supabase.table('comments') \
+                    .select('id, comment, created_at, post_id, user_id, user:users!comments_user_id_fkey(*)') \
+                    .eq('user_id', profile_user['id']) \
+                    .order('created_at', desc=True) \
+                    .range(offset, offset + POSTS_PER_PAGE - 1) \
+                    .execute()
+                user_comments = comments_res.data if comments_res and comments_res.data else []
+                # Fetch the parent posts so we can show context
+                parent_post_ids = list(set([c['post_id'] for c in user_comments if c.get('post_id')]))
+                posts_by_id = {}
+                if parent_post_ids:
+                    parent_res = supabase.table('posts').select('id, content, user_id, user:users!posts_user_id_fkey(username, display_name)').in_('id', parent_post_ids).is_('deleted_at', 'null').execute()
+                    if parent_res and parent_res.data:
+                        posts_by_id = {p['id']: p for p in parent_res.data}
+                for c in user_comments:
+                    c['_parent_post'] = posts_by_id.get(c.get('post_id'))
+                posts = user_comments  # template iterates these as reply cards
             elif mode == 'saved':
                 # /bookmarks is the single canonical Saved experience. This
                 # branch used to be a second implementation of the same
@@ -7252,7 +7378,8 @@ def notifications():
         flash(handle_db_error(e), "error")
         formatted = []
 
-    return render_template('notifications.html', viewer=viewer, notifications=formatted, highlights=get_community_highlights())
+    return render_template('notifications.html', viewer=viewer, notifications=formatted, highlights=get_community_highlights(),
+                           now_date=datetime.now(timezone.utc).strftime('%Y-%m-%d'))
 
 @app.route('/community')
 def community():
@@ -7538,24 +7665,31 @@ def search():
 
     try:
         select_query = '*, user:users!posts_user_id_fkey(*), likes(count), comments(count), reposts(count)'
-        if query:
-            if tab == 'people':
+        offset = (page - 1) * POSTS_PER_PAGE
+        
+        if tab == 'people':
+            if query:
                 safe_query = query.replace('%', '').replace(',', ' ')
-                offset = (page - 1) * POSTS_PER_PAGE
                 res = supabase.table('users').select('*').or_(f"display_name.ilike.%{safe_query}%,username.ilike.%{safe_query}%,nickname.ilike.%{safe_query}%").range(offset, offset + POSTS_PER_PAGE - 1).execute()
-                users = res.data if res.data else []
-                users = filter_blocked_users(users, viewer['id'], include_mutes=False)
-                users = mark_following_state(users, viewer['id'])
             else:
-                order_desc = True
-                offset = (page - 1) * POSTS_PER_PAGE
-                res = execute_published_posts(lambda: supabase.table('posts').select(select_query).ilike('content', f"%{query}%").is_('deleted_at', 'null').order('created_at', desc=order_desc).range(offset, offset + POSTS_PER_PAGE - 1))
+                res = supabase.table('users').select('*').order('level', desc=True).range(offset, offset + POSTS_PER_PAGE - 1).execute()
+            users = res.data if res.data else []
+            users = filter_blocked_users(users, viewer['id'], include_mutes=False)
+            users = mark_following_state(users, viewer['id'])
+        elif tab == 'latest':
+            if query:
+                res = execute_published_posts(lambda: supabase.table('posts').select(select_query).ilike('content', f"%{query}%").is_('deleted_at', 'null').order('created_at', desc=True).range(offset, offset + POSTS_PER_PAGE - 1))
+            else:
+                res = execute_published_posts(lambda: supabase.table('posts').select(select_query).is_('deleted_at', 'null').order('created_at', desc=True).range(offset, offset + POSTS_PER_PAGE - 1))
+            posts = res.data if res.data else []
+            posts = enrich_posts(visible_post_filter(posts, viewer['id']), viewer['id'])
+        else: # top
+            if query:
+                res = execute_published_posts(lambda: supabase.table('posts').select(select_query).ilike('content', f"%{query}%").is_('deleted_at', 'null').order('created_at', desc=True).range(offset, offset + POSTS_PER_PAGE - 1))
                 posts = res.data if res.data else []
                 posts = enrich_posts(visible_post_filter(posts, viewer['id']), viewer['id'])
-        else:
-            discovery = get_search_discovery_context(viewer)
-            suggested_users = discovery['suggested_users']
-            recent_posts = discovery['recent_posts']
+            else:
+                posts = get_trending_posts(viewer['id'], POSTS_PER_PAGE)
     except Exception as e:
         flash(handle_db_error(e), "error")
 

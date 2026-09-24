@@ -314,10 +314,11 @@
    so the blanket `background: transparent !important` on those does not
    reach it and this needs no !important of its own. */
 .reel-mute-float {
-  position: absolute;
-  inset-inline-end: var(--space-5);
-  bottom: var(--space-5);
-  z-index: 5;
+  position: absolute !important;
+  right: 20px !important;
+  top: 40px !important;
+  bottom: auto !important;
+  z-index: 20 !important;
   border-radius: var(--radius-pill);
   background: var(--lvl-black-45);
   backdrop-filter: blur(6px);

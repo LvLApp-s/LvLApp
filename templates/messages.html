@@ -189,7 +189,7 @@
           <div class="chat-input-wrapper">
             <button type="button" class="attachment-btn" id="attachment-trigger-btn" aria-label="Add attachment" data-i18n-aria="messages_add_attachment_aria" {% if chat_safety_state.interaction_blocked %}disabled{% endif %}>+</button>
             <input type="file" id="chat-file-input" style="display: none;" accept="image/*,video/*,audio/*,application/*,text/*">
-            <textarea name="content" id="message-text-input" placeholder="Start a new message" data-i18n-placeholder="start_message_placeholder" required maxlength="1000" rows="1" {% if chat_safety_state.interaction_blocked %}disabled{% endif %}></textarea>
+            <textarea name="content" id="message-text-input" placeholder="Start a new message" data-i18n-placeholder="start_message_placeholder" maxlength="1000" rows="1" {% if chat_safety_state.interaction_blocked %}disabled{% endif %}></textarea>
             <button type="submit" class="send-btn" aria-label="Send message" data-i18n-aria="messages_send_aria" {% if chat_safety_state.interaction_blocked %}disabled{% endif %}>
               <svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20" fill="currentColor"><g><path d="M2.504 21.866l.526-2.108C3.04 19.719 4 15.823 4 12s-.96-7.719-.97-7.757l-.526-2.109L22.247 12 2.504 21.866zM5.981 13c-.072 1.962-.34 3.833-.583 5.183L17.584 12 5.398 5.817c.243 1.35.511 3.221.583 5.183H12v2H5.981z"></path></g></svg>
             </button>
@@ -346,7 +346,7 @@
     if (bubble) bubble.classList.add('ctx-selected');
 
     // show/hide delete buttons
-    btnDelMe.hidden  = !isOwn;
+    btnDelMe.hidden  = false;
     btnDelAll.hidden = !isOwn;
 
     // position
@@ -369,7 +369,7 @@
     isOwn = false;
   }
 
-  // ── Right-click & Left-click (Desktop) ──
+  // ── Right-click (Desktop) ──
   const feed = document.getElementById('messages-feed');
   if (feed) {
     feed.addEventListener('contextmenu', e => {
@@ -379,12 +379,9 @@
       openMenu(wrapper, e.clientX, e.clientY);
     });
 
+    // Close menu when clicking elsewhere in feed (but NOT on a bubble)
     feed.addEventListener('click', e => {
-      const wrapper = getWrapper(e.target);
-      if (!wrapper) { closeMenu(); return; }
-      if (e.target.closest('a, button, video')) return;
-      e.stopPropagation();
-      openMenu(wrapper, e.clientX, e.clientY);
+      if (!menu.hidden && !menu.contains(e.target)) closeMenu();
     });
   }
 

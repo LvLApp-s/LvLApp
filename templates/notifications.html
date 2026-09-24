@@ -4,6 +4,18 @@
 {% set title = "Notifications" %}
 
 {% block content %}
+
+{% set today_notifs = [] %}
+{% set earlier_notifs = [] %}
+{% for n in notifications %}
+  {% set notif_date = (n.created_at or '')[:10] %}
+  {% if notif_date == now_date %}
+    {% set _ = today_notifs.append(n) %}
+  {% else %}
+    {% set _ = earlier_notifs.append(n) %}
+  {% endif %}
+{% endfor %}
+
 <header class="page-header notif-page-header">
   <div class="notif-header-info">
     <div class="notif-header-badge">
@@ -13,8 +25,15 @@
       </svg>
     </div>
     <div>
-      <h1 data-i18n="notif_alerts_title">Alerts</h1>
-      <p data-i18n="notif_alerts_desc">Short grouped updates for likes, comments, follows, messages, and high-fives.</p>
+      <h1 data-i18n="notif_alerts_title">Alerts
+        {% if notifications %}
+          {% set unread_count = notifications | selectattr('is_read', 'equalto', False) | list | length %}
+          {% if unread_count > 0 %}
+            <span class="notif-count-badge">{{ unread_count if unread_count < 100 else '99+' }}</span>
+          {% endif %}
+        {% endif %}
+      </h1>
+      <p data-i18n="notif_alerts_desc">Likes, comments, follows, messages, and more.</p>
     </div>
   </div>
   <form action="{{ url_for('mark_notifications_read') }}" method="post" class="notif-mark-read-form">
@@ -23,7 +42,7 @@
       <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <polyline points="20 6 9 17 4 12"/>
       </svg>
-      <span data-i18n="notif_mark_read">Mark read</span>
+      <span data-i18n="notif_mark_read">Mark all read</span>
     </button>
   </form>
 </header>

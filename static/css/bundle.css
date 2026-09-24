@@ -5,7 +5,7 @@
    Edit the section files under static/css/sections/ and re-run the script.
    --------------------------------------------------------------------------- */
 
-/* ===== sections/base.css ===== */
+/* ===== sections\base.css ===== */
 /* Design tokens, reset, shell layout */
 :root {
   /* ---------------------------------------------------------------------
@@ -980,7 +980,10 @@ body,
   background: transparent;
 }
 
-/* ===== sections/navigation.css ===== */
+
+img.avatar[src$=".svg"] { object-fit: contain !important; }
+
+/* ===== sections\navigation.css ===== */
 /* Left rail and primary navigation */
 /* Left Sidebar */
 .brand {
@@ -1240,7 +1243,7 @@ body,
   }
 }
 
-/* ===== sections/feed.css ===== */
+/* ===== sections\feed.css ===== */
 /* Timeline, composer, posts, empty and flash states */
 /* Timeline */
 /* Parks below the top bar, not under it. At top: 0 the header pinned into
@@ -2099,7 +2102,7 @@ body,
   100% { opacity: 0; transform: translate(-22px, -50%) scale(0.2); }
 }
 
-/* ===== sections/feedback.css ===== */
+/* ===== sections\feedback.css ===== */
 /* ---------------------------------------------------------------------------
    Feedback: the one surface for every message LvL shows.
 
@@ -2403,7 +2406,7 @@ label.has-success input {
   }
 }
 
-/* ===== sections/components.css ===== */
+/* ===== sections\components.css ===== */
 /* ---------------------------------------------------------------------------
    Shared components introduced by the final implementation pass.
 
@@ -3976,7 +3979,7 @@ label.has-success input {
   margin-inline-start: 0;
 }
 
-/* ===== sections/auth.css ===== */
+/* ===== sections\auth.css ===== */
 /* Login/register page */
 .auth-form .remember-me-row {
   display: inline-flex;
@@ -4557,7 +4560,7 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   }
 }
 
-/* ===== sections/profile.css ===== */
+/* ===== sections\profile.css ===== */
 /* Profile header and public profile layout */
 .profile-header {
   border-bottom: 1px solid var(--border-color);
@@ -5146,7 +5149,129 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   filter: drop-shadow(0 2px 5px rgba(0,0,0,0.85)) !important;
 }
 
-/* ===== sections/rewards.css ===== */
+/* --------------------------------------------------------------------------
+   Replies Feed
+   -------------------------------------------------------------------------- */
+.replies-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 0;
+}
+
+.reply-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.02);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.reply-card:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.reply-card-context {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  transition: color 0.2s;
+}
+
+.reply-card-context:hover {
+  color: var(--text-primary);
+}
+
+.reply-card-context svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--lvl-brand);
+}
+
+.reply-card-context span {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.4;
+}
+
+.reply-card-body {
+  display: flex;
+  gap: 12px;
+}
+
+.reply-card-avatar-link {
+  flex-shrink: 0;
+}
+
+.reply-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.reply-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.reply-card-name {
+  font-weight: 700;
+  font-size: 14.5px;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.reply-card-name:hover {
+  text-decoration: underline;
+}
+
+.reply-card-handle,
+.reply-card-time {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+}
+
+.reply-card-text {
+  font-size: 14.5px;
+  color: var(--text-primary);
+  line-height: 1.5;
+  margin: 4px 0 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.reply-card-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--lvl-brand);
+  text-decoration: none;
+  background: rgba(var(--lvl-brand-rgb, 56,189,248), 0.1);
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  transition: background 0.2s, color 0.2s;
+}
+
+.reply-card-link:hover {
+  background: var(--lvl-brand);
+  color: #fff;
+}
+
+/* ===== sections\rewards.css ===== */
 /* XP cards, achievements, reward ladder, and LvL guide */
 .profile-xp-card {
   margin-top: 16px;
@@ -5522,7 +5647,7 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   }
 }
 
-/* ===== sections/messages.css ===== */
+/* ===== sections\messages.css ===== */
 /* Messages and chat UI */
 .timeline-messages {
   display: flex !important;
@@ -6601,7 +6726,7 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   border: none !important;
   resize: none !important;
   outline: none !important;
-  color: var(--lvl-white) !important;
+  color: var(--text-primary) !important;
   padding: 6px 4px !important;
   font-family: inherit !important;
   font-size: 15px !important;
@@ -6618,6 +6743,10 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   padding: 8px 12px;
   margin-bottom: 8px;
   font-size: 0.9em;
+}
+
+.attachment-preview-box[hidden] {
+  display: none !important;
 }
 
 .preview-filename {
@@ -6853,6 +6982,10 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   animation: ctx-pop .12s cubic-bezier(.2,.8,.4,1);
 }
 
+.msg-ctx-menu[hidden] {
+  display: none !important;
+}
+
 @keyframes ctx-pop {
   from {
     opacity: 0;
@@ -6914,7 +7047,14 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
 
 }
 
-/* ===== sections/settings.css ===== */
+
+/* Hide reels and media panels on messages page */
+main:has(.messages-container) + .right-rail-wrapper .home-reel-panel,
+main:has(.messages-container) + .right-rail-wrapper .home-media-panel {
+  display: none !important;
+}
+
+/* ===== sections\settings.css ===== */
 /* ── Settings – redesigned card layout ── */
 
 /* ── Cards ── */
@@ -7109,7 +7249,8 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
 }
 
 .input-icon-wrapper input.has-icon,
-.input-icon-wrapper select.has-icon {
+.input-icon-wrapper select.has-icon,
+.gender-select-wrapper select.has-icon {
   padding-left: 34px;
   width: 100%;
 }
@@ -7878,7 +8019,12 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   direction: rtl;
 }
 
-/* ===== sections/notifications.css ===== */
+/* Hide reels panel on settings page */
+main:has(.settings-container) + .right-rail-wrapper .home-reel-panel {
+  display: none !important;
+}
+
+/* ===== sections\notifications.css ===== */
 /* ==========================================================================
    Modern Animated Alerts & Notifications UI
    ========================================================================== */
@@ -8487,7 +8633,191 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   }
 }
 
-/* ===== sections/activity.css ===== */
+/* --------------------------------------------------------------------------
+   Enhanced Notification Grouping & Page Extras
+   -------------------------------------------------------------------------- */
+
+/* Filter tabs row (date groups / "Today", "Earlier") */
+.notif-date-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 4px;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.notif-date-group::before,
+.notif-date-group::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-color);
+  opacity: 0.5;
+}
+
+/* Shimmer loading for skeleton */
+@keyframes notif-shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.notif-skeleton {
+  height: 72px;
+  border-radius: var(--radius-xl);
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0.04) 0%,
+    rgba(255,255,255,0.08) 50%,
+    rgba(255,255,255,0.04) 100%);
+  background-size: 800px 100%;
+  animation: notif-shimmer 1.5s infinite linear;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Unread count badge on header */
+.notif-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: var(--radius-pill);
+  background: var(--lvl-brand);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1;
+  margin-left: 8px;
+  animation: pulse-badge 2s ease-in-out infinite;
+}
+
+@keyframes pulse-badge {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--lvl-brand-rgb, 56,189,248), 0.4); }
+  50%       { box-shadow: 0 0 0 6px rgba(var(--lvl-brand-rgb, 56,189,248), 0); }
+}
+
+/* "All read" success glow on the feed */
+.notifications-feed.all-read {
+  opacity: 0.7;
+}
+
+/* Enhanced actor link hover */
+.actor-link:hover strong {
+  color: var(--lvl-brand);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Content preview card */
+.notification-content-preview {
+  position: relative;
+  margin-top: 8px;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.035);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  transition: background 0.2s;
+}
+
+.notification-item:hover .notification-content-preview {
+  background: rgba(255,255,255,0.06);
+}
+
+.preview-quote-mark {
+  color: var(--lvl-brand);
+  font-weight: 800;
+  font-size: 16px;
+  line-height: 0;
+  vertical-align: middle;
+}
+
+/* "Open post/clip" action pill */
+.notif-pill-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 10px;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-color);
+  background: rgba(255,255,255,0.04);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.18s, border-color 0.18s, color 0.18s, transform 0.18s;
+}
+
+.notif-pill-action:hover {
+  background: var(--lvl-brand);
+  border-color: transparent;
+  color: #fff;
+  transform: translateX(2px);
+}
+
+/* Friend request buttons */
+.notif-friend-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.notif-btn-accept {
+  background: var(--lvl-brand) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+
+.notif-btn-accept:hover {
+  background: var(--lvl-brand-hover) !important;
+}
+
+/* Unread indicator dot (pulsing) */
+.notif-unread-indicator {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+}
+
+.unread-pulse-ring {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(56,189,248,0.25);
+  animation: unread-ring 1.8s ease-out infinite;
+}
+
+.unread-pulse-core {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--notif-accent);
+  box-shadow: 0 0 6px var(--notif-accent);
+  flex-shrink: 0;
+}
+
+@keyframes unread-ring {
+  0%   { transform: scale(0.8); opacity: 0.9; }
+  70%  { transform: scale(1.8); opacity: 0; }
+  100% { transform: scale(0.8); opacity: 0; }
+}
+
+/* ===== sections\activity.css ===== */
 /* Activity history */
 .activity-header {
   border-bottom: 1px solid var(--border-color);
@@ -8576,7 +8906,7 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   }
 }
 
-/* ===== sections/home.css ===== */
+/* ===== sections\home.css ===== */
 /* Home and composer refinements */
 /* Home & Composer Improvements */
 .home-header .header-top {
@@ -8698,7 +9028,59 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   cursor: default;
 }
 
-/* ===== sections/message-discovery.css ===== */
+.clip-submit-btn {
+  background: linear-gradient(135deg, #6d28d9, #8b5cf6);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.clip-submit-btn:hover {
+  background: linear-gradient(135deg, #5b21b6, #7c3aed);
+}
+
+.video-upload-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-color);
+  transition: background 0.15s, color 0.15s;
+}
+
+.video-upload-control:hover {
+  background: var(--lvl-surface-hover);
+  color: var(--text-primary);
+}
+
+.video-upload-control input[type="file"] {
+  display: none;
+}
+
+#composer-video-preview {
+  margin: 8px 0;
+}
+
+#composer-video-clear {
+  background: var(--lvl-surface-overlay);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 4px 12px;
+}
+
+#composer-video-clear:hover {
+  color: var(--lvl-red, #ef4444);
+  border-color: var(--lvl-red, #ef4444);
+}
+
+/* ===== sections\message-discovery.css ===== */
 /* Message user selection */
 /* User Selection for Messages */
 .new-chat-section {
@@ -8777,7 +9159,7 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   font-size: 18px;
 }
 
-/* ===== sections/search.css ===== */
+/* ===== sections\search.css ===== */
 /* Search page */
 /* Search Page Improvements */
 .search-header {
@@ -8884,7 +9266,7 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   margin-top: 4px;
 }
 
-/* ===== sections/legacy-polish.css ===== */
+/* ===== sections\legacy-polish.css ===== */
 
 
 
@@ -10668,7 +11050,7 @@ button {
 /* Legacy .profile-public-progress (keep for compat if needed) */
 .profile-public-progress { display: none; }
 
-/* ===== sections/community.css ===== */
+/* ===== sections\community.css ===== */
 /* Community pages, group detail, and shared community cards */
 
 .compact-action {
@@ -11254,7 +11636,7 @@ button {
   }
 }
 
-/* ===== sections/mobile-drawer.css ===== */
+/* ===== sections\mobile-drawer.css ===== */
 /* Phone navigation: Twitter/X-style mobile slide-over drawer */
 @media (max-width: 767px) {
   .left-rail-wrapper,
@@ -11646,7 +12028,7 @@ button {
   }
 }
 
-/* ===== sections/design-system.css ===== */
+/* ===== sections\design-system.css ===== */
 /* ---------------------------------------------------------------------------
    Surface system.
 
@@ -12031,7 +12413,7 @@ button {
   }
 }
 
-/* ===== sections/hardening.css ===== */
+/* ===== sections\hardening.css ===== */
 /* Product hardening and layout safety additions */
 .post-content {
   min-width: 0;
@@ -12648,7 +13030,7 @@ button {
 
 }
 
-/* ===== sections/profile-mobile.css ===== */
+/* ===== sections\profile-mobile.css ===== */
 /* Mobile profile layout repair */
 /* Mobile profile layout repair */
 .profile-info-container {
@@ -12945,7 +13327,7 @@ button {
   }
 }
 
-/* ===== sections/community-timeline.css ===== */
+/* ===== sections\community-timeline.css ===== */
 /* Community timeline tabs and panes */
 /* LvL community timeline redesign */
 /* The Community hero. The artwork sits to the right, behind the Create group
@@ -12993,9 +13375,13 @@ button {
 @media (max-width: 767px) {
   /* On a phone the text fills the width, so the artwork would sit under it. */
   .community-timeline-header {
-    padding-block: var(--space-9);
-    background-size: cover, 160% auto;
-    background-position: center, right -40% top -20%;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 16px !important;
+    padding-block: var(--space-9) !important;
+    background-size: cover, 160% auto !important;
+    background-position: center, right -40% top -20% !important;
   }
 }
 
@@ -13499,7 +13885,7 @@ button {
   }
 }
 
-/* ===== sections/notification-badge.css ===== */
+/* ===== sections\notification-badge.css ===== */
 /* Unread notification badge */
 /* ─── Notification badge ─────────────────────────────────────────────────── */
 .nav-icon-badge {
@@ -13559,7 +13945,7 @@ button {
   pointer-events: none;
 }
 
-/* ===== sections/reels.css ===== */
+/* ===== sections\reels.css ===== */
 /* Reels tabs, cards, comments, and modal helpers */
 :root {
   --max-reel-height-desktop: 78vh;
@@ -13876,10 +14262,11 @@ button {
    so the blanket `background: transparent !important` on those does not
    reach it and this needs no !important of its own. */
 .reel-mute-float {
-  position: absolute;
-  inset-inline-end: var(--space-5);
-  bottom: var(--space-5);
-  z-index: 5;
+  position: absolute !important;
+  right: 20px !important;
+  top: 40px !important;
+  bottom: auto !important;
+  z-index: 20 !important;
   border-radius: var(--radius-pill);
   background: var(--lvl-black-45);
   backdrop-filter: blur(6px);
@@ -15288,7 +15675,7 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 
 }
 
-/* ===== sections/mobile-navigation.css ===== */
+/* ===== sections\mobile-navigation.css ===== */
 /* Collapsed sidebar and mobile bottom navigation */
 /* ─── Sidebar collapsed — icons only ────────────────────────────────────── */
 .left-rail:not(.menu-open) .nav-list {
@@ -15678,17 +16065,19 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
     background: currentColor;
   }
 
-  .mobile-compose-action,
-  .mobile-compose-action.mobile-reel-upload-action {
-    width: var(--control-xl);
-    height: var(--control-xl);
-    margin-inline: auto;
-    border-radius: var(--radius-round);
+  .mobile-bottom-nav a.mobile-compose-action,
+  .mobile-bottom-nav a.mobile-compose-action.mobile-reel-upload-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 16px;
+    border-radius: var(--radius-pill);
     background: var(--text-primary);
     color: var(--lvl-text-inverse);
-    font-size: 30px;
-    line-height: 1;
-    box-shadow: 0 12px 34px var(--lvl-black-58);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: 0 2px 8px var(--lvl-black-12);
   }
 
   .reels-header .compact-action {
@@ -15750,7 +16139,7 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   }
 }
 
-/* ===== sections/community-highlights.css ===== */
+/* ===== sections\community-highlights.css ===== */
 /* Community highlights overflow safety */
 /* ─── New leaderboard design (lb-*) ─────────────────────────────────────── */
 
@@ -16269,6 +16658,10 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   object-fit: cover;
 }
 
+.leaderboard-avatar[src$=".svg"] {
+  object-fit: contain;
+}
+
 .leaderboard-identity {
   display: grid;
   gap: var(--space-1);
@@ -16359,9 +16752,13 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   margin: 0 var(--space-4) var(--space-4);
 }
 
-@media (max-width: 767px) {
-  .community-highlights.panel.community-mobile-leaderboard {
-    display: grid;
+@media (max-width: 900px) {
+  .community-highlights {
+    display: none; /* Desktop sidebar hidden */
+  }
+
+  .community-mobile-leaderboard {
+    display: none !important; /* User requested removal on mobile */
   }
 
   .community-mobile-leaderboard .leaderboard-list {
@@ -16369,12 +16766,18 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   }
 
   .community-mobile-leaderboard .leaderboard-row {
-    grid-template-columns: 26px minmax(0, 1fr);
+    grid-template-columns: 26px minmax(0, 1fr) auto;
   }
 
   .community-mobile-leaderboard .leaderboard-actions {
-    grid-column: 2;
-    grid-template-columns: auto minmax(92px, max-content);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .community-mobile-leaderboard .leaderboard-follow-form {
+    display: none !important;
   }
 }
 
@@ -16433,7 +16836,7 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   }
 }
 
-/* ===== sections/home-reels.css ===== */
+/* ===== sections\home-reels.css ===== */
 /* Desktop Home reels panel */
 /* ─── Home Reel Panel (right rail compact player) ────────────────────────── */
 /* The panel takes whatever height the rail has left rather than a guessed
@@ -16759,7 +17162,7 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 
 }
 
-/* ===== sections/streaks.css ===== */
+/* ===== sections\streaks.css ===== */
 /* Chat streak badges */
 /* ─── Streak badges ─────────────────────────────────────────────────────────── */
 .streak-badge {
@@ -16843,7 +17246,7 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   32% { transform: rotate(0deg); }
 }
 
-/* ===== sections/message-dock.css ===== */
+/* ===== sections\message-dock.css ===== */
 /* ---------------------------------------------------------------------------
    Message dock.
 
@@ -17183,7 +17586,7 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   }
 }
 
-/* ===== sections/share-modal.css ===== */
+/* ===== sections\share-modal.css ===== */
 /* ─── Share Modal (Overlay on top of video, matching comments panel) ───────── */
 .share-modal-overlay,
 .reel-video-frame .share-modal-overlay {
@@ -17409,7 +17812,7 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   box-shadow: none;
 }
 
-/* ===== sections/admin.css ===== */
+/* ===== sections\admin.css ===== */
 /* Admin dashboard. Operator-only surface, kept out of the product cascade. */
 
 /* ── Admin Styles ── */
@@ -17723,7 +18126,7 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   font: inherit;
 }
 
-/* ===== sections/rtl.css ===== */
+/* ===== sections\rtl.css ===== */
 /* ── RTL Global Layout Support ──────────────────────────────────────────── */
 /* Applied when lang="ar" sets dir="rtl" on <html> */
 
@@ -18176,7 +18579,7 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   direction: rtl;
 }
 
-/* ===== sections/responsive.css ===== */
+/* ===== sections\responsive.css ===== */
 /* ── Responsive Design System ─────────────────────────────────────────────
    Breakpoints:
    Mobile portrait  : ≤ 599px

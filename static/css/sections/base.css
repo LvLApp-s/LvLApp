@@ -972,3 +972,5 @@ body,
   background: transparent;
 }
 
+
+img.avatar[src$=".svg"] { object-fit: contain !important; }

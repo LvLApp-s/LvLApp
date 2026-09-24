@@ -605,3 +605,187 @@
     font-size: 11.5px;
   }
 }
+
+/* --------------------------------------------------------------------------
+   Enhanced Notification Grouping & Page Extras
+   -------------------------------------------------------------------------- */
+
+/* Filter tabs row (date groups / "Today", "Earlier") */
+.notif-date-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 4px;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.notif-date-group::before,
+.notif-date-group::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-color);
+  opacity: 0.5;
+}
+
+/* Shimmer loading for skeleton */
+@keyframes notif-shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.notif-skeleton {
+  height: 72px;
+  border-radius: var(--radius-xl);
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0.04) 0%,
+    rgba(255,255,255,0.08) 50%,
+    rgba(255,255,255,0.04) 100%);
+  background-size: 800px 100%;
+  animation: notif-shimmer 1.5s infinite linear;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Unread count badge on header */
+.notif-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: var(--radius-pill);
+  background: var(--lvl-brand);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1;
+  margin-left: 8px;
+  animation: pulse-badge 2s ease-in-out infinite;
+}
+
+@keyframes pulse-badge {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--lvl-brand-rgb, 56,189,248), 0.4); }
+  50%       { box-shadow: 0 0 0 6px rgba(var(--lvl-brand-rgb, 56,189,248), 0); }
+}
+
+/* "All read" success glow on the feed */
+.notifications-feed.all-read {
+  opacity: 0.7;
+}
+
+/* Enhanced actor link hover */
+.actor-link:hover strong {
+  color: var(--lvl-brand);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Content preview card */
+.notification-content-preview {
+  position: relative;
+  margin-top: 8px;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.035);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  transition: background 0.2s;
+}
+
+.notification-item:hover .notification-content-preview {
+  background: rgba(255,255,255,0.06);
+}
+
+.preview-quote-mark {
+  color: var(--lvl-brand);
+  font-weight: 800;
+  font-size: 16px;
+  line-height: 0;
+  vertical-align: middle;
+}
+
+/* "Open post/clip" action pill */
+.notif-pill-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 10px;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-color);
+  background: rgba(255,255,255,0.04);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.18s, border-color 0.18s, color 0.18s, transform 0.18s;
+}
+
+.notif-pill-action:hover {
+  background: var(--lvl-brand);
+  border-color: transparent;
+  color: #fff;
+  transform: translateX(2px);
+}
+
+/* Friend request buttons */
+.notif-friend-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.notif-btn-accept {
+  background: var(--lvl-brand) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+
+.notif-btn-accept:hover {
+  background: var(--lvl-brand-hover) !important;
+}
+
+/* Unread indicator dot (pulsing) */
+.notif-unread-indicator {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+}
+
+.unread-pulse-ring {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(56,189,248,0.25);
+  animation: unread-ring 1.8s ease-out infinite;
+}
+
+.unread-pulse-core {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--notif-accent);
+  box-shadow: 0 0 6px var(--notif-accent);
+  flex-shrink: 0;
+}
+
+@keyframes unread-ring {
+  0%   { transform: scale(0.8); opacity: 0.9; }
+  70%  { transform: scale(1.8); opacity: 0; }
+  100% { transform: scale(0.8); opacity: 0; }
+}
