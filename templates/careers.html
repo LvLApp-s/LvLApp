@@ -17,7 +17,7 @@
     {% if open_positions %}
       <div class="careers-positions-grid">
         {% for pos in open_positions %}
-          <article class="careers-position-card">
+          <article class="careers-position-card" onclick="document.getElementById('careers-position-input').value = '{{ pos.title }}'; document.getElementById('careers-form').scrollIntoView({behavior: 'smooth', block: 'center'}); document.getElementById('careers-position-input').focus();" style="cursor: pointer; transition: transform 0.2s;">
             <div class="careers-position-header">
               <strong>{{ pos.title }}</strong>
               <span class="careers-position-type {% if pos.type == 'Internship' %}careers-type-internship{% elif pos.type == 'Part-time' %}careers-type-parttime{% else %}careers-type-fulltime{% endif %}">{{ pos.type }}</span>

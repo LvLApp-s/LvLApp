@@ -248,8 +248,8 @@
        {% if show_trends and trending_posts %}
          <section class="panel trending-panel" aria-labelledby="trending-heading">
            <h2 class="panel-title" id="trending-heading" data-i18n="trending_title">Trending Posts</h2>
-           <style>.trending-panel .timeline .post { flex-shrink: 0; }</style>
-<div class="trending-list custom-scrollbar timeline" role="list" style="overflow-y: auto; overflow-x: hidden;">
+           <style>.trending-panel .timeline .post { flex-shrink: 0; padding: 4px 8px; min-height: unset; } .trending-panel .post-avatar img { width: 24px; height: 24px; } .trending-panel .post-content { font-size: 0.8em; } .trending-panel .post-header { margin-bottom: 0px; font-size: 0.85em; } .trending-panel .post-actions { margin-top: 0px; transform: scale(0.75); transform-origin: left; }</style>
+<div class="trending-list custom-scrollbar timeline" role="list" style="overflow-y: auto; overflow-x: hidden; max-height: 480px;">
              {% for tp in trending_posts %}
                <div style="flex-shrink: 0; display: block; border-bottom: 1px solid var(--border-color);">
                  {% set post = tp %}

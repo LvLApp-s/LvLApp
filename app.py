@@ -3237,33 +3237,12 @@ def actor_summary(names, count):
     return f"{count} people"
 
 def stack_notifications(notifications):
-    stacked = []
-    stack_map = {}
     for notification in notifications:
-        notification['stack_count'] = 1
-        notification['stack_actor_names'] = [notification.get('actor_name') or 'Someone']
-        notification['actor_summary'] = actor_summary(notification['stack_actor_names'], 1)
-
-        notif_type = notification.get('type')
-        if notif_type not in STACKABLE_NOTIFICATION_TYPES:
-            stacked.append(notification)
-            continue
-
-        key = (notif_type, notification.get('post_id') or notification.get('reel_id') or 'global')
-        existing = stack_map.get(key)
-        if not existing:
-            stack_map[key] = notification
-            stacked.append(notification)
-            continue
-
-        existing['stack_count'] += 1
-        existing['is_read'] = existing.get('is_read') and notification.get('is_read')
         name = notification.get('actor_name') or 'Someone'
-        if name not in existing['stack_actor_names']:
-            existing['stack_actor_names'].append(name)
-        existing['actor_summary'] = actor_summary(existing['stack_actor_names'], existing['stack_count'])
-
-    return stacked
+        notification['stack_count'] = 1
+        notification['stack_actor_names'] = [name]
+        notification['actor_summary'] = name
+    return notifications
 
 @app.route('/')
 def index():
@@ -6153,7 +6132,7 @@ def admin_dashboard():
                     return redirect(url_for('admin_dashboard'))
                     
             elif action == 'toggle_position':
-                pos_id = parse_uuid_id(request.form.get('id'))
+                pos_id = parse_positive_id(request.form.get('id'))
                 if pos_id and supabase:
                     try:
                         res = supabase.table('job_positions').select('is_active').eq('id', pos_id).limit(1).execute()
@@ -6166,7 +6145,7 @@ def admin_dashboard():
                 return redirect(url_for('admin_dashboard'))
                 
             elif action == 'delete_position':
-                pos_id = parse_uuid_id(request.form.get('id'))
+                pos_id = parse_positive_id(request.form.get('id'))
                 if pos_id and supabase:
                     try:
                         supabase.table('job_positions').delete().eq('id', pos_id).execute()
@@ -6176,7 +6155,7 @@ def admin_dashboard():
                 return redirect(url_for('admin_dashboard'))
 
             elif action == 'update_suggestion_status':
-                msg_id = parse_uuid_id(request.form.get('id'))
+                msg_id = parse_positive_id(request.form.get('id'))
                 status = request.form.get('status')
                 if status not in ADMIN_SUGGESTION_STATUSES:
                     flash("Invalid suggestion status.", "error")
@@ -6191,7 +6170,7 @@ def admin_dashboard():
                 return redirect(url_for('admin_dashboard'))
 
             elif action == 'respond_verification':
-                req_id = parse_uuid_id(request.form.get('id'))
+                req_id = parse_positive_id(request.form.get('id'))
                 status = request.form.get('status')
                 if status not in ADMIN_VERIFICATION_DECISIONS:
                     flash("Invalid verification decision.", "error")
@@ -6307,7 +6286,7 @@ def admin_dashboard():
                         supabase.table('messages').insert({
                             'sender_id': viewer['id'],
                             'receiver_id': user_id,
-                            'content': f"⚠️ SYSTEM WARNING: {warning_text}",
+                            'content': f"SYSTEM WARNING: {warning_text}",
                             'created_at': datetime.now(timezone.utc).isoformat()
                         }).execute()
                         flash("Warning sent to user as a direct message.", "success")
@@ -6442,7 +6421,7 @@ def admin_dashboard():
             app.logger.warning(f"Failed to fetch verification requests for admin: {exc}")
 
         try:
-            res_r = supabase.table('user_safety_actions').select('*, post:posts(*, user:users(*)), actor:users(*)').eq('action_type', 'report').order('created_at', desc=True).execute()
+            res_r = supabase.table('user_safety_actions').select('*, post:posts(*, user:users!posts_user_id_fkey(*)), actor:users!user_safety_actions_actor_id_fkey(*)').eq('action_type', 'report').order('created_at', desc=True).execute()
             if res_r and res_r.data:
                 safety_reports = res_r.data
         except Exception as exc:
@@ -6460,9 +6439,9 @@ def admin_dashboard():
 
         try:
             if q_post:
-                res_p_search = supabase.table('posts').select('*, user:users(*)').ilike('content', f'%{q_post}%').limit(50).execute()
+                res_p_search = supabase.table('posts').select('*, user:users!posts_user_id_fkey(*)').ilike('content', f'%{q_post}%').limit(50).execute()
             else:
-                res_p_search = supabase.table('posts').select('*, user:users(*)').order('created_at', desc=True).limit(50).execute()
+                res_p_search = supabase.table('posts').select('*, user:users!posts_user_id_fkey(*)').order('created_at', desc=True).limit(50).execute()
             if res_p_search and res_p_search.data:
                 system_posts = res_p_search.data
         except Exception as exc:

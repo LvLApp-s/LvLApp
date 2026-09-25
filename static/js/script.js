@@ -892,8 +892,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const currentDraftId = () => draftIdInput ? draftIdInput.value.trim() : '';
 
             function updateDraftControls() {
+                const videoInput = composer.querySelector('input[type="file"][name="video"]');
+                const hasVideo = videoInput && videoInput.files && videoInput.files.length > 0;
                 const hasContent = textarea.value.trim().length > 0 || Boolean(draftImageUrl) || (imageInput && imageInput.files && imageInput.files.length > 0);
-                if (saveDraftBtn) saveDraftBtn.disabled = savingDraft || !hasContent || textarea.value.length > maxLen;
+                if (saveDraftBtn) {
+                    saveDraftBtn.disabled = savingDraft || !hasContent || textarea.value.length > maxLen || hasVideo;
+                    saveDraftBtn.title = hasVideo ? 'Klipler taslak olarak kaydedilemez.' : '';
+                }
                 if (discardDraftBtn) discardDraftBtn.hidden = !currentDraftId() && !hasContent;
             }
 
@@ -4276,6 +4281,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const openPanel = async () => {
                     commentPanel.classList.add('is-open');
                     document.body.classList.add('reel-comments-open');
+                    const info = slide.querySelector('.home-reel-info');
+                    if (info) {
+                        info.style.opacity = '0';
+                        info.style.pointerEvents = 'none';
+                    }
                     if (!commentsLoaded) {
                         commentsLoaded = true;
                         if (typeof loadReelComments === 'function') {
@@ -4287,6 +4297,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const closePanel = () => {
                     commentPanel.classList.remove('is-open');
                     document.body.classList.remove('reel-comments-open');
+                    const info = slide.querySelector('.home-reel-info');
+                    if (info) {
+                        info.style.opacity = '';
+                        info.style.pointerEvents = '';
+                    }
                 };
 
                 commentToggle.addEventListener('click', () => {

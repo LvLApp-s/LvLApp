@@ -100,17 +100,31 @@
 
     <div class="profile-meta-grid">
       {% if profile.location %}
-        <span title="Location">📍 {{ profile.location }}</span>
+        <span title="Location">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          {{ profile.location }}
+        </span>
       {% endif %}
       {% if profile.website %}
-        <span title="Website">🔗 <a href="{{ profile.website }}" target="_blank" rel="nofollow noreferrer">{{ profile.website }}</a></span>
+        <span title="Website">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          <a href="{{ profile.website }}" target="_blank" rel="nofollow noreferrer">{{ profile.website }}</a>
+        </span>
       {% endif %}
       {% if profile.gender %}
         <span class="profile-gender {{ 'female' if profile.gender == 'Female' else 'male' }}" title="Gender">
-          {{ '♀' if profile.gender == 'Female' else '♂' }} {{ profile.gender }}
+          {% if profile.gender == 'Female' %}
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="5"/><line x1="12" y1="15" x2="12" y2="22"/><line x1="9" y1="19" x2="15" y2="19"/></svg>
+          {% else %}
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="14" r="5"/><line x1="13.54" y1="10.46" x2="21" y2="3"/><line x1="16" y1="3" x2="21" y2="3"/><line x1="21" y1="8" x2="21" y2="3"/></svg>
+          {% endif %}
+          {{ profile.gender }}
         </span>
       {% endif %}
-      <span>📅 <span data-i18n="joined">Joined</span> {{ profile.created_at[:7] }}</span>
+      <span>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span data-i18n="joined">Joined</span> {{ profile.created_at[:7] }}
+      </span>
     </div>
 
     <div class="profile-stats">

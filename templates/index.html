@@ -87,6 +87,8 @@
       if (intentInput) intentInput.value = 'upload_clip';
       var lbl = videoLabel.querySelector('[data-video-label]');
       if (lbl) lbl.textContent = file.name.length > 22 ? file.name.slice(0, 20) + '...' : file.name;
+      var ta = document.querySelector('#composer textarea');
+      if (ta) ta.dispatchEvent(new Event('input'));
     }
   });
 
@@ -99,6 +101,8 @@
       var lbl = videoLabel.querySelector('[data-video-label]');
       if (lbl) lbl.setAttribute('data-i18n', 'composer_add_video');
       if (lbl) lbl.textContent = 'Add clip';
+      var ta = document.querySelector('#composer textarea');
+      if (ta) ta.dispatchEvent(new Event('input'));
     });
   }
 })();

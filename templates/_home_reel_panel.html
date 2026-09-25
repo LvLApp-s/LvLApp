@@ -22,20 +22,12 @@
                {% if reel.cover_url %}poster="{{ reel.cover_url }}"{% endif %}>
           <source src="{{ reel.video_url }}" type="video/mp4">
         </video>
-        {# Click the speaker to mute or unmute; hold the pointer on it and the
-           level slides out beside it. One control, two gestures. #}
-        <div class="media-volume" data-volume-control>
-          <button class="home-reel-mute-btn media-volume-toggle" type="button" data-home-reel-mute data-volume-toggle aria-label="Toggle sound" data-i18n-aria="reel_toggle_sound">
-            {# Two icons, swapped by CSS on .active. The button only changed its
-               background before, so a muted clip looked like a playing one. #}
-            <svg class="home-reel-icon-muted" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3z"/><path d="M16.5 8.5 22 14m0-5.5L16.5 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
-            <svg class="home-reel-icon-sound" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-          </button>
-          <span class="media-volume-track">
-            <input class="media-volume-slider" type="range" min="0" max="100" step="1" value="100"
-                   aria-label="Volume" data-i18n-aria="media_volume_aria" data-volume-slider>
-          </span>
-        </div>
+        <button class="home-reel-mute-btn" type="button" data-home-reel-mute aria-label="Toggle sound" data-i18n-aria="reel_toggle_sound">
+          {# Two icons, swapped by CSS on .active. The button only changed its
+             background before, so a muted clip looked like a playing one. #}
+          <svg class="home-reel-icon-muted" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3z"/><path d="M16.5 8.5 22 14m0-5.5L16.5 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+          <svg class="home-reel-icon-sound" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+        </button>
         
         <div class="reel-comment-panel" data-reel-comment-panel aria-label="Clip comments" data-i18n-aria="reel_comments_aria" style="z-index: 10;">
           <div class="reel-comment-panel-header">
@@ -46,15 +38,6 @@
           </div>
           <div class="reel-comment-list" data-reel-comment-list>
             <p class="reel-comment-empty" data-i18n="reel_loading_comments">Loading comments...</p>
-            <div class="reel-comment-item">
-              <img class="avatar reel-comment-avatar" src="/static/assets/default-male-avatar.svg" alt="" style="border: 2px solid green;">
-              <div class="reel-comment-body">
-                  <span class="reel-comment-author">HARDCODED TEST</span>
-                  <span class="reel-comment-handle">@test</span>
-                  <p class="reel-comment-text">If you can see this, CSS is fine.</p>
-                  <time class="reel-comment-time">01.01.2026</time>
-              </div>
-            </div>
           </div>
           <form class="reel-comment-submit-form" data-reel-comment-form
                 action="{{ url_for('add_reel_comment', reel_id=reel.id) }}" method="post"
@@ -68,18 +51,26 @@
         </div>
       </div>
       <div class="home-reel-info">
+        {% if reel_author.username %}
+        <a href="{{ url_for('profile', username=reel_author.username) }}" class="home-reel-author">
+        {% else %}
         <div class="home-reel-author">
+        {% endif %}
           <img class="avatar small-avatar" src="{{ reel_author.profile_photo_url or url_for('static', filename='assets/default-male-avatar.svg') }}" alt="">
           <strong>{{ reel_author.display_name or 'LvL' }}</strong>
           {% if reel.is_demo %}<em class="demo-badge" data-i18n="reel_demo">Demo</em>{% endif %}
+        {% if reel_author.username %}
+        </a>
+        {% else %}
         </div>
+        {% endif %}
         {% if reel.caption %}
         <p class="home-reel-caption">{{ reel.caption }}</p>
         {% endif %}
         <div class="home-reel-counts">
           <form action="{{ url_for('toggle_reel_like', reel_id=reel.id) }}" method="post" class="reel-like-form" style="display:inline-block; margin-right: 8px;" data-reel-like-form>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button class="reel-action-button reel-action-like {% if reel.viewer_liked %}active{% endif %}" type="submit" aria-label="Like clip" data-i18n-aria="reel_like" style="background:none; border:none; color:inherit; cursor:pointer; display:flex; align-items:center; gap:4px; padding:0;">
+            <button class="reel-action-button reel-action-like {% if reel.viewer_liked %}active{% endif %}" type="submit" aria-label="Like clip" data-i18n-aria="reel_like">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="{% if reel.viewer_liked %}currentColor{% else %}none{% endif %}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
               <span data-reel-like-count>{{ reel.like_count or 0 }}</span>
             </button>
@@ -91,7 +82,7 @@
                   data-comment-action="{{ url_for('add_reel_comment', reel_id=reel.id) }}"
                   data-csrf="{{ csrf_token() }}"
                   {% endif %}
-                  aria-label="View comments" data-i18n-aria="reel_view_comments" style="background:none; border:none; color:inherit; cursor:pointer; display:inline-flex; align-items:center; gap:4px; padding:0;">
+                  aria-label="View comments" data-i18n-aria="reel_view_comments">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             <span data-reel-comment-count>{{ reel.comment_count or 0 }}</span>
           </button>

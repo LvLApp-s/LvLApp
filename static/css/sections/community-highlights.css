@@ -44,19 +44,9 @@
   }
 }
 
-.lb-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: var(--radius-md);
-  background: transparent;
-  transition: background 0.15s;
-}
+.lb-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin-bottom: 6px; border-radius: 12px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); transition: all 0.2s ease; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
 
-.lb-row:hover {
-  background: var(--lvl-white-05);
-}
+.lb-row:hover { background: rgba(255, 255, 255, 0.08); transform: translateY(-2px); border-color: rgba(255, 255, 255, 0.1); }
 
 .lb-person {
   display: flex;

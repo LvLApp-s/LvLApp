@@ -204,13 +204,19 @@
   align-items: center;
 }
 
+.gender-select::-ms-expand {
+  display: none;
+}
+
 .gender-select {
   width: 100%;
-  appearance: none;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
   background: transparent;
   border: 1px solid var(--border-color);
   color: var(--text-primary);
-  padding: 12px 36px 12px 34px;
+  padding: 12px 36px 12px 14px;
   border-radius: var(--radius-sm);
   font-size: 15px;
   font-family: inherit;
@@ -225,10 +231,7 @@
 }
 
 .select-chevron {
-  position: absolute;
-  right: 11px;
-  color: var(--text-secondary);
-  pointer-events: none;
+  display: none !important;
 }
 
 /* ── Toggle switch ── */

@@ -81,7 +81,7 @@ const TRANSLATIONS = {
     /* Post card */
     post_copy_link:"Copy link",post_share_dm:"Share via DM",post_delete:"Delete post",post_report:"Report post",post_mute_user:"Mute",post_block_user:"Block",post_reposted_by:"reposted",post_edit:"Edit post",comment_delete:"Delete reply",
     /* GIF Picker */
-    gif_search_placeholder:"Search GIFs…",gif_loading:"Loading…",gif_no_results:"No GIFs found",gif_trending:"Trending",
+    gif_search_placeholder:"Search GIFs…",gif_loading:"Loading…",gif_no_results:"No GIFs found",gif_trending:"Trending",composer_add_video:"Add clip",
     /* Search */
     search_placeholder:"Search LvL",search_no_results:"No results found",search_results_for:"Results for",
     /* General */
