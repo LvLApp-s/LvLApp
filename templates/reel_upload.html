@@ -13,6 +13,7 @@
       <p data-i18n="reel_upload_desc">Upload a short vertical video for the Clips feed. Public clips can appear in For You, follower clips stay close to your network, and community clips attach to a group.</p>
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <a class="outline-button small" href="{{ url_for('drafts') }}" data-i18n="drafts_title">Drafts</a>
       <button type="button" id="reel-save-draft-btn" class="outline-button small" title="Save caption and settings as a draft">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         Save draft
@@ -25,7 +26,7 @@
 
   <form class="reel-upload-form panel" action="{{ url_for('reel_upload') }}" method="post" enctype="multipart/form-data" data-reel-upload-form data-max-video-bytes="{{ max_video_bytes }}" data-upload-url="{{ url_for('api_reel_upload_url') }}" data-complete-url="{{ url_for('api_reel_complete_upload') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <input type="hidden" name="reel_draft_id" id="reel-draft-id-field" value="">
+    <input type="hidden" name="reel_draft_id" id="reel-draft-id-field" value="{{ current_draft.id if current_draft else '' }}">
 
     <div class="reel-upload-grid">
       <label class="reel-file-picker">
@@ -41,7 +42,7 @@
 
     <label class="form-field">
       <span data-i18n="reel_caption">Caption</span>
-      <textarea name="caption" id="reel-caption-field" maxlength="220" placeholder="Write a caption" data-i18n-placeholder="reel_caption_placeholder"></textarea>
+      <textarea name="caption" id="reel-caption-field" maxlength="220" placeholder="Write a caption" data-i18n-placeholder="reel_caption_placeholder">{{ current_draft.caption if current_draft else '' }}</textarea>
       <small><span data-reel-caption-count>220</span> <span data-i18n="reel_characters_left">characters left</span></small>
     </label>
 
@@ -49,10 +50,10 @@
       <label class="form-field">
         <span data-i18n="reel_visibility">Visibility</span>
         <select name="visibility" id="reel-visibility-field" data-reel-visibility>
-          <option value="public" data-i18n-option="reel_visibility_public">Public</option>
-          <option value="followers" data-i18n-option="reel_visibility_followers">Followers</option>
-          <option value="community" data-i18n-option="reel_visibility_community">Community</option>
-          <option value="private" data-i18n-option="reel_visibility_private">Private</option>
+          <option value="public" {% if current_draft and current_draft.visibility == 'public' %}selected{% endif %} data-i18n-option="reel_visibility_public">Public</option>
+          <option value="followers" {% if current_draft and current_draft.visibility == 'followers' %}selected{% endif %} data-i18n-option="reel_visibility_followers">Followers</option>
+          <option value="community" {% if current_draft and current_draft.visibility == 'community' %}selected{% endif %} data-i18n-option="reel_visibility_community">Community</option>
+          <option value="private" {% if current_draft and current_draft.visibility == 'private' %}selected{% endif %} data-i18n-option="reel_visibility_private">Private</option>
         </select>
         <small data-i18n="reel_visibility_hint">Choose where the clip can be discovered after upload.</small>
       </label>
@@ -112,7 +113,7 @@
 
       fetch('{{ url_for("api_save_reel_draft") }}', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}', 'X-CSRF-Token': '{{ csrf_token() }}' },
         body: JSON.stringify(payload),
       })
       .then(function (r) { return r.json(); })

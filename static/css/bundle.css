@@ -7259,6 +7259,7 @@ main:has(.messages-container) + .right-rail-wrapper .home-media-panel {
   position: relative;
   display: flex;
   align-items: center;
+  width: 100%;
 }
 
 .gender-select::-ms-expand {
@@ -7270,7 +7271,7 @@ main:has(.messages-container) + .right-rail-wrapper .home-media-panel {
   appearance: none !important;
   -webkit-appearance: none !important;
   -moz-appearance: none !important;
-  background: transparent;
+  background: var(--lvl-surface-raised, transparent);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
   padding: 12px 36px 12px 14px;
@@ -7280,6 +7281,22 @@ main:has(.messages-container) + .right-rail-wrapper .home-media-panel {
   outline: none;
   transition: 0.2s;
   cursor: pointer;
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] .gender-select {
+  color-scheme: light;
+}
+
+.gender-select option {
+  background-color: var(--lvl-surface-raised, #18181b);
+  color: var(--text-primary, #fff);
+  padding: 8px 12px;
+}
+
+:root[data-theme="light"] .gender-select option {
+  background-color: #ffffff;
+  color: #0f1419;
 }
 
 .gender-select:focus {
@@ -7288,7 +7305,23 @@ main:has(.messages-container) + .right-rail-wrapper .home-media-panel {
 }
 
 .select-chevron {
-  display: none !important;
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--text-secondary);
+  display: block !important;
+  transition: color 0.2s;
+}
+
+.gender-select:focus + .select-chevron {
+  color: var(--accent-color);
+}
+
+[dir="rtl"] .select-chevron {
+  right: auto;
+  left: 14px;
 }
 
 /* ── Toggle switch ── */
@@ -8417,10 +8450,18 @@ main:has(.settings-container) + .right-rail-wrapper .home-reel-panel {
   min-height: 32px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--text-secondary);
+  background: var(--lvl-surface-raised, rgba(255, 255, 255, 0.05));
+  color: var(--text-primary);
   font: inherit;
   font-size: 13px;
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] .composer-draft-button,
+:root[data-theme="light"] .composer-draft-picker {
+  color-scheme: light;
+  background: #ffffff;
+  color: #0f1419;
 }
 
 .composer-draft-button {
@@ -8444,8 +8485,20 @@ main:has(.settings-container) + .right-rail-wrapper .home-reel-panel {
 }
 
 .composer-draft-picker {
-  max-width: min(220px, 100%);
-  padding: 0 8px;
+  max-width: min(240px, 100%);
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+.composer-draft-picker option {
+  background-color: var(--lvl-surface-raised, #18181b);
+  color: var(--text-primary, #ffffff);
+  padding: 8px 12px;
+}
+
+:root[data-theme="light"] .composer-draft-picker option {
+  background-color: #ffffff;
+  color: #0f1419;
 }
 
 .draft-status {

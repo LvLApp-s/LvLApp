@@ -202,6 +202,7 @@
   position: relative;
   display: flex;
   align-items: center;
+  width: 100%;
 }
 
 .gender-select::-ms-expand {
@@ -213,7 +214,7 @@
   appearance: none !important;
   -webkit-appearance: none !important;
   -moz-appearance: none !important;
-  background: transparent;
+  background: var(--lvl-surface-raised, transparent);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
   padding: 12px 36px 12px 14px;
@@ -223,6 +224,22 @@
   outline: none;
   transition: 0.2s;
   cursor: pointer;
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] .gender-select {
+  color-scheme: light;
+}
+
+.gender-select option {
+  background-color: var(--lvl-surface-raised, #18181b);
+  color: var(--text-primary, #fff);
+  padding: 8px 12px;
+}
+
+:root[data-theme="light"] .gender-select option {
+  background-color: #ffffff;
+  color: #0f1419;
 }
 
 .gender-select:focus {
@@ -231,7 +248,23 @@
 }
 
 .select-chevron {
-  display: none !important;
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--text-secondary);
+  display: block !important;
+  transition: color 0.2s;
+}
+
+.gender-select:focus + .select-chevron {
+  color: var(--accent-color);
+}
+
+[dir="rtl"] .select-chevron {
+  right: auto;
+  left: 14px;
 }
 
 /* ── Toggle switch ── */

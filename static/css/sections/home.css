@@ -57,10 +57,18 @@
   min-height: 32px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--text-secondary);
+  background: var(--lvl-surface-raised, rgba(255, 255, 255, 0.05));
+  color: var(--text-primary);
   font: inherit;
   font-size: 13px;
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] .composer-draft-button,
+:root[data-theme="light"] .composer-draft-picker {
+  color-scheme: light;
+  background: #ffffff;
+  color: #0f1419;
 }
 
 .composer-draft-button {
@@ -84,8 +92,20 @@
 }
 
 .composer-draft-picker {
-  max-width: min(220px, 100%);
-  padding: 0 8px;
+  max-width: min(240px, 100%);
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+.composer-draft-picker option {
+  background-color: var(--lvl-surface-raised, #18181b);
+  color: var(--text-primary, #ffffff);
+  padding: 8px 12px;
+}
+
+:root[data-theme="light"] .composer-draft-picker option {
+  background-color: #ffffff;
+  color: #0f1419;
 }
 
 .draft-status {

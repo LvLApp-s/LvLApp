@@ -893,11 +893,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             function updateDraftControls() {
                 const videoInput = composer.querySelector('input[type="file"][name="video"]');
-                const hasVideo = videoInput && videoInput.files && videoInput.files.length > 0;
-                const hasContent = textarea.value.trim().length > 0 || Boolean(draftImageUrl) || (imageInput && imageInput.files && imageInput.files.length > 0);
+                const hasVideo = Boolean(videoInput && videoInput.files && videoInput.files.length > 0);
+                const hasContent = textarea.value.trim().length > 0 || Boolean(draftImageUrl) || Boolean(imageInput && imageInput.files && imageInput.files.length > 0) || hasVideo;
                 if (saveDraftBtn) {
-                    saveDraftBtn.disabled = savingDraft || !hasContent || textarea.value.length > maxLen || hasVideo;
-                    saveDraftBtn.title = hasVideo ? 'Klipler taslak olarak kaydedilemez.' : '';
+                    saveDraftBtn.disabled = savingDraft || !hasContent || textarea.value.length > maxLen;
+                    saveDraftBtn.title = '';
                 }
                 if (discardDraftBtn) discardDraftBtn.hidden = !currentDraftId() && !hasContent;
             }
@@ -924,9 +924,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 drafts.forEach((draft) => {
                     const option = document.createElement('option');
                     option.value = String(draft.id);
-                    const label = (draft.content || '').trim() || (draft.image_url
+                    const prefix = draft.type === 'reel' ? '🎬 ' : '';
+                    const label = prefix + ((draft.content || '').trim() || (draft.image_url
                         ? translateUi('draft_image_label', 'Image draft')
-                        : translateUi('draft_untitled_label', 'Untitled draft'));
+                        : (draft.type === 'reel' ? translateUi('reel_draft_label', 'Clip draft') : translateUi('draft_untitled_label', 'Untitled draft'))));
                     option.textContent = label.length > 40 ? `${label.slice(0, 40)}...` : label;
                     draftPicker.appendChild(option);
                 });
@@ -949,11 +950,60 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!draftSaveUrl || savingDraft) return;
                 const content = textarea.value.trim();
                 const selectedFile = imageInput && imageInput.files && imageInput.files.length ? imageInput.files[0] : null;
-                if (!content && !selectedFile && !draftImageUrl && !draftImageCleared) return;
+                const videoInput = composer.querySelector('input[type="file"][name="video"]');
+                const hasVideo = Boolean(videoInput && videoInput.files && videoInput.files.length > 0);
+                if (!content && !selectedFile && !draftImageUrl && !draftImageCleared && !hasVideo) return;
 
                 savingDraft = true;
                 updateDraftControls();
                 if (!silent) setDraftStatus('Saving...');
+
+                if (hasVideo) {
+                    try {
+                        const headers = {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                        };
+                        if (csrfTokenInput) {
+                            headers['X-CSRF-Token'] = csrfTokenInput.value;
+                            headers['X-CSRFToken'] = csrfTokenInput.value;
+                        }
+                        const curId = currentDraftId();
+                        const payload = {
+                            caption: content,
+                            visibility: 'public',
+                        };
+                        if (curId) payload.draft_id = parseInt(curId, 10);
+                        const response = await fetch('/api/reel-drafts/save', {
+                            method: 'POST',
+                            headers,
+                            body: JSON.stringify(payload),
+                        });
+                        const result = await response.json();
+                        if (!response.ok || !result.success) {
+                            throw new Error(result.error || 'Could not save clip draft.');
+                        }
+                        const savedId = result.draft_id;
+                        if (draftIdInput && savedId) draftIdInput.value = String(savedId);
+                        rememberDraft({
+                            id: savedId,
+                            type: 'reel',
+                            content: content,
+                            updated_at: new Date().toISOString()
+                        });
+                        lastSavedText = content;
+                        setDraftStatus('Clip draft saved');
+                        if (!silent) showAppToast(translateUi('draft_saved_status', 'Clip draft saved'), 'success');
+                    } catch (error) {
+                        console.error('Clip draft save failed:', error);
+                        setDraftStatus(error.message || 'Draft save failed', true);
+                        if (!silent) showAppToast(error.message || 'Draft save failed', 'error');
+                    } finally {
+                        savingDraft = false;
+                        updateDraftControls();
+                    }
+                    return;
+                }
 
                 const formData = new FormData();
                 formData.append('content', content);
@@ -963,7 +1013,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 try {
                     const headers = { 'Accept': 'application/json' };
-                    if (csrfTokenInput) headers['X-CSRF-Token'] = csrfTokenInput.value;
+                    if (csrfTokenInput) {
+                        headers['X-CSRF-Token'] = csrfTokenInput.value;
+                        headers['X-CSRFToken'] = csrfTokenInput.value;
+                    }
                     const response = await fetch(draftSaveUrl, {
                         method: 'POST',
                         body: formData,
@@ -979,7 +1032,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (draftClearImageInput) draftClearImageInput.value = '0';
                     if (selectedFile && imageInput) imageInput.value = '';
                     if (draftImageUrl) showDraftImage(draftImageUrl);
-                    rememberDraft(result.draft);
+                    const savedDraft = Object.assign({ type: 'post' }, result.draft);
+                    rememberDraft(savedDraft);
                     lastSavedText = content;
                     setDraftStatus('Draft saved');
                 } catch (error) {
@@ -995,10 +1049,35 @@ document.addEventListener('DOMContentLoaded', () => {
             const loadDrafts = async () => {
                 if (!draftListUrl) return;
                 try {
-                    const response = await fetch(draftListUrl, { headers: { 'Accept': 'application/json' } });
-                    const result = await response.json();
-                    if (!response.ok || !result.success || !Array.isArray(result.drafts)) return;
-                    drafts = result.drafts;
+                    const [postsResp, reelsResp] = await Promise.allSettled([
+                        fetch(draftListUrl, { headers: { 'Accept': 'application/json' } }),
+                        fetch('/api/reel-drafts', { headers: { 'Accept': 'application/json' } })
+                    ]);
+                    let combined = [];
+                    if (postsResp.status === 'fulfilled' && postsResp.value.ok) {
+                        const pData = await postsResp.value.json();
+                        if (pData && pData.success && Array.isArray(pData.drafts)) {
+                            pData.drafts.forEach((d) => { d.type = 'post'; combined.push(d); });
+                        }
+                    }
+                    if (reelsResp.status === 'fulfilled' && reelsResp.value.ok) {
+                        const rData = await reelsResp.value.json();
+                        if (rData && rData.success && Array.isArray(rData.drafts)) {
+                            rData.drafts.forEach((rd) => {
+                                combined.push({
+                                    id: rd.id,
+                                    type: 'reel',
+                                    content: rd.caption || '',
+                                    visibility: rd.visibility || 'public',
+                                    image_url: null,
+                                    created_at: rd.created_at,
+                                    updated_at: rd.updated_at
+                                });
+                            });
+                        }
+                    }
+                    combined.sort((a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0));
+                    drafts = combined.slice(0, 20);
                     renderDraftPicker();
                 } catch (error) {
                     console.error('Draft load failed:', error);
@@ -1022,25 +1101,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 textarea.dispatchEvent(new Event('input'));
                 textarea.focus();
-                setDraftStatus('Draft restored');
+                setDraftStatus(draft.type === 'reel' ? 'Clip draft restored' : 'Draft restored');
             };
 
             const discardCurrentDraft = async () => {
                 const draftId = currentDraftId();
-                if (draftId && draftDeleteUrl) {
-                    const formData = new FormData();
-                    formData.append('draft_id', draftId);
+                const matched = drafts.find((item) => String(item.id) === String(draftId));
+                const isReel = matched && matched.type === 'reel';
+                if (draftId) {
                     try {
                         const headers = { 'Accept': 'application/json' };
-                        if (csrfTokenInput) headers['X-CSRF-Token'] = csrfTokenInput.value;
-                        const response = await fetch(draftDeleteUrl, {
-                            method: 'POST',
-                            body: formData,
-                            headers
-                        });
-                        const result = await response.json();
-                        if (!response.ok || !result.success) {
-                            throw new Error(result.error || 'Could not discard draft.');
+                        if (csrfTokenInput) {
+                            headers['X-CSRF-Token'] = csrfTokenInput.value;
+                            headers['X-CSRFToken'] = csrfTokenInput.value;
+                        }
+                        if (isReel) {
+                            headers['Content-Type'] = 'application/json';
+                            const response = await fetch('/api/reel-drafts/delete', {
+                                method: 'POST',
+                                headers,
+                                body: JSON.stringify({ draft_id: parseInt(draftId, 10) })
+                            });
+                            const result = await response.json();
+                            if (!response.ok || !result.success) {
+                                throw new Error(result.error || 'Could not discard clip draft.');
+                            }
+                        } else if (draftDeleteUrl) {
+                            const formData = new FormData();
+                            formData.append('draft_id', draftId);
+                            const response = await fetch(draftDeleteUrl, {
+                                method: 'POST',
+                                body: formData,
+                                headers
+                            });
+                            const result = await response.json();
+                            if (!response.ok || !result.success) {
+                                throw new Error(result.error || 'Could not discard draft.');
+                            }
                         }
                         drafts = drafts.filter((item) => String(item.id) !== String(draftId));
                     } catch (error) {

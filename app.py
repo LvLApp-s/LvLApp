@@ -3457,6 +3457,16 @@ def reel_upload():
         return redirect(url_for('auth'))
 
     communities = get_reel_upload_communities(viewer['id'])
+    draft_id = parse_int(request.args.get('draft_id'))
+    current_draft = None
+    if draft_id:
+        try:
+            d_res = supabase.table('reel_drafts').select('*').eq('id', draft_id).eq('user_id', viewer['id']).execute()
+            if d_res.data:
+                current_draft = d_res.data[0]
+        except Exception:
+            pass
+
     if request.method == 'POST':
         video_file = request.files.get('video')
         caption = request.form.get('caption', '').strip()
@@ -3465,6 +3475,7 @@ def reel_upload():
         allow_comments = request.form.get('allow_comments') == 'on'
         allow_downloads = request.form.get('allow_downloads') == 'on'
         autoplay_next = request.form.get('autoplay_next') == 'on'
+        used_draft_id = parse_int(request.form.get('reel_draft_id'))
 
         try:
             details = validate_reel_details(viewer['id'], caption, visibility, community_id, communities)
@@ -3478,6 +3489,11 @@ def reel_upload():
                 allow_downloads,
                 autoplay_next,
             )
+            if used_draft_id:
+                try:
+                    supabase.table('reel_drafts').delete().eq('id', used_draft_id).eq('user_id', viewer['id']).execute()
+                except Exception:
+                    pass
             flash("Reel uploaded.", "success")
             return redirect(url_for('reels'))
         except (ValueError, RuntimeError) as exc:
@@ -3492,6 +3508,7 @@ def reel_upload():
                            viewer=viewer,
                            communities=communities,
                            max_video_bytes=MAX_VIDEO_BYTES,
+                           current_draft=current_draft,
                            highlights=[])
 
 @app.route('/clips/<int:reel_id>/like', methods=['POST'])
@@ -4632,7 +4649,7 @@ def api_delete_reel_draft():
     viewer = get_current_user()
     if not viewer:
         return jsonify({'success': False, 'error': 'Authentication required.'}), 401
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(silent=True) or request.form or {}
     draft_id = parse_int(data.get('draft_id') or data.get('id'))
     if not draft_id:
         return jsonify({'success': False, 'error': 'Draft id is required.'}), 400
@@ -4641,6 +4658,18 @@ def api_delete_reel_draft():
         return jsonify({'success': True, 'deleted_id': draft_id})
     except Exception as exc:
         return jsonify({'success': False, 'error': handle_db_error(exc, "Could not delete clip draft.")}), 400
+
+@app.route('/reels/draft/<int:draft_id>/delete', methods=['POST'])
+def delete_reel_draft(draft_id):
+    viewer = get_current_user()
+    if not viewer:
+        return redirect(url_for('auth'))
+    try:
+        supabase.table('reel_drafts').delete().eq('id', draft_id).eq('user_id', viewer['id']).execute()
+        flash("Clip draft deleted.", "success")
+    except Exception as exc:
+        flash(handle_db_error(exc, "Could not delete clip draft."), "error")
+    return redirect(url_for('drafts'))
 
 @app.route('/drafts')
 def drafts():
@@ -4653,7 +4682,37 @@ def drafts():
     except Exception as exc:
         flash(handle_db_error(exc, "Could not load drafts."), "error")
         items = []
-    return render_template('drafts.html', viewer=viewer, drafts=items)
+
+    reel_items = []
+    try:
+        r_result = supabase.table('reel_drafts').select('*').eq('user_id', viewer['id']).order('updated_at', desc=True).execute()
+        reel_items = r_result.data or []
+    except Exception:
+        reel_items = []
+
+    all_drafts = []
+    for item in items:
+        all_drafts.append({
+            'type': 'post',
+            'id': item['id'],
+            'content': item.get('content') or '',
+            'image_url': item.get('image_url'),
+            'created_at': item.get('created_at'),
+            'updated_at': item.get('updated_at'),
+        })
+    for r_item in reel_items:
+        all_drafts.append({
+            'type': 'reel',
+            'id': r_item['id'],
+            'content': r_item.get('caption') or '',
+            'visibility': r_item.get('visibility') or 'public',
+            'image_url': None,
+            'created_at': r_item.get('created_at'),
+            'updated_at': r_item.get('updated_at'),
+        })
+    all_drafts.sort(key=lambda d: d.get('updated_at') or d.get('created_at') or '', reverse=True)
+
+    return render_template('drafts.html', viewer=viewer, drafts=all_drafts, post_drafts=items, reel_drafts=reel_items)
 
 @app.route('/posts/<int:post_id>/edit', methods=['GET', 'POST'])
 def edit_post(post_id):
