@@ -162,7 +162,7 @@
           <button type="button" class="cancel-upload-btn" id="cancel-upload-btn" aria-label="Cancel upload" data-i18n-aria="messages_cancel_upload_aria">✕</button>
         </div>
 
-        <form action="{{ url_for('send_message') }}" method="post" class="chat-input-form" id="chat-input-form" autocomplete="off">
+        <form action="{{ url_for('send_message') }}" method="post" class="chat-input-form" id="chat-input-form" autocomplete="off" data-upload-url="{{ url_for('api_upload_attachment_url') }}" data-fallback-upload-url="{{ url_for('api_upload_attachment') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="receiver_id" value="{{ target_user.id }}">
           <input type="hidden" name="redirect" value="{{ url_for('messages', u=target_user.username) }}">

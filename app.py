@@ -291,9 +291,10 @@ COMMUNITY_TIMELINE_TABS = [
 def check_supabase():
     if request.method == 'POST':
         token = session.get('csrf_token')
-        submitted = request.form.get('csrf_token') or request.headers.get('X-CSRF-Token')
+        submitted = request.form.get('csrf_token') or request.headers.get('X-CSRF-Token') or request.headers.get('X-CSRFToken')
+        is_api = request.path.startswith('/api/') or request.form.get('ajax') == '1' or request.headers.get('Accept') == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
         if not token or not submitted or not secrets.compare_digest(token, submitted):
-            if request.form.get('ajax') == '1':
+            if is_api:
                 return jsonify({'success': False, 'error': 'Security check failed. Refresh the page and try again.'}), 400
             flash("Security check failed. Refresh the page and try again.", "error")
             return redirect(safe_redirect_url(url_for('index')))
@@ -1375,6 +1376,10 @@ def attachment_content_type(extension):
 def attachment_extension(filename):
     safe_name = secure_filename(filename or '')
     if not safe_name or '.' not in safe_name:
+        if filename and '.' in filename:
+            ext = filename.rsplit('.', 1)[1].lower()
+            if ext in ATTACHMENT_EXTENSION_TYPES:
+                return ext
         raise ValueError("This file type is not supported for security reasons.")
     ext = safe_name.rsplit('.', 1)[1].lower()
     if ext not in ATTACHMENT_EXTENSION_TYPES:
@@ -4399,6 +4404,12 @@ def create_post():
                 allow_downloads=False,
                 autoplay_next=True,
             )
+            if draft_id:
+                try:
+                    delete_post_draft_for_user(viewer['id'], draft_id)
+                    supabase.table('reel_drafts').delete().eq('id', draft_id).eq('user_id', viewer['id']).execute()
+                except Exception:
+                    pass
             flash("Clip uploaded successfully!", "success")
         except (ValueError, RuntimeError) as exc:
             flash(str(exc), "error")
@@ -7092,6 +7103,57 @@ def api_messages(username):
     except Exception as e:
         return jsonify({'success': False, 'error': handle_db_error(e)}), 400
 
+@app.route('/api/upload_attachment_url', methods=['POST'])
+def api_upload_attachment_url():
+    viewer = get_current_user()
+    if not viewer:
+        return jsonify({'success': False, 'error': 'Authentication required.'}), 401
+
+    data = request.get_json(silent=True) or request.form or {}
+    filename = (data.get('filename') or '').strip()
+    size = parse_int(data.get('size'))
+    if not filename:
+        return jsonify({'success': False, 'error': 'No file selected.'}), 400
+
+    try:
+        extension = attachment_extension(filename)
+    except ValueError as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 400
+
+    if size and size > MAX_ATTACHMENT_BYTES:
+        return jsonify({'success': False, 'error': 'File size exceeds the limit of 15 MB.'}), 400
+
+    unique_filename = temporary_attachment_filename(viewer['id'], extension)
+    storage_path = attachment_storage_path(unique_filename)
+
+    if use_supabase_attachment_storage():
+        try:
+            ensure_attachment_bucket()
+            signed = supabase.storage.from_(SUPABASE_ATTACHMENT_BUCKET).create_signed_upload_url(storage_path)
+            upload_url = signed.get('signedUrl') or signed.get('signed_url')
+            if upload_url:
+                return jsonify({
+                    'success': True,
+                    'direct_upload': True,
+                    'upload_url': upload_url,
+                    'storage_path': storage_path,
+                    'temp_filename': unique_filename,
+                    'attachment_name': attachment_display_name(filename, extension),
+                    'attachment_type': attachment_type_for_extension(extension),
+                    'content_type': attachment_content_type(extension),
+                })
+        except Exception as exc:
+            app.logger.warning("Could not create signed upload URL for attachment: %s", exc)
+
+    return jsonify({
+        'success': True,
+        'direct_upload': False,
+        'fallback_url': url_for('api_upload_attachment'),
+        'temp_filename': unique_filename,
+        'attachment_name': attachment_display_name(filename, extension),
+        'attachment_type': attachment_type_for_extension(extension),
+    })
+
 @app.route('/api/upload_attachment', methods=['POST'])
 def api_upload_attachment():
     viewer = get_current_user()
@@ -7192,6 +7254,14 @@ def download_attachment(message_id):
         extension = attachment_extension(filename)
         if use_supabase_attachment_storage():
             try:
+                if not app.config.get('TESTING'):
+                    try:
+                        signed = supabase.storage.from_(SUPABASE_ATTACHMENT_BUCKET).create_signed_url(attachment_storage_path(filename), 3600)
+                        signed_url = signed.get('signedURL') or signed.get('signedUrl') or signed.get('signed_url')
+                        if signed_url:
+                            return redirect(signed_url)
+                    except Exception:
+                        pass
                 payload = supabase.storage.from_(SUPABASE_ATTACHMENT_BUCKET).download(attachment_storage_path(filename))
                 if hasattr(payload, 'content'):
                     payload = payload.content

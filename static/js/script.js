@@ -952,13 +952,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const selectedFile = imageInput && imageInput.files && imageInput.files.length ? imageInput.files[0] : null;
                 const videoInput = composer.querySelector('input[type="file"][name="video"]');
                 const hasVideo = Boolean(videoInput && videoInput.files && videoInput.files.length > 0);
-                if (!content && !selectedFile && !draftImageUrl && !draftImageCleared && !hasVideo) return;
+                const intentInput = composer.querySelector('#composer-intent-input');
+                const curId = currentDraftId();
+                const isReel = hasVideo || (intentInput && intentInput.value === 'upload_clip') || Boolean(curId && drafts.some(d => String(d.id) === String(curId) && d.type === 'reel'));
+                if (!content && !selectedFile && !draftImageUrl && !draftImageCleared && !hasVideo && !curId) return;
 
                 savingDraft = true;
                 updateDraftControls();
                 if (!silent) setDraftStatus('Saving...');
 
-                if (hasVideo) {
+                if (isReel) {
                     try {
                         const headers = {
                             'Content-Type': 'application/json',
@@ -968,7 +971,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             headers['X-CSRF-Token'] = csrfTokenInput.value;
                             headers['X-CSRFToken'] = csrfTokenInput.value;
                         }
-                        const curId = currentDraftId();
                         const payload = {
                             caption: content,
                             visibility: 'public',
@@ -1090,18 +1092,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (draftIdInput) draftIdInput.value = String(draft.id);
                 textarea.value = draft.content || '';
                 lastSavedText = textarea.value.trim();
-                if (draft.image_url) {
-                    showDraftImage(draft.image_url);
-                } else {
+                const intentInput = composer.querySelector('#composer-intent-input');
+                if (draft.type === 'reel') {
+                    if (intentInput) intentInput.value = 'upload_clip';
+                    clearImagePreview();
                     draftImageUrl = null;
                     draftImageCleared = false;
                     if (draftClearImageInput) draftClearImageInput.value = '0';
-                    if (imagePreviewImg) imagePreviewImg.removeAttribute('src');
-                    if (imagePreview) imagePreview.hidden = true;
+                    setDraftStatus(translateUi('reel_draft_restored', 'Clip draft restored'));
+                } else {
+                    if (intentInput) intentInput.value = 'publish';
+                    if (draft.image_url) {
+                        showDraftImage(draft.image_url);
+                    } else {
+                        draftImageUrl = null;
+                        draftImageCleared = false;
+                        if (draftClearImageInput) draftClearImageInput.value = '0';
+                        if (imagePreviewImg) imagePreviewImg.removeAttribute('src');
+                        if (imagePreview) imagePreview.hidden = true;
+                    }
+                    setDraftStatus(translateUi('draft_restored', 'Draft restored'));
                 }
                 textarea.dispatchEvent(new Event('input'));
                 textarea.focus();
-                setDraftStatus(draft.type === 'reel' ? 'Clip draft restored' : 'Draft restored');
             };
 
             const discardCurrentDraft = async () => {
@@ -1266,9 +1279,50 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Handle file selection and AJAX upload
+        // Helper to compress large image attachments before upload
+        async function compressImageIfNeeded(file) {
+            const isCompressible = /\.(jpe?g|png|webp)$/i.test(file.name) || (file.type && /^image\/(jpeg|png|webp)$/i.test(file.type));
+            if (!isCompressible || file.size <= 1.2 * 1024 * 1024) {
+                return file;
+            }
+            try {
+                if (typeof createImageBitmap !== 'function') return file;
+                const bitmap = await createImageBitmap(file);
+                const maxDim = 1920;
+                let width = bitmap.width;
+                let height = bitmap.height;
+
+                if (width > maxDim || height > maxDim) {
+                    if (width > height) {
+                        height = Math.round((height * maxDim) / width);
+                        width = maxDim;
+                    } else {
+                        width = Math.round((width * maxDim) / height);
+                        height = maxDim;
+                    }
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) return file;
+                ctx.drawImage(bitmap, 0, 0, width, height);
+
+                const mimeType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+                const blob = await new Promise((resolve) => canvas.toBlob(resolve, mimeType, 0.85));
+                if (blob && blob.size < file.size) {
+                    return new File([blob], file.name, { type: mimeType, lastModified: Date.now() });
+                }
+            } catch (err) {
+                console.warn('Attachment image compression skipped:', err);
+            }
+            return file;
+        }
+
+        // Handle file selection and upload
         if (fileInput) {
-            fileInput.addEventListener('change', () => {
+            fileInput.addEventListener('change', async () => {
                 const file = fileInput.files[0];
                 if (!file) return;
 
@@ -1281,7 +1335,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     '.mp3', '.wav', '.ogg', '.m4a',
                     '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt'
                 ];
-                
+
                 const lang = window.LvLI18n ? window.LvLI18n.getCurrentLang() : 'en';
                 const t = (window.LvLI18n && window.LvLI18n.TRANSLATIONS && window.LvLI18n.TRANSLATIONS[lang]) || {};
 
@@ -1313,63 +1367,161 @@ document.addEventListener('DOMContentLoaded', () => {
                     progressText.textContent = '0%';
                 }
 
-                // Start AJAX upload
-                const formData = new FormData();
-                formData.append('file', file);
+                const uploadFile = await compressImageIfNeeded(file);
+                const csrfTokenEl = chatForm.querySelector('input[name="csrf_token"]') || document.querySelector('meta[name="csrf-token"]');
+                const csrfToken = csrfTokenEl ? (csrfTokenEl.value || csrfTokenEl.getAttribute('content') || '') : '';
 
-                const xhr = new XMLHttpRequest();
-                currentUploadXhr = xhr;
+                function performFallbackUpload(targetFile) {
+                    const fallbackUrl = chatForm.dataset.fallbackUploadUrl || '/api/upload_attachment';
+                    const formData = new FormData();
+                    formData.append('file', targetFile);
+                    formData.append('csrf_token', csrfToken);
+                    formData.append('ajax', '1');
 
-                xhr.upload.addEventListener('progress', (e) => {
-                    if (e.lengthComputable) {
-                        const percent = Math.round((e.loaded / e.total) * 100);
-                        progressBar.style.width = percent + '%';
-                        progressText.textContent = percent + '%';
+                    const xhr = new XMLHttpRequest();
+                    currentUploadXhr = xhr;
+
+                    xhr.upload.addEventListener('progress', (e) => {
+                        if (e.lengthComputable) {
+                            const percent = Math.min(99, Math.round((e.loaded / e.total) * 100));
+                            progressBar.style.width = percent + '%';
+                            progressText.textContent = percent + '%';
+                        }
+                    });
+
+                    xhr.addEventListener('load', () => {
+                        if (xhr.status === 200) {
+                            try {
+                                const res = JSON.parse(xhr.responseText);
+                                if (res.success) {
+                                    if (hiddenTempFilename) hiddenTempFilename.value = res.temp_filename;
+                                    if (hiddenAttachmentName) hiddenAttachmentName.value = res.attachment_name;
+                                    if (hiddenAttachmentType) hiddenAttachmentType.value = res.attachment_type;
+                                    progressBar.style.width = '100%';
+                                    progressText.textContent = '100%';
+                                } else {
+                                    showAppToast(res.error || translateUi('upload_failed', 'Upload failed'));
+                                    resetUploadPreview();
+                                }
+                            } catch (err) {
+                                showAppToast(translateUi('upload_failed', 'Upload failed'));
+                                resetUploadPreview();
+                            }
+                        } else if (xhr.status === 413) {
+                            showAppToast(translateUi('error_file_too_large', 'File size exceeds limit.'));
+                            resetUploadPreview();
+                        } else {
+                            try {
+                                const res = JSON.parse(xhr.responseText);
+                                showAppToast(res.error || translateUi('upload_failed', 'Upload failed'));
+                            } catch (_) {
+                                showAppToast(translateUi('upload_failed', 'Upload failed'));
+                            }
+                            resetUploadPreview();
+                        }
+                        currentUploadXhr = null;
+                    });
+
+                    xhr.addEventListener('error', () => {
+                        showAppToast(translateUi('upload_error', 'Upload error'));
+                        resetUploadPreview();
+                        currentUploadXhr = null;
+                    });
+
+                    xhr.addEventListener('abort', () => {
+                        resetUploadPreview();
+                        currentUploadXhr = null;
+                    });
+
+                    xhr.open('POST', fallbackUrl);
+                    if (csrfToken) {
+                        xhr.setRequestHeader('X-CSRF-Token', csrfToken);
                     }
-                });
+                    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                    xhr.send(formData);
+                }
 
-                xhr.addEventListener('load', () => {
-                    if (xhr.status === 200) {
-                        try {
-                            const res = JSON.parse(xhr.responseText);
-                            if (res.success) {
-                                hiddenTempFilename.value = res.temp_filename;
-                                hiddenAttachmentName.value = res.attachment_name;
-                                hiddenAttachmentType.value = res.attachment_type;
+                // Request signed upload URL to bypass serverless payload limit
+                const requestUrl = chatForm.dataset.uploadUrl || '/api/upload_attachment_url';
+                try {
+                    const urlRes = await fetch(requestUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            filename: uploadFile.name,
+                            size: uploadFile.size,
+                            csrf_token: csrfToken,
+                            ajax: '1'
+                        })
+                    });
+
+                    if (!urlRes.ok) {
+                        const errData = await urlRes.json().catch(() => ({}));
+                        if (errData && errData.error) {
+                            showAppToast(errData.error);
+                            resetUploadPreview();
+                            return;
+                        }
+                        performFallbackUpload(uploadFile);
+                        return;
+                    }
+
+                    const urlData = await urlRes.json();
+                    if (!urlData.success) {
+                        showAppToast(urlData.error || translateUi('upload_failed', 'Upload failed'));
+                        resetUploadPreview();
+                        return;
+                    }
+
+                    if (urlData.direct_upload && urlData.upload_url) {
+                        const directXhr = new XMLHttpRequest();
+                        currentUploadXhr = directXhr;
+
+                        directXhr.upload.addEventListener('progress', (e) => {
+                            if (e.lengthComputable) {
+                                const percent = Math.min(99, Math.round((e.loaded / e.total) * 100));
+                                progressBar.style.width = percent + '%';
+                                progressText.textContent = percent + '%';
+                            }
+                        });
+
+                        directXhr.addEventListener('load', () => {
+                            if (directXhr.status >= 200 && directXhr.status < 300) {
+                                if (hiddenTempFilename) hiddenTempFilename.value = urlData.temp_filename;
+                                if (hiddenAttachmentName) hiddenAttachmentName.value = urlData.attachment_name;
+                                if (hiddenAttachmentType) hiddenAttachmentType.value = urlData.attachment_type;
                                 progressBar.style.width = '100%';
                                 progressText.textContent = '100%';
                             } else {
-                                showAppToast(res.error || translateUi('upload_failed', 'Upload failed'));
-                                resetUploadPreview();
+                                performFallbackUpload(uploadFile);
                             }
-                        } catch (err) {
-                            showAppToast(translateUi('upload_failed', 'Upload failed'));
+                            currentUploadXhr = null;
+                        });
+
+                        directXhr.addEventListener('error', () => {
+                            performFallbackUpload(uploadFile);
+                            currentUploadXhr = null;
+                        });
+
+                        directXhr.addEventListener('abort', () => {
                             resetUploadPreview();
-                        }
+                            currentUploadXhr = null;
+                        });
+
+                        directXhr.open('PUT', urlData.upload_url);
+                        directXhr.setRequestHeader('Content-Type', urlData.content_type || uploadFile.type || 'application/octet-stream');
+                        directXhr.send(uploadFile);
                     } else {
-                        showAppToast(translateUi('upload_failed', 'Upload failed'));
-                        resetUploadPreview();
+                        performFallbackUpload(uploadFile);
                     }
-                    currentUploadXhr = null;
-                });
-
-                xhr.addEventListener('error', () => {
-                    showAppToast(translateUi('upload_error', 'Upload error'));
-                    resetUploadPreview();
-                    currentUploadXhr = null;
-                });
-
-                xhr.addEventListener('abort', () => {
-                    resetUploadPreview();
-                    currentUploadXhr = null;
-                });
-
-                xhr.open('POST', '/api/upload_attachment');
-                const csrfTokenEl = chatForm.querySelector('input[name="csrf_token"]');
-                if (csrfTokenEl) {
-                    xhr.setRequestHeader('X-CSRF-Token', csrfTokenEl.value);
+                } catch (e) {
+                    performFallbackUpload(uploadFile);
                 }
-                xhr.send(formData);
             });
         }
 

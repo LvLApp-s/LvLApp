@@ -3799,6 +3799,61 @@ class AppRouteTests(unittest.TestCase):
         self.assertEqual(uploaded_payload, b"%PDF-1.4")
         self.assertEqual(options["content-type"], "application/pdf")
 
+    def test_upload_attachment_url_validation_and_signed_url(self):
+        fake_user = {"id": 7, "username": "demo"}
+        token = self.csrf()
+
+        # Reject unsupported extension
+        with patch.object(zapp, "get_current_user", return_value=fake_user):
+            res_bad_ext = self.client.post(
+                "/api/upload_attachment_url",
+                json={"filename": "script.exe", "csrf_token": token, "ajax": "1"},
+                headers={"X-CSRF-Token": token},
+            )
+            self.assertEqual(res_bad_ext.status_code, 400)
+            self.assertFalse(res_bad_ext.get_json()["success"])
+
+            # Reject oversized file (> 15 MB)
+            res_large = self.client.post(
+                "/api/upload_attachment_url",
+                json={"filename": "photo.jpg", "size": 20 * 1024 * 1024, "csrf_token": token, "ajax": "1"},
+                headers={"X-CSRF-Token": token},
+            )
+            self.assertEqual(res_large.status_code, 400)
+            self.assertIn("15 MB", res_large.get_json()["error"])
+
+        # Signed upload URL outside testing
+        class FakeBucket:
+            def create_signed_upload_url(self, path):
+                return {"signedUrl": f"https://supabase.co/storage/v1/upload/sign/{path}"}
+
+        class FakeStorage:
+            def __init__(self):
+                self.bucket = FakeBucket()
+
+            def get_bucket(self, name):
+                return {}
+
+            def from_(self, name):
+                return self.bucket
+
+        fake_supabase = SimpleNamespace(storage=FakeStorage())
+
+        with patch.dict(zapp.app.config, {"TESTING": False}), \
+             patch.object(zapp, "supabase", fake_supabase), \
+             patch.object(zapp, "get_current_user", return_value=fake_user):
+            res_signed = self.client.post(
+                "/api/upload_attachment_url",
+                json={"filename": "my_video.mp4", "size": 8 * 1024 * 1024, "csrf_token": token, "ajax": "1"},
+                headers={"X-CSRF-Token": token},
+            )
+            self.assertEqual(res_signed.status_code, 200)
+            data = res_signed.get_json()
+            self.assertTrue(data["success"])
+            self.assertTrue(data["direct_upload"])
+            self.assertIn("https://supabase.co/storage/v1/upload/sign/", data["upload_url"])
+            self.assertEqual(data["attachment_type"], "video")
+
     def test_send_message_finalizes_private_attachment_file(self):
         class Result:
             def __init__(self, data=None):
