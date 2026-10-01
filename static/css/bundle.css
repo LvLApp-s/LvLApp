@@ -5,7 +5,7 @@
    Edit the section files under static/css/sections/ and re-run the script.
    --------------------------------------------------------------------------- */
 
-/* ===== sections\base.css ===== */
+/* ===== sections/base.css ===== */
 /* Design tokens, reset, shell layout */
 :root {
   /* ---------------------------------------------------------------------
@@ -983,7 +983,7 @@ body,
 
 img.avatar[src$=".svg"] { object-fit: contain !important; }
 
-/* ===== sections\navigation.css ===== */
+/* ===== sections/navigation.css ===== */
 /* Left rail and primary navigation */
 /* Left Sidebar */
 .brand {
@@ -1243,7 +1243,7 @@ img.avatar[src$=".svg"] { object-fit: contain !important; }
   }
 }
 
-/* ===== sections\feed.css ===== */
+/* ===== sections/feed.css ===== */
 /* Timeline, composer, posts, empty and flash states */
 /* Timeline */
 /* Parks below the top bar, not under it. At top: 0 the header pinned into
@@ -2102,7 +2102,7 @@ img.avatar[src$=".svg"] { object-fit: contain !important; }
   100% { opacity: 0; transform: translate(-22px, -50%) scale(0.2); }
 }
 
-/* ===== sections\feedback.css ===== */
+/* ===== sections/feedback.css ===== */
 /* ---------------------------------------------------------------------------
    Feedback: the one surface for every message LvL shows.
 
@@ -2406,7 +2406,7 @@ label.has-success input {
   }
 }
 
-/* ===== sections\components.css ===== */
+/* ===== sections/components.css ===== */
 /* ---------------------------------------------------------------------------
    Shared components introduced by the final implementation pass.
 
@@ -3979,7 +3979,7 @@ label.has-success input {
   margin-inline-start: 0;
 }
 
-/* ===== sections\auth.css ===== */
+/* ===== sections/auth.css ===== */
 /* Login/register page */
 .auth-form .remember-me-row {
   display: inline-flex;
@@ -4560,7 +4560,7 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   }
 }
 
-/* ===== sections\profile.css ===== */
+/* ===== sections/profile.css ===== */
 /* Profile header and public profile layout */
 .profile-header {
   border-bottom: 1px solid var(--border-color);
@@ -5271,7 +5271,7 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   color: #fff;
 }
 
-/* ===== sections\rewards.css ===== */
+/* ===== sections/rewards.css ===== */
 /* XP cards, achievements, reward ladder, and LvL guide */
 .profile-xp-card {
   margin-top: 16px;
@@ -5647,7 +5647,7 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   }
 }
 
-/* ===== sections\messages.css ===== */
+/* ===== sections/messages.css ===== */
 /* Messages and chat UI */
 .timeline-messages {
   display: flex !important;
@@ -7054,7 +7054,7 @@ main:has(.messages-container) + .right-rail-wrapper .home-media-panel {
   display: none !important;
 }
 
-/* ===== sections\settings.css ===== */
+/* ===== sections/settings.css ===== */
 /* ── Settings – redesigned card layout ── */
 
 /* ── Cards ── */
@@ -8060,7 +8060,7 @@ main:has(.settings-container) + .right-rail-wrapper .home-reel-panel {
   display: none !important;
 }
 
-/* ===== sections\notifications.css ===== */
+/* ===== sections/notifications.css ===== */
 /* Modern, Flat, Premium Notifications UI */
 :root {
   --notif-accent: var(--lvl-cyan);
@@ -8301,7 +8301,7 @@ main:has(.settings-container) + .right-rail-wrapper .home-reel-panel {
   cursor: pointer;
 }
 
-/* ===== sections\activity.css ===== */
+/* ===== sections/activity.css ===== */
 /* Activity history */
 .activity-header {
   border-bottom: 1px solid var(--border-color);
@@ -8390,7 +8390,7 @@ main:has(.settings-container) + .right-rail-wrapper .home-reel-panel {
   }
 }
 
-/* ===== sections\home.css ===== */
+/* ===== sections/home.css ===== */
 /* Home and composer refinements */
 /* Home & Composer Improvements */
 .home-header .header-top {
@@ -8584,7 +8584,7 @@ main:has(.settings-container) + .right-rail-wrapper .home-reel-panel {
   border-color: var(--lvl-red, #ef4444);
 }
 
-/* ===== sections\message-discovery.css ===== */
+/* ===== sections/message-discovery.css ===== */
 /* Message user selection */
 /* User Selection for Messages */
 .new-chat-section {
@@ -8663,7 +8663,7 @@ main:has(.settings-container) + .right-rail-wrapper .home-reel-panel {
   font-size: 18px;
 }
 
-/* ===== sections\search.css ===== */
+/* ===== sections/search.css ===== */
 /* Search page */
 /* Search Page Improvements */
 .search-header {
@@ -8770,7 +8770,7 @@ main:has(.settings-container) + .right-rail-wrapper .home-reel-panel {
   margin-top: 4px;
 }
 
-/* ===== sections\legacy-polish.css ===== */
+/* ===== sections/legacy-polish.css ===== */
 
 
 
@@ -10554,7 +10554,7 @@ button {
 /* Legacy .profile-public-progress (keep for compat if needed) */
 .profile-public-progress { display: none; }
 
-/* ===== sections\community.css ===== */
+/* ===== sections/community.css ===== */
 /* Community pages, group detail, and shared community cards */
 
 .compact-action {
@@ -11140,7 +11140,7 @@ button {
   }
 }
 
-/* ===== sections\mobile-drawer.css ===== */
+/* ===== sections/mobile-drawer.css ===== */
 /* Phone navigation: Twitter/X-style mobile slide-over drawer */
 @media (max-width: 767px) {
   .left-rail-wrapper,
@@ -11532,7 +11532,7 @@ button {
   }
 }
 
-/* ===== sections\design-system.css ===== */
+/* ===== sections/design-system.css ===== */
 /* ---------------------------------------------------------------------------
    Surface system.
 
@@ -11917,7 +11917,7 @@ button {
   }
 }
 
-/* ===== sections\hardening.css ===== */
+/* ===== sections/hardening.css ===== */
 /* Product hardening and layout safety additions */
 .post-content {
   min-width: 0;
@@ -12534,7 +12534,7 @@ button {
 
 }
 
-/* ===== sections\profile-mobile.css ===== */
+/* ===== sections/profile-mobile.css ===== */
 /* Mobile profile layout repair */
 /* Mobile profile layout repair */
 .profile-info-container {
@@ -12831,7 +12831,7 @@ button {
   }
 }
 
-/* ===== sections\community-timeline.css ===== */
+/* ===== sections/community-timeline.css ===== */
 /* Community timeline tabs and panes */
 /* LvL community timeline redesign */
 /* The Community hero. The artwork sits to the right, behind the Create group
@@ -13389,7 +13389,7 @@ button {
   }
 }
 
-/* ===== sections\notification-badge.css ===== */
+/* ===== sections/notification-badge.css ===== */
 /* Unread notification badge */
 /* ─── Notification badge ─────────────────────────────────────────────────── */
 .nav-icon-badge {
@@ -13450,7 +13450,7 @@ button {
   pointer-events: none;
 }
 
-/* ===== sections\reels.css ===== */
+/* ===== sections/reels.css ===== */
 /* Reels tabs, cards, comments, and modal helpers */
 :root {
   --max-reel-height-desktop: 78vh;
@@ -15181,7 +15181,7 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 
 }
 
-/* ===== sections\mobile-navigation.css ===== */
+/* ===== sections/mobile-navigation.css ===== */
 /* Collapsed sidebar and mobile bottom navigation */
 /* ─── Sidebar collapsed — icons only ────────────────────────────────────── */
 .left-rail:not(.menu-open) .nav-list {
@@ -15645,7 +15645,7 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   }
 }
 
-/* ===== sections\community-highlights.css ===== */
+/* ===== sections/community-highlights.css ===== */
 /* Community highlights overflow safety */
 /* ─── New leaderboard design (lb-*) ─────────────────────────────────────── */
 
@@ -16332,7 +16332,7 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   }
 }
 
-/* ===== sections\home-reels.css ===== */
+/* ===== sections/home-reels.css ===== */
 /* Desktop Home reels panel */
 /* ─── Home Reel Panel (right rail compact player) ────────────────────────── */
 /* The panel takes whatever height the rail has left rather than a guessed
@@ -16711,7 +16711,7 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 
 }
 
-/* ===== sections\streaks.css ===== */
+/* ===== sections/streaks.css ===== */
 /* Chat streak badges */
 /* ─── Streak badges ─────────────────────────────────────────────────────────── */
 .streak-badge {
@@ -16795,7 +16795,7 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   32% { transform: rotate(0deg); }
 }
 
-/* ===== sections\message-dock.css ===== */
+/* ===== sections/message-dock.css ===== */
 /* ---------------------------------------------------------------------------
    Message dock.
 
@@ -17135,7 +17135,7 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   }
 }
 
-/* ===== sections\share-modal.css ===== */
+/* ===== sections/share-modal.css ===== */
 /* ─── Share Modal (Overlay on top of video, matching comments panel) ───────── */
 .share-modal-overlay,
 .reel-video-frame .share-modal-overlay {
@@ -17361,7 +17361,7 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   box-shadow: none;
 }
 
-/* ===== sections\admin.css ===== */
+/* ===== sections/admin.css ===== */
 /* Admin dashboard. Operator-only surface, kept out of the product cascade. */
 
 /* ── Admin Styles ── */
@@ -17902,7 +17902,7 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   font: inherit;
 }
 
-/* ===== sections\rtl.css ===== */
+/* ===== sections/rtl.css ===== */
 /* ── RTL Global Layout Support ──────────────────────────────────────────── */
 /* Applied when lang="ar" sets dir="rtl" on <html> */
 
@@ -18355,7 +18355,7 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   direction: rtl;
 }
 
-/* ===== sections\responsive.css ===== */
+/* ===== sections/responsive.css ===== */
 /* ── Responsive Design System ─────────────────────────────────────────────
    Breakpoints:
    Mobile portrait  : ≤ 599px

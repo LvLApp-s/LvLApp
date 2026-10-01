@@ -199,7 +199,7 @@ ATTACHMENT_CONTENT_TYPES = {
     'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'txt': 'text/plain',
 }
-ASSET_VERSION = "202"
+ASSET_VERSION = "203"
 
 # --- Per-request query cache ------------------------------------------------
 #
