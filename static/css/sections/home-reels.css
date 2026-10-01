@@ -121,8 +121,19 @@
   pointer-events: none;
 }
 
-/* Top-right mute control as seen in production. */
-.home-reel-video-wrap > .media-volume,
+/* The volume control floats in the clip's top right corner. Top, not bottom:
+   the message dock is fixed to the bottom right of the window and used to
+   cover it there. The wrapper carries the position -- speaker and level
+   together -- so the button below sets only its own size and colour. */
+.home-reel-video-wrap > .media-volume {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  inset-inline-start: auto;
+  z-index: 10;
+}
+
+/* Same corner for the bare button, on a surface that has no level slider. */
 .home-reel-video-wrap > .home-reel-mute-btn {
   position: absolute;
   top: 12px;
@@ -241,12 +252,12 @@
 }
 
 .home-reel-counts .reel-action-like.active {
-  color: var(--lvl-danger, #f43f5e) !important;
+  color: var(--lvl-danger, var(--lvl-rose-strong)) !important;
 }
 
 .home-reel-counts .reel-action-like.active svg {
-  fill: var(--lvl-danger, #f43f5e) !important;
-  stroke: var(--lvl-danger, #f43f5e) !important;
+  fill: var(--lvl-danger, var(--lvl-rose-strong)) !important;
+  stroke: var(--lvl-danger, var(--lvl-rose-strong)) !important;
 }
 
 .home-reel-counts span {

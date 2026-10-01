@@ -22,7 +22,15 @@ def css(name):
 
 
 def rule(name, selector):
-    match = re.search(re.escape(selector) + r"\s*\{([^}]*)\}", css(name))
+    """The body of the rule whose selector list starts with this selector.
+
+    Anchored to the start of a line: without it, looking up
+    ".home-reel-mute-btn" also matched the ".home-reel-video-wrap >
+    .home-reel-mute-btn" rule above it, so a test about what the button sets
+    read the wrapper's positioning instead.
+    """
+    match = re.search(r"^" + re.escape(selector) + r"\s*(?:,[^{]*)?\{([^}]*)\}",
+                      css(name), re.M)
     return match.group(1) if match else None
 
 
@@ -72,17 +80,31 @@ class OneClipPerScreenfulTests(unittest.TestCase):
         self.assertIsNotNone(body)
         self.assertRegex(body, r"scroll-snap-stop:\s*always")
 
-    def test_the_video_takes_the_slides_remaining_height(self):
+    def test_the_video_fills_the_slide(self):
+        """The slide was a flex column -- video above, author row below -- and
+        is a single grid cell now, with the author row laid over the video
+        under a gradient. Either way the point is the same: the video takes
+        the whole box, with nothing capping it short of the rail."""
+        slide = rule("home-reels.css", ".home-reel-slide")
+        self.assertIsNotNone(slide)
+        self.assertRegex(slide, r'grid-template-areas:\s*"content"')
+
         body = rule("home-reels.css", ".home-reel-video-wrap")
         self.assertIsNotNone(body)
-        self.assertRegex(body, r"flex:\s*1 1 auto")
+        self.assertRegex(body, r"grid-area:\s*content")
+        self.assertRegex(body, r"height:\s*100%")
         self.assertNotRegex(body, r"max-height:",
                             "a ceiling here stops the clip short of the rail")
 
     def test_the_author_row_is_not_squeezed(self):
+        """It shares the cell with the video rather than taking height from
+        it, so it is sized by its own content and cannot be compressed."""
         body = rule("home-reels.css", ".home-reel-info")
         self.assertIsNotNone(body)
-        self.assertRegex(body, r"flex:\s*0 0 auto")
+        self.assertRegex(body, r"grid-area:\s*content")
+        self.assertRegex(body, r"align-self:\s*end")
+        self.assertNotRegex(body, r"height:\s*\d",
+                            "a fixed height would clip a long caption")
 
 
 class CommunityRailTests(unittest.TestCase):
@@ -146,7 +168,14 @@ class VolumeControlStyleTests(unittest.TestCase):
         self.assertIn(".media-volume-track", block.group(1))
 
     def test_the_floating_control_needs_no_important(self):
-        body = rule("reels.css", ".reel-mute-float")
+        """It used to be .reel-mute-float, which carried six !important
+        declarations and no template that used the class -- dead CSS winning
+        arguments with rules that were actually on the page. The rule that
+        positions the control now is the one on the rail's wrapper, and it
+        wins on specificity rather than by shouting."""
+        self.assertIsNone(rule("reels.css", ".reel-mute-float"),
+                          "dead rule is back")
+        body = rule("home-reels.css", ".home-reel-video-wrap > .media-volume")
         self.assertIsNotNone(body)
         self.assertNotIn("!important", body)
 

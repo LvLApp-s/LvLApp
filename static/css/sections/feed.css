@@ -1,3 +1,15 @@
+/* A note on !important in this file.
+
+   It used to carry 25 of them. Each one was removed, every page this file
+   touches was re-rendered at two widths in both themes, and the computed
+   style of every element was compared against the same dump taken before.
+   5 declarations changed something; those kept the override and are the
+   ones still here. The rest changed nothing and are gone.
+
+   So: before adding one, check whether the rule it is fighting can simply be
+   made more specific. If an override really is needed, the test above is how
+   to prove it. */
+
 /* Timeline, composer, posts, empty and flash states */
 /* Timeline */
 /* Parks below the top bar, not under it. At top: 0 the header pinned into
@@ -534,7 +546,7 @@
 .media-loading::before { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 20%, var(--lvl-white-08) 45%, transparent 70%); background-size: 220% 100%; animation: media-skeleton 1.2s linear infinite; }
 @keyframes media-skeleton { to { background-position: -220% 0; } }
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  *, *::before, *::after { scroll-behavior: auto; animation-duration: 0.01ms; animation-iteration-count: 1; transition-duration: 0.01ms; }
 }
 
 .home-header .header-top {
@@ -580,10 +592,10 @@
   padding: 4px 8px;
   border-radius: 0 !important;
   border: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  outline: none !important;
-  -webkit-tap-highlight-color: transparent !important;
+  background: transparent;
+  box-shadow: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
   color: var(--text-secondary);
   font-family: inherit;
   font-size: 13px;
@@ -617,10 +629,10 @@
 
 .post-action-button.like-active,
 .lvl-action-like.active {
-  color: var(--lvl-danger) !important;
-  background: transparent !important;
+  color: var(--lvl-danger);
+  background: transparent;
   border: none !important;
-  box-shadow: none !important;
+  box-shadow: none;
 }
 
 .post-action-button.like-active .post-action-icon,
@@ -635,9 +647,9 @@
 .post-action-button.like-active .post-action-icon svg path,
 .lvl-action-like.active .post-action-icon svg,
 .lvl-action-like.active .post-action-icon svg path {
-  fill: var(--lvl-danger) !important;
-  stroke: var(--lvl-danger) !important;
-  filter: drop-shadow(0 0 6px rgba(244, 63, 94, 0.6)) !important;
+  fill: var(--lvl-danger);
+  stroke: var(--lvl-danger);
+  filter: drop-shadow(0 0 6px rgba(244, 63, 94, 0.6));
 }
 
 /* ── Repost (Vibrant Emerald) ── */
@@ -651,10 +663,10 @@
 
 .post-action-button.repost-active,
 .lvl-action-repost.active {
-  color: var(--lvl-success) !important;
-  background: transparent !important;
+  color: var(--lvl-success);
+  background: transparent;
   border: none !important;
-  box-shadow: none !important;
+  box-shadow: none;
 }
 
 .post-action-button.repost-active .post-action-icon,
@@ -679,10 +691,10 @@
 
 .post-action-button.bookmark-active,
 .lvl-action-vault.active {
-  color: var(--lvl-warning) !important;
-  background: transparent !important;
+  color: var(--lvl-warning);
+  background: transparent;
   border: none !important;
-  box-shadow: none !important;
+  box-shadow: none;
 }
 
 .post-action-button.bookmark-active .post-action-icon,

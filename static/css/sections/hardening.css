@@ -1,3 +1,15 @@
+/* A note on !important in this file.
+
+   It used to carry 38 of them. Each one was removed, every page this file
+   touches was re-rendered at two widths in both themes, and the computed
+   style of every element was compared against the same dump taken before.
+   7 declarations changed something; those kept the override and are the
+   ones still here. The rest changed nothing and are gone.
+
+   So: before adding one, check whether the rule it is fighting can simply be
+   made more specific. If an override really is needed, the test above is how
+   to prove it. */
+
 /* Product hardening and layout safety additions */
 .post-content {
   min-width: 0;
@@ -68,7 +80,7 @@
 .post-action-button:hover,
 .post-action-button:focus-visible {
   border-color: transparent !important;
-  background: transparent !important;
+  background: transparent;
   text-decoration: none;
 }
 
@@ -287,47 +299,47 @@
 
 .left-rail.menu-open .nav-label,
 .left-rail.mobile-menu-open .nav-label {
-  position: static !important;
-  width: auto !important;
-  height: auto !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  overflow: visible !important;
-  clip: auto !important;
-  clip-path: none !important;
-  white-space: nowrap !important;
+  position: static;
+  width: auto;
+  height: auto;
+  padding: 0;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  clip-path: none;
+  white-space: nowrap;
   display: block !important;
-  font-size: 17px !important;
-  font-weight: 700 !important;
-  color: var(--text-primary) !important;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .left-rail:not(.menu-open):not(.mobile-menu-open) .nav-list a {
-  justify-content: center !important;
-  padding-inline: 0 !important;
+  justify-content: center;
+  padding-inline: 0;
 }
 
 .left-rail.menu-open .nav-list a,
 .left-rail.mobile-menu-open .nav-list a {
-  justify-content: flex-start !important;
-  padding-inline: 14px !important;
+  justify-content: flex-start;
+  padding-inline: 14px;
   gap: 14px !important;
 }
 
 .left-rail.menu-open .mini-profile,
 .left-rail.mobile-menu-open .mini-profile {
-  justify-content: flex-start !important;
+  justify-content: flex-start;
   gap: 12px !important;
 }
 
 .left-rail.menu-open .mini-profile div,
 .left-rail.mobile-menu-open .mini-profile div {
   display: flex !important;
-  min-width: 0 !important;
-  flex: 1 1 auto !important;
-  flex-direction: column !important;
-  align-items: flex-start !important;
-  overflow: hidden !important;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: flex-start;
+  overflow: hidden;
 }
 
 .left-rail.menu-open .mini-profile strong,
@@ -335,10 +347,10 @@
 .left-rail.mobile-menu-open .mini-profile strong,
 .left-rail.mobile-menu-open .mini-profile span {
   display: block !important;
-  max-width: 100% !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .profile-stats a:hover {
@@ -359,15 +371,15 @@
 }
 
 .own .message-bubble {
-  background: linear-gradient(135deg, var(--lvl-brand), var(--lvl-brand-hover)) !important;
-  color: var(--lvl-white) !important;
+  background: linear-gradient(135deg, var(--lvl-brand), var(--lvl-brand-hover));
+  color: var(--lvl-white);
   border-bottom-right-radius: 4px;
 }
 
 .message-bubble-wrapper:not(.own) .message-bubble {
-  background: var(--lvl-surface-overlay) !important;
+  background: var(--lvl-surface-overlay);
   border: 1px solid var(--border-color) !important;
-  color: var(--lvl-text-primary) !important;
+  color: var(--lvl-text-primary);
   border-bottom-left-radius: 4px;
 }
 

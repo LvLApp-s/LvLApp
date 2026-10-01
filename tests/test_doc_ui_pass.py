@@ -21,7 +21,15 @@ def css(name):
 
 
 def rule(name, selector):
-    match = re.search(re.escape(selector) + r"\s*\{([^}]*)\}", css(name))
+    """The body of the rule whose selector list starts with this selector.
+
+    Anchored to the start of a line: without it, looking up
+    ".home-reel-mute-btn" also matched the ".home-reel-video-wrap >
+    .home-reel-mute-btn" rule above it, so a test about what the button sets
+    read the wrapper's positioning instead.
+    """
+    match = re.search(r"^" + re.escape(selector) + r"\s*(?:,[^{]*)?\{([^}]*)\}",
+                      css(name), re.M)
     return match.group(1) if match else None
 
 
@@ -53,15 +61,22 @@ class RailSectionSeparationTests(unittest.TestCase):
         self.assertRegex(body, r"align-items:\s*center")
 
     def test_the_mute_control_is_clear_of_the_dock(self):
-        """The dock is fixed bottom-right; this control used to be there too.
+        """The dock is fixed to the bottom right; this control used to be
+        there too, so the dock covered it.
 
-        The position belongs to the wrapper now -- speaker plus level -- so
-        the whole control has to sit on the other side, not just the button.
+        What matters is that the two do not share a corner. This asserted one
+        particular answer -- move the control to the left -- and the control
+        went to the top instead, which is equally clear of a dock at the
+        bottom. So it checks the requirement: the control is positioned away
+        from the bottom edge, and only one rule positions it.
         """
         body = rule("home-reels.css", ".home-reel-video-wrap > .media-volume")
         self.assertIsNotNone(body)
-        self.assertRegex(body, r"inset-inline-start:\s*8px")
-        self.assertNotRegex(body, r"\bright:\s*8px")
+        self.assertRegex(body, r"position:\s*absolute")
+        self.assertRegex(body, r"\btop:\s*\d+px",
+                         "anchored to the top, away from the dock's corner")
+        self.assertNotRegex(body, r"\bbottom:\s*\d+px",
+                            "the dock owns the bottom right")
         button = rule("home-reels.css", ".home-reel-mute-btn")
         self.assertIsNotNone(button)
         self.assertNotRegex(button, r"position:\s*absolute",

@@ -61,6 +61,29 @@
   --lvl-blue-strong: #3b82f6;
   --lvl-deep-blue: #0066ff;
   --lvl-purple-strong: #a855f7;
+  /* Light ends of the accents, for text and icons on a tinted chip where
+     the full-strength colour is too dark to read. The drafts page had these
+     written as raw hex in a <style> block in its own template. */
+  --lvl-purple-light: #a78bfa;
+  --lvl-blue-light: #60a5fa;
+  --lvl-rose: #fb7185;
+  --lvl-rose-soft: rgba(244, 63, 94, 0.15);
+  --lvl-rose-border: rgba(244, 63, 94, 0.3);
+  --lvl-blue-light-soft: rgba(59, 130, 246, 0.12);
+  --lvl-blue-light-border: rgba(59, 130, 246, 0.25);
+  /* Status accents used by the admin dashboard's chips and meters, and the
+     rose the clip like button burns to. These were raw hex spread across
+     five section files, where no theme flip could reach them. */
+  --lvl-emerald: #10b981;
+  --lvl-emerald-light: #34d399;
+  --lvl-amber: #f59e0b;
+  --lvl-red-light: #f87171;
+  --lvl-red-plain: #ef4444;
+  --lvl-rose-strong: #f43f5e;
+  --lvl-violet: #7c3aed;
+  --lvl-violet-deep: #6d28d9;
+  --lvl-violet-deepest: #5b21b6;
+  --lvl-ink: #18181b;
   --lvl-streak: #ff6b35;
   --lvl-streak-soft: rgba(255, 107, 53, 0.12);
   --lvl-streak-border: rgba(255, 107, 53, 0.25);
@@ -193,6 +216,9 @@
   --control-xl: 52px;
   /* Minimum comfortable touch area; every tappable control meets this. */
   --touch-target: 44px;
+  /* The floor for a control packed into a dense row, where the full
+     44px target would not fit: still large enough to hit on a phone. */
+  --touch-target-sm: 28px;
 
   --icon-sm: 24px;
   --swatch-md: 32px;

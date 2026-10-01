@@ -96,23 +96,41 @@ class RailBalanceTests(unittest.TestCase):
         body = rule("community-highlights.css", ".lb-identity")
         self.assertIsNotNone(body)
         self.assertRegex(body, r"display:\s*grid")
-        self.assertIsNotNone(rule("community-highlights.css", ".lb-level-badge"))
-        badge = rule("community-highlights.css", ".lb-level-badge")
-        self.assertRegex(badge, r"grid-column:\s*2")
+        # The badge travels with the XP pill now, so the pair is the grid item
+        # that shares the handle's line rather than the badge on its own.
+        stats = rule("community-highlights.css", ".lb-stats")
+        self.assertIsNotNone(stats)
+        self.assertRegex(stats, r"grid-column:\s*2")
+        handle = rule("community-highlights.css", ".lb-handle")
+        self.assertRegex(handle, r"grid-column:\s*1")
 
-    def test_the_list_height_follows_the_window(self):
+    def test_the_list_height_is_counted_in_rows(self):
+        """It was clamp(204px, 23vh, 268px) -- a height with no relationship
+        to the 76px a row occupies, so the last visible row was always sliced
+        through the middle of its own text. The height is row arithmetic now,
+        and still follows the window rather than being pinned at 268px."""
         body = rule("community-highlights.css", ".lb-list")
         self.assertIsNotNone(body)
-        self.assertRegex(body, r"max-height:\s*clamp\(")
+        self.assertRegex(body, r"--lb-rows:\s*\d+")
+        self.assertRegex(body, r"max-height:\s*calc\([^)]*--lb-rows")
         self.assertNotRegex(body, r"max-height:\s*268px",
                             "a fixed height gave the clip whatever was left")
 
     def test_the_podium_is_the_floor(self):
-        """Three rows plus their gaps: the medals never fall below the fold."""
+        """Three whole rows at the default: the medals are all above the fold
+        and none of them is cut in half."""
         body = rule("community-highlights.css", ".lb-list")
-        floor = re.search(r"clamp\((\d+)px", body)
-        self.assertIsNotNone(floor)
-        self.assertGreaterEqual(int(floor.group(1)), 3 * 65 + 2 * 4)
+        rows = re.search(r"--lb-rows:\s*(\d+)", body)
+        self.assertIsNotNone(rows)
+        self.assertGreaterEqual(int(rows.group(1)), 3)
+
+    def test_a_taller_window_shows_a_fourth_row(self):
+        """The height follows the window by changing the row count, so what
+        it adds is always another whole row."""
+        block = re.search(r"@media \(min-height: 1000px\) \{(.*?)\n\}\n",
+                          css("community-highlights.css"), re.S)
+        self.assertIsNotNone(block)
+        self.assertRegex(block.group(1), r"--lb-rows:\s*4")
 
     def test_a_short_window_lets_the_list_give_first(self):
         """It scrolls; the clip does not."""

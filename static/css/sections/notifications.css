@@ -188,7 +188,7 @@
   right: 16px;
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: var(--lvl-brand);
 }
 
@@ -207,7 +207,7 @@
   display: inline-flex;
   align-items: center;
   padding: 2px 6px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: rgba(56, 189, 248, 0.1);
   color: var(--lvl-cyan);
   font-size: 11px;
@@ -221,9 +221,9 @@
 }
 .notif-btn-accept {
   background: var(--lvl-brand);
-  color: #fff;
+  color: var(--lvl-white);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   padding: 6px 12px;
   font-weight: 600;
   cursor: pointer;
@@ -232,7 +232,7 @@
   background: transparent;
   color: var(--text-secondary);
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   padding: 6px 12px;
   font-weight: 600;
   cursor: pointer;

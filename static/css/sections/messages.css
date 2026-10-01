@@ -1,11 +1,23 @@
+/* A note on !important in this file.
+
+   It used to carry 200 of them. Each one was removed, every page this file
+   touches was re-rendered at two widths in both themes, and the computed
+   style of every element was compared against the same dump taken before.
+   55 declarations changed something; those kept the override and are the
+   ones still here. The rest changed nothing and are gone.
+
+   So: before adding one, check whether the rule it is fighting can simply be
+   made more specific. If an override really is needed, the test above is how
+   to prove it. */
+
 /* Messages and chat UI */
 .timeline-messages {
   display: flex !important;
-  flex-direction: column !important;
+  flex-direction: column;
   height: 100dvh !important;
-  max-height: 100dvh !important;
-  overflow: hidden !important;
-  box-sizing: border-box !important;
+  max-height: 100dvh;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .timeline-messages .app-topbar {
@@ -15,12 +27,12 @@
 
 .messages-container {
   display: flex !important;
-  flex: 1 1 0 !important;
+  flex: 1 1 0;
   min-height: 0 !important;
   height: 100% !important;
-  max-height: 100% !important;
-  width: 100% !important;
-  overflow: hidden !important;
+  max-height: 100%;
+  width: 100%;
+  overflow: hidden;
 }
 
 .conversations-sidebar {
@@ -60,8 +72,8 @@
 .conversations-list {
   flex: 1;
   overflow-y: auto;
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .conversation-item {
@@ -125,15 +137,15 @@
 }
 
 .chat-window {
-  flex: 1 1 0 !important;
-  min-width: 0 !important;
+  flex: 1 1 0;
+  min-width: 0;
   min-height: 0 !important;
   display: flex !important;
-  flex-direction: column !important;
+  flex-direction: column;
   background-color: var(--bg-color);
-  overflow: hidden !important;
+  overflow: hidden;
   height: 100% !important;
-  max-height: 100% !important;
+  max-height: 100%;
 }
 
 .chat-window-empty {
@@ -150,7 +162,7 @@
   backdrop-filter: blur(12px);
   position: sticky;
   top: 0;
-  flex-shrink: 0 !important;
+  flex-shrink: 0;
   min-height: 53px !important;
 }
 
@@ -196,10 +208,10 @@
 }
 
 .messages-feed {
-  flex: 1 1 auto !important;
+  flex: 1 1 auto;
   min-height: 0 !important;
-  overflow-y: auto !important;
-  padding: 16px 20px !important;
+  overflow-y: auto;
+  padding: 16px 20px;
   display: flex !important;
   flex-direction: column;
   gap: 14px;
@@ -212,9 +224,9 @@
 .chat-window::-webkit-scrollbar,
 .messages-container::-webkit-scrollbar {
   display: none !important;
-  width: 0 !important;
+  width: 0;
   height: 0 !important;
-  background: transparent !important;
+  background: transparent;
 }
 
 .load-older-messages {
@@ -269,8 +281,8 @@
   display: flex;
   flex-direction: column;
   width: fit-content;
-  max-width: min(75%, 480px) !important;
-  margin-bottom: 0 !important;
+  max-width: min(75%, 480px);
+  margin-bottom: 0;
   height: auto;
   min-height: 0;
   flex-shrink: 0;
@@ -279,44 +291,44 @@
 
 .message-bubble-wrapper:has(.shared-reel-card),
 .message-bubble-wrapper:has(.shared-post-card) {
-  margin-bottom: 0 !important;
+  margin-bottom: 0;
 }
 
 .message-bubble-wrapper.own {
   align-self: flex-end;
-  align-items: flex-end !important;
+  align-items: flex-end;
   margin-left: auto;
 }
 
 .message-bubble-wrapper:not(.own) {
   align-self: flex-start;
-  align-items: flex-start !important;
+  align-items: flex-start;
   margin-right: auto;
 }
 
 .message-bubble {
   display: block;
   width: fit-content;
-  max-width: 100% !important;
+  max-width: 100%;
   height: auto;
   min-width: 0;
   min-height: 0;
   aspect-ratio: auto;
-  padding: 8px 14px !important;
-  border-radius: var(--radius-2xl) !important;
-  font-size: 14.5px !important;
-  line-height: 1.45 !important;
-  word-break: break-word !important;
-  overflow-wrap: anywhere !important;
-  white-space: normal !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
+  padding: 8px 14px;
+  border-radius: var(--radius-2xl);
+  font-size: 14.5px;
+  line-height: 1.45;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
   box-sizing: border-box;
 }
 
 .message-bubble.deleted-message {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-color);
-  color: rgba(255, 255, 255, 0.45) !important;
+  color: rgba(255, 255, 255, 0.45);
   font-style: italic;
   padding: 8px 14px;
   font-size: 13.5px;
@@ -324,9 +336,9 @@
 }
 
 .own .message-bubble:not(.deleted-message) {
-  background: linear-gradient(135deg, var(--lvl-brand), var(--lvl-brand-hover)) !important;
-  color: var(--lvl-white) !important;
-  border: none !important;
+  background: linear-gradient(135deg, var(--lvl-brand), var(--lvl-brand-hover));
+  color: var(--lvl-white);
+  border: none;
   border-bottom-right-radius: 4px;
 }
 
@@ -334,18 +346,18 @@
 .own .message-bubble div,
 .own .message-bubble p,
 .own .message-bubble span {
-  color: inherit !important;
+  color: inherit;
 }
 
 .own .message-bubble a {
-  color: var(--lvl-white) !important;
-  text-decoration: underline !important;
+  color: var(--lvl-white);
+  text-decoration: underline;
 }
 
 .message-bubble-wrapper:not(.own) .message-bubble:not(.deleted-message) {
-  background: var(--lvl-surface-overlay) !important;
-  border: 1px solid rgba(255, 255, 255, 0.09) !important;
-  color: var(--lvl-text-primary) !important;
+  background: var(--lvl-surface-overlay);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: var(--lvl-text-primary);
   border-bottom-left-radius: 4px;
 }
 
@@ -353,12 +365,12 @@
 .message-bubble-wrapper:not(.own) .message-bubble div,
 .message-bubble-wrapper:not(.own) .message-bubble p,
 .message-bubble-wrapper:not(.own) .message-bubble span {
-  color: inherit !important;
+  color: inherit;
 }
 
 .message-bubble-wrapper:not(.own) .message-bubble a {
-  color: var(--lvl-cyan) !important;
-  text-decoration: underline !important;
+  color: var(--lvl-cyan);
+  text-decoration: underline;
 }
 
 .message-bubble .message-text-content {
@@ -366,7 +378,7 @@
   white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: anywhere;
-  color: inherit !important;
+  color: inherit;
   font-size: inherit;
   line-height: inherit;
 }
@@ -406,8 +418,8 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 4px !important;
-  margin-bottom: 0 !important;
+  margin-top: 4px;
+  margin-bottom: 0;
   padding: 0 4px;
   min-height: 14px;
   line-height: 14px;
@@ -415,8 +427,8 @@
 
 .shared-reel-card + .message-meta,
 .shared-post-card + .message-meta {
-  margin-top: 6px !important;
-  margin-bottom: 0 !important;
+  margin-top: 6px;
+  margin-bottom: 0;
 }
 
 .own .message-meta {
@@ -459,11 +471,11 @@
 }
 
 .chat-footer {
-  flex-shrink: 0 !important;
-  padding: 12px 16px !important;
-  border-top: 1px solid var(--border-color, rgba(255,255,255,0.08)) !important;
-  background: var(--bg-color) !important;
-  z-index: 10 !important;
+  flex-shrink: 0;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-color, rgba(255,255,255,0.08));
+  background: var(--bg-color);
+  z-index: 10;
 }
 
 .chat-blocked-note {
@@ -544,7 +556,7 @@
 
 .chat-unselected::-webkit-scrollbar {
   display: none !important;
-  width: 0 !important;
+  width: 0;
 }
 
 .chat-unselected .outline-button {
@@ -591,30 +603,30 @@
 @media (max-width: 767px) {
   .app-shell:has(.timeline-messages) {
     display: block !important;
-    width: 100vw !important;
-    max-width: 100vw !important;
-    padding-inline: 0 !important;
-    box-sizing: border-box !important;
+    width: 100vw;
+    max-width: 100vw;
+    padding-inline: 0;
+    box-sizing: border-box;
   }
 
   .app-shell:has(.timeline-messages) .left-rail-wrapper,
   .app-shell:has(.timeline-messages) .right-rail-wrapper {
     display: none !important;
-    width: 0 !important;
+    width: 0;
   }
 
   .timeline-messages {
-    width: 100vw !important;
-    max-width: 100vw !important;
-    box-sizing: border-box !important;
+    width: 100vw;
+    max-width: 100vw;
+    box-sizing: border-box;
   }
 
 }
 
 @media (min-width: 768px) {
   .app-shell:has(.timeline-messages) {
-    max-width: 100% !important;
-    grid-template-columns: auto 1fr 0 !important;
+    max-width: 100%;
+    grid-template-columns: auto 1fr 0;
   }
 
   .app-shell:has(.timeline-messages) .right-rail-wrapper {
@@ -622,16 +634,16 @@
   }
 
   .timeline-messages {
-    width: 100% !important;
-    max-width: none !important;
-    flex-basis: auto !important;
+    width: 100%;
+    max-width: none;
+    flex-basis: auto;
     justify-self: stretch;
     border-right: 0;
     display: flex !important;
-    flex-direction: column !important;
+    flex-direction: column;
     height: 100dvh !important;
-    max-height: 100dvh !important;
-    overflow: hidden !important;
+    max-height: 100dvh;
+    overflow: hidden;
   }
 
   .messages-container {
@@ -639,11 +651,11 @@
     max-width: none;
     margin: 0;
     display: flex !important;
-    flex: 1 1 0 !important;
+    flex: 1 1 0;
     min-height: 0 !important;
     height: 100% !important;
-    max-height: 100% !important;
-    overflow: hidden !important;
+    max-height: 100%;
+    overflow: hidden;
   }
 
 }
@@ -680,7 +692,7 @@
   }
 
   .messages-container {
-    flex: 1 !important;
+    flex: 1;
     height: auto !important;
     min-height: 0 !important;
     overflow: hidden;
@@ -722,7 +734,7 @@
   }
 
   .messages-container {
-    flex: 1 !important;
+    flex: 1;
     height: auto !important;
     min-height: 0 !important;
   }
@@ -736,30 +748,30 @@
 @media (max-width: 767px) {
   .app-shell:has(.timeline-messages) {
     display: block !important;
-    width: 100vw !important;
-    max-width: 100vw !important;
-    padding-inline: 0 !important;
-    box-sizing: border-box !important;
+    width: 100vw;
+    max-width: 100vw;
+    padding-inline: 0;
+    box-sizing: border-box;
   }
 
   .app-shell:has(.timeline-messages) .left-rail-wrapper,
   .app-shell:has(.timeline-messages) .right-rail-wrapper {
     display: none !important;
-    width: 0 !important;
+    width: 0;
   }
 
   .timeline-messages {
-    width: 100vw !important;
-    max-width: 100vw !important;
-    box-sizing: border-box !important;
+    width: 100vw;
+    max-width: 100vw;
+    box-sizing: border-box;
   }
 
 }
 
 @media (min-width: 768px) {
   .app-shell:has(.timeline-messages) {
-    max-width: 100% !important;
-    grid-template-columns: auto 1fr 0 !important;
+    max-width: 100%;
+    grid-template-columns: auto 1fr 0;
   }
 
   .app-shell:has(.timeline-messages) .right-rail-wrapper {
@@ -767,9 +779,9 @@
   }
 
   .timeline-messages {
-    width: 100% !important;
-    max-width: none !important;
-    flex-basis: auto !important;
+    width: 100%;
+    max-width: none;
+    flex-basis: auto;
     justify-self: stretch;
     border-right: 0;
   }
@@ -814,7 +826,7 @@
   }
 
   .messages-container {
-    flex: 1 !important;
+    flex: 1;
     height: auto !important;
     min-height: 0 !important;
     overflow: hidden;
@@ -856,7 +868,7 @@
   }
 
   .messages-container {
-    flex: 1 !important;
+    flex: 1;
     height: auto !important;
     min-height: 0 !important;
   }
@@ -890,9 +902,9 @@
 .message-discovery-grid::-webkit-scrollbar,
 .message-discovery-panel::-webkit-scrollbar {
   display: none !important;
-  width: 0 !important;
+  width: 0;
   height: 0 !important;
-  background: transparent !important;
+  background: transparent;
 }
 
 .conversations-list,
@@ -904,8 +916,8 @@
 .new-chat-dialog .user-selection-list,
 .message-discovery-grid,
 .message-discovery-panel {
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 @media (max-width: 1000px) {
@@ -917,14 +929,14 @@
 
   .app-shell:has(.timeline-messages) {
     display: flex !important;
-    flex-direction: column !important;
-    width: 100vw !important;
-    max-width: 100vw !important;
+    flex-direction: column;
+    width: 100vw;
+    max-width: 100vw;
     height: 100dvh;
     max-height: 100dvh;
     overflow: hidden;
     padding: 0;
-    margin: 0 !important;
+    margin: 0;
   }
 
   .app-shell:has(.timeline-messages) .left-rail-wrapper,
@@ -934,17 +946,17 @@
 
   .timeline-messages {
     display: flex !important;
-    flex-direction: column !important;
+    flex-direction: column;
     flex: 1 1 0;
-    width: 100vw !important;
-    max-width: 100vw !important;
+    width: 100vw;
+    max-width: 100vw;
     height: calc(100dvh - 64px - env(safe-area-inset-bottom, 0px)) !important;
-    max-height: calc(100dvh - 64px - env(safe-area-inset-bottom, 0px)) !important;
+    max-height: calc(100dvh - 64px - env(safe-area-inset-bottom, 0px));
     min-height: 0 !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    overflow: hidden !important;
-    box-sizing: border-box !important;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    box-sizing: border-box;
   }
 
   .mobile-header {
@@ -953,29 +965,29 @@
   }
 
   .messages-container {
-    flex: 1 1 0 !important;
-    width: 100% !important;
+    flex: 1 1 0;
+    width: 100%;
     max-width: 100%;
     height: 100% !important;
-    max-height: 100% !important;
+    max-height: 100%;
     min-height: 0 !important;
-    overflow: hidden !important;
+    overflow: hidden;
     display: flex !important;
   }
 
   .messages-container:has(.chat-unselected) {
-    flex-direction: column !important;
+    flex-direction: column;
     height: 100% !important;
   }
 
   .messages-container:has(.chat-unselected) .conversations-sidebar {
-    width: 100% !important;
-    flex: 1 1 auto !important;
+    width: 100%;
+    flex: 1 1 auto;
     max-height: none;
     height: 100%;
-    border-right: none !important;
+    border-right: none;
     border-bottom: none;
-    overflow-y: auto !important;
+    overflow-y: auto;
   }
 
   .messages-container:has(.chat-unselected) .sidebar-header h2,
@@ -998,38 +1010,38 @@
   }
 
   .messages-container:has(.messages-feed) .chat-window {
-    flex: 1 1 0 !important;
-    min-width: 0 !important;
+    flex: 1 1 0;
+    min-width: 0;
     min-height: 0 !important;
     height: 100% !important;
-    max-height: 100% !important;
-    overflow: hidden !important;
+    max-height: 100%;
+    overflow: hidden;
     display: flex !important;
-    flex-direction: column !important;
+    flex-direction: column;
   }
 
   .messages-container:has(.messages-feed) .chat-header {
-    flex-shrink: 0 !important;
+    flex-shrink: 0;
   }
 
   .messages-container:has(.messages-feed) .messages-feed {
-    flex: 1 1 auto !important;
+    flex: 1 1 auto;
     min-height: 0 !important;
-    overflow-y: auto !important;
+    overflow-y: auto;
   }
 
   .messages-container:has(.messages-feed) .chat-footer {
-    flex-shrink: 0 !important;
-    position: relative !important;
+    flex-shrink: 0;
+    position: relative;
     bottom: 0 !important;
-    z-index: 10 !important;
-    padding: 8px 12px !important;
-    background: var(--bg-color) !important;
-    border-top: 1px solid var(--border-color) !important;
+    z-index: 10;
+    padding: 8px 12px;
+    background: var(--bg-color);
+    border-top: 1px solid var(--border-color);
   }
 
   .chat-footer {
-    flex-shrink: 0 !important;
+    flex-shrink: 0;
   }
 
 }
@@ -1071,15 +1083,15 @@
 
 .chat-input-wrapper textarea {
   flex: 1 1 auto;
-  min-width: 0 !important;
-  background: none !important;
-  border: none !important;
-  resize: none !important;
-  outline: none !important;
-  color: var(--text-primary) !important;
-  padding: 6px 4px !important;
-  font-family: inherit !important;
-  font-size: 15px !important;
+  min-width: 0;
+  background: none;
+  border: none;
+  resize: none;
+  outline: none;
+  color: var(--text-primary);
+  padding: 6px 4px;
+  font-family: inherit;
+  font-size: 15px;
   line-height: 1.35;
 }
 
@@ -1182,7 +1194,7 @@
 
 .deleted-message {
   font-style: italic;
-  color: var(--lvl-white-40) !important;
+  color: var(--lvl-white-40);
 }
 
 .message-delete-dropdown {

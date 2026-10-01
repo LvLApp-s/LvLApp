@@ -224,22 +224,15 @@
   outline: none;
   transition: 0.2s;
   cursor: pointer;
-  color-scheme: dark;
+  /* Inherited from :root, which carries the active theme's scheme. */
 }
 
-:root[data-theme="light"] .gender-select {
-  color-scheme: light;
-}
-
+/* The browser paints the dropdown's popup, so the option needs its colours
+   spelled out -- but from the tokens, which already flip with the theme. */
 .gender-select option {
-  background-color: var(--lvl-surface-raised, #18181b);
-  color: var(--text-primary, #fff);
+  background-color: var(--lvl-surface-raised);
+  color: var(--text-primary);
   padding: 8px 12px;
-}
-
-:root[data-theme="light"] .gender-select option {
-  background-color: #ffffff;
-  color: #0f1419;
 }
 
 .gender-select:focus {

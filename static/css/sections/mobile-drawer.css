@@ -1,10 +1,22 @@
+/* A note on !important in this file.
+
+   It used to carry 11 of them. Each one was removed, every page this file
+   touches was re-rendered at two widths in both themes, and the computed
+   style of every element was compared against the same dump taken before.
+   1 declarations changed something; those kept the override and are the
+   ones still here. The rest changed nothing and are gone.
+
+   So: before adding one, check whether the rule it is fighting can simply be
+   made more specific. If an override really is needed, the test above is how
+   to prove it. */
+
 /* Phone navigation: Twitter/X-style mobile slide-over drawer */
 @media (max-width: 767px) {
   .left-rail-wrapper,
   .left-rail-wrapper:has(.left-rail.menu-open),
   .left-rail-wrapper:has(.left-rail.mobile-menu-open) {
     display: contents !important;
-    width: auto !important;
+    width: auto;
   }
 
   .left-rail,
@@ -201,12 +213,12 @@
     display: flex;
     flex-direction: column;
     gap: 3px;
-    text-decoration: none !important;
+    text-decoration: none;
   }
 
   .drawer-user-meta:hover,
   .drawer-user-meta:focus {
-    text-decoration: none !important;
+    text-decoration: none;
   }
 
   .drawer-name-row {
@@ -260,7 +272,7 @@
     padding: 12px 16px;
     border-radius: var(--radius-lg);
     color: var(--text-primary);
-    text-decoration: none !important;
+    text-decoration: none;
     font-size: 16px;
     font-weight: 700;
     letter-spacing: -0.1px;
@@ -274,20 +286,20 @@
   .drawer-nav-item:hover {
     background: rgba(255, 255, 255, 0.08);
     color: var(--lvl-white);
-    text-decoration: none !important;
+    text-decoration: none;
     transform: translateX(6px);
     box-shadow: inset 3.5px 0 0 var(--lvl-cyan);
   }
 
   .drawer-nav-item:active {
     background: rgba(0, 240, 255, 0.12);
-    text-decoration: none !important;
+    text-decoration: none;
     transform: translateX(6px) scale(0.97);
   }
 
   .drawer-nav-item:focus,
   .drawer-nav-item:focus-visible {
-    text-decoration: none !important;
+    text-decoration: none;
     outline: none;
   }
 
@@ -361,7 +373,7 @@
     padding: 11px 16px;
     border-radius: var(--radius-lg);
     color: var(--lvl-danger);
-    text-decoration: none !important;
+    text-decoration: none;
     font-size: 15px;
     font-weight: 700;
     transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
@@ -373,14 +385,14 @@
   .drawer-logout-btn:hover {
     background: rgba(244, 33, 46, 0.12);
     color: var(--lvl-danger);
-    text-decoration: none !important;
+    text-decoration: none;
     transform: translateX(6px);
     box-shadow: inset 3.5px 0 0 var(--lvl-danger);
   }
 
   .drawer-logout-btn:active {
     background: rgba(244, 33, 46, 0.18);
-    text-decoration: none !important;
+    text-decoration: none;
     transform: translateX(6px) scale(0.97);
   }
 

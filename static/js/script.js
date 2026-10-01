@@ -3687,56 +3687,37 @@ document.addEventListener('DOMContentLoaded', () => {
         const text = comment.comment || '';
         const time = comment.created_at ? new Date(comment.created_at).toLocaleDateString() : '';
         
+        /* Class names only. Every declaration that used to be set here is
+           already in sections/reels.css, and setting them inline beat the
+           stylesheet: the hardcoded white and greys meant a comment posted
+           while the page was open stayed dark-theme coloured in daylight
+           mode, unreadable against the light panel behind it. */
         const item = document.createElement('div');
         item.className = 'reel-comment-item';
-        item.style.display = 'flex';
-        item.style.alignItems = 'flex-start';
-        item.style.gap = '10px';
 
         const img = document.createElement('img');
         img.className = 'avatar reel-comment-avatar';
         img.src = avatarSrc;
         img.alt = '';
-        img.style.display = 'block';
-        img.style.width = '32px';
-        img.style.height = '32px';
-        img.style.borderRadius = '50%';
-        img.style.objectFit = 'cover';
-        
+
         const body = document.createElement('div');
         body.className = 'reel-comment-body';
-        body.style.flex = '1';
-        body.style.minWidth = '0';
-        body.style.display = 'block';
-        
+
         const author = document.createElement('span');
         author.className = 'reel-comment-author';
         author.textContent = displayName;
-        author.style.fontWeight = '700';
-        author.style.fontSize = '13px';
-        author.style.color = 'white';
-        
+
         const handle = document.createElement('span');
         handle.className = 'reel-comment-handle';
-        if (username) handle.textContent = ' @' + username;
-        handle.style.fontSize = '12px';
-        handle.style.color = '#aaa';
-        
+        if (username) handle.textContent = '@' + username;
+
         const p = document.createElement('p');
         p.className = 'reel-comment-text';
         p.textContent = text;
-        p.style.fontSize = '14px';
-        p.style.color = 'white';
-        p.style.marginTop = '4px';
-        p.style.wordBreak = 'break-word';
-        
+
         const timeEl = document.createElement('time');
         timeEl.className = 'reel-comment-time';
         timeEl.textContent = time;
-        timeEl.style.fontSize = '11px';
-        timeEl.style.color = '#888';
-        timeEl.style.marginTop = '2px';
-        timeEl.style.display = 'block';
 
         body.appendChild(author);
         body.appendChild(handle);

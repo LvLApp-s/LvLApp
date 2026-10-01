@@ -21,8 +21,8 @@
   height: 16px;
   padding: 0 4px;
   border-radius: var(--radius-pill);
-  background: var(--lvl-brand, #38bdf8);
-  color: #fff;
+  background: var(--lvl-brand, var(--lvl-cyan));
+  color: var(--lvl-white);
   font-size: 10px;
   font-weight: 800;
   line-height: 1;
