@@ -368,17 +368,40 @@ document.addEventListener('DOMContentLoaded', () => {
     function initCookieConsent() {
         const banner = document.querySelector('[data-consent-banner]');
 
+        /* The bar is fixed, so the page has to be told to keep that much
+           height free underneath it -- otherwise the last thing on the page
+           sits behind the notice and cannot be scrolled into view. */
+        const reserveSpace = () => {
+            if (!banner || banner.hidden) {
+                document.documentElement.style.removeProperty('--consent-clearance');
+                return;
+            }
+            document.documentElement.style.setProperty(
+                '--consent-clearance', `${Math.ceil(banner.offsetHeight)}px`);
+        };
+
         const openBanner = () => {
             if (!banner) return;
             banner.hidden = false;
-            window.requestAnimationFrame(() => banner.classList.add('is-visible'));
+            window.requestAnimationFrame(() => {
+                banner.classList.add('is-visible');
+                reserveSpace();
+            });
         };
 
         const closeBanner = () => {
             if (!banner) return;
             banner.classList.remove('is-visible');
-            window.setTimeout(() => { banner.hidden = true; }, 260);
+            window.setTimeout(() => {
+                banner.hidden = true;
+                reserveSpace();
+            }, 260);
         };
+
+        // The sentence rewraps when the window narrows or the language
+        // changes, and a taller bar needs more clearance than it did.
+        window.addEventListener('resize', reserveSpace);
+        document.addEventListener('lvl:langchange', reserveSpace);
 
         if (banner) {
             banner.querySelectorAll('[data-consent-choice]').forEach((button) => {
@@ -1856,6 +1879,15 @@ document.addEventListener('DOMContentLoaded', () => {
             || (window.navigator.platform === 'MacIntel' && window.navigator.maxTouchPoints > 1);
 
         const showPrompt = () => {
+            // One bottom sheet at a time. The cookie notice and the install
+            // prompt both dock to the foot of the window, and with both up
+            // they stacked on top of each other -- the install card drawn
+            // over the consent buttons, so neither could be answered. The
+            // consent question comes first; this one waits for the answer.
+            if (!consentChoice()) {
+                document.addEventListener('lvl:consent', showPrompt, { once: true });
+                return;
+            }
             promptEl.hidden = false;
         };
 
@@ -2371,6 +2403,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     initVolumeControls();
+
+    /* A destructive form asks before it submits, in the reader's language.
+
+       These used to be inline onsubmit="return confirm('...')" attributes
+       with the sentence written into the markup -- which is how the clip
+       delete ended up being the one dialog in the product that spoke only
+       Turkish, whatever language the rest of the page was in. The question
+       now comes from the translation table like every other string, with the
+       markup carrying only the key and an English fallback. */
+    function initConfirmForms(root) {
+        (root || document).querySelectorAll('[data-confirm]').forEach((form) => {
+            if (form.dataset.confirmBound === '1') return;
+            form.dataset.confirmBound = '1';
+            form.addEventListener('submit', (event) => {
+                const fallback = form.dataset.confirmDefault || 'Are you sure?';
+                const question = form.dataset.confirmKey
+                    ? translateUi(form.dataset.confirmKey, fallback)
+                    : fallback;
+                if (!window.confirm(question)) {
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                }
+            });
+        });
+    }
+
+    initConfirmForms(document);
 
     document.querySelectorAll('[data-copy-url]').forEach((button) => {
         button.addEventListener('click', async () => {

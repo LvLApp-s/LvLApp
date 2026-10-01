@@ -98,7 +98,12 @@
   --lvl-warning-border: rgba(245, 197, 66, 0.55);
   --lvl-purple-soft-25: rgba(139, 92, 246, 0.25);
   --lvl-purple-solid-96: rgba(139, 92, 246, 0.96);
+  --lvl-cyan-soft-18: rgba(56, 189, 248, 0.18);
   --lvl-cyan-soft-42: rgba(56, 189, 248, 0.42);
+  --lvl-purple-strong-soft-08: rgba(168, 85, 247, 0.08);
+  --lvl-purple-strong-soft-20: rgba(168, 85, 247, 0.2);
+  --lvl-purple-strong-soft-30: rgba(168, 85, 247, 0.3);
+  --lvl-purple-strong-soft-35: rgba(168, 85, 247, 0.35);
   --lvl-purple-strong-soft-40: rgba(168, 85, 247, 0.4);
   --lvl-system-blue-soft-28: rgba(88, 184, 255, 0.28);
   --lvl-system-blue-border: rgba(67, 171, 255, 0.32);

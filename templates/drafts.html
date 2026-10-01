@@ -34,7 +34,7 @@
           </div>
         {% elif draft.type == 'reel' %}
           <div class="draft-media">
-            <div class="draft-reel-icon-thumb" title="Klip Taslağı">
+            <div class="draft-reel-icon-thumb" title="Clip draft" data-i18n-title="reel_draft_label">
               <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
             </div>
           </div>
@@ -45,10 +45,10 @@
             {% if draft.type == 'reel' %}
               <span class="draft-badge reel">
                 <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-                Klip
+                <span data-i18n="draft_badge_clip">Clip</span>
               </span>
             {% else %}
-              <span class="draft-badge post">Gönderi</span>
+              <span class="draft-badge post" data-i18n="draft_badge_post">Post</span>
             {% endif %}
           </div>
           <p class="draft-body-text">
@@ -56,7 +56,7 @@
               {{ draft.content|truncate(180) }}
             {% else %}
               {% if draft.type == 'reel' %}
-                <span class="draft-image-only">Başlıksız Klip</span>
+                <span class="draft-image-only" data-i18n="draft_clip_untitled">Untitled clip</span>
               {% else %}
                 <span class="draft-image-only" data-i18n="draft_image_post">Image post</span>
               {% endif %}

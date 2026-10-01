@@ -201,25 +201,25 @@
       <a href="{{ url_for('profile', username=profile.username, m='posts') }}" 
          class="{% if mode == 'posts' %}active{% endif %}"
          {% if mode == 'posts' %}aria-current="page"{% endif %} data-i18n="profile_posts">
-        Gönderiler
+        Posts
       </a>
       <a href="{{ url_for('profile', username=profile.username, m='replies') }}"
          class="{% if mode == 'replies' %}active{% endif %}"
          {% if mode == 'replies' %}aria-current="page"{% endif %} data-i18n="profile_replies">
-        Yanıtlar
+        Replies
       </a>
       <a href="{{ url_for('profile', username=profile.username, m='clips') }}"
          class="{% if mode == 'clips' %}active{% endif %}"
          {% if mode == 'clips' %}aria-current="page"{% endif %} data-i18n="nav_clips">
-        Klipler
+        Clips
       </a>
       <a href="{{ url_for('profile', username=profile.username, m='liked') }}"
          class="{% if mode == 'liked' %}active{% endif %}"
          {% if mode == 'liked' %}aria-current="page"{% endif %} data-i18n="profile_likes">
-        Beğeniler
+        Likes
       </a>
       {% if is_own_profile %}
-      {# Kaydedilenler yan menüde olduğu için burada gösterilmiyor #}
+      {# Saved lives in the rail, so it is not repeated here. #}
       {% endif %}
     </nav>
   </section>

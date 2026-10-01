@@ -15,10 +15,13 @@
           {{ verified_badge(h, size='sm') }}
         </strong>
         <span class="lb-handle">@{{ h.username }}</span>
-        <div style="display: flex; gap: 6px; align-items: center; margin-top: 2px;">
+        {# The XP pill only appears when there is XP to show. A level set by
+           an admin carries none, and "Lvl 39 / 0 XP" side by side read as a
+           contradiction rather than as a missing number. #}
+        <span class="lb-stats">
           <span class="lb-level-badge" style="--badge-color: {{ h.badge_color or theme_colors.muted }};">Lvl {{ h.level or 1 }}</span>
-          <span style="font-size: 0.75rem; color: var(--lvl-brand); font-weight: 700; letter-spacing: 0.5px; background: rgba(56, 189, 248, 0.1); padding: 2px 8px; border-radius: 12px; white-space: nowrap;">{{ '{:,}'.format(h.total_xp or 0) }} XP</span>
-        </div>
+          {% if h.total_xp %}<span class="lb-xp">{{ '{:,}'.format(h.total_xp) }} XP</span>{% endif %}
+        </span>
       </div>
     </a>
     {% if session.get('user_id') and session.get('user_id') != h.id %}

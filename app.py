@@ -2606,8 +2606,13 @@ def get_home_reel_preview(viewer_id, limit=HOME_REEL_PREVIEW_LIMIT):
     diversification helper so clips, trending and media behave consistently.
     """
     try:
+        # The rail prints the public counts and one viewer flag: whether this
+        # reader has liked the clip, because the panel has a like button. The
+        # other two viewer lookups -- saved, following -- have nothing on this
+        # surface to render them, so they stay off.
         home_reels_data, _ = get_reels(viewer_id, limit=REEL_CANDIDATE_POOL, page=1,
-                                       include_viewer_state=False)
+                                       include_viewer_state=False,
+                                       include_viewer_likes=True)
         if not home_reels_data:
             return get_demo_reels(limit)
 
@@ -2830,16 +2835,24 @@ def toggle_reel_bookmark_record(viewer_id, reel_id):
                 _save_local_reel_bookmarks(data)
                 return True
 
-def enrich_reels(reels, viewer_id, include_viewer_state=True):
+def enrich_reels(reels, viewer_id, include_viewer_state=True, include_viewer_likes=None):
     """Attach counts, and optionally this viewer's own relationship to each clip.
 
     The three viewer-specific lookups -- did you like it, did you save it, do
     you follow the author -- are three more round trips. A surface that only
-    prints the public counts, like the side rail, asks for them and throws
-    them away, so it can pass include_viewer_state=False. The flags are still
-    set on every clip, just to their empty values, so the shape of a clip does
-    not change with the caller.
+    prints the public counts asks for them and throws them away, so it can
+    pass include_viewer_state=False. The flags are still set on every clip,
+    just to their empty values, so the shape of a clip does not change with
+    the caller.
+
+    include_viewer_likes splits the cheapest of the three out of that bundle.
+    The side rail grew a like button, and with the bundle off it rendered
+    every clip unliked -- including ones the reader had just liked on the
+    clips page. It needs that one flag to be true, not the other two, so it
+    pays for one round trip instead of three.
     """
+    if include_viewer_likes is None:
+        include_viewer_likes = include_viewer_state
     if not reels:
         return []
     apply_forced_user_levels(reels)
@@ -2861,7 +2874,7 @@ def enrich_reels(reels, viewer_id, include_viewer_state=True):
         except Exception:
             like_counts = {}
 
-        if include_viewer_state:
+        if include_viewer_likes and viewer_id:
             try:
                 viewer_likes_res = supabase.table('reel_likes').select('reel_id').eq('user_id', viewer_id).in_('reel_id', reel_ids).execute()
                 viewer_liked_ids = {row['reel_id'] for row in viewer_likes_res.data or []}
@@ -2911,7 +2924,8 @@ def enrich_reels(reels, viewer_id, include_viewer_state=True):
         reel['is_demo'] = False
     return reels
 
-def get_reels(viewer_id, limit=8, page=1, tab='for_you', include_viewer_state=True):
+def get_reels(viewer_id, limit=8, page=1, tab='for_you', include_viewer_state=True,
+              include_viewer_likes=None):
     offset = (page - 1) * limit
     select_query = '*, user:users!reels_user_id_fkey(*), community:communities!reels_community_id_fkey(*)'
     query = supabase.table('reels').select(select_query).eq('status', 'active').is_('deleted_at', 'null')
@@ -2932,7 +2946,9 @@ def get_reels(viewer_id, limit=8, page=1, tab='for_you', include_viewer_state=Tr
     res = query.range(offset, offset + limit).execute()
     rows = res.data if res and res.data else []
     visible = visible_reel_filter(rows, viewer_id)
-    return enrich_reels(visible[:limit], viewer_id, include_viewer_state), len(visible) > limit
+    return (enrich_reels(visible[:limit], viewer_id, include_viewer_state,
+                        include_viewer_likes=include_viewer_likes),
+            len(visible) > limit)
 
 def get_reel_by_id(reel_id, viewer_id=None):
     select_query = '*, user:users!reels_user_id_fkey(*), community:communities!reels_community_id_fkey(*)'
@@ -3330,12 +3346,49 @@ def actor_summary(names, count):
     return f"{count} people"
 
 def stack_notifications(notifications):
+    """Collapse repeated events on the same thing into one line.
+
+    Fifty likes on one post are one fact, not fifty. They are grouped by
+    (type, subject) -- the post or the clip the event is about -- and the
+    group reads "Ada and Sam" or "Ada, Sam, and 48 others". A group counts as
+    unread until every event in it has been read, so a stack cannot hide a new
+    event behind an old one. Types outside STACKABLE_NOTIFICATION_TYPES (a
+    follow, a friend request, a message) stay one line each, because each is
+    about a different person and grouping them would lose the point.
+
+    Order is preserved: a group sits where its first event sat.
+    """
+    stacked = []
+    stack_map = {}
     for notification in notifications:
         name = notification.get('actor_name') or 'Someone'
         notification['stack_count'] = 1
         notification['stack_actor_names'] = [name]
-        notification['actor_summary'] = name
-    return notifications
+        notification['actor_summary'] = actor_summary([name], 1)
+
+        notif_type = notification.get('type')
+        if notif_type not in STACKABLE_NOTIFICATION_TYPES:
+            stacked.append(notification)
+            continue
+
+        # A clip event names a reel, a post event names a post. Without the
+        # subject in the key, every like anywhere would collapse into one row.
+        key = (notif_type,
+               notification.get('post_id') or notification.get('reel_id') or 'global')
+        existing = stack_map.get(key)
+        if existing is None:
+            stack_map[key] = notification
+            stacked.append(notification)
+            continue
+
+        existing['stack_count'] += 1
+        existing['is_read'] = bool(existing.get('is_read') and notification.get('is_read'))
+        if name not in existing['stack_actor_names']:
+            existing['stack_actor_names'].append(name)
+        existing['actor_summary'] = actor_summary(existing['stack_actor_names'],
+                                                  existing['stack_count'])
+
+    return stacked
 
 @app.route('/')
 def index():
@@ -4233,7 +4286,10 @@ def oauth_onboarding():
 
 @app.route('/under-13')
 def under_13():
-    return render_template('under_13.html')
+    # The page states the age someone can come back at, and that is MIN_AGE,
+    # not the COPPA threshold that routes them here. Passing the constant
+    # keeps the two from drifting apart again.
+    return render_template('under_13.html', min_age=MIN_AGE)
 
 
 @app.route('/auth', methods=['GET', 'POST'])

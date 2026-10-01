@@ -237,12 +237,30 @@ class ReelViewerStateTests(unittest.TestCase):
         self.assertIs(inspect.signature(zapp.get_reels)
                       .parameters['include_viewer_state'].default, True)
 
-    def test_the_rail_template_reads_no_viewer_state(self):
-        """If the rail ever starts showing a like or follow state, this opt-out
-        becomes wrong -- fail here rather than render it blank."""
+    def test_the_rail_template_reads_only_the_like_flag(self):
+        """The rail gained a like button, so viewer_liked is now rendered
+        there and has to be fetched. The other three still have nothing on
+        this surface to show them -- if one appears, the opt-out below it
+        becomes wrong and the panel renders it blank."""
         from pathlib import Path
         panel = (Path(zapp.__file__).parent / 'templates' / '_home_reel_panel.html')
         markup = panel.read_text(encoding='utf-8')
-        for key in ('viewer_liked', 'viewer_bookmarked', 'author_followed', 'is_owner'):
+        self.assertIn('viewer_liked', markup)
+        for key in ('viewer_bookmarked', 'author_followed', 'is_owner'):
             with self.subTest(key=key):
                 self.assertNotIn(key, markup)
+
+    def test_the_like_flag_can_be_asked_for_on_its_own(self):
+        """One round trip, not the bundle of three."""
+        self.enrich(include_viewer_state=False, include_viewer_likes=True)
+        self.assertIn('reel_likes', self.tables)
+        self.assertNotIn('reel_bookmarks', self.tables)
+        self.assertNotIn('follows', self.tables)
+
+    def test_the_rail_asks_for_the_like_flag(self):
+        """get_home_reel_preview is what renders that button, so the opt-in
+        has to survive down the call chain."""
+        import inspect
+        source = inspect.getsource(zapp.get_home_reel_preview)
+        self.assertIn('include_viewer_likes=True', source)
+        self.assertIn('include_viewer_state=False', source)

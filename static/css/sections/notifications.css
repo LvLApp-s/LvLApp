@@ -237,3 +237,33 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+/* A notification that arrived while the page was open.
+
+   The live feed adds the row from script, so without this it simply appeared
+   in place and the reader had no way to tell the new one from the forty
+   already there. It fades down from a cyan tint instead -- once, 0.4s, and
+   then it is an ordinary row. */
+.notification-item.new-notification {
+  animation: notification-arrive 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes notification-arrive {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+    background: var(--lvl-cyan-soft-18);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Someone who asked not to see motion gets the tint and no movement. */
+@media (prefers-reduced-motion: reduce) {
+  .notification-item.new-notification {
+    animation: none;
+    background: var(--lvl-cyan-soft-18);
+  }
+}

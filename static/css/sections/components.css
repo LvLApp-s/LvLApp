@@ -90,22 +90,38 @@
 
 /* --- Cookie consent ------------------------------------------------------ */
 
+/* A bar across the foot of the window, not a card floating over the page.
+
+   It used to be a 560px card pinned to the bottom left, which is exactly
+   where the content column is: on /careers it covered the "Full Name" field
+   of the application form, and because it is fixed, scrolling moved the form
+   but not the card -- the field could not be reached at all until the notice
+   was dismissed. A full-width bar has nothing beside it to cover, and the
+   clearance below reserves its height so the page can always scroll clear
+   of it. */
 .consent-banner {
   position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  /* Sits above the mobile bottom navigation, never on top of it. */
-  bottom: calc(var(--mobile-nav-clearance) + var(--space-5));
+  left: 0;
+  right: 0;
+  /* Above the mobile bottom navigation, never on top of it. */
+  bottom: var(--mobile-nav-clearance);
   z-index: var(--z-modal);
-  width: min(100% - 32px, 520px);
   opacity: 0;
+  transform: translateY(12px);
   transition:
     opacity var(--duration-slow) var(--ease-standard),
     transform var(--duration-slow) var(--ease-standard);
+  /* The surface belongs to the bar, so it reaches both edges of the window;
+     the card inside only sets where the words sit. With the background on
+     the card instead, the notice read as another floating panel. */
+  border-top: 1px solid var(--border-color);
+  background: var(--lvl-surface-overlay);
+  box-shadow: var(--shadow-lg);
 }
 
 .consent-banner.is-visible {
   opacity: 1;
+  transform: translateY(0);
 }
 
 .consent-card {
@@ -113,10 +129,21 @@
   flex-direction: column;
   gap: var(--space-6);
   padding: var(--space-7);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-xl);
-  background: var(--lvl-surface-overlay);
-  box-shadow: var(--shadow-lg);
+  max-width: 1100px;
+  margin-inline: auto;
+}
+
+/* While the notice is up, the page keeps its height free underneath it.
+
+   This is a block in normal flow at the end of the body rather than padding
+   on a shell, because which element carries the page's bottom padding is not
+   the same on every page or at every width -- the feed hands it to .timeline
+   on phones, for instance. A spacer at the end of the document extends the
+   scroll height wherever it is used. The script measures the bar and writes
+   the value; the fallback is 0 so nothing shifts once a choice is made. */
+.consent-spacer {
+  height: var(--consent-clearance, 0px);
+  flex: 0 0 auto;
 }
 
 .consent-title {
@@ -157,36 +184,20 @@
 }
 
 @media (min-width: 768px) {
-  .consent-banner {
-    left: var(--space-10);
-    right: auto;
-    bottom: var(--space-10);
-    transform: translateY(12px);
-    width: min(100% - 48px, 560px);
-  }
-
-  .consent-banner.is-visible {
-    transform: translateY(0);
-  }
-
-  [dir="rtl"] .consent-banner {
-    left: auto;
-    right: var(--space-10);
-  }
-
   .consent-card {
     flex-direction: row;
     align-items: center;
   }
 
+  /* Side by side: the bar is wide, and stacking two short labels in a column
+     made the bar taller than the sentence beside it needed. */
   .consent-actions {
     flex: 0 0 auto;
-    flex-direction: column;
+    flex-direction: row;
   }
 
   .consent-button {
     flex: 0 0 auto;
-    width: 100%;
   }
 }
 
@@ -251,6 +262,10 @@
 .right-rail {
   display: flex;
   flex-direction: column;
+  /* Without this the panels butted into each other: the leaderboard's rounded
+     bottom edge and the "LEVELS" kicker of the panel under it shared a pixel
+     row, so the two read as one broken box. */
+  gap: var(--space-5);
 }
 
 /* Sized by their content, so the clips panel below them takes the rest.

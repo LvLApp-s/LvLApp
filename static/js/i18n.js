@@ -771,13 +771,31 @@ function getCurrentLang() {
   const b = (navigator.language||'en').split('-')[0].toLowerCase();
   return SUPPORTED_LANGS.includes(b) ? b : 'en';
 }
+function interpolate(text, vars) {
+  if (!vars) return text;
+  let values;
+  try { values = JSON.parse(vars); } catch (_) { return text; }
+  if (!values || typeof values !== 'object') return text;
+  return text.replace(/\{(\w+)\}/g, function (whole, name) {
+    return Object.prototype.hasOwnProperty.call(values, name) ? values[name] : whole;
+  });
+}
+
 function applyLanguage(lang, save) {
   if (save===undefined) save=true;
   if (!SUPPORTED_LANGS.includes(lang)) lang='en';
   const t=TRANSLATIONS[lang], html=document.documentElement;
   html.setAttribute('lang',lang);
   html.setAttribute('dir', RTL_LANGS.includes(lang)?'rtl':'ltr');
-  document.querySelectorAll('[data-i18n]').forEach(function(el){const k=el.getAttribute('data-i18n');if(t[k]!==undefined)el.textContent=t[k];});
+  // A translated sentence is one string, not three. Splitting it around a
+  // number means the parts have to be reassembled in English word order,
+  // which Turkish and Arabic do not share -- so a key may carry {name}
+  // placeholders and the element supplies the values in data-i18n-vars.
+  document.querySelectorAll('[data-i18n]').forEach(function(el){
+    const k=el.getAttribute('data-i18n');
+    if(t[k]===undefined)return;
+    el.textContent=interpolate(t[k], el.getAttribute('data-i18n-vars'));
+  });
   document.querySelectorAll('[data-i18n-placeholder]').forEach(function(el){const k=el.getAttribute('data-i18n-placeholder');if(t[k]!==undefined)el.setAttribute('placeholder',t[k]);});
   document.querySelectorAll('[data-i18n-aria]').forEach(function(el){const k=el.getAttribute('data-i18n-aria');if(t[k]!==undefined)el.setAttribute('aria-label',t[k]);});
   document.querySelectorAll('[data-i18n-title]').forEach(function(el){const k=el.getAttribute('data-i18n-title');if(t[k]!==undefined)el.setAttribute('title',t[k]);});
@@ -864,6 +882,27 @@ Object.assign(TRANSLATIONS.en, {
   draft_delete: "Delete draft",
   drafts_empty_title: "No drafts yet",
   drafts_empty_desc: "Use “Save draft” in the home composer.",
+  /* The age gate. One key per sentence; {age} is filled from MIN_AGE. */
+  /* The message context menu, and the questions destructive forms ask. */
+  msg_ctx_copy: "Copy message",
+  msg_ctx_delete_me: "Delete for me",
+  msg_ctx_delete_all: "Delete for everyone",
+  reel_delete_confirm: "Delete this clip?",
+  draft_badge_clip: "Clip",
+  draft_badge_post: "Post",
+  draft_clip_untitled: "Untitled clip",
+  age_gate_title: "Age requirement — LvL",
+  age_gate_heading: "Age requirement",
+  age_gate_lede: "You need to be a certain age to join LvL.",
+  age_gate_rule: "LvL is built for people aged {age} and over, and going by the birthday you entered, you cannot join yet.",
+  age_gate_return: "You can sign up again when you turn {age}. Sorry to keep you waiting \u2014 see you then! \ud83d\udc4b",
+  age_gate_back: "Go back",
+  /* Drafts: the status line and the restore toasts the composer shows. */
+  draft_restored: "Draft restored",
+  draft_saved_status: "Draft saved",
+  reel_draft_label: "Clip draft",
+  reel_draft_restored: "Clip draft restored",
+  reel_like: "Like clip",
   draft_save: "Save draft",
   draft_discard: "Discard draft",
   edit_post_title: "Edit post",
@@ -1179,6 +1218,25 @@ Object.assign(TRANSLATIONS.tr, {
   draft_delete: "Taslağı Sil",
   drafts_empty_title: "Henüz taslak yok",
   drafts_empty_desc: "Ana sayfadaki oluşturucuda “Taslak Olarak Kaydet” seçeneğini kullanın.",
+  msg_ctx_copy: "Mesaj\u0131 kopyala",
+  msg_ctx_delete_me: "Benden sil",
+  msg_ctx_delete_all: "Herkesten sil",
+  reel_delete_confirm: "Bu klibi silmek istedi\u011finize emin misiniz?",
+  draft_badge_clip: "Klip",
+  draft_badge_post: "G\u00f6nderi",
+  draft_clip_untitled: "Ba\u015fl\u0131ks\u0131z klip",
+  age_gate_title: "Ya\u015f s\u0131n\u0131r\u0131 \u2014 LvL",
+  age_gate_heading: "Ya\u015f s\u0131n\u0131r\u0131",
+  age_gate_lede: "LvL'e kat\u0131lmak i\u00e7in belirli bir ya\u015fta olman gerekiyor.",
+  age_gate_rule: "LvL, {age} ya\u015f ve \u00fczeri kullan\u0131c\u0131lar i\u00e7in tasarland\u0131; girdi\u011fin do\u011fum tarihine g\u00f6re hen\u00fcz kat\u0131lamazs\u0131n.",
+  age_gate_return: "{age} ya\u015f\u0131na geldi\u011finde tekrar kaydolabilirsin. Beklemek zorunda oldu\u011fun i\u00e7in \u00fczg\u00fcn\u00fcz \u2014 o zamana kadar g\u00f6r\u00fc\u015f\u00fcr\u00fcz! \ud83d\udc4b",
+  age_gate_back: "Geri d\u00f6n",
+  composer_add_video: "Klip ekle",
+  draft_restored: "Taslak geri y\u00fcklendi",
+  draft_saved_status: "Taslak kaydedildi",
+  reel_draft_label: "Klip tasla\u011f\u0131",
+  reel_draft_restored: "Klip tasla\u011f\u0131 geri y\u00fcklendi",
+  reel_like: "Klibi be\u011fen",
   draft_save: "Taslak Olarak Kaydet",
   draft_discard: "Taslağı Bırak",
   edit_post_title: "Gönderiyi düzenle",
@@ -1967,6 +2025,25 @@ Object.assign(TRANSLATIONS.ar, {
   profile_view_picture_aria: "عرض صورة الملف الشخصي",
   reel_actions_aria: "إجراءات المقطع",
   reel_allow_comments: "السماح بالتعليقات",
+  msg_ctx_copy: "\u0646\u0633\u062e \u0627\u0644\u0631\u0633\u0627\u0644\u0629",
+  msg_ctx_delete_me: "\u062d\u0630\u0641 \u0645\u0646 \u0639\u0646\u062f\u064a",
+  msg_ctx_delete_all: "\u062d\u0630\u0641 \u0644\u062f\u0649 \u0627\u0644\u062c\u0645\u064a\u0639",
+  reel_delete_confirm: "\u0647\u0644 \u062a\u0631\u064a\u062f \u062d\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u0645\u0642\u0637\u0639\u061f",
+  draft_badge_clip: "\u0645\u0642\u0637\u0639",
+  draft_badge_post: "\u0645\u0646\u0634\u0648\u0631",
+  draft_clip_untitled: "\u0645\u0642\u0637\u0639 \u0628\u0644\u0627 \u0639\u0646\u0648\u0627\u0646",
+  age_gate_title: "\u0634\u0631\u0637 \u0627\u0644\u0639\u0645\u0631 \u2014 LvL",
+  age_gate_heading: "\u0634\u0631\u0637 \u0627\u0644\u0639\u0645\u0631",
+  age_gate_lede: "\u064a\u0644\u0632\u0645 \u0623\u0646 \u062a\u0643\u0648\u0646 \u0641\u064a \u0633\u0646 \u0645\u0639\u064a\u0646\u0629 \u0644\u0644\u0627\u0646\u0636\u0645\u0627\u0645 \u0625\u0644\u0649 LvL.",
+  age_gate_rule: "\u0644\u0642\u062f \u0635\u064f\u0645\u0651\u0645 LvL \u0644\u0645\u0646 \u0623\u0639\u0645\u0627\u0631\u0647\u0645 {age} \u0633\u0646\u0629 \u0641\u0623\u0643\u062b\u0631\u060c \u0648\u0628\u062d\u0633\u0628 \u062a\u0627\u0631\u064a\u062e \u0627\u0644\u0645\u064a\u0644\u0627\u062f \u0627\u0644\u0630\u064a \u0623\u062f\u062e\u0644\u062a\u0647 \u0644\u0627 \u064a\u0645\u0643\u0646\u0643 \u0627\u0644\u0627\u0646\u0636\u0645\u0627\u0645 \u0628\u0639\u062f.",
+  age_gate_return: "\u064a\u0645\u0643\u0646\u0643 \u0627\u0644\u062a\u0633\u062c\u064a\u0644 \u0645\u062c\u062f\u062f\u064b\u0627 \u0639\u0646\u062f \u0628\u0644\u0648\u063a\u0643 {age}. \u0646\u0623\u0633\u0641 \u0644\u0627\u0646\u062a\u0638\u0627\u0631\u0643 \u2014 \u0625\u0644\u0649 \u0627\u0644\u0644\u0642\u0627\u0621! \ud83d\udc4b",
+  age_gate_back: "\u0627\u0644\u0639\u0648\u062f\u0629",
+  composer_add_video: "\u0625\u0636\u0627\u0641\u0629 \u0645\u0642\u0637\u0639",
+  draft_restored: "\u062a\u0645\u0651 \u0627\u0633\u062a\u0639\u0627\u062f\u0629 \u0627\u0644\u0645\u0633\u0648\u062f\u0629",
+  draft_saved_status: "\u062a\u0645\u0651 \u062d\u0641\u0638 \u0627\u0644\u0645\u0633\u0648\u062f\u0629",
+  reel_draft_label: "\u0645\u0633\u0648\u062f\u0629 \u0645\u0642\u0637\u0639",
+  reel_draft_restored: "\u062a\u0645\u0651 \u0627\u0633\u062a\u0639\u0627\u062f\u0629 \u0645\u0633\u0648\u062f\u0629 \u0627\u0644\u0645\u0642\u0637\u0639",
+  reel_like: "\u0627\u0644\u0625\u0639\u062c\u0627\u0628 \u0628\u0627\u0644\u0645\u0642\u0637\u0639",
   reel_allow_downloads: "السماح بالتنزيل",
   reel_autoplay_next: "تشغيل التالي تلقائيًا",
   reel_caption: "الوصف",
