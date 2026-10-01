@@ -66,11 +66,24 @@ class RequestCacheTests(unittest.TestCase):
         self.assertEqual(everyone, {9})
         self.assertEqual(narrowed, set(), "a candidate list must still narrow the result")
 
-    def test_mutes_and_blocks_are_cached_separately(self):
+    def test_mutes_and_blocks_share_one_lookup(self):
+        """Blocks are a subset of blocks-and-mutes, so asking both ways is one
+        round trip, not two. include_mutes used to be part of the cache key,
+        which made a page that rendered a list each way pay twice for the same
+        rows."""
         with zapp.app.test_request_context('/'), patch.object(zapp, 'supabase', self.fake):
             zapp.blocked_user_ids_for_viewer(1, include_mutes=True)
             zapp.blocked_user_ids_for_viewer(1, include_mutes=False)
-        self.assertEqual(self.counter['n'], 2, "the two queries differ, so both must run")
+            zapp.blocked_user_ids_for_viewer(1, include_mutes=True)
+        self.assertEqual(self.counter['n'], 1)
+
+    def test_sharing_the_lookup_did_not_change_who_is_hidden(self):
+        """The saving is only legitimate if the answers are identical."""
+        with zapp.app.test_request_context('/'), patch.object(zapp, 'supabase', self.fake):
+            with_mutes = zapp.blocked_user_ids_for_viewer(1, include_mutes=True)
+            blocks_only = zapp.blocked_user_ids_for_viewer(1, include_mutes=False)
+        self.assertTrue(blocks_only.issubset(with_mutes),
+                        "hiding fewer things must never hide something more")
 
     def test_each_request_starts_from_a_cold_cache(self):
         with zapp.app.test_request_context('/'), patch.object(zapp, 'supabase', self.fake):

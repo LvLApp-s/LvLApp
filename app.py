@@ -1703,17 +1703,24 @@ def safety_action_rows(viewer_id, include_mutes=True):
 
     The rows do not depend on which candidates the caller is filtering, so one
     request asks for them once however many lists it renders.
+
+    Blocks are a subset of blocks-and-mutes, and include_mutes used to be part
+    of the cache key, so a page that rendered one list each way paid two round
+    trips for one answer. The superset is fetched once and the blocks-only
+    caller filters it here.
     """
     def fetch():
-        query = supabase.table('user_safety_actions').select('actor_id,target_user_id,action_type').or_(f"actor_id.eq.{viewer_id},target_user_id.eq.{viewer_id}")
-        if include_mutes:
-            query = query.in_('action_type', ['block', 'mute'])
-        else:
-            query = query.eq('action_type', 'block')
-        res = query.execute()
+        res = (supabase.table('user_safety_actions')
+               .select('actor_id,target_user_id,action_type')
+               .or_(f"actor_id.eq.{viewer_id},target_user_id.eq.{viewer_id}")
+               .in_('action_type', ['block', 'mute'])
+               .execute())
         return list(res.data or [])
 
-    return request_cached(('safety_actions', viewer_id, bool(include_mutes)), fetch)
+    rows = request_cached(('safety_actions', viewer_id), fetch)
+    if include_mutes:
+        return rows
+    return [row for row in rows if row.get('action_type') == 'block']
 
 
 def blocked_user_ids_for_viewer(viewer_id, candidate_ids=None, include_mutes=True):
