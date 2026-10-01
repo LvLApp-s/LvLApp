@@ -1495,16 +1495,34 @@ def remove_stored_attachment_file(message):
         os.remove(file_path)
 
 def ensure_media_bucket(bucket_name, file_size_limit, allowed_mime_types, public=True):
+    """Make sure the bucket is there, without inventing a failure if it is.
+
+    This used to read "look it up, and if that throws for any reason, create
+    it" -- so a lookup that failed on a blip, a permission or a rate limit
+    went straight to a create that failed with "bucket already exists", and
+    that error was the one the caller saw. An upload would then be refused
+    because of a bucket that was sitting there the whole time.
+    """
     if not supabase:
         raise RuntimeError("Supabase is not configured.")
     try:
         supabase.storage.get_bucket(bucket_name)
-    except Exception:
+        return
+    except Exception as lookup_error:
+        app.logger.info("Storage bucket %s could not be read back: %s", bucket_name, lookup_error)
+
+    try:
         supabase.storage.create_bucket(bucket_name, options={
             "public": public,
             "file_size_limit": file_size_limit,
             "allowed_mime_types": allowed_mime_types
         })
+    except Exception as create_error:
+        message = str(create_error).lower()
+        if 'already exist' in message or 'duplicate' in message:
+            # It exists; the lookup above is what failed. Nothing to do.
+            return
+        raise
 
 def ensure_attachment_bucket():
     ensure_media_bucket(
@@ -1521,6 +1539,30 @@ def ensure_storage_bucket(bucket_name):
         "image/gif",
         "image/webp"
     ])
+
+def media_extension(filename, allowed):
+    """The file's extension, from a name that may not survive sanitising.
+
+    secure_filename() drops every character it does not trust. A name made
+    only of such characters -- "фото.jpg", "写真.png", a photo saved under an
+    emoji -- comes back as just "jpg", with no dot left to split on, and
+    reading the extension off that raised IndexError. The callers only catch
+    ValueError and RuntimeError, so it escaped as a 500 and took the post
+    with it. That is why some photos uploaded and some did not with nothing
+    obviously different about them.
+
+    The sanitised name is still preferred. The original is consulted for the
+    extension alone, and only when that extension is one we already allow --
+    it never reaches the filesystem or the storage path, which are built from
+    a generated name.
+    """
+    for candidate in (secure_filename(filename or ''), filename or ''):
+        if candidate and '.' in candidate:
+            extension = candidate.rsplit('.', 1)[1].lower()
+            if extension in allowed:
+                return extension
+    raise ValueError("Files must be images (JPG, PNG, GIF, WebP) or videos (MP4, WebM, MOV).")
+
 
 def safe_upload_folder(folder):
     parts = []
@@ -1571,8 +1613,8 @@ def upload_image_to_storage(file_storage, folder, max_bytes=MAX_IMAGE_BYTES):
         max_megabytes = max(1, actual_max_bytes // (1024 * 1024))
         raise ValueError(f"Files must be {max_megabytes} MB or smaller.")
 
-    filename = secure_filename(file_storage.filename)
-    extension = filename.rsplit('.', 1)[1].lower()
+    extension = media_extension(
+        file_storage.filename, ALLOWED_IMAGE_EXTENSIONS | ALLOWED_VIDEO_EXTENSIONS)
     storage_path = f"{safe_upload_folder(folder)}/{uuid.uuid4().hex}.{extension}"
     content_type = IMAGE_CONTENT_TYPES.get(extension, file_storage.mimetype or "application/octet-stream")
 
@@ -3211,6 +3253,45 @@ def get_setup_health():
             checks.append(setup_health_check("Private attachment bucket", False, f"Create or allow the private {SUPABASE_ATTACHMENT_BUCKET} Supabase storage bucket."))
     else:
         checks.append(setup_health_check("Private attachment bucket", False, "Supabase is not configured."))
+
+    # Which key the storage calls are made with. The attachment bucket is
+    # private: signing an upload for it, and reading an object back out of it,
+    # need the service role. With only the anon key the bucket check above can
+    # still pass while every photo sent in a message fails.
+    service_role_configured = env_value_present("SUPABASE_SECRET")
+    checks.append(setup_health_check(
+        "Supabase service role key",
+        service_role_configured,
+        "SUPABASE_SECRET is configured, so private storage is reachable."
+        if service_role_configured else
+        "Only the anon key is set. Set SUPABASE_SECRET, or photos and videos "
+        "sent in messages will fail even though the bucket exists."
+    ))
+
+    # The step that actually fails when the above is wrong. Signing creates no
+    # object, so this writes nothing -- it only proves the app is allowed to
+    # hand the browser an upload URL for the private bucket.
+    if supabase:
+        try:
+            probe_path = attachment_storage_path(f"healthcheck_{uuid.uuid4().hex}.png")
+            signed = supabase.storage.from_(SUPABASE_ATTACHMENT_BUCKET).create_signed_upload_url(probe_path)
+            if signed.get('signedUrl') or signed.get('signed_url'):
+                checks.append(setup_health_check(
+                    "Message attachment upload", True,
+                    "The app can sign an upload for the private bucket, so photos "
+                    "and videos in messages go straight to Supabase."))
+            else:
+                checks.append(setup_health_check(
+                    "Message attachment upload", False,
+                    "Supabase returned no upload URL. Photos in messages will fall "
+                    "back to uploading through the server, which fails above ~4 MB."))
+        except Exception as exc:
+            checks.append(setup_health_check(
+                "Message attachment upload", False,
+                f"Could not sign an upload for {SUPABASE_ATTACHMENT_BUCKET}: "
+                f"{handle_db_error(exc, 'check the bucket and SUPABASE_SECRET')}"))
+    else:
+        checks.append(setup_health_check("Message attachment upload", False, "Supabase is not configured."))
 
     for relative_path, label in [
         ('static/manifest.json', 'PWA manifest'),
