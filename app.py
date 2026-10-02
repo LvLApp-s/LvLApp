@@ -496,6 +496,26 @@ EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 def is_valid_email(value):
     return bool(EMAIL_PATTERN.match((value or '').strip()))
 
+def normalise_web_link(value, max_length=500):
+    """A link someone typed, or None if it is not one we would open.
+
+    Only http and https: a javascript: or data: URL in a field an admin later
+    clicks is the whole point of checking. A bare host is accepted and gets
+    https:// put in front, because people type "linkedin.com/in/me" far more
+    often than they type the scheme.
+    """
+    value = str(value or '').strip()
+    if not value or len(value) > max_length:
+        return None
+    if '://' not in value:
+        value = 'https://' + value
+    parsed = urlparse(value)
+    if parsed.scheme not in {'http', 'https'}:
+        return None
+    if not parsed.netloc or '.' not in parsed.netloc:
+        return None
+    return value
+
 def mail_settings():
     username = os.getenv("MAIL_USERNAME") or os.getenv("SMTP_USERNAME") or os.getenv("SMTP_FROM")
     password = os.getenv("MAIL_PASSWORD") or os.getenv("SMTP_PASSWORD")
@@ -6274,51 +6294,58 @@ def careers():
         email = request.form.get('email', '').strip()
         position_title = request.form.get('position', '').strip()
         message = request.form.get('message', '').strip()
-        cv_file = request.files.get('cv')
+        portfolio_raw = request.form.get('portfolio_url', '').strip()
 
         if not name or not email or not position_title or not message:
             flash("All fields are required.", "error")
-            return redirect(url_for('careers'))
-        if not cv_file or not cv_file.filename:
-            flash("A CV / resume is required to submit your application.", "error")
             return redirect(url_for('careers'))
         if not is_valid_email(email):
             flash("Please enter a valid email address.", "error")
             return redirect(url_for('careers'))
 
-        allowed_ext = {'.pdf', '.doc', '.docx'}
-        ext = os.path.splitext(cv_file.filename.lower())[1]
-        if ext not in allowed_ext:
-            flash("CV must be a PDF, DOC, or DOCX file.", "error")
+        # This used to take a CV file and write it to static/uploads/cvs/.
+        # The serverless filesystem is read-only, so the save raised -- and it
+        # ran before the insert with nothing catching it, so the applicant got
+        # a 500 and the application never reached the table at all. A link is
+        # something the candidate already has, and nothing is written to disk,
+        # so the application always lands.
+        portfolio_url = normalise_web_link(portfolio_raw)
+        if not portfolio_url:
+            flash("Add a link to your LinkedIn, GitHub or portfolio so we can "
+                  "see your work.", "error")
             return redirect(url_for('careers'))
 
-        safe_name = f"cv_{uuid.uuid4().hex}{ext}"
-        upload_dir = os.path.join(app.root_path, 'static', 'uploads', 'cvs')
-        os.makedirs(upload_dir, exist_ok=True)
-        cv_file.save(os.path.join(upload_dir, safe_name))
+        if not supabase:
+            flash("Applications are unavailable right now. Try again shortly.", "error")
+            return redirect(url_for('careers'))
 
         position_id = None
-        if supabase:
-            try:
-                res = supabase.table('job_positions').select('id').eq('title', position_title).limit(1).execute()
-                if res and getattr(res, 'data', None):
-                    position_id = res.data[0]['id']
-            except Exception:
-                position_id = None
+        try:
+            res = supabase.table('job_positions').select('id').eq('title', position_title).limit(1).execute()
+            if res and getattr(res, 'data', None):
+                position_id = res.data[0]['id']
+        except Exception:
+            # An open application that names no listed role is still an
+            # application; it keeps the title the candidate typed.
+            position_id = None
 
-            try:
-                supabase.table('job_applications').insert({
-                    'position_id': position_id,
-                    'position_title': position_title,
-                    'name': name,
-                    'email': email,
-                    'message': message,
-                    'cv_url': safe_name,
-                }).execute()
-            except Exception as exc:
-                app.logger.error(f"Failed to save job application to DB: {exc}")
+        try:
+            supabase.table('job_applications').insert({
+                'position_id': position_id,
+                'position_title': position_title,
+                'name': name,
+                'email': email,
+                'message': message,
+                'portfolio_url': portfolio_url,
+            }).execute()
+        except Exception as exc:
+            # Saying "submitted successfully" after the insert failed sent the
+            # candidate away believing they had applied.
+            app.logger.error(f"Failed to save job application: {exc}")
+            flash("Your application could not be submitted. Try again shortly.", "error")
+            return redirect(url_for('careers'))
 
-        app.logger.info(f"[CAREERS] from={email} name={name} position={position_title} cv={safe_name}")
+        app.logger.info("[CAREERS] from=%s name=%s position=%s", email, name, position_title)
         flash('Application submitted successfully!', 'success')
         return redirect(url_for('careers'))
 

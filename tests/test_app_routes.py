@@ -5324,19 +5324,9 @@ class AppRouteTests(unittest.TestCase):
             self.assertTrue(res.headers['Location'].endswith("/careers"))
             self.assertEqual(applications_table.inserted, [])
 
-            res = self.client.post("/careers", data={
-                "csrf_token": self.csrf(),
-                "name": "Sina",
-                "email": "sina@example.com",
-                "position": "Backend Engineer",
-                "message": "I can help with backend systems.",
-                "cv": (io.BytesIO(b"bad executable"), "resume.exe")
-            })
-            self.assertEqual(res.status_code, 302)
-            self.assertTrue(res.headers['Location'].endswith("/careers"))
-            self.assertEqual(applications_table.inserted, [])
-
-            # A CV is required, so a submission without one is rejected.
+            # The CV upload is gone -- it wrote to a read-only filesystem and
+            # took the whole application down with it. A link stands in for
+            # it, and a submission without one is rejected.
             res = self.client.post("/careers", data={
                 "csrf_token": self.csrf(),
                 "name": "Sina",
@@ -5345,6 +5335,19 @@ class AppRouteTests(unittest.TestCase):
                 "message": "I can help with backend systems."
             })
             self.assertEqual(res.status_code, 302)
+            self.assertTrue(res.headers['Location'].endswith("/careers"))
+            self.assertEqual(applications_table.inserted, [])
+
+            # And one that is not a web address is rejected too.
+            res = self.client.post("/careers", data={
+                "csrf_token": self.csrf(),
+                "name": "Sina",
+                "email": "sina@example.com",
+                "position": "Backend Engineer",
+                "message": "I can help with backend systems.",
+                "portfolio_url": "javascript:alert(1)"
+            })
+            self.assertEqual(res.status_code, 302)
             self.assertEqual(applications_table.inserted, [])
 
             res = self.client.post("/careers", data={
@@ -5353,7 +5356,7 @@ class AppRouteTests(unittest.TestCase):
                 "email": "sina@example.com",
                 "position": "Backend Engineer",
                 "message": "I can help with backend systems.",
-                "cv": (io.BytesIO(b"%PDF-1.4 resume"), "resume.pdf")
+                "portfolio_url": "github.com/sina"
             })
 
         self.assertEqual(res.status_code, 302)
@@ -5362,7 +5365,8 @@ class AppRouteTests(unittest.TestCase):
         self.assertEqual(len(applications_table.inserted), 1)
         self.assertEqual(applications_table.inserted[0]["position_id"], "position-1")
         self.assertEqual(applications_table.inserted[0]["position_title"], "Backend Engineer")
-        self.assertTrue(applications_table.inserted[0]["cv_url"].endswith(".pdf"))
+        self.assertEqual(applications_table.inserted[0]["portfolio_url"],
+                         "https://github.com/sina")
 
     def test_verification_request_cooldown_and_submission(self):
         res = self.client.get("/request_verification")
@@ -6084,7 +6088,7 @@ class IndependentRouteTests(unittest.TestCase):
              patch.object(zapp, "get_community_highlights", return_value=[]):
             html = self.client.get("/careers").data.decode()
         self.assertIn('action="/careers"', html)
-        self.assertIn("careers_cv", html)
+        self.assertIn("careers_portfolio", html)
 
     def test_no_template_links_to_the_removed_guide(self):
         for path in sorted(Path("templates").glob("*.html")):

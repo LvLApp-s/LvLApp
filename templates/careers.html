@@ -46,7 +46,7 @@
     <h2 class="page-section-title" data-i18n="careers_apply_title">Apply Now</h2>
     <p class="page-section-text" data-i18n="careers_apply_subtitle">Interested in joining LvL? Fill out the form below.</p>
 
-    <form id="careers-form" class="premium-form" action="{{ url_for('careers') }}" method="post" enctype="multipart/form-data">
+    <form id="careers-form" class="premium-form" action="{{ url_for('careers') }}" method="post">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label class="form-group">
         <span data-i18n="careers_position">Position</span>
@@ -66,10 +66,20 @@
         <span data-i18n="careers_message">Cover Letter / Message</span>
         <textarea name="message" rows="6" maxlength="3000" required id="careers-message-input" data-i18n-placeholder="careers_message_placeholder" placeholder="Tell us about yourself and why you want to join LvL..."></textarea>
       </label>
+      {# A link, not a file upload. The upload wrote to the serverless
+         filesystem, which is read-only, so it raised before the application
+         was saved and the whole submission was lost. #}
       <label class="form-group">
-        <span data-i18n="careers_cv">CV / Resume</span>
-        <input type="file" name="cv" accept=".pdf,.doc,.docx" id="careers-cv-input" class="form-file-input" required>
-        <small class="form-hint" data-i18n="careers_cv_hint">PDF, DOC, or DOCX up to 5 MB</small>
+        <span data-i18n="careers_portfolio">LinkedIn, GitHub or portfolio</span>
+        {# type="text", not type="url": the browser's url validator refuses a
+           bare host, so it blocked the very thing the hint below tells people
+           to paste. The server adds the scheme and checks the address. #}
+        <input type="text" name="portfolio_url" maxlength="500" required
+               id="careers-portfolio-input" autocomplete="url" inputmode="url"
+               spellcheck="false" autocapitalize="none"
+               data-i18n-placeholder="careers_portfolio_placeholder"
+               placeholder="linkedin.com/in/you">
+        <small class="form-hint" data-i18n="careers_portfolio_hint">Somewhere we can see your work. Paste the address; https:// is added for you.</small>
       </label>
       <div class="form-actions">
         <button type="submit" class="primary-button" data-i18n="careers_submit">Submit Application</button>

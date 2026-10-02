@@ -18265,6 +18265,15 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   font: inherit;
 }
 
+/* The applicant's link, spelled out under the button that opens it, so an
+   admin can see where it goes before clicking. It is text someone typed, so
+   it gets no room to push the card wider. */
+.admin-portfolio-url {
+  margin-top: var(--space-2);
+  font-size: 12px;
+  word-break: break-all;
+}
+
 /* ===== sections/age-gate.css ===== */
 /* ---------------------------------------------------------------------------
    The age gate.
