@@ -270,7 +270,12 @@
      the top of the timeline parks below this instead of sliding under the
      bar. */
   --sticky-top: var(--topbar-height);
-  --mobile-nav-height: 56px;
+  /* Measured, not guessed: the bar renders 77px at phone widths (a 24px
+     icon, its label, and 8px of padding at each end). It read 56px, so
+     everything that reserved space for the nav -- the feed's bottom
+     padding, the clip player's height, the cookie bar's offset -- was 21px
+     short, and the cookie bar in particular overlapped it. */
+  --mobile-nav-height: 77px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);

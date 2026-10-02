@@ -3688,7 +3688,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const time = comment.created_at ? new Date(comment.created_at).toLocaleDateString() : '';
         
         /* Class names only. Every declaration that used to be set here is
-           already in sections/reels.css, and setting them inline beat the
+           already in the reels stylesheet, and setting them inline beat the
            stylesheet: the hardcoded white and greys meant a comment posted
            while the page was open stayed dark-theme coloured in daylight
            mode, unreadable against the light panel behind it. */

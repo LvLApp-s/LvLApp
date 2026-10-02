@@ -278,7 +278,12 @@
      the top of the timeline parks below this instead of sliding under the
      bar. */
   --sticky-top: var(--topbar-height);
-  --mobile-nav-height: 56px;
+  /* Measured, not guessed: the bar renders 77px at phone widths (a 24px
+     icon, its label, and 8px of padding at each end). It read 56px, so
+     everything that reserved space for the nav -- the feed's bottom
+     padding, the clip player's height, the cookie bar's offset -- was 21px
+     short, and the cookie bar in particular overlapped it. */
+  --mobile-nav-height: 77px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
@@ -12085,6 +12090,19 @@ button {
     border-radius: var(--radius-xl);
   }
 
+  /* A rounded box needs an outline all the way round.
+
+     These two are flow surfaces: edge to edge, separated from what follows
+     by a bottom border and nothing else. The rule above insets them and
+     rounds their corners on a phone, which turned that single border into a
+     line that curved up at each end into nothing -- a corner with no box
+     attached to it. Inset and rounded, they are cards, so they get a card's
+     border. */
+  .page-header,
+  .composer {
+    border: 1px solid var(--border-color);
+  }
+
   .post,
   .composer,
   .form-section {
@@ -12927,12 +12945,21 @@ button {
   }
 }
 
+/* The install offer.
+
+   Centred at the foot of the window, it landed on whatever was there: on the
+   clips page, across the author row and caption of the clip being watched.
+   It sits at the left edge now -- the message dock owns the right -- and
+   clears the mobile navigation, so on every page it covers chrome rather
+   than content. */
 .install-prompt {
   position: fixed;
-  left: 50%;
-  bottom: calc(18px + env(safe-area-inset-bottom));
+  inset-inline-start: var(--space-10);
+  inset-inline-end: auto;
+  bottom: calc(var(--mobile-nav-clearance) + var(--space-5)
+               + env(safe-area-inset-bottom));
   z-index: 1200;
-  width: min(560px, calc(100vw - 28px));
+  width: min(460px, calc(100vw - 28px));
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
@@ -12944,7 +12971,13 @@ button {
   color: var(--text-primary);
   box-shadow: 0 18px 60px var(--lvl-black-48);
   backdrop-filter: blur(18px);
-  transform: translateX(-50%);
+}
+
+/* From tablet up there is no bottom navigation to clear. */
+@media (min-width: 768px) {
+  .install-prompt {
+    bottom: calc(var(--space-10) + env(safe-area-inset-bottom));
+  }
 }
 
 .install-prompt[hidden] {
@@ -17019,6 +17052,14 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
     border-right: 1px solid var(--border-color);
   }
 
+}
+
+/* The like form in the counts row. It was style="display:inline-block;
+   margin-right: 8px" on the element. */
+.home-reel-counts .reel-like-form {
+  display: inline-block;
+  margin: 0;
+  margin-inline-end: var(--space-3);
 }
 
 /* ===== sections/streaks.css ===== */

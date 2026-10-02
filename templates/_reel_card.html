@@ -15,7 +15,7 @@
            muted
            {% if not reel.autoplay_next %}loop{% endif %}
            {% if reel.cover_url %}poster="{{ reel.cover_url }}"{% endif %}>
-      <source src="{{ reel.video_url }}" type="video/mp4">
+      {% if reel.video_url %}<source src="{{ reel.video_url }}" type="video/mp4">{% endif %}
       <span data-i18n="reel_video_unsupported">Your browser does not support short videos.</span>
     </video>
     <button class="reel-play-toggle" type="button" data-reel-play aria-label="Play or pause clip" data-i18n-aria="reel_play_pause_aria">
@@ -48,7 +48,10 @@
               <svg class="reel-icon-muted" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M22 9l-6 6"/><path d="M16 9l6 6"/></svg>
               <svg class="reel-icon-sound" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
             </button>
-            <span class="media-volume-track" style="position:static; display:none;">
+            {# display:none was on this element, so the clips page had a mute
+               toggle and no level at all -- the one clip surface where the
+               slider the rest of the product offers could not be reached. #}
+            <span class="media-volume-track">
               <input class="media-volume-slider" type="range" min="0" max="100" step="1" value="100"
                      aria-label="Volume" data-i18n-aria="media_volume_aria" data-volume-slider>
             </span>

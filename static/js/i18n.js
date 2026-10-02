@@ -884,6 +884,7 @@ Object.assign(TRANSLATIONS.en, {
   drafts_empty_desc: "Use “Save draft” in the home composer.",
   /* The age gate. One key per sentence; {age} is filled from MIN_AGE. */
   /* The message context menu, and the questions destructive forms ask. */
+  settings_color_hex_aria: "Profile colour hex code",
   msg_ctx_copy: "Copy message",
   msg_ctx_delete_me: "Delete for me",
   msg_ctx_delete_all: "Delete for everyone",
@@ -1218,6 +1219,7 @@ Object.assign(TRANSLATIONS.tr, {
   draft_delete: "Taslağı Sil",
   drafts_empty_title: "Henüz taslak yok",
   drafts_empty_desc: "Ana sayfadaki oluşturucuda “Taslak Olarak Kaydet” seçeneğini kullanın.",
+  settings_color_hex_aria: "Profil rengi hex kodu",
   msg_ctx_copy: "Mesaj\u0131 kopyala",
   msg_ctx_delete_me: "Benden sil",
   msg_ctx_delete_all: "Herkesten sil",
@@ -2025,6 +2027,7 @@ Object.assign(TRANSLATIONS.ar, {
   profile_view_picture_aria: "عرض صورة الملف الشخصي",
   reel_actions_aria: "إجراءات المقطع",
   reel_allow_comments: "السماح بالتعليقات",
+  settings_color_hex_aria: "\u0643\u0648\u062f \u0644\u0648\u0646 \u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u0634\u062e\u0635\u064a",
   msg_ctx_copy: "\u0646\u0633\u062e \u0627\u0644\u0631\u0633\u0627\u0644\u0629",
   msg_ctx_delete_me: "\u062d\u0630\u0641 \u0645\u0646 \u0639\u0646\u062f\u064a",
   msg_ctx_delete_all: "\u062d\u0630\u0641 \u0644\u062f\u0649 \u0627\u0644\u062c\u0645\u064a\u0639",

@@ -78,7 +78,17 @@ def session_cookie_config(environ=None):
     if environ is None:
         environ = os.environ
     cookie_secure = env_truthy(environ.get("SESSION_COOKIE_SECURE"), default=is_production_runtime(environ))
-    cookie_samesite = (environ.get("SESSION_COOKIE_SAMESITE") or ('None' if cookie_secure else 'Lax')).strip().capitalize()
+    # Lax by default, in production as well as locally.
+    #
+    # This used to send None whenever the cookie was Secure, which tells the
+    # browser to attach the session to requests from any other site. Every
+    # POST is checked against a CSRF token, so that was not an open door --
+    # but SameSite is the layer that holds if the token check ever has a gap,
+    # and nothing here needs the cookie cross-site: the OAuth callback is a
+    # top-level navigation, which Lax allows. Somewhere that genuinely needs
+    # it, such as the app in a third-party iframe, can still set
+    # SESSION_COOKIE_SAMESITE=None explicitly.
+    cookie_samesite = (environ.get("SESSION_COOKIE_SAMESITE") or 'Lax').strip().capitalize()
     if cookie_samesite not in {'Lax', 'Strict', 'None'}:
         cookie_samesite = 'None' if cookie_secure else 'Lax'
     if cookie_samesite == 'None' and not cookie_secure:
@@ -658,6 +668,16 @@ def parse_positive_id(value):
     return parsed
 
 def parse_uuid_id(value):
+    """An admin form's id, for a table whose primary key is a uuid.
+
+    job_positions, contact_messages, verification_requests and
+    job_applications are keyed by uuid; posts, comments, clips, communities,
+    users and safety actions by bigint. Four admin actions were reading uuids
+    through parse_positive_id, which accepts only integers: it returned None,
+    the handler's `if id and supabase` was false, and opening or closing a job
+    posting, deleting one, marking a suggestion reviewed and approving a
+    verification request all redirected having done nothing and said nothing.
+    """
     value = str(value or '').strip()
     if not ADMIN_UUID_PATTERN.fullmatch(value):
         return None
@@ -2562,7 +2582,12 @@ def get_demo_reels(count=5):
         'profile_photo_url': url_for('static', filename='assets/icon-192.png'),
         'level': 1,
     }
-    demo_video_url = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4'
+    # Mozilla retired interactive-examples.mdn.mozilla.net, which is where
+    # this pointed: every demo clip was a dead request and a broken player.
+    # There is no clip to play on an empty install, so it carries a poster and
+    # no source -- the <video> shows the still, which is what a placeholder
+    # should look like, with nothing fetched from anyone else's server.
+    demo_video_url = None
     captions = [
         'Demo reel: a quick vertical-video preview for LvL.',
         'Demo reel: upload your own short videos when storage is ready.',
@@ -2578,6 +2603,7 @@ def get_demo_reels(count=5):
         'id': reel_id,
         'user_id': 0,
         'video_url': video_url,
+        'cover_url': url_for('static', filename='assets/demo-clip-poster.png'),
         'caption': caption,
         'visibility': 'public',
         'allow_comments': False,
@@ -2757,7 +2783,18 @@ def visible_reel_filter(reels, viewer_id):
 REEL_BOOKMARKS_FILE = os.path.join(os.path.dirname(__file__), 'data', 'reel_bookmarks.json')
 _reel_bookmarks_lock = threading.Lock()
 
+# A file on disk standing in for the reel_bookmarks table while it is
+# unavailable. That works on a developer's machine and nowhere else: the
+# serverless filesystem is read-only, so in production the write failed, the
+# failure was swallowed, and the reader was told their clip had been saved
+# when nothing had been written anywhere. Off in production, where a database
+# failure is reported rather than papered over.
+LOCAL_REEL_BOOKMARK_MIRROR = env_truthy(os.getenv("LOCAL_REEL_BOOKMARK_MIRROR"),
+                                        default=not is_production_runtime())
+
 def _load_local_reel_bookmarks():
+    if not LOCAL_REEL_BOOKMARK_MIRROR:
+        return {}
     try:
         if os.path.exists(REEL_BOOKMARKS_FILE):
             with open(REEL_BOOKMARKS_FILE, 'r', encoding='utf-8') as f:
@@ -2767,12 +2804,17 @@ def _load_local_reel_bookmarks():
     return {}
 
 def _save_local_reel_bookmarks(data):
+    """Write the mirror. False means the save did not happen."""
+    if not LOCAL_REEL_BOOKMARK_MIRROR:
+        return False
     try:
         os.makedirs(os.path.dirname(REEL_BOOKMARKS_FILE), exist_ok=True)
         with open(REEL_BOOKMARKS_FILE, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
+        return True
     except Exception as e:
-        print(f"Error saving local reel bookmarks: {e}", flush=True)
+        app.logger.warning("Could not write the local reel bookmark mirror: %s", e)
+        return False
 
 def get_viewer_bookmarked_reel_ids(viewer_id, reel_ids):
     if not viewer_id or not reel_ids:
@@ -2821,19 +2863,23 @@ def toggle_reel_bookmark_record(viewer_id, reel_id):
                     _save_local_reel_bookmarks(data)
             return True
     except Exception:
+        # The table is unavailable. The mirror is the only place left to put
+        # this, and if it cannot be written either then nothing was saved --
+        # say so instead of returning a state the next page load will not
+        # agree with.
         with _reel_bookmarks_lock:
             data = _load_local_reel_bookmarks()
             str_uid = str(viewer_id)
             if str_uid not in data:
                 data[str_uid] = []
-            if reel_id in data[str_uid]:
+            removing = reel_id in data[str_uid]
+            if removing:
                 data[str_uid].remove(reel_id)
-                _save_local_reel_bookmarks(data)
-                return False
             else:
                 data[str_uid].insert(0, reel_id)
-                _save_local_reel_bookmarks(data)
-                return True
+            if not _save_local_reel_bookmarks(data):
+                raise RuntimeError("Saved clips are unavailable right now. Try again shortly.")
+            return not removing
 
 def enrich_reels(reels, viewer_id, include_viewer_state=True, include_viewer_likes=None):
     """Attach counts, and optionally this viewer's own relationship to each clip.
@@ -6346,7 +6392,7 @@ def admin_dashboard():
                     return redirect(url_for('admin_dashboard'))
                     
             elif action == 'toggle_position':
-                pos_id = parse_positive_id(request.form.get('id'))
+                pos_id = parse_uuid_id(request.form.get('id'))
                 if pos_id and supabase:
                     try:
                         res = supabase.table('job_positions').select('is_active').eq('id', pos_id).limit(1).execute()
@@ -6359,7 +6405,7 @@ def admin_dashboard():
                 return redirect(url_for('admin_dashboard'))
                 
             elif action == 'delete_position':
-                pos_id = parse_positive_id(request.form.get('id'))
+                pos_id = parse_uuid_id(request.form.get('id'))
                 if pos_id and supabase:
                     try:
                         supabase.table('job_positions').delete().eq('id', pos_id).execute()
@@ -6369,7 +6415,7 @@ def admin_dashboard():
                 return redirect(url_for('admin_dashboard'))
 
             elif action == 'update_suggestion_status':
-                msg_id = parse_positive_id(request.form.get('id'))
+                msg_id = parse_uuid_id(request.form.get('id'))
                 status = request.form.get('status')
                 if status not in ADMIN_SUGGESTION_STATUSES:
                     flash("Invalid suggestion status.", "error")
@@ -6384,7 +6430,7 @@ def admin_dashboard():
                 return redirect(url_for('admin_dashboard'))
 
             elif action == 'respond_verification':
-                req_id = parse_positive_id(request.form.get('id'))
+                req_id = parse_uuid_id(request.form.get('id'))
                 status = request.form.get('status')
                 if status not in ADMIN_VERIFICATION_DECISIONS:
                     flash("Invalid verification decision.", "error")

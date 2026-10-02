@@ -386,3 +386,11 @@
   }
 
 }
+
+/* The like form in the counts row. It was style="display:inline-block;
+   margin-right: 8px" on the element. */
+.home-reel-counts .reel-like-form {
+  display: inline-block;
+  margin: 0;
+  margin-inline-end: var(--space-3);
+}
