@@ -209,7 +209,7 @@ ATTACHMENT_CONTENT_TYPES = {
     'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'txt': 'text/plain',
 }
-ASSET_VERSION = "203"
+ASSET_VERSION = "204"
 
 # --- Per-request query cache ------------------------------------------------
 #
@@ -1174,8 +1174,40 @@ def service_worker():
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return response
 
+# The ?v= on a static URL, taken from the file's own bytes.
+#
+# It used to be ASSET_VERSION, one hand-maintained number for every asset.
+# vercel.json caches /static/* at the edge for a year, so the URL is the only
+# thing that can retire a cached copy -- and the number only changes when
+# somebody remembers to change it. Five commits of CSS shipped at ?v=203:
+# every one of them was built, tested and pushed, and every one was invisible,
+# because the browser and the CDN both already had a bundle.css?v=203 and had
+# no reason to ask for another. A content hash cannot be forgotten: change the
+# file and the URL changes with it; change nothing and the cached copy stands.
+_ASSET_FINGERPRINTS = {}
+
+def asset_fingerprint(filename):
+    """A short hash of a static file, recomputed when the file changes."""
+    try:
+        path = os.path.join(app.static_folder, filename)
+        stamp = os.stat(path).st_mtime_ns
+    except OSError:
+        # Not on disk (a path built from user data, or a packaging slip).
+        # The shared version still busts caches on a deploy.
+        return ASSET_VERSION
+    cached = _ASSET_FINGERPRINTS.get(filename)
+    if cached and cached[0] == stamp:
+        return cached[1]
+    try:
+        with open(path, 'rb') as handle:
+            digest = hashlib.sha256(handle.read()).hexdigest()[:10]
+    except OSError:
+        return ASSET_VERSION
+    _ASSET_FINGERPRINTS[filename] = (stamp, digest)
+    return digest
+
 def static_asset_url(filename):
-    return url_for('static', filename=filename, v=ASSET_VERSION)
+    return url_for('static', filename=filename, v=asset_fingerprint(filename))
 
 def normalize_gender(value):
     value = (value or '').strip().title()
