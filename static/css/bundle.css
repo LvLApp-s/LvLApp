@@ -3247,26 +3247,32 @@ label.has-success input {
 }
 
 /* --- Media volume --------------------------------------------------------
-   One control, two gestures, the way a phone app does it: a tap on the
-   speaker mutes or unmutes, and holding the pointer on it opens the level
-   beside it. The track stays in the layout and is clipped to zero width so
-   it can slide rather than blink in -- display:none cannot be transitioned.
+   A speaker and a level bar, side by side, on every surface that plays a
+   clip. Tap the speaker to mute or unmute; drag the bar to set the level.
+
+   The bar used to be clipped to zero width and opened on hover, focus or
+   drag. That made it invisible: nothing on the control suggested a level
+   existed, so someone who wanted to turn a clip down saw a speaker, pressed
+   it, and got silence instead of the quieter clip they wanted. A control you
+   have to discover by hovering is a control most people never find -- and on
+   a touch screen there is no hover to discover it with, which is why there
+   was already a media query forcing it open there. It is simply out now,
+   everywhere, which is what that query was working around.
    ------------------------------------------------------------------------ */
 
 .media-volume {
   display: inline-flex;
   align-items: center;
-  gap: 0;
-  padding: 0;
+  gap: var(--space-3);
+  padding-inline-end: var(--space-4);
   border-radius: var(--radius-pill);
   background: var(--lvl-black-52);
-  transition: gap var(--duration-base) var(--ease-standard),
-              padding var(--duration-base) var(--ease-standard);
 }
 
-/* Sitting against the right edge, so it opens towards the middle. */
+/* Sitting against the right edge, so the bar runs towards the middle. */
 .media-volume-end {
   flex-direction: row-reverse;
+  padding-inline: var(--space-4) 0;
 }
 
 .media-volume-toggle {
@@ -3276,43 +3282,21 @@ label.has-success input {
 .media-volume-track {
   display: flex;
   align-items: center;
-  max-width: 0;
-  overflow: hidden;
-  opacity: 0;
-  transition: max-width var(--duration-base) var(--ease-standard),
-              opacity var(--duration-base) var(--ease-standard);
+  flex: 0 0 auto;
 }
 
-/* is-adjusting is set while the thumb is held. A drag that wanders off the
-   pill -- which is easy, it is 30px tall -- would otherwise end the hover and
-   collapse the track out from under the pointer mid-drag. */
-.media-volume:hover,
-.media-volume:focus-within,
-.media-volume.is-adjusting {
-  gap: var(--space-3);
-  padding-inline-end: var(--space-4);
+/* is-adjusting is set while the thumb is held, so the handle can grow under
+   the finger that is holding it. It no longer has to keep the bar open --
+   the bar does not close -- but a drag still deserves to be acknowledged. */
+.media-volume.is-adjusting .media-volume-slider::-webkit-slider-thumb {
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
 }
 
-.media-volume-end:hover,
-.media-volume-end:focus-within,
-.media-volume-end.is-adjusting {
-  padding-inline: var(--space-4) 0;
-}
-
-.media-volume:hover .media-volume-track,
-.media-volume:focus-within .media-volume-track,
-.media-volume.is-adjusting .media-volume-track {
-  max-width: 96px;
-  opacity: 1;
-}
-
-/* A pointer that only grazes the corner should not pop the slider open, so
-   the level waits for the pointer to settle. Not while dragging: that has to
-   answer immediately. */
-@media (hover: hover) {
-  .media-volume:hover:not(.is-adjusting) .media-volume-track {
-    transition-delay: 90ms;
-  }
+.media-volume.is-adjusting .media-volume-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
 }
 
 .media-volume-slider {
@@ -3367,27 +3351,21 @@ label.has-success input {
   box-shadow: 0 1px 4px var(--lvl-black-62);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .media-volume,
-  .media-volume-track {
-    transition: none;
-  }
-}
-
-/* No hover on a touch screen, so the level is always out. */
+/* A finger needs more of the bar to aim at than a pointer does. */
 @media (hover: none) {
-  .media-volume-track {
-    max-width: 84px;
-    opacity: 1;
+  .media-volume-slider {
+    height: 24px;
   }
 
-  .media-volume {
-    gap: var(--space-3);
-    padding-inline-end: var(--space-4);
+  .media-volume-slider::-webkit-slider-thumb {
+    width: 14px;
+    height: 14px;
+    margin-top: -5px;
   }
 
-  .media-volume-end {
-    padding-inline: var(--space-4) 0;
+  .media-volume-slider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
   }
 }
 

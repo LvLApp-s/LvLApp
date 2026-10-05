@@ -142,30 +142,54 @@ class VolumeControlMarkupTests(unittest.TestCase):
 
 
 class VolumeControlStyleTests(unittest.TestCase):
-    def test_the_level_is_clipped_rather_than_removed(self):
-        """display:none cannot be transitioned, so it would blink in."""
+    """The level bar is out, on every surface, without being asked for.
+
+    It used to be clipped to max-width: 0 and opened on hover, focus or
+    drag. A control you have to discover by hovering is one most people
+    never find: the clip showed a speaker, pressing it gave silence, and the
+    bar for turning the clip *down* was never seen. These assert the bar is
+    simply there.
+    """
+
+    def test_the_level_is_not_hidden(self):
         body = rule("components.css", ".media-volume-track")
         self.assertIsNotNone(body)
-        self.assertRegex(body, r"max-width:\s*0")
+        self.assertNotRegex(body, r"max-width:\s*0")
         self.assertNotRegex(body, r"display:\s*none")
+        self.assertNotRegex(body, r"opacity:\s*0")
 
-    def test_holding_the_pointer_on_it_opens_the_level(self):
-        body = rule("components.css",
-                    ".media-volume:hover .media-volume-track,\n"
-                    ".media-volume:focus-within .media-volume-track,\n"
-                    ".media-volume.is-adjusting .media-volume-track")
+    def test_the_bar_has_a_width_to_drag_along(self):
+        body = rule("components.css", ".media-volume-slider")
         self.assertIsNotNone(body)
-        self.assertRegex(body, r"max-width:\s*\d+px")
+        width = re.search(r"width:\s*(\d+)px", body)
+        self.assertIsNotNone(width)
+        self.assertGreaterEqual(int(width.group(1)), 60,
+                                "too short to aim at")
 
-    def test_a_keyboard_opens_it_too(self):
-        self.assertIn(".media-volume:focus-within", css("components.css"))
+    def test_the_speaker_and_the_bar_are_spaced_apart(self):
+        """They are one pill; without the gap the thumb sits on the icon."""
+        body = rule("components.css", ".media-volume")
+        self.assertIsNotNone(body)
+        self.assertRegex(body, r"gap:\s*var\(--space")
 
-    def test_a_touch_screen_gets_it_without_hovering(self):
+    def test_nothing_waits_for_a_hover_to_show_the_level(self):
+        """The whole point: no rule opens it, because it never closed."""
+        sheet = css("components.css")
+        for gate in (".media-volume:hover .media-volume-track",
+                     ".media-volume:focus-within .media-volume-track",
+                     ".media-volume.is-adjusting .media-volume-track"):
+            with self.subTest(selector=gate):
+                self.assertNotIn(gate, sheet)
+
+    def test_a_touch_screen_gets_a_bigger_handle(self):
+        """A finger is blunter than a pointer. This used to be where the bar
+        was forced open, because a touch screen has no hover to open it with
+        -- the workaround that showed the default was wrong."""
         block = re.search(r"@media \(hover: none\) \{(.*?)\n\}\n",
                           css("components.css"), re.S)
-        self.assertIsNotNone(block, "there is no hover on a touch screen, so "
-                                    "the level would never open")
-        self.assertIn(".media-volume-track", block.group(1))
+        self.assertIsNotNone(block)
+        self.assertIn(".media-volume-slider", block.group(1))
+        self.assertNotIn("max-width", block.group(1))
 
     def test_the_floating_control_needs_no_important(self):
         """It used to be .reel-mute-float, which carried six !important
@@ -279,10 +303,15 @@ class DraggingAloneIsEnoughTests(unittest.TestCase):
         self.assertIn("window.addEventListener('pointerup', release)", handler)
         self.assertIn("window.addEventListener('pointercancel', release)", handler)
 
-    def test_the_open_delay_does_not_apply_mid_drag(self):
-        block = re.search(r"@media \(hover: hover\) \{(.*?)\n\}", css("components.css"), re.S)
-        self.assertIsNotNone(block)
-        self.assertIn(":not(.is-adjusting)", block.group(1))
+    def test_the_handle_grows_while_it_is_held(self):
+        """is-adjusting used to hold the bar open through a drag that left
+        the pill. The bar does not close any more, so the class answers the
+        drag instead: the handle grows under the finger holding it."""
+        sheet = css("components.css")
+        self.assertIn(".media-volume.is-adjusting .media-volume-slider::-webkit-slider-thumb",
+                      sheet)
+        self.assertIn(".media-volume.is-adjusting .media-volume-slider::-moz-range-thumb",
+                      sheet)
 
     def test_dragging_to_the_bottom_keeps_the_level_it_started_from(self):
         """Otherwise muting by dragging left the clip at the few percent the
