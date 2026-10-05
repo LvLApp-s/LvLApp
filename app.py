@@ -78,7 +78,17 @@ def session_cookie_config(environ=None):
     if environ is None:
         environ = os.environ
     cookie_secure = env_truthy(environ.get("SESSION_COOKIE_SECURE"), default=is_production_runtime(environ))
-    cookie_samesite = (environ.get("SESSION_COOKIE_SAMESITE") or ('None' if cookie_secure else 'Lax')).strip().capitalize()
+    # Lax by default, in production as well as locally.
+    #
+    # This used to send None whenever the cookie was Secure, which tells the
+    # browser to attach the session to requests from any other site. Every
+    # POST is checked against a CSRF token, so that was not an open door --
+    # but SameSite is the layer that holds if the token check ever has a gap,
+    # and nothing here needs the cookie cross-site: the OAuth callback is a
+    # top-level navigation, which Lax allows. Somewhere that genuinely needs
+    # it, such as the app in a third-party iframe, can still set
+    # SESSION_COOKIE_SAMESITE=None explicitly.
+    cookie_samesite = (environ.get("SESSION_COOKIE_SAMESITE") or 'Lax').strip().capitalize()
     if cookie_samesite not in {'Lax', 'Strict', 'None'}:
         cookie_samesite = 'None' if cookie_secure else 'Lax'
     if cookie_samesite == 'None' and not cookie_secure:
@@ -199,7 +209,7 @@ ATTACHMENT_CONTENT_TYPES = {
     'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'txt': 'text/plain',
 }
-ASSET_VERSION = "202"
+ASSET_VERSION = "204"
 
 # --- Per-request query cache ------------------------------------------------
 #
@@ -486,6 +496,26 @@ EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 def is_valid_email(value):
     return bool(EMAIL_PATTERN.match((value or '').strip()))
 
+def normalise_web_link(value, max_length=500):
+    """A link someone typed, or None if it is not one we would open.
+
+    Only http and https: a javascript: or data: URL in a field an admin later
+    clicks is the whole point of checking. A bare host is accepted and gets
+    https:// put in front, because people type "linkedin.com/in/me" far more
+    often than they type the scheme.
+    """
+    value = str(value or '').strip()
+    if not value or len(value) > max_length:
+        return None
+    if '://' not in value:
+        value = 'https://' + value
+    parsed = urlparse(value)
+    if parsed.scheme not in {'http', 'https'}:
+        return None
+    if not parsed.netloc or '.' not in parsed.netloc:
+        return None
+    return value
+
 def mail_settings():
     username = os.getenv("MAIL_USERNAME") or os.getenv("SMTP_USERNAME") or os.getenv("SMTP_FROM")
     password = os.getenv("MAIL_PASSWORD") or os.getenv("SMTP_PASSWORD")
@@ -658,6 +688,16 @@ def parse_positive_id(value):
     return parsed
 
 def parse_uuid_id(value):
+    """An admin form's id, for a table whose primary key is a uuid.
+
+    job_positions, contact_messages, verification_requests and
+    job_applications are keyed by uuid; posts, comments, clips, communities,
+    users and safety actions by bigint. Four admin actions were reading uuids
+    through parse_positive_id, which accepts only integers: it returned None,
+    the handler's `if id and supabase` was false, and opening or closing a job
+    posting, deleting one, marking a suggestion reviewed and approving a
+    verification request all redirected having done nothing and said nothing.
+    """
     value = str(value or '').strip()
     if not ADMIN_UUID_PATTERN.fullmatch(value):
         return None
@@ -1134,8 +1174,40 @@ def service_worker():
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return response
 
+# The ?v= on a static URL, taken from the file's own bytes.
+#
+# It used to be ASSET_VERSION, one hand-maintained number for every asset.
+# vercel.json caches /static/* at the edge for a year, so the URL is the only
+# thing that can retire a cached copy -- and the number only changes when
+# somebody remembers to change it. Five commits of CSS shipped at ?v=203:
+# every one of them was built, tested and pushed, and every one was invisible,
+# because the browser and the CDN both already had a bundle.css?v=203 and had
+# no reason to ask for another. A content hash cannot be forgotten: change the
+# file and the URL changes with it; change nothing and the cached copy stands.
+_ASSET_FINGERPRINTS = {}
+
+def asset_fingerprint(filename):
+    """A short hash of a static file, recomputed when the file changes."""
+    try:
+        path = os.path.join(app.static_folder, filename)
+        stamp = os.stat(path).st_mtime_ns
+    except OSError:
+        # Not on disk (a path built from user data, or a packaging slip).
+        # The shared version still busts caches on a deploy.
+        return ASSET_VERSION
+    cached = _ASSET_FINGERPRINTS.get(filename)
+    if cached and cached[0] == stamp:
+        return cached[1]
+    try:
+        with open(path, 'rb') as handle:
+            digest = hashlib.sha256(handle.read()).hexdigest()[:10]
+    except OSError:
+        return ASSET_VERSION
+    _ASSET_FINGERPRINTS[filename] = (stamp, digest)
+    return digest
+
 def static_asset_url(filename):
-    return url_for('static', filename=filename, v=ASSET_VERSION)
+    return url_for('static', filename=filename, v=asset_fingerprint(filename))
 
 def normalize_gender(value):
     value = (value or '').strip().title()
@@ -1495,16 +1567,34 @@ def remove_stored_attachment_file(message):
         os.remove(file_path)
 
 def ensure_media_bucket(bucket_name, file_size_limit, allowed_mime_types, public=True):
+    """Make sure the bucket is there, without inventing a failure if it is.
+
+    This used to read "look it up, and if that throws for any reason, create
+    it" -- so a lookup that failed on a blip, a permission or a rate limit
+    went straight to a create that failed with "bucket already exists", and
+    that error was the one the caller saw. An upload would then be refused
+    because of a bucket that was sitting there the whole time.
+    """
     if not supabase:
         raise RuntimeError("Supabase is not configured.")
     try:
         supabase.storage.get_bucket(bucket_name)
-    except Exception:
+        return
+    except Exception as lookup_error:
+        app.logger.info("Storage bucket %s could not be read back: %s", bucket_name, lookup_error)
+
+    try:
         supabase.storage.create_bucket(bucket_name, options={
             "public": public,
             "file_size_limit": file_size_limit,
             "allowed_mime_types": allowed_mime_types
         })
+    except Exception as create_error:
+        message = str(create_error).lower()
+        if 'already exist' in message or 'duplicate' in message:
+            # It exists; the lookup above is what failed. Nothing to do.
+            return
+        raise
 
 def ensure_attachment_bucket():
     ensure_media_bucket(
@@ -1521,6 +1611,30 @@ def ensure_storage_bucket(bucket_name):
         "image/gif",
         "image/webp"
     ])
+
+def media_extension(filename, allowed):
+    """The file's extension, from a name that may not survive sanitising.
+
+    secure_filename() drops every character it does not trust. A name made
+    only of such characters -- "фото.jpg", "写真.png", a photo saved under an
+    emoji -- comes back as just "jpg", with no dot left to split on, and
+    reading the extension off that raised IndexError. The callers only catch
+    ValueError and RuntimeError, so it escaped as a 500 and took the post
+    with it. That is why some photos uploaded and some did not with nothing
+    obviously different about them.
+
+    The sanitised name is still preferred. The original is consulted for the
+    extension alone, and only when that extension is one we already allow --
+    it never reaches the filesystem or the storage path, which are built from
+    a generated name.
+    """
+    for candidate in (secure_filename(filename or ''), filename or ''):
+        if candidate and '.' in candidate:
+            extension = candidate.rsplit('.', 1)[1].lower()
+            if extension in allowed:
+                return extension
+    raise ValueError("Files must be images (JPG, PNG, GIF, WebP) or videos (MP4, WebM, MOV).")
+
 
 def safe_upload_folder(folder):
     parts = []
@@ -1571,8 +1685,8 @@ def upload_image_to_storage(file_storage, folder, max_bytes=MAX_IMAGE_BYTES):
         max_megabytes = max(1, actual_max_bytes // (1024 * 1024))
         raise ValueError(f"Files must be {max_megabytes} MB or smaller.")
 
-    filename = secure_filename(file_storage.filename)
-    extension = filename.rsplit('.', 1)[1].lower()
+    extension = media_extension(
+        file_storage.filename, ALLOWED_IMAGE_EXTENSIONS | ALLOWED_VIDEO_EXTENSIONS)
     storage_path = f"{safe_upload_folder(folder)}/{uuid.uuid4().hex}.{extension}"
     content_type = IMAGE_CONTENT_TYPES.get(extension, file_storage.mimetype or "application/octet-stream")
 
@@ -1661,17 +1775,24 @@ def safety_action_rows(viewer_id, include_mutes=True):
 
     The rows do not depend on which candidates the caller is filtering, so one
     request asks for them once however many lists it renders.
+
+    Blocks are a subset of blocks-and-mutes, and include_mutes used to be part
+    of the cache key, so a page that rendered one list each way paid two round
+    trips for one answer. The superset is fetched once and the blocks-only
+    caller filters it here.
     """
     def fetch():
-        query = supabase.table('user_safety_actions').select('actor_id,target_user_id,action_type').or_(f"actor_id.eq.{viewer_id},target_user_id.eq.{viewer_id}")
-        if include_mutes:
-            query = query.in_('action_type', ['block', 'mute'])
-        else:
-            query = query.eq('action_type', 'block')
-        res = query.execute()
+        res = (supabase.table('user_safety_actions')
+               .select('actor_id,target_user_id,action_type')
+               .or_(f"actor_id.eq.{viewer_id},target_user_id.eq.{viewer_id}")
+               .in_('action_type', ['block', 'mute'])
+               .execute())
         return list(res.data or [])
 
-    return request_cached(('safety_actions', viewer_id, bool(include_mutes)), fetch)
+    rows = request_cached(('safety_actions', viewer_id), fetch)
+    if include_mutes:
+        return rows
+    return [row for row in rows if row.get('action_type') == 'block']
 
 
 def blocked_user_ids_for_viewer(viewer_id, candidate_ids=None, include_mutes=True):
@@ -2513,7 +2634,12 @@ def get_demo_reels(count=5):
         'profile_photo_url': url_for('static', filename='assets/icon-192.png'),
         'level': 1,
     }
-    demo_video_url = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4'
+    # Mozilla retired interactive-examples.mdn.mozilla.net, which is where
+    # this pointed: every demo clip was a dead request and a broken player.
+    # There is no clip to play on an empty install, so it carries a poster and
+    # no source -- the <video> shows the still, which is what a placeholder
+    # should look like, with nothing fetched from anyone else's server.
+    demo_video_url = None
     captions = [
         'Demo reel: a quick vertical-video preview for LvL.',
         'Demo reel: upload your own short videos when storage is ready.',
@@ -2529,6 +2655,7 @@ def get_demo_reels(count=5):
         'id': reel_id,
         'user_id': 0,
         'video_url': video_url,
+        'cover_url': url_for('static', filename='assets/demo-clip-poster.png'),
         'caption': caption,
         'visibility': 'public',
         'allow_comments': False,
@@ -2557,8 +2684,13 @@ def get_home_reel_preview(viewer_id, limit=HOME_REEL_PREVIEW_LIMIT):
     diversification helper so clips, trending and media behave consistently.
     """
     try:
+        # The rail prints the public counts and one viewer flag: whether this
+        # reader has liked the clip, because the panel has a like button. The
+        # other two viewer lookups -- saved, following -- have nothing on this
+        # surface to render them, so they stay off.
         home_reels_data, _ = get_reels(viewer_id, limit=REEL_CANDIDATE_POOL, page=1,
-                                       include_viewer_state=False)
+                                       include_viewer_state=False,
+                                       include_viewer_likes=True)
         if not home_reels_data:
             return get_demo_reels(limit)
 
@@ -2703,7 +2835,18 @@ def visible_reel_filter(reels, viewer_id):
 REEL_BOOKMARKS_FILE = os.path.join(os.path.dirname(__file__), 'data', 'reel_bookmarks.json')
 _reel_bookmarks_lock = threading.Lock()
 
+# A file on disk standing in for the reel_bookmarks table while it is
+# unavailable. That works on a developer's machine and nowhere else: the
+# serverless filesystem is read-only, so in production the write failed, the
+# failure was swallowed, and the reader was told their clip had been saved
+# when nothing had been written anywhere. Off in production, where a database
+# failure is reported rather than papered over.
+LOCAL_REEL_BOOKMARK_MIRROR = env_truthy(os.getenv("LOCAL_REEL_BOOKMARK_MIRROR"),
+                                        default=not is_production_runtime())
+
 def _load_local_reel_bookmarks():
+    if not LOCAL_REEL_BOOKMARK_MIRROR:
+        return {}
     try:
         if os.path.exists(REEL_BOOKMARKS_FILE):
             with open(REEL_BOOKMARKS_FILE, 'r', encoding='utf-8') as f:
@@ -2713,12 +2856,17 @@ def _load_local_reel_bookmarks():
     return {}
 
 def _save_local_reel_bookmarks(data):
+    """Write the mirror. False means the save did not happen."""
+    if not LOCAL_REEL_BOOKMARK_MIRROR:
+        return False
     try:
         os.makedirs(os.path.dirname(REEL_BOOKMARKS_FILE), exist_ok=True)
         with open(REEL_BOOKMARKS_FILE, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
+        return True
     except Exception as e:
-        print(f"Error saving local reel bookmarks: {e}", flush=True)
+        app.logger.warning("Could not write the local reel bookmark mirror: %s", e)
+        return False
 
 def get_viewer_bookmarked_reel_ids(viewer_id, reel_ids):
     if not viewer_id or not reel_ids:
@@ -2767,30 +2915,42 @@ def toggle_reel_bookmark_record(viewer_id, reel_id):
                     _save_local_reel_bookmarks(data)
             return True
     except Exception:
+        # The table is unavailable. The mirror is the only place left to put
+        # this, and if it cannot be written either then nothing was saved --
+        # say so instead of returning a state the next page load will not
+        # agree with.
         with _reel_bookmarks_lock:
             data = _load_local_reel_bookmarks()
             str_uid = str(viewer_id)
             if str_uid not in data:
                 data[str_uid] = []
-            if reel_id in data[str_uid]:
+            removing = reel_id in data[str_uid]
+            if removing:
                 data[str_uid].remove(reel_id)
-                _save_local_reel_bookmarks(data)
-                return False
             else:
                 data[str_uid].insert(0, reel_id)
-                _save_local_reel_bookmarks(data)
-                return True
+            if not _save_local_reel_bookmarks(data):
+                raise RuntimeError("Saved clips are unavailable right now. Try again shortly.")
+            return not removing
 
-def enrich_reels(reels, viewer_id, include_viewer_state=True):
+def enrich_reels(reels, viewer_id, include_viewer_state=True, include_viewer_likes=None):
     """Attach counts, and optionally this viewer's own relationship to each clip.
 
     The three viewer-specific lookups -- did you like it, did you save it, do
     you follow the author -- are three more round trips. A surface that only
-    prints the public counts, like the side rail, asks for them and throws
-    them away, so it can pass include_viewer_state=False. The flags are still
-    set on every clip, just to their empty values, so the shape of a clip does
-    not change with the caller.
+    prints the public counts asks for them and throws them away, so it can
+    pass include_viewer_state=False. The flags are still set on every clip,
+    just to their empty values, so the shape of a clip does not change with
+    the caller.
+
+    include_viewer_likes splits the cheapest of the three out of that bundle.
+    The side rail grew a like button, and with the bundle off it rendered
+    every clip unliked -- including ones the reader had just liked on the
+    clips page. It needs that one flag to be true, not the other two, so it
+    pays for one round trip instead of three.
     """
+    if include_viewer_likes is None:
+        include_viewer_likes = include_viewer_state
     if not reels:
         return []
     apply_forced_user_levels(reels)
@@ -2812,7 +2972,7 @@ def enrich_reels(reels, viewer_id, include_viewer_state=True):
         except Exception:
             like_counts = {}
 
-        if include_viewer_state:
+        if include_viewer_likes and viewer_id:
             try:
                 viewer_likes_res = supabase.table('reel_likes').select('reel_id').eq('user_id', viewer_id).in_('reel_id', reel_ids).execute()
                 viewer_liked_ids = {row['reel_id'] for row in viewer_likes_res.data or []}
@@ -2862,7 +3022,8 @@ def enrich_reels(reels, viewer_id, include_viewer_state=True):
         reel['is_demo'] = False
     return reels
 
-def get_reels(viewer_id, limit=8, page=1, tab='for_you', include_viewer_state=True):
+def get_reels(viewer_id, limit=8, page=1, tab='for_you', include_viewer_state=True,
+              include_viewer_likes=None):
     offset = (page - 1) * limit
     select_query = '*, user:users!reels_user_id_fkey(*), community:communities!reels_community_id_fkey(*)'
     query = supabase.table('reels').select(select_query).eq('status', 'active').is_('deleted_at', 'null')
@@ -2883,7 +3044,9 @@ def get_reels(viewer_id, limit=8, page=1, tab='for_you', include_viewer_state=Tr
     res = query.range(offset, offset + limit).execute()
     rows = res.data if res and res.data else []
     visible = visible_reel_filter(rows, viewer_id)
-    return enrich_reels(visible[:limit], viewer_id, include_viewer_state), len(visible) > limit
+    return (enrich_reels(visible[:limit], viewer_id, include_viewer_state,
+                        include_viewer_likes=include_viewer_likes),
+            len(visible) > limit)
 
 def get_reel_by_id(reel_id, viewer_id=None):
     select_query = '*, user:users!reels_user_id_fkey(*), community:communities!reels_community_id_fkey(*)'
@@ -3212,6 +3375,45 @@ def get_setup_health():
     else:
         checks.append(setup_health_check("Private attachment bucket", False, "Supabase is not configured."))
 
+    # Which key the storage calls are made with. The attachment bucket is
+    # private: signing an upload for it, and reading an object back out of it,
+    # need the service role. With only the anon key the bucket check above can
+    # still pass while every photo sent in a message fails.
+    service_role_configured = env_value_present("SUPABASE_SECRET")
+    checks.append(setup_health_check(
+        "Supabase service role key",
+        service_role_configured,
+        "SUPABASE_SECRET is configured, so private storage is reachable."
+        if service_role_configured else
+        "Only the anon key is set. Set SUPABASE_SECRET, or photos and videos "
+        "sent in messages will fail even though the bucket exists."
+    ))
+
+    # The step that actually fails when the above is wrong. Signing creates no
+    # object, so this writes nothing -- it only proves the app is allowed to
+    # hand the browser an upload URL for the private bucket.
+    if supabase:
+        try:
+            probe_path = attachment_storage_path(f"healthcheck_{uuid.uuid4().hex}.png")
+            signed = supabase.storage.from_(SUPABASE_ATTACHMENT_BUCKET).create_signed_upload_url(probe_path)
+            if signed.get('signedUrl') or signed.get('signed_url'):
+                checks.append(setup_health_check(
+                    "Message attachment upload", True,
+                    "The app can sign an upload for the private bucket, so photos "
+                    "and videos in messages go straight to Supabase."))
+            else:
+                checks.append(setup_health_check(
+                    "Message attachment upload", False,
+                    "Supabase returned no upload URL. Photos in messages will fall "
+                    "back to uploading through the server, which fails above ~4 MB."))
+        except Exception as exc:
+            checks.append(setup_health_check(
+                "Message attachment upload", False,
+                f"Could not sign an upload for {SUPABASE_ATTACHMENT_BUCKET}: "
+                f"{handle_db_error(exc, 'check the bucket and SUPABASE_SECRET')}"))
+    else:
+        checks.append(setup_health_check("Message attachment upload", False, "Supabase is not configured."))
+
     for relative_path, label in [
         ('static/manifest.json', 'PWA manifest'),
         ('static/service-worker.js', 'Service worker'),
@@ -3242,12 +3444,49 @@ def actor_summary(names, count):
     return f"{count} people"
 
 def stack_notifications(notifications):
+    """Collapse repeated events on the same thing into one line.
+
+    Fifty likes on one post are one fact, not fifty. They are grouped by
+    (type, subject) -- the post or the clip the event is about -- and the
+    group reads "Ada and Sam" or "Ada, Sam, and 48 others". A group counts as
+    unread until every event in it has been read, so a stack cannot hide a new
+    event behind an old one. Types outside STACKABLE_NOTIFICATION_TYPES (a
+    follow, a friend request, a message) stay one line each, because each is
+    about a different person and grouping them would lose the point.
+
+    Order is preserved: a group sits where its first event sat.
+    """
+    stacked = []
+    stack_map = {}
     for notification in notifications:
         name = notification.get('actor_name') or 'Someone'
         notification['stack_count'] = 1
         notification['stack_actor_names'] = [name]
-        notification['actor_summary'] = name
-    return notifications
+        notification['actor_summary'] = actor_summary([name], 1)
+
+        notif_type = notification.get('type')
+        if notif_type not in STACKABLE_NOTIFICATION_TYPES:
+            stacked.append(notification)
+            continue
+
+        # A clip event names a reel, a post event names a post. Without the
+        # subject in the key, every like anywhere would collapse into one row.
+        key = (notif_type,
+               notification.get('post_id') or notification.get('reel_id') or 'global')
+        existing = stack_map.get(key)
+        if existing is None:
+            stack_map[key] = notification
+            stacked.append(notification)
+            continue
+
+        existing['stack_count'] += 1
+        existing['is_read'] = bool(existing.get('is_read') and notification.get('is_read'))
+        if name not in existing['stack_actor_names']:
+            existing['stack_actor_names'].append(name)
+        existing['actor_summary'] = actor_summary(existing['stack_actor_names'],
+                                                  existing['stack_count'])
+
+    return stacked
 
 @app.route('/')
 def index():
@@ -4145,7 +4384,10 @@ def oauth_onboarding():
 
 @app.route('/under-13')
 def under_13():
-    return render_template('under_13.html')
+    # The page states the age someone can come back at, and that is MIN_AGE,
+    # not the COPPA threshold that routes them here. Passing the constant
+    # keeps the two from drifting apart again.
+    return render_template('under_13.html', min_age=MIN_AGE)
 
 
 @app.route('/auth', methods=['GET', 'POST'])
@@ -6084,51 +6326,58 @@ def careers():
         email = request.form.get('email', '').strip()
         position_title = request.form.get('position', '').strip()
         message = request.form.get('message', '').strip()
-        cv_file = request.files.get('cv')
+        portfolio_raw = request.form.get('portfolio_url', '').strip()
 
         if not name or not email or not position_title or not message:
             flash("All fields are required.", "error")
-            return redirect(url_for('careers'))
-        if not cv_file or not cv_file.filename:
-            flash("A CV / resume is required to submit your application.", "error")
             return redirect(url_for('careers'))
         if not is_valid_email(email):
             flash("Please enter a valid email address.", "error")
             return redirect(url_for('careers'))
 
-        allowed_ext = {'.pdf', '.doc', '.docx'}
-        ext = os.path.splitext(cv_file.filename.lower())[1]
-        if ext not in allowed_ext:
-            flash("CV must be a PDF, DOC, or DOCX file.", "error")
+        # This used to take a CV file and write it to static/uploads/cvs/.
+        # The serverless filesystem is read-only, so the save raised -- and it
+        # ran before the insert with nothing catching it, so the applicant got
+        # a 500 and the application never reached the table at all. A link is
+        # something the candidate already has, and nothing is written to disk,
+        # so the application always lands.
+        portfolio_url = normalise_web_link(portfolio_raw)
+        if not portfolio_url:
+            flash("Add a link to your LinkedIn, GitHub or portfolio so we can "
+                  "see your work.", "error")
             return redirect(url_for('careers'))
 
-        safe_name = f"cv_{uuid.uuid4().hex}{ext}"
-        upload_dir = os.path.join(app.root_path, 'static', 'uploads', 'cvs')
-        os.makedirs(upload_dir, exist_ok=True)
-        cv_file.save(os.path.join(upload_dir, safe_name))
+        if not supabase:
+            flash("Applications are unavailable right now. Try again shortly.", "error")
+            return redirect(url_for('careers'))
 
         position_id = None
-        if supabase:
-            try:
-                res = supabase.table('job_positions').select('id').eq('title', position_title).limit(1).execute()
-                if res and getattr(res, 'data', None):
-                    position_id = res.data[0]['id']
-            except Exception:
-                position_id = None
+        try:
+            res = supabase.table('job_positions').select('id').eq('title', position_title).limit(1).execute()
+            if res and getattr(res, 'data', None):
+                position_id = res.data[0]['id']
+        except Exception:
+            # An open application that names no listed role is still an
+            # application; it keeps the title the candidate typed.
+            position_id = None
 
-            try:
-                supabase.table('job_applications').insert({
-                    'position_id': position_id,
-                    'position_title': position_title,
-                    'name': name,
-                    'email': email,
-                    'message': message,
-                    'cv_url': safe_name,
-                }).execute()
-            except Exception as exc:
-                app.logger.error(f"Failed to save job application to DB: {exc}")
+        try:
+            supabase.table('job_applications').insert({
+                'position_id': position_id,
+                'position_title': position_title,
+                'name': name,
+                'email': email,
+                'message': message,
+                'portfolio_url': portfolio_url,
+            }).execute()
+        except Exception as exc:
+            # Saying "submitted successfully" after the insert failed sent the
+            # candidate away believing they had applied.
+            app.logger.error(f"Failed to save job application: {exc}")
+            flash("Your application could not be submitted. Try again shortly.", "error")
+            return redirect(url_for('careers'))
 
-        app.logger.info(f"[CAREERS] from={email} name={name} position={position_title} cv={safe_name}")
+        app.logger.info("[CAREERS] from=%s name=%s position=%s", email, name, position_title)
         flash('Application submitted successfully!', 'success')
         return redirect(url_for('careers'))
 
@@ -6202,7 +6451,7 @@ def admin_dashboard():
                     return redirect(url_for('admin_dashboard'))
                     
             elif action == 'toggle_position':
-                pos_id = parse_positive_id(request.form.get('id'))
+                pos_id = parse_uuid_id(request.form.get('id'))
                 if pos_id and supabase:
                     try:
                         res = supabase.table('job_positions').select('is_active').eq('id', pos_id).limit(1).execute()
@@ -6215,7 +6464,7 @@ def admin_dashboard():
                 return redirect(url_for('admin_dashboard'))
                 
             elif action == 'delete_position':
-                pos_id = parse_positive_id(request.form.get('id'))
+                pos_id = parse_uuid_id(request.form.get('id'))
                 if pos_id and supabase:
                     try:
                         supabase.table('job_positions').delete().eq('id', pos_id).execute()
@@ -6225,7 +6474,7 @@ def admin_dashboard():
                 return redirect(url_for('admin_dashboard'))
 
             elif action == 'update_suggestion_status':
-                msg_id = parse_positive_id(request.form.get('id'))
+                msg_id = parse_uuid_id(request.form.get('id'))
                 status = request.form.get('status')
                 if status not in ADMIN_SUGGESTION_STATUSES:
                     flash("Invalid suggestion status.", "error")
@@ -6240,7 +6489,7 @@ def admin_dashboard():
                 return redirect(url_for('admin_dashboard'))
 
             elif action == 'respond_verification':
-                req_id = parse_positive_id(request.form.get('id'))
+                req_id = parse_uuid_id(request.form.get('id'))
                 status = request.form.get('status')
                 if status not in ADMIN_VERIFICATION_DECISIONS:
                     flash("Invalid verification decision.", "error")

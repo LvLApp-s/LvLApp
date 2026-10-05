@@ -61,14 +61,10 @@
   color: var(--text-primary);
   font: inherit;
   font-size: 13px;
-  color-scheme: dark;
-}
-
-:root[data-theme="light"] .composer-draft-button,
-:root[data-theme="light"] .composer-draft-picker {
-  color-scheme: light;
-  background: #ffffff;
-  color: #0f1419;
+  /* color-scheme is inherited, and :root already carries the right one for
+     the active theme. Pinning it to dark here is what forced the light-mode
+     override below to exist -- and that override, living in a section rather
+     than in the token block, is a second stylesheet for daylight mode. */
 }
 
 .composer-draft-button {
@@ -97,15 +93,12 @@
   cursor: pointer;
 }
 
+/* The browser paints the dropdown's popup, so the option needs its colours
+   spelled out -- but from the tokens, which already flip with the theme. */
 .composer-draft-picker option {
-  background-color: var(--lvl-surface-raised, #18181b);
-  color: var(--text-primary, #ffffff);
+  background-color: var(--lvl-surface-raised);
+  color: var(--text-primary);
   padding: 8px 12px;
-}
-
-:root[data-theme="light"] .composer-draft-picker option {
-  background-color: #ffffff;
-  color: #0f1419;
 }
 
 .draft-status {
@@ -140,14 +133,14 @@
 }
 
 .clip-submit-btn {
-  background: linear-gradient(135deg, #6d28d9, #8b5cf6);
+  background: linear-gradient(135deg, var(--lvl-violet-deep), var(--lvl-purple));
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 
 .clip-submit-btn:hover {
-  background: linear-gradient(135deg, #5b21b6, #7c3aed);
+  background: linear-gradient(135deg, var(--lvl-violet-deepest), var(--lvl-violet));
 }
 
 .video-upload-control {
@@ -187,6 +180,6 @@
 }
 
 #composer-video-clear:hover {
-  color: var(--lvl-red, #ef4444);
-  border-color: var(--lvl-red, #ef4444);
+  color: var(--lvl-red, var(--lvl-red-plain));
+  border-color: var(--lvl-red, var(--lvl-red-plain));
 }

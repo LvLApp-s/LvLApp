@@ -61,6 +61,29 @@
   --lvl-blue-strong: #3b82f6;
   --lvl-deep-blue: #0066ff;
   --lvl-purple-strong: #a855f7;
+  /* Light ends of the accents, for text and icons on a tinted chip where
+     the full-strength colour is too dark to read. The drafts page had these
+     written as raw hex in a <style> block in its own template. */
+  --lvl-purple-light: #a78bfa;
+  --lvl-blue-light: #60a5fa;
+  --lvl-rose: #fb7185;
+  --lvl-rose-soft: rgba(244, 63, 94, 0.15);
+  --lvl-rose-border: rgba(244, 63, 94, 0.3);
+  --lvl-blue-light-soft: rgba(59, 130, 246, 0.12);
+  --lvl-blue-light-border: rgba(59, 130, 246, 0.25);
+  /* Status accents used by the admin dashboard's chips and meters, and the
+     rose the clip like button burns to. These were raw hex spread across
+     five section files, where no theme flip could reach them. */
+  --lvl-emerald: #10b981;
+  --lvl-emerald-light: #34d399;
+  --lvl-amber: #f59e0b;
+  --lvl-red-light: #f87171;
+  --lvl-red-plain: #ef4444;
+  --lvl-rose-strong: #f43f5e;
+  --lvl-violet: #7c3aed;
+  --lvl-violet-deep: #6d28d9;
+  --lvl-violet-deepest: #5b21b6;
+  --lvl-ink: #18181b;
   --lvl-streak: #ff6b35;
   --lvl-streak-soft: rgba(255, 107, 53, 0.12);
   --lvl-streak-border: rgba(255, 107, 53, 0.25);
@@ -98,7 +121,12 @@
   --lvl-warning-border: rgba(245, 197, 66, 0.55);
   --lvl-purple-soft-25: rgba(139, 92, 246, 0.25);
   --lvl-purple-solid-96: rgba(139, 92, 246, 0.96);
+  --lvl-cyan-soft-18: rgba(56, 189, 248, 0.18);
   --lvl-cyan-soft-42: rgba(56, 189, 248, 0.42);
+  --lvl-purple-strong-soft-08: rgba(168, 85, 247, 0.08);
+  --lvl-purple-strong-soft-20: rgba(168, 85, 247, 0.2);
+  --lvl-purple-strong-soft-30: rgba(168, 85, 247, 0.3);
+  --lvl-purple-strong-soft-35: rgba(168, 85, 247, 0.35);
   --lvl-purple-strong-soft-40: rgba(168, 85, 247, 0.4);
   --lvl-system-blue-soft-28: rgba(88, 184, 255, 0.28);
   --lvl-system-blue-border: rgba(67, 171, 255, 0.32);
@@ -188,6 +216,9 @@
   --control-xl: 52px;
   /* Minimum comfortable touch area; every tappable control meets this. */
   --touch-target: 44px;
+  /* The floor for a control packed into a dense row, where the full
+     44px target would not fit: still large enough to hit on a phone. */
+  --touch-target-sm: 28px;
 
   --icon-sm: 24px;
   --swatch-md: 32px;
@@ -239,7 +270,12 @@
      the top of the timeline parks below this instead of sliding under the
      bar. */
   --sticky-top: var(--topbar-height);
-  --mobile-nav-height: 56px;
+  /* Measured, not guessed: the bar renders 77px at phone widths (a 24px
+     icon, its label, and 8px of padding at each end). It read 56px, so
+     everything that reserved space for the nav -- the feed's bottom
+     padding, the clip player's height, the cookie bar's offset -- was 21px
+     short, and the cookie bar in particular overlapped it. */
+  --mobile-nav-height: 77px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);

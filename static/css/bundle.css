@@ -5,7 +5,7 @@
    Edit the section files under static/css/sections/ and re-run the script.
    --------------------------------------------------------------------------- */
 
-/* ===== sections\base.css ===== */
+/* ===== sections/base.css ===== */
 /* Design tokens, reset, shell layout */
 :root {
   /* ---------------------------------------------------------------------
@@ -69,6 +69,29 @@
   --lvl-blue-strong: #3b82f6;
   --lvl-deep-blue: #0066ff;
   --lvl-purple-strong: #a855f7;
+  /* Light ends of the accents, for text and icons on a tinted chip where
+     the full-strength colour is too dark to read. The drafts page had these
+     written as raw hex in a <style> block in its own template. */
+  --lvl-purple-light: #a78bfa;
+  --lvl-blue-light: #60a5fa;
+  --lvl-rose: #fb7185;
+  --lvl-rose-soft: rgba(244, 63, 94, 0.15);
+  --lvl-rose-border: rgba(244, 63, 94, 0.3);
+  --lvl-blue-light-soft: rgba(59, 130, 246, 0.12);
+  --lvl-blue-light-border: rgba(59, 130, 246, 0.25);
+  /* Status accents used by the admin dashboard's chips and meters, and the
+     rose the clip like button burns to. These were raw hex spread across
+     five section files, where no theme flip could reach them. */
+  --lvl-emerald: #10b981;
+  --lvl-emerald-light: #34d399;
+  --lvl-amber: #f59e0b;
+  --lvl-red-light: #f87171;
+  --lvl-red-plain: #ef4444;
+  --lvl-rose-strong: #f43f5e;
+  --lvl-violet: #7c3aed;
+  --lvl-violet-deep: #6d28d9;
+  --lvl-violet-deepest: #5b21b6;
+  --lvl-ink: #18181b;
   --lvl-streak: #ff6b35;
   --lvl-streak-soft: rgba(255, 107, 53, 0.12);
   --lvl-streak-border: rgba(255, 107, 53, 0.25);
@@ -106,7 +129,12 @@
   --lvl-warning-border: rgba(245, 197, 66, 0.55);
   --lvl-purple-soft-25: rgba(139, 92, 246, 0.25);
   --lvl-purple-solid-96: rgba(139, 92, 246, 0.96);
+  --lvl-cyan-soft-18: rgba(56, 189, 248, 0.18);
   --lvl-cyan-soft-42: rgba(56, 189, 248, 0.42);
+  --lvl-purple-strong-soft-08: rgba(168, 85, 247, 0.08);
+  --lvl-purple-strong-soft-20: rgba(168, 85, 247, 0.2);
+  --lvl-purple-strong-soft-30: rgba(168, 85, 247, 0.3);
+  --lvl-purple-strong-soft-35: rgba(168, 85, 247, 0.35);
   --lvl-purple-strong-soft-40: rgba(168, 85, 247, 0.4);
   --lvl-system-blue-soft-28: rgba(88, 184, 255, 0.28);
   --lvl-system-blue-border: rgba(67, 171, 255, 0.32);
@@ -196,6 +224,9 @@
   --control-xl: 52px;
   /* Minimum comfortable touch area; every tappable control meets this. */
   --touch-target: 44px;
+  /* The floor for a control packed into a dense row, where the full
+     44px target would not fit: still large enough to hit on a phone. */
+  --touch-target-sm: 28px;
 
   --icon-sm: 24px;
   --swatch-md: 32px;
@@ -247,7 +278,12 @@
      the top of the timeline parks below this instead of sliding under the
      bar. */
   --sticky-top: var(--topbar-height);
-  --mobile-nav-height: 56px;
+  /* Measured, not guessed: the bar renders 77px at phone widths (a 24px
+     icon, its label, and 8px of padding at each end). It read 56px, so
+     everything that reserved space for the nav -- the feed's bottom
+     padding, the clip player's height, the cookie bar's offset -- was 21px
+     short, and the cookie bar in particular overlapped it. */
+  --mobile-nav-height: 77px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
@@ -983,7 +1019,7 @@ body,
 
 img.avatar[src$=".svg"] { object-fit: contain !important; }
 
-/* ===== sections\navigation.css ===== */
+/* ===== sections/navigation.css ===== */
 /* Left rail and primary navigation */
 /* Left Sidebar */
 .brand {
@@ -1243,7 +1279,19 @@ img.avatar[src$=".svg"] { object-fit: contain !important; }
   }
 }
 
-/* ===== sections\feed.css ===== */
+/* ===== sections/feed.css ===== */
+/* A note on !important in this file.
+
+   It used to carry 25 of them. Each one was removed, every page this file
+   touches was re-rendered at two widths in both themes, and the computed
+   style of every element was compared against the same dump taken before.
+   5 declarations changed something; those kept the override and are the
+   ones still here. The rest changed nothing and are gone.
+
+   So: before adding one, check whether the rule it is fighting can simply be
+   made more specific. If an override really is needed, the test above is how
+   to prove it. */
+
 /* Timeline, composer, posts, empty and flash states */
 /* Timeline */
 /* Parks below the top bar, not under it. At top: 0 the header pinned into
@@ -1780,7 +1828,7 @@ img.avatar[src$=".svg"] { object-fit: contain !important; }
 .media-loading::before { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 20%, var(--lvl-white-08) 45%, transparent 70%); background-size: 220% 100%; animation: media-skeleton 1.2s linear infinite; }
 @keyframes media-skeleton { to { background-position: -220% 0; } }
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  *, *::before, *::after { scroll-behavior: auto; animation-duration: 0.01ms; animation-iteration-count: 1; transition-duration: 0.01ms; }
 }
 
 .home-header .header-top {
@@ -1826,10 +1874,10 @@ img.avatar[src$=".svg"] { object-fit: contain !important; }
   padding: 4px 8px;
   border-radius: 0 !important;
   border: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  outline: none !important;
-  -webkit-tap-highlight-color: transparent !important;
+  background: transparent;
+  box-shadow: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
   color: var(--text-secondary);
   font-family: inherit;
   font-size: 13px;
@@ -1863,10 +1911,10 @@ img.avatar[src$=".svg"] { object-fit: contain !important; }
 
 .post-action-button.like-active,
 .lvl-action-like.active {
-  color: var(--lvl-danger) !important;
-  background: transparent !important;
+  color: var(--lvl-danger);
+  background: transparent;
   border: none !important;
-  box-shadow: none !important;
+  box-shadow: none;
 }
 
 .post-action-button.like-active .post-action-icon,
@@ -1881,9 +1929,9 @@ img.avatar[src$=".svg"] { object-fit: contain !important; }
 .post-action-button.like-active .post-action-icon svg path,
 .lvl-action-like.active .post-action-icon svg,
 .lvl-action-like.active .post-action-icon svg path {
-  fill: var(--lvl-danger) !important;
-  stroke: var(--lvl-danger) !important;
-  filter: drop-shadow(0 0 6px rgba(244, 63, 94, 0.6)) !important;
+  fill: var(--lvl-danger);
+  stroke: var(--lvl-danger);
+  filter: drop-shadow(0 0 6px rgba(244, 63, 94, 0.6));
 }
 
 /* ── Repost (Vibrant Emerald) ── */
@@ -1897,10 +1945,10 @@ img.avatar[src$=".svg"] { object-fit: contain !important; }
 
 .post-action-button.repost-active,
 .lvl-action-repost.active {
-  color: var(--lvl-success) !important;
-  background: transparent !important;
+  color: var(--lvl-success);
+  background: transparent;
   border: none !important;
-  box-shadow: none !important;
+  box-shadow: none;
 }
 
 .post-action-button.repost-active .post-action-icon,
@@ -1925,10 +1973,10 @@ img.avatar[src$=".svg"] { object-fit: contain !important; }
 
 .post-action-button.bookmark-active,
 .lvl-action-vault.active {
-  color: var(--lvl-warning) !important;
-  background: transparent !important;
+  color: var(--lvl-warning);
+  background: transparent;
   border: none !important;
-  box-shadow: none !important;
+  box-shadow: none;
 }
 
 .post-action-button.bookmark-active .post-action-icon,
@@ -2102,7 +2150,7 @@ img.avatar[src$=".svg"] { object-fit: contain !important; }
   100% { opacity: 0; transform: translate(-22px, -50%) scale(0.2); }
 }
 
-/* ===== sections\feedback.css ===== */
+/* ===== sections/feedback.css ===== */
 /* ---------------------------------------------------------------------------
    Feedback: the one surface for every message LvL shows.
 
@@ -2406,7 +2454,7 @@ label.has-success input {
   }
 }
 
-/* ===== sections\components.css ===== */
+/* ===== sections/components.css ===== */
 /* ---------------------------------------------------------------------------
    Shared components introduced by the final implementation pass.
 
@@ -2499,22 +2547,38 @@ label.has-success input {
 
 /* --- Cookie consent ------------------------------------------------------ */
 
+/* A bar across the foot of the window, not a card floating over the page.
+
+   It used to be a 560px card pinned to the bottom left, which is exactly
+   where the content column is: on /careers it covered the "Full Name" field
+   of the application form, and because it is fixed, scrolling moved the form
+   but not the card -- the field could not be reached at all until the notice
+   was dismissed. A full-width bar has nothing beside it to cover, and the
+   clearance below reserves its height so the page can always scroll clear
+   of it. */
 .consent-banner {
   position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  /* Sits above the mobile bottom navigation, never on top of it. */
-  bottom: calc(var(--mobile-nav-clearance) + var(--space-5));
+  left: 0;
+  right: 0;
+  /* Above the mobile bottom navigation, never on top of it. */
+  bottom: var(--mobile-nav-clearance);
   z-index: var(--z-modal);
-  width: min(100% - 32px, 520px);
   opacity: 0;
+  transform: translateY(12px);
   transition:
     opacity var(--duration-slow) var(--ease-standard),
     transform var(--duration-slow) var(--ease-standard);
+  /* The surface belongs to the bar, so it reaches both edges of the window;
+     the card inside only sets where the words sit. With the background on
+     the card instead, the notice read as another floating panel. */
+  border-top: 1px solid var(--border-color);
+  background: var(--lvl-surface-overlay);
+  box-shadow: var(--shadow-lg);
 }
 
 .consent-banner.is-visible {
   opacity: 1;
+  transform: translateY(0);
 }
 
 .consent-card {
@@ -2522,10 +2586,21 @@ label.has-success input {
   flex-direction: column;
   gap: var(--space-6);
   padding: var(--space-7);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-xl);
-  background: var(--lvl-surface-overlay);
-  box-shadow: var(--shadow-lg);
+  max-width: 1100px;
+  margin-inline: auto;
+}
+
+/* While the notice is up, the page keeps its height free underneath it.
+
+   This is a block in normal flow at the end of the body rather than padding
+   on a shell, because which element carries the page's bottom padding is not
+   the same on every page or at every width -- the feed hands it to .timeline
+   on phones, for instance. A spacer at the end of the document extends the
+   scroll height wherever it is used. The script measures the bar and writes
+   the value; the fallback is 0 so nothing shifts once a choice is made. */
+.consent-spacer {
+  height: var(--consent-clearance, 0px);
+  flex: 0 0 auto;
 }
 
 .consent-title {
@@ -2566,36 +2641,20 @@ label.has-success input {
 }
 
 @media (min-width: 768px) {
-  .consent-banner {
-    left: var(--space-10);
-    right: auto;
-    bottom: var(--space-10);
-    transform: translateY(12px);
-    width: min(100% - 48px, 560px);
-  }
-
-  .consent-banner.is-visible {
-    transform: translateY(0);
-  }
-
-  [dir="rtl"] .consent-banner {
-    left: auto;
-    right: var(--space-10);
-  }
-
   .consent-card {
     flex-direction: row;
     align-items: center;
   }
 
+  /* Side by side: the bar is wide, and stacking two short labels in a column
+     made the bar taller than the sentence beside it needed. */
   .consent-actions {
     flex: 0 0 auto;
-    flex-direction: column;
+    flex-direction: row;
   }
 
   .consent-button {
     flex: 0 0 auto;
-    width: 100%;
   }
 }
 
@@ -2651,7 +2710,45 @@ label.has-success input {
   min-height: 0;
   max-height: 420px;
   overflow-y: auto;
+  overflow-x: hidden;
   overscroll-behavior: contain;
+}
+
+/* One trending entry. The rail is a narrow column, so the full feed post is
+   drawn smaller here: a smaller avatar, tighter text, and the action row
+   scaled down. This was a <style> block inside layout.html, inside the loop's
+   own section -- sent again on every render of every page with a rail, and
+   out of reach of the bundle and the token tests. */
+.trending-item {
+  flex-shrink: 0;
+  display: block;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.trending-panel .timeline .post {
+  flex-shrink: 0;
+  padding: var(--space-1) var(--space-3);
+  min-height: unset;
+}
+
+.trending-panel .post-avatar img {
+  width: 24px;
+  height: 24px;
+}
+
+.trending-panel .post-content {
+  font-size: 0.8em;
+}
+
+.trending-panel .post-header {
+  margin-bottom: 0;
+  font-size: 0.85em;
+}
+
+.trending-panel .post-actions {
+  margin-top: 0;
+  transform: scale(0.75);
+  transform-origin: left;
 }
 
 /* The rail is a column, so a panel can only grow if the rail lets it. */
@@ -2660,6 +2757,10 @@ label.has-success input {
 .right-rail {
   display: flex;
   flex-direction: column;
+  /* Without this the panels butted into each other: the leaderboard's rounded
+     bottom edge and the "LEVELS" kicker of the panel under it shared a pixel
+     row, so the two read as one broken box. */
+  gap: var(--space-5);
 }
 
 /* Sized by their content, so the clips panel below them takes the rest.
@@ -3146,26 +3247,32 @@ label.has-success input {
 }
 
 /* --- Media volume --------------------------------------------------------
-   One control, two gestures, the way a phone app does it: a tap on the
-   speaker mutes or unmutes, and holding the pointer on it opens the level
-   beside it. The track stays in the layout and is clipped to zero width so
-   it can slide rather than blink in -- display:none cannot be transitioned.
+   A speaker and a level bar, side by side, on every surface that plays a
+   clip. Tap the speaker to mute or unmute; drag the bar to set the level.
+
+   The bar used to be clipped to zero width and opened on hover, focus or
+   drag. That made it invisible: nothing on the control suggested a level
+   existed, so someone who wanted to turn a clip down saw a speaker, pressed
+   it, and got silence instead of the quieter clip they wanted. A control you
+   have to discover by hovering is a control most people never find -- and on
+   a touch screen there is no hover to discover it with, which is why there
+   was already a media query forcing it open there. It is simply out now,
+   everywhere, which is what that query was working around.
    ------------------------------------------------------------------------ */
 
 .media-volume {
   display: inline-flex;
   align-items: center;
-  gap: 0;
-  padding: 0;
+  gap: var(--space-3);
+  padding-inline-end: var(--space-4);
   border-radius: var(--radius-pill);
   background: var(--lvl-black-52);
-  transition: gap var(--duration-base) var(--ease-standard),
-              padding var(--duration-base) var(--ease-standard);
 }
 
-/* Sitting against the right edge, so it opens towards the middle. */
+/* Sitting against the right edge, so the bar runs towards the middle. */
 .media-volume-end {
   flex-direction: row-reverse;
+  padding-inline: var(--space-4) 0;
 }
 
 .media-volume-toggle {
@@ -3175,43 +3282,79 @@ label.has-success input {
 .media-volume-track {
   display: flex;
   align-items: center;
-  max-width: 0;
-  overflow: hidden;
-  opacity: 0;
-  transition: max-width var(--duration-base) var(--ease-standard),
-              opacity var(--duration-base) var(--ease-standard);
+  flex: 0 0 auto;
 }
 
-/* is-adjusting is set while the thumb is held. A drag that wanders off the
-   pill -- which is easy, it is 30px tall -- would otherwise end the hover and
-   collapse the track out from under the pointer mid-drag. */
-.media-volume:hover,
-.media-volume:focus-within,
-.media-volume.is-adjusting {
-  gap: var(--space-3);
-  padding-inline-end: var(--space-4);
+/* The corner control: the level standing on top of the speaker, in the
+   clip's bottom right corner, the way a phone app puts it.
+
+   Laid out along the block axis, so the same markup reads as a column here
+   and as a row where the control sits in a toolbar. It is absolutely placed
+   on the frame rather than in the row of names and badges, where a reader
+   took it for another badge instead of the thing you grab to turn a clip
+   down. */
+.media-volume-corner {
+  position: absolute;
+  inset-inline-end: 12px;
+  inset-block-end: 12px;
+  inset-block-start: auto;
+  z-index: 12;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-2) var(--space-2);
+  border-radius: var(--radius-pill);
+  /* It sits on moving pictures, so it carries its own backdrop. */
+  background: var(--lvl-black-52);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  pointer-events: auto;
 }
 
-.media-volume-end:hover,
-.media-volume-end:focus-within,
-.media-volume-end.is-adjusting {
-  padding-inline: var(--space-4) 0;
+.media-volume-corner .media-volume-slider {
+  /* writing-mode is what stands a range input up these days, and it keeps
+     appearance: none -- so the track and handle below are the ones we drew.
+     The old way, appearance: slider-vertical, turns the native widget back
+     on and takes its own colours with it: the bar came back in the system
+     accent with a blue handle, which is the browser's idea of a slider and
+     not this product's. */
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 18px;
+  height: 72px;
 }
 
-.media-volume:hover .media-volume-track,
-.media-volume:focus-within .media-volume-track,
-.media-volume.is-adjusting .media-volume-track {
-  max-width: 96px;
-  opacity: 1;
+/* Vertical, so the filled part runs up from the bottom rather than in from
+   the left. */
+.media-volume-corner .media-volume-slider::-webkit-slider-runnable-track {
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(to top,
+    var(--lvl-white) 0 var(--volume-fill, 100%),
+    var(--lvl-white-22) var(--volume-fill, 100%) 100%);
 }
 
-/* A pointer that only grazes the corner should not pop the slider open, so
-   the level waits for the pointer to settle. Not while dragging: that has to
-   answer immediately. */
-@media (hover: hover) {
-  .media-volume:hover:not(.is-adjusting) .media-volume-track {
-    transition-delay: 90ms;
-  }
+.media-volume-corner .media-volume-slider::-moz-range-track {
+  width: 4px;
+  height: 100%;
+}
+
+.media-volume-corner .media-volume-slider::-webkit-slider-thumb {
+  margin-top: 0;
+  margin-left: -4px;
+}
+
+/* is-adjusting is set while the thumb is held, so the handle can grow under
+   the finger that is holding it. It no longer has to keep the bar open --
+   the bar does not close -- but a drag still deserves to be acknowledged. */
+.media-volume.is-adjusting .media-volume-slider::-webkit-slider-thumb {
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+}
+
+.media-volume.is-adjusting .media-volume-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
 }
 
 .media-volume-slider {
@@ -3266,27 +3409,26 @@ label.has-success input {
   box-shadow: 0 1px 4px var(--lvl-black-62);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .media-volume,
-  .media-volume-track {
-    transition: none;
-  }
-}
-
-/* No hover on a touch screen, so the level is always out. */
+/* A finger needs more of the bar to aim at than a pointer does. */
 @media (hover: none) {
-  .media-volume-track {
-    max-width: 84px;
-    opacity: 1;
+  .media-volume-slider {
+    height: 24px;
   }
 
-  .media-volume {
-    gap: var(--space-3);
-    padding-inline-end: var(--space-4);
+  .media-volume-corner .media-volume-slider {
+    width: 26px;
+    height: 84px;
   }
 
-  .media-volume-end {
-    padding-inline: var(--space-4) 0;
+  .media-volume-slider::-webkit-slider-thumb {
+    width: 14px;
+    height: 14px;
+    margin-top: -5px;
+  }
+
+  .media-volume-slider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
   }
 }
 
@@ -3979,7 +4121,7 @@ label.has-success input {
   margin-inline-start: 0;
 }
 
-/* ===== sections\auth.css ===== */
+/* ===== sections/auth.css ===== */
 /* Login/register page */
 .auth-form .remember-me-row {
   display: inline-flex;
@@ -4560,7 +4702,19 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   }
 }
 
-/* ===== sections\profile.css ===== */
+/* ===== sections/profile.css ===== */
+/* A note on !important in this file.
+
+   It used to carry 34 of them. Each one was removed, every page this file
+   touches was re-rendered at two widths in both themes, and the computed
+   style of every element was compared against the same dump taken before.
+   5 declarations changed something; those kept the override and are the
+   ones still here. The rest changed nothing and are gone.
+
+   So: before adding one, check whether the rule it is fighting can simply be
+   made more specific. If an override really is needed, the test above is how
+   to prove it. */
+
 /* Profile header and public profile layout */
 .profile-header {
   border-bottom: 1px solid var(--border-color);
@@ -4911,9 +5065,9 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
 }
 
 .pprogress-body.is-collapsed {
-  max-height: 0 !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
   visibility: hidden;
 }
 
@@ -5101,52 +5255,52 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
 }
 
 .profile-reels-feed .reel-card {
-  min-height: auto !important;
-  height: auto !important;
-  padding: 0 !important;
-  width: min(100%, 420px) !important;
-  box-sizing: border-box !important;
+  min-height: auto;
+  height: auto;
+  padding: 0;
+  width: min(100%, 420px);
+  box-sizing: border-box;
 }
 
 .profile-reels-feed .reel-video-frame {
-  width: 100% !important;
-  height: auto !important;
-  aspect-ratio: 9 / 16 !important;
-  max-height: clamp(380px, 60vh, 560px) !important;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 9 / 16;
+  max-height: clamp(380px, 60vh, 560px);
   border-radius: var(--radius-xl) !important;
-  overflow: hidden !important;
+  overflow: hidden;
 }
 
 .profile-reels-feed .reel-actions,
       .profile-reels-feed .reel-actions * {
-  background: transparent !important;
+  background: transparent;
   border: none !important;
-  box-shadow: none !important;
+  box-shadow: none;
   border-radius: 0 !important;
 }
 
 .profile-reels-feed .reel-actions {
-  position: absolute !important;
-  bottom: 8px !important;
-  right: 8px !important;
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
   display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
+  flex-direction: column;
+  align-items: center;
   gap: 3px !important;
-  width: 40px !important;
-  z-index: 5 !important;
+  width: 40px;
+  z-index: 5;
 }
 
 .profile-reels-feed .reel-action-button,
       .profile-reels-feed .reel-actions button,
       .profile-reels-feed .reel-actions a {
-  width: 36px !important;
-  min-height: 36px !important;
-  height: 36px !important;
-  font-size: 10px !important;
-  padding: 0 !important;
-  color: var(--lvl-white) !important;
-  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.85)) !important;
+  width: 36px;
+  min-height: 36px;
+  height: 36px;
+  font-size: 10px;
+  padding: 0;
+  color: var(--lvl-white);
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.85));
 }
 
 /* --------------------------------------------------------------------------
@@ -5268,10 +5422,10 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
 
 .reply-card-link:hover {
   background: var(--lvl-brand);
-  color: #fff;
+  color: var(--lvl-white);
 }
 
-/* ===== sections\rewards.css ===== */
+/* ===== sections/rewards.css ===== */
 /* XP cards, achievements, reward ladder, and LvL guide */
 .profile-xp-card {
   margin-top: 16px;
@@ -5647,15 +5801,27 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   }
 }
 
-/* ===== sections\messages.css ===== */
+/* ===== sections/messages.css ===== */
+/* A note on !important in this file.
+
+   It used to carry 200 of them. Each one was removed, every page this file
+   touches was re-rendered at two widths in both themes, and the computed
+   style of every element was compared against the same dump taken before.
+   55 declarations changed something; those kept the override and are the
+   ones still here. The rest changed nothing and are gone.
+
+   So: before adding one, check whether the rule it is fighting can simply be
+   made more specific. If an override really is needed, the test above is how
+   to prove it. */
+
 /* Messages and chat UI */
 .timeline-messages {
   display: flex !important;
-  flex-direction: column !important;
+  flex-direction: column;
   height: 100dvh !important;
-  max-height: 100dvh !important;
-  overflow: hidden !important;
-  box-sizing: border-box !important;
+  max-height: 100dvh;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .timeline-messages .app-topbar {
@@ -5665,12 +5831,12 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
 
 .messages-container {
   display: flex !important;
-  flex: 1 1 0 !important;
+  flex: 1 1 0;
   min-height: 0 !important;
   height: 100% !important;
-  max-height: 100% !important;
-  width: 100% !important;
-  overflow: hidden !important;
+  max-height: 100%;
+  width: 100%;
+  overflow: hidden;
 }
 
 .conversations-sidebar {
@@ -5710,8 +5876,8 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
 .conversations-list {
   flex: 1;
   overflow-y: auto;
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .conversation-item {
@@ -5775,15 +5941,15 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
 }
 
 .chat-window {
-  flex: 1 1 0 !important;
-  min-width: 0 !important;
+  flex: 1 1 0;
+  min-width: 0;
   min-height: 0 !important;
   display: flex !important;
-  flex-direction: column !important;
+  flex-direction: column;
   background-color: var(--bg-color);
-  overflow: hidden !important;
+  overflow: hidden;
   height: 100% !important;
-  max-height: 100% !important;
+  max-height: 100%;
 }
 
 .chat-window-empty {
@@ -5800,7 +5966,7 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   backdrop-filter: blur(12px);
   position: sticky;
   top: 0;
-  flex-shrink: 0 !important;
+  flex-shrink: 0;
   min-height: 53px !important;
 }
 
@@ -5846,10 +6012,10 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
 }
 
 .messages-feed {
-  flex: 1 1 auto !important;
+  flex: 1 1 auto;
   min-height: 0 !important;
-  overflow-y: auto !important;
-  padding: 16px 20px !important;
+  overflow-y: auto;
+  padding: 16px 20px;
   display: flex !important;
   flex-direction: column;
   gap: 14px;
@@ -5862,9 +6028,9 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
 .chat-window::-webkit-scrollbar,
 .messages-container::-webkit-scrollbar {
   display: none !important;
-  width: 0 !important;
+  width: 0;
   height: 0 !important;
-  background: transparent !important;
+  background: transparent;
 }
 
 .load-older-messages {
@@ -5919,8 +6085,8 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   display: flex;
   flex-direction: column;
   width: fit-content;
-  max-width: min(75%, 480px) !important;
-  margin-bottom: 0 !important;
+  max-width: min(75%, 480px);
+  margin-bottom: 0;
   height: auto;
   min-height: 0;
   flex-shrink: 0;
@@ -5929,44 +6095,44 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
 
 .message-bubble-wrapper:has(.shared-reel-card),
 .message-bubble-wrapper:has(.shared-post-card) {
-  margin-bottom: 0 !important;
+  margin-bottom: 0;
 }
 
 .message-bubble-wrapper.own {
   align-self: flex-end;
-  align-items: flex-end !important;
+  align-items: flex-end;
   margin-left: auto;
 }
 
 .message-bubble-wrapper:not(.own) {
   align-self: flex-start;
-  align-items: flex-start !important;
+  align-items: flex-start;
   margin-right: auto;
 }
 
 .message-bubble {
   display: block;
   width: fit-content;
-  max-width: 100% !important;
+  max-width: 100%;
   height: auto;
   min-width: 0;
   min-height: 0;
   aspect-ratio: auto;
-  padding: 8px 14px !important;
-  border-radius: var(--radius-2xl) !important;
-  font-size: 14.5px !important;
-  line-height: 1.45 !important;
-  word-break: break-word !important;
-  overflow-wrap: anywhere !important;
-  white-space: normal !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
+  padding: 8px 14px;
+  border-radius: var(--radius-2xl);
+  font-size: 14.5px;
+  line-height: 1.45;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
   box-sizing: border-box;
 }
 
 .message-bubble.deleted-message {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-color);
-  color: rgba(255, 255, 255, 0.45) !important;
+  color: rgba(255, 255, 255, 0.45);
   font-style: italic;
   padding: 8px 14px;
   font-size: 13.5px;
@@ -5974,9 +6140,9 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
 }
 
 .own .message-bubble:not(.deleted-message) {
-  background: linear-gradient(135deg, var(--lvl-brand), var(--lvl-brand-hover)) !important;
-  color: var(--lvl-white) !important;
-  border: none !important;
+  background: linear-gradient(135deg, var(--lvl-brand), var(--lvl-brand-hover));
+  color: var(--lvl-white);
+  border: none;
   border-bottom-right-radius: 4px;
 }
 
@@ -5984,18 +6150,18 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
 .own .message-bubble div,
 .own .message-bubble p,
 .own .message-bubble span {
-  color: inherit !important;
+  color: inherit;
 }
 
 .own .message-bubble a {
-  color: var(--lvl-white) !important;
-  text-decoration: underline !important;
+  color: var(--lvl-white);
+  text-decoration: underline;
 }
 
 .message-bubble-wrapper:not(.own) .message-bubble:not(.deleted-message) {
-  background: var(--lvl-surface-overlay) !important;
-  border: 1px solid rgba(255, 255, 255, 0.09) !important;
-  color: var(--lvl-text-primary) !important;
+  background: var(--lvl-surface-overlay);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: var(--lvl-text-primary);
   border-bottom-left-radius: 4px;
 }
 
@@ -6003,12 +6169,12 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
 .message-bubble-wrapper:not(.own) .message-bubble div,
 .message-bubble-wrapper:not(.own) .message-bubble p,
 .message-bubble-wrapper:not(.own) .message-bubble span {
-  color: inherit !important;
+  color: inherit;
 }
 
 .message-bubble-wrapper:not(.own) .message-bubble a {
-  color: var(--lvl-cyan) !important;
-  text-decoration: underline !important;
+  color: var(--lvl-cyan);
+  text-decoration: underline;
 }
 
 .message-bubble .message-text-content {
@@ -6016,7 +6182,7 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: anywhere;
-  color: inherit !important;
+  color: inherit;
   font-size: inherit;
   line-height: inherit;
 }
@@ -6056,8 +6222,8 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 4px !important;
-  margin-bottom: 0 !important;
+  margin-top: 4px;
+  margin-bottom: 0;
   padding: 0 4px;
   min-height: 14px;
   line-height: 14px;
@@ -6065,8 +6231,8 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
 
 .shared-reel-card + .message-meta,
 .shared-post-card + .message-meta {
-  margin-top: 6px !important;
-  margin-bottom: 0 !important;
+  margin-top: 6px;
+  margin-bottom: 0;
 }
 
 .own .message-meta {
@@ -6109,11 +6275,11 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
 }
 
 .chat-footer {
-  flex-shrink: 0 !important;
-  padding: 12px 16px !important;
-  border-top: 1px solid var(--border-color, rgba(255,255,255,0.08)) !important;
-  background: var(--bg-color) !important;
-  z-index: 10 !important;
+  flex-shrink: 0;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-color, rgba(255,255,255,0.08));
+  background: var(--bg-color);
+  z-index: 10;
 }
 
 .chat-blocked-note {
@@ -6194,7 +6360,7 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
 
 .chat-unselected::-webkit-scrollbar {
   display: none !important;
-  width: 0 !important;
+  width: 0;
 }
 
 .chat-unselected .outline-button {
@@ -6241,30 +6407,30 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
 @media (max-width: 767px) {
   .app-shell:has(.timeline-messages) {
     display: block !important;
-    width: 100vw !important;
-    max-width: 100vw !important;
-    padding-inline: 0 !important;
-    box-sizing: border-box !important;
+    width: 100vw;
+    max-width: 100vw;
+    padding-inline: 0;
+    box-sizing: border-box;
   }
 
   .app-shell:has(.timeline-messages) .left-rail-wrapper,
   .app-shell:has(.timeline-messages) .right-rail-wrapper {
     display: none !important;
-    width: 0 !important;
+    width: 0;
   }
 
   .timeline-messages {
-    width: 100vw !important;
-    max-width: 100vw !important;
-    box-sizing: border-box !important;
+    width: 100vw;
+    max-width: 100vw;
+    box-sizing: border-box;
   }
 
 }
 
 @media (min-width: 768px) {
   .app-shell:has(.timeline-messages) {
-    max-width: 100% !important;
-    grid-template-columns: auto 1fr 0 !important;
+    max-width: 100%;
+    grid-template-columns: auto 1fr 0;
   }
 
   .app-shell:has(.timeline-messages) .right-rail-wrapper {
@@ -6272,16 +6438,16 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   }
 
   .timeline-messages {
-    width: 100% !important;
-    max-width: none !important;
-    flex-basis: auto !important;
+    width: 100%;
+    max-width: none;
+    flex-basis: auto;
     justify-self: stretch;
     border-right: 0;
     display: flex !important;
-    flex-direction: column !important;
+    flex-direction: column;
     height: 100dvh !important;
-    max-height: 100dvh !important;
-    overflow: hidden !important;
+    max-height: 100dvh;
+    overflow: hidden;
   }
 
   .messages-container {
@@ -6289,11 +6455,11 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
     max-width: none;
     margin: 0;
     display: flex !important;
-    flex: 1 1 0 !important;
+    flex: 1 1 0;
     min-height: 0 !important;
     height: 100% !important;
-    max-height: 100% !important;
-    overflow: hidden !important;
+    max-height: 100%;
+    overflow: hidden;
   }
 
 }
@@ -6330,7 +6496,7 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   }
 
   .messages-container {
-    flex: 1 !important;
+    flex: 1;
     height: auto !important;
     min-height: 0 !important;
     overflow: hidden;
@@ -6372,7 +6538,7 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   }
 
   .messages-container {
-    flex: 1 !important;
+    flex: 1;
     height: auto !important;
     min-height: 0 !important;
   }
@@ -6386,30 +6552,30 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
 @media (max-width: 767px) {
   .app-shell:has(.timeline-messages) {
     display: block !important;
-    width: 100vw !important;
-    max-width: 100vw !important;
-    padding-inline: 0 !important;
-    box-sizing: border-box !important;
+    width: 100vw;
+    max-width: 100vw;
+    padding-inline: 0;
+    box-sizing: border-box;
   }
 
   .app-shell:has(.timeline-messages) .left-rail-wrapper,
   .app-shell:has(.timeline-messages) .right-rail-wrapper {
     display: none !important;
-    width: 0 !important;
+    width: 0;
   }
 
   .timeline-messages {
-    width: 100vw !important;
-    max-width: 100vw !important;
-    box-sizing: border-box !important;
+    width: 100vw;
+    max-width: 100vw;
+    box-sizing: border-box;
   }
 
 }
 
 @media (min-width: 768px) {
   .app-shell:has(.timeline-messages) {
-    max-width: 100% !important;
-    grid-template-columns: auto 1fr 0 !important;
+    max-width: 100%;
+    grid-template-columns: auto 1fr 0;
   }
 
   .app-shell:has(.timeline-messages) .right-rail-wrapper {
@@ -6417,9 +6583,9 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   }
 
   .timeline-messages {
-    width: 100% !important;
-    max-width: none !important;
-    flex-basis: auto !important;
+    width: 100%;
+    max-width: none;
+    flex-basis: auto;
     justify-self: stretch;
     border-right: 0;
   }
@@ -6464,7 +6630,7 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   }
 
   .messages-container {
-    flex: 1 !important;
+    flex: 1;
     height: auto !important;
     min-height: 0 !important;
     overflow: hidden;
@@ -6506,7 +6672,7 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   }
 
   .messages-container {
-    flex: 1 !important;
+    flex: 1;
     height: auto !important;
     min-height: 0 !important;
   }
@@ -6540,9 +6706,9 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
 .message-discovery-grid::-webkit-scrollbar,
 .message-discovery-panel::-webkit-scrollbar {
   display: none !important;
-  width: 0 !important;
+  width: 0;
   height: 0 !important;
-  background: transparent !important;
+  background: transparent;
 }
 
 .conversations-list,
@@ -6554,8 +6720,8 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
 .new-chat-dialog .user-selection-list,
 .message-discovery-grid,
 .message-discovery-panel {
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 @media (max-width: 1000px) {
@@ -6567,14 +6733,14 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
 
   .app-shell:has(.timeline-messages) {
     display: flex !important;
-    flex-direction: column !important;
-    width: 100vw !important;
-    max-width: 100vw !important;
+    flex-direction: column;
+    width: 100vw;
+    max-width: 100vw;
     height: 100dvh;
     max-height: 100dvh;
     overflow: hidden;
     padding: 0;
-    margin: 0 !important;
+    margin: 0;
   }
 
   .app-shell:has(.timeline-messages) .left-rail-wrapper,
@@ -6584,17 +6750,17 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
 
   .timeline-messages {
     display: flex !important;
-    flex-direction: column !important;
+    flex-direction: column;
     flex: 1 1 0;
-    width: 100vw !important;
-    max-width: 100vw !important;
+    width: 100vw;
+    max-width: 100vw;
     height: calc(100dvh - 64px - env(safe-area-inset-bottom, 0px)) !important;
-    max-height: calc(100dvh - 64px - env(safe-area-inset-bottom, 0px)) !important;
+    max-height: calc(100dvh - 64px - env(safe-area-inset-bottom, 0px));
     min-height: 0 !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    overflow: hidden !important;
-    box-sizing: border-box !important;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    box-sizing: border-box;
   }
 
   .mobile-header {
@@ -6603,29 +6769,29 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   }
 
   .messages-container {
-    flex: 1 1 0 !important;
-    width: 100% !important;
+    flex: 1 1 0;
+    width: 100%;
     max-width: 100%;
     height: 100% !important;
-    max-height: 100% !important;
+    max-height: 100%;
     min-height: 0 !important;
-    overflow: hidden !important;
+    overflow: hidden;
     display: flex !important;
   }
 
   .messages-container:has(.chat-unselected) {
-    flex-direction: column !important;
+    flex-direction: column;
     height: 100% !important;
   }
 
   .messages-container:has(.chat-unselected) .conversations-sidebar {
-    width: 100% !important;
-    flex: 1 1 auto !important;
+    width: 100%;
+    flex: 1 1 auto;
     max-height: none;
     height: 100%;
-    border-right: none !important;
+    border-right: none;
     border-bottom: none;
-    overflow-y: auto !important;
+    overflow-y: auto;
   }
 
   .messages-container:has(.chat-unselected) .sidebar-header h2,
@@ -6648,38 +6814,38 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
   }
 
   .messages-container:has(.messages-feed) .chat-window {
-    flex: 1 1 0 !important;
-    min-width: 0 !important;
+    flex: 1 1 0;
+    min-width: 0;
     min-height: 0 !important;
     height: 100% !important;
-    max-height: 100% !important;
-    overflow: hidden !important;
+    max-height: 100%;
+    overflow: hidden;
     display: flex !important;
-    flex-direction: column !important;
+    flex-direction: column;
   }
 
   .messages-container:has(.messages-feed) .chat-header {
-    flex-shrink: 0 !important;
+    flex-shrink: 0;
   }
 
   .messages-container:has(.messages-feed) .messages-feed {
-    flex: 1 1 auto !important;
+    flex: 1 1 auto;
     min-height: 0 !important;
-    overflow-y: auto !important;
+    overflow-y: auto;
   }
 
   .messages-container:has(.messages-feed) .chat-footer {
-    flex-shrink: 0 !important;
-    position: relative !important;
+    flex-shrink: 0;
+    position: relative;
     bottom: 0 !important;
-    z-index: 10 !important;
-    padding: 8px 12px !important;
-    background: var(--bg-color) !important;
-    border-top: 1px solid var(--border-color) !important;
+    z-index: 10;
+    padding: 8px 12px;
+    background: var(--bg-color);
+    border-top: 1px solid var(--border-color);
   }
 
   .chat-footer {
-    flex-shrink: 0 !important;
+    flex-shrink: 0;
   }
 
 }
@@ -6721,15 +6887,15 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
 
 .chat-input-wrapper textarea {
   flex: 1 1 auto;
-  min-width: 0 !important;
-  background: none !important;
-  border: none !important;
-  resize: none !important;
-  outline: none !important;
-  color: var(--text-primary) !important;
-  padding: 6px 4px !important;
-  font-family: inherit !important;
-  font-size: 15px !important;
+  min-width: 0;
+  background: none;
+  border: none;
+  resize: none;
+  outline: none;
+  color: var(--text-primary);
+  padding: 6px 4px;
+  font-family: inherit;
+  font-size: 15px;
   line-height: 1.35;
 }
 
@@ -6832,7 +6998,7 @@ body:has(.feedback-alerts .feedback-item) .auth-panel {
 
 .deleted-message {
   font-style: italic;
-  color: var(--lvl-white-40) !important;
+  color: var(--lvl-white-40);
 }
 
 .message-delete-dropdown {
@@ -7054,7 +7220,7 @@ main:has(.messages-container) + .right-rail-wrapper .home-media-panel {
   display: none !important;
 }
 
-/* ===== sections\settings.css ===== */
+/* ===== sections/settings.css ===== */
 /* ── Settings – redesigned card layout ── */
 
 /* ── Cards ── */
@@ -7281,22 +7447,15 @@ main:has(.messages-container) + .right-rail-wrapper .home-media-panel {
   outline: none;
   transition: 0.2s;
   cursor: pointer;
-  color-scheme: dark;
+  /* Inherited from :root, which carries the active theme's scheme. */
 }
 
-:root[data-theme="light"] .gender-select {
-  color-scheme: light;
-}
-
+/* The browser paints the dropdown's popup, so the option needs its colours
+   spelled out -- but from the tokens, which already flip with the theme. */
 .gender-select option {
-  background-color: var(--lvl-surface-raised, #18181b);
-  color: var(--text-primary, #fff);
+  background-color: var(--lvl-surface-raised);
+  color: var(--text-primary);
   padding: 8px 12px;
-}
-
-:root[data-theme="light"] .gender-select option {
-  background-color: #ffffff;
-  color: #0f1419;
 }
 
 .gender-select:focus {
@@ -8060,7 +8219,7 @@ main:has(.settings-container) + .right-rail-wrapper .home-reel-panel {
   display: none !important;
 }
 
-/* ===== sections\notifications.css ===== */
+/* ===== sections/notifications.css ===== */
 /* Modern, Flat, Premium Notifications UI */
 :root {
   --notif-accent: var(--lvl-cyan);
@@ -8251,7 +8410,7 @@ main:has(.settings-container) + .right-rail-wrapper .home-reel-panel {
   right: 16px;
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: var(--lvl-brand);
 }
 
@@ -8270,7 +8429,7 @@ main:has(.settings-container) + .right-rail-wrapper .home-reel-panel {
   display: inline-flex;
   align-items: center;
   padding: 2px 6px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: rgba(56, 189, 248, 0.1);
   color: var(--lvl-cyan);
   font-size: 11px;
@@ -8284,9 +8443,9 @@ main:has(.settings-container) + .right-rail-wrapper .home-reel-panel {
 }
 .notif-btn-accept {
   background: var(--lvl-brand);
-  color: #fff;
+  color: var(--lvl-white);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   padding: 6px 12px;
   font-weight: 600;
   cursor: pointer;
@@ -8295,13 +8454,43 @@ main:has(.settings-container) + .right-rail-wrapper .home-reel-panel {
   background: transparent;
   color: var(--text-secondary);
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   padding: 6px 12px;
   font-weight: 600;
   cursor: pointer;
 }
 
-/* ===== sections\activity.css ===== */
+/* A notification that arrived while the page was open.
+
+   The live feed adds the row from script, so without this it simply appeared
+   in place and the reader had no way to tell the new one from the forty
+   already there. It fades down from a cyan tint instead -- once, 0.4s, and
+   then it is an ordinary row. */
+.notification-item.new-notification {
+  animation: notification-arrive 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes notification-arrive {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+    background: var(--lvl-cyan-soft-18);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Someone who asked not to see motion gets the tint and no movement. */
+@media (prefers-reduced-motion: reduce) {
+  .notification-item.new-notification {
+    animation: none;
+    background: var(--lvl-cyan-soft-18);
+  }
+}
+
+/* ===== sections/activity.css ===== */
 /* Activity history */
 .activity-header {
   border-bottom: 1px solid var(--border-color);
@@ -8390,7 +8579,7 @@ main:has(.settings-container) + .right-rail-wrapper .home-reel-panel {
   }
 }
 
-/* ===== sections\home.css ===== */
+/* ===== sections/home.css ===== */
 /* Home and composer refinements */
 /* Home & Composer Improvements */
 .home-header .header-top {
@@ -8454,14 +8643,10 @@ main:has(.settings-container) + .right-rail-wrapper .home-reel-panel {
   color: var(--text-primary);
   font: inherit;
   font-size: 13px;
-  color-scheme: dark;
-}
-
-:root[data-theme="light"] .composer-draft-button,
-:root[data-theme="light"] .composer-draft-picker {
-  color-scheme: light;
-  background: #ffffff;
-  color: #0f1419;
+  /* color-scheme is inherited, and :root already carries the right one for
+     the active theme. Pinning it to dark here is what forced the light-mode
+     override below to exist -- and that override, living in a section rather
+     than in the token block, is a second stylesheet for daylight mode. */
 }
 
 .composer-draft-button {
@@ -8490,15 +8675,12 @@ main:has(.settings-container) + .right-rail-wrapper .home-reel-panel {
   cursor: pointer;
 }
 
+/* The browser paints the dropdown's popup, so the option needs its colours
+   spelled out -- but from the tokens, which already flip with the theme. */
 .composer-draft-picker option {
-  background-color: var(--lvl-surface-raised, #18181b);
-  color: var(--text-primary, #ffffff);
+  background-color: var(--lvl-surface-raised);
+  color: var(--text-primary);
   padding: 8px 12px;
-}
-
-:root[data-theme="light"] .composer-draft-picker option {
-  background-color: #ffffff;
-  color: #0f1419;
 }
 
 .draft-status {
@@ -8533,14 +8715,14 @@ main:has(.settings-container) + .right-rail-wrapper .home-reel-panel {
 }
 
 .clip-submit-btn {
-  background: linear-gradient(135deg, #6d28d9, #8b5cf6);
+  background: linear-gradient(135deg, var(--lvl-violet-deep), var(--lvl-purple));
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 
 .clip-submit-btn:hover {
-  background: linear-gradient(135deg, #5b21b6, #7c3aed);
+  background: linear-gradient(135deg, var(--lvl-violet-deepest), var(--lvl-violet));
 }
 
 .video-upload-control {
@@ -8580,11 +8762,11 @@ main:has(.settings-container) + .right-rail-wrapper .home-reel-panel {
 }
 
 #composer-video-clear:hover {
-  color: var(--lvl-red, #ef4444);
-  border-color: var(--lvl-red, #ef4444);
+  color: var(--lvl-red, var(--lvl-red-plain));
+  border-color: var(--lvl-red, var(--lvl-red-plain));
 }
 
-/* ===== sections\message-discovery.css ===== */
+/* ===== sections/message-discovery.css ===== */
 /* Message user selection */
 /* User Selection for Messages */
 .new-chat-section {
@@ -8657,13 +8839,28 @@ main:has(.settings-container) + .right-rail-wrapper .home-reel-panel {
   color: var(--text-secondary);
 }
 
+/* The affordance at the end of a discovery row. It is an inline <svg> on the
+   message lists and a short word ("Send") on the share sheet, so this styles
+   both: colour and weight for the word, size and alignment for the glyph. */
 .select-arrow {
   color: var(--accent-color);
   font-weight: bold;
   font-size: 18px;
+  flex-shrink: 0;
 }
 
-/* ===== sections\search.css ===== */
+svg.select-arrow {
+  /* The row is a flex line; without this the glyph sits on the text baseline
+     and rides a pixel or two low against the name beside it. */
+  align-self: center;
+}
+
+/* RTL reads the other way, so the chevron has to point the other way. */
+[dir="rtl"] svg.select-arrow {
+  transform: scaleX(-1);
+}
+
+/* ===== sections/search.css ===== */
 /* Search page */
 /* Search Page Improvements */
 .search-header {
@@ -8770,7 +8967,19 @@ main:has(.settings-container) + .right-rail-wrapper .home-reel-panel {
   margin-top: 4px;
 }
 
-/* ===== sections\legacy-polish.css ===== */
+/* ===== sections/legacy-polish.css ===== */
+/* A note on !important in this file.
+
+   It used to carry 33 of them. Each one was removed, every page this file
+   touches was re-rendered at two widths in both themes, and the computed
+   style of every element was compared against the same dump taken before.
+   10 declarations changed something; those kept the override and are the
+   ones still here. The rest changed nothing and are gone.
+
+   So: before adding one, check whether the rule it is fighting can simply be
+   made more specific. If an override really is needed, the test above is how
+   to prove it. */
+
 
 
 
@@ -9921,22 +10130,22 @@ button {
 
   .left-rail,
   .left-rail:not(.menu-open) {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    bottom: 0 !important;
-    width: 280px !important;
-    height: 100vh !important;
-    flex-direction: column !important;
-    align-items: stretch !important;
-    justify-content: flex-start !important;
-    background: var(--bg-color) !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    height: 100vh;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    background: var(--bg-color);
     border-right: 1px solid var(--border-color) !important;
     border-top: 0 !important;
-    padding: 16px !important;
-    transform: translateX(-100%) !important;
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    z-index: 1000 !important;
+    padding: 16px;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000;
   }
 
   .left-rail.menu-open {
@@ -9948,13 +10157,13 @@ button {
   }
 
   .left-rail .nav-list a{
-    width: 100% !important;
-    justify-content: flex-start !important;
-    padding: 0 16px !important;
+    width: 100%;
+    justify-content: flex-start;
+    padding: 0 16px;
     gap: 20px !important;
     border-radius: var(--radius-pill) !important;
-    font-size: 20px !important;
-    font-weight: 500 !important;
+    font-size: 20px;
+    font-weight: 500;
     display: flex;
   }
 
@@ -9966,13 +10175,13 @@ button {
 
   .left-rail .mini-profile {
     display: flex !important;
-    width: 100% !important;
+    width: 100%;
   }
 
   .left-rail .compose-link {
     display: flex !important;
-    width: 100% !important;
-    justify-content: center !important;
+    width: 100%;
+    justify-content: center;
   }
 
 }
@@ -10434,7 +10643,7 @@ button {
 }
 
 .pprogress-body.is-collapsed {
-  max-height: 0 !important;
+  max-height: 0;
   opacity: 0;
   pointer-events: none;
   /* profile.css also sets visibility: hidden here. Untransitioned it snaps at
@@ -10554,7 +10763,7 @@ button {
 /* Legacy .profile-public-progress (keep for compat if needed) */
 .profile-public-progress { display: none; }
 
-/* ===== sections\community.css ===== */
+/* ===== sections/community.css ===== */
 /* Community pages, group detail, and shared community cards */
 
 .compact-action {
@@ -11140,14 +11349,26 @@ button {
   }
 }
 
-/* ===== sections\mobile-drawer.css ===== */
+/* ===== sections/mobile-drawer.css ===== */
+/* A note on !important in this file.
+
+   It used to carry 11 of them. Each one was removed, every page this file
+   touches was re-rendered at two widths in both themes, and the computed
+   style of every element was compared against the same dump taken before.
+   1 declarations changed something; those kept the override and are the
+   ones still here. The rest changed nothing and are gone.
+
+   So: before adding one, check whether the rule it is fighting can simply be
+   made more specific. If an override really is needed, the test above is how
+   to prove it. */
+
 /* Phone navigation: Twitter/X-style mobile slide-over drawer */
 @media (max-width: 767px) {
   .left-rail-wrapper,
   .left-rail-wrapper:has(.left-rail.menu-open),
   .left-rail-wrapper:has(.left-rail.mobile-menu-open) {
     display: contents !important;
-    width: auto !important;
+    width: auto;
   }
 
   .left-rail,
@@ -11344,12 +11565,12 @@ button {
     display: flex;
     flex-direction: column;
     gap: 3px;
-    text-decoration: none !important;
+    text-decoration: none;
   }
 
   .drawer-user-meta:hover,
   .drawer-user-meta:focus {
-    text-decoration: none !important;
+    text-decoration: none;
   }
 
   .drawer-name-row {
@@ -11403,7 +11624,7 @@ button {
     padding: 12px 16px;
     border-radius: var(--radius-lg);
     color: var(--text-primary);
-    text-decoration: none !important;
+    text-decoration: none;
     font-size: 16px;
     font-weight: 700;
     letter-spacing: -0.1px;
@@ -11417,20 +11638,20 @@ button {
   .drawer-nav-item:hover {
     background: rgba(255, 255, 255, 0.08);
     color: var(--lvl-white);
-    text-decoration: none !important;
+    text-decoration: none;
     transform: translateX(6px);
     box-shadow: inset 3.5px 0 0 var(--lvl-cyan);
   }
 
   .drawer-nav-item:active {
     background: rgba(0, 240, 255, 0.12);
-    text-decoration: none !important;
+    text-decoration: none;
     transform: translateX(6px) scale(0.97);
   }
 
   .drawer-nav-item:focus,
   .drawer-nav-item:focus-visible {
-    text-decoration: none !important;
+    text-decoration: none;
     outline: none;
   }
 
@@ -11504,7 +11725,7 @@ button {
     padding: 11px 16px;
     border-radius: var(--radius-lg);
     color: var(--lvl-danger);
-    text-decoration: none !important;
+    text-decoration: none;
     font-size: 15px;
     font-weight: 700;
     transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
@@ -11516,14 +11737,14 @@ button {
   .drawer-logout-btn:hover {
     background: rgba(244, 33, 46, 0.12);
     color: var(--lvl-danger);
-    text-decoration: none !important;
+    text-decoration: none;
     transform: translateX(6px);
     box-shadow: inset 3.5px 0 0 var(--lvl-danger);
   }
 
   .drawer-logout-btn:active {
     background: rgba(244, 33, 46, 0.18);
-    text-decoration: none !important;
+    text-decoration: none;
     transform: translateX(6px) scale(0.97);
   }
 
@@ -11532,7 +11753,7 @@ button {
   }
 }
 
-/* ===== sections\design-system.css ===== */
+/* ===== sections/design-system.css ===== */
 /* ---------------------------------------------------------------------------
    Surface system.
 
@@ -11910,6 +12131,19 @@ button {
     border-radius: var(--radius-xl);
   }
 
+  /* A rounded box needs an outline all the way round.
+
+     These two are flow surfaces: edge to edge, separated from what follows
+     by a bottom border and nothing else. The rule above insets them and
+     rounds their corners on a phone, which turned that single border into a
+     line that curved up at each end into nothing -- a corner with no box
+     attached to it. Inset and rounded, they are cards, so they get a card's
+     border. */
+  .page-header,
+  .composer {
+    border: 1px solid var(--border-color);
+  }
+
   .post,
   .composer,
   .form-section {
@@ -11917,7 +12151,19 @@ button {
   }
 }
 
-/* ===== sections\hardening.css ===== */
+/* ===== sections/hardening.css ===== */
+/* A note on !important in this file.
+
+   It used to carry 38 of them. Each one was removed, every page this file
+   touches was re-rendered at two widths in both themes, and the computed
+   style of every element was compared against the same dump taken before.
+   7 declarations changed something; those kept the override and are the
+   ones still here. The rest changed nothing and are gone.
+
+   So: before adding one, check whether the rule it is fighting can simply be
+   made more specific. If an override really is needed, the test above is how
+   to prove it. */
+
 /* Product hardening and layout safety additions */
 .post-content {
   min-width: 0;
@@ -11988,7 +12234,7 @@ button {
 .post-action-button:hover,
 .post-action-button:focus-visible {
   border-color: transparent !important;
-  background: transparent !important;
+  background: transparent;
   text-decoration: none;
 }
 
@@ -12207,47 +12453,47 @@ button {
 
 .left-rail.menu-open .nav-label,
 .left-rail.mobile-menu-open .nav-label {
-  position: static !important;
-  width: auto !important;
-  height: auto !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  overflow: visible !important;
-  clip: auto !important;
-  clip-path: none !important;
-  white-space: nowrap !important;
+  position: static;
+  width: auto;
+  height: auto;
+  padding: 0;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  clip-path: none;
+  white-space: nowrap;
   display: block !important;
-  font-size: 17px !important;
-  font-weight: 700 !important;
-  color: var(--text-primary) !important;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .left-rail:not(.menu-open):not(.mobile-menu-open) .nav-list a {
-  justify-content: center !important;
-  padding-inline: 0 !important;
+  justify-content: center;
+  padding-inline: 0;
 }
 
 .left-rail.menu-open .nav-list a,
 .left-rail.mobile-menu-open .nav-list a {
-  justify-content: flex-start !important;
-  padding-inline: 14px !important;
+  justify-content: flex-start;
+  padding-inline: 14px;
   gap: 14px !important;
 }
 
 .left-rail.menu-open .mini-profile,
 .left-rail.mobile-menu-open .mini-profile {
-  justify-content: flex-start !important;
+  justify-content: flex-start;
   gap: 12px !important;
 }
 
 .left-rail.menu-open .mini-profile div,
 .left-rail.mobile-menu-open .mini-profile div {
   display: flex !important;
-  min-width: 0 !important;
-  flex: 1 1 auto !important;
-  flex-direction: column !important;
-  align-items: flex-start !important;
-  overflow: hidden !important;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: flex-start;
+  overflow: hidden;
 }
 
 .left-rail.menu-open .mini-profile strong,
@@ -12255,10 +12501,10 @@ button {
 .left-rail.mobile-menu-open .mini-profile strong,
 .left-rail.mobile-menu-open .mini-profile span {
   display: block !important;
-  max-width: 100% !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .profile-stats a:hover {
@@ -12279,15 +12525,15 @@ button {
 }
 
 .own .message-bubble {
-  background: linear-gradient(135deg, var(--lvl-brand), var(--lvl-brand-hover)) !important;
-  color: var(--lvl-white) !important;
+  background: linear-gradient(135deg, var(--lvl-brand), var(--lvl-brand-hover));
+  color: var(--lvl-white);
   border-bottom-right-radius: 4px;
 }
 
 .message-bubble-wrapper:not(.own) .message-bubble {
-  background: var(--lvl-surface-overlay) !important;
+  background: var(--lvl-surface-overlay);
   border: 1px solid var(--border-color) !important;
-  color: var(--lvl-text-primary) !important;
+  color: var(--lvl-text-primary);
   border-bottom-left-radius: 4px;
 }
 
@@ -12534,7 +12780,7 @@ button {
 
 }
 
-/* ===== sections\profile-mobile.css ===== */
+/* ===== sections/profile-mobile.css ===== */
 /* Mobile profile layout repair */
 /* Mobile profile layout repair */
 .profile-info-container {
@@ -12740,12 +12986,21 @@ button {
   }
 }
 
+/* The install offer.
+
+   Centred at the foot of the window, it landed on whatever was there: on the
+   clips page, across the author row and caption of the clip being watched.
+   It sits at the left edge now -- the message dock owns the right -- and
+   clears the mobile navigation, so on every page it covers chrome rather
+   than content. */
 .install-prompt {
   position: fixed;
-  left: 50%;
-  bottom: calc(18px + env(safe-area-inset-bottom));
+  inset-inline-start: var(--space-10);
+  inset-inline-end: auto;
+  bottom: calc(var(--mobile-nav-clearance) + var(--space-5)
+               + env(safe-area-inset-bottom));
   z-index: 1200;
-  width: min(560px, calc(100vw - 28px));
+  width: min(460px, calc(100vw - 28px));
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
@@ -12757,7 +13012,13 @@ button {
   color: var(--text-primary);
   box-shadow: 0 18px 60px var(--lvl-black-48);
   backdrop-filter: blur(18px);
-  transform: translateX(-50%);
+}
+
+/* From tablet up there is no bottom navigation to clear. */
+@media (min-width: 768px) {
+  .install-prompt {
+    bottom: calc(var(--space-10) + env(safe-area-inset-bottom));
+  }
 }
 
 .install-prompt[hidden] {
@@ -12831,7 +13092,7 @@ button {
   }
 }
 
-/* ===== sections\community-timeline.css ===== */
+/* ===== sections/community-timeline.css ===== */
 /* Community timeline tabs and panes */
 /* LvL community timeline redesign */
 /* The Community hero. The artwork sits to the right, behind the Create group
@@ -13389,7 +13650,7 @@ button {
   }
 }
 
-/* ===== sections\notification-badge.css ===== */
+/* ===== sections/notification-badge.css ===== */
 /* Unread notification badge */
 /* ─── Notification badge ─────────────────────────────────────────────────── */
 .nav-icon-badge {
@@ -13413,8 +13674,8 @@ button {
   height: 16px;
   padding: 0 4px;
   border-radius: var(--radius-pill);
-  background: var(--lvl-brand, #38bdf8);
-  color: #fff;
+  background: var(--lvl-brand, var(--lvl-cyan));
+  color: var(--lvl-white);
   font-size: 10px;
   font-weight: 800;
   line-height: 1;
@@ -13450,7 +13711,19 @@ button {
   pointer-events: none;
 }
 
-/* ===== sections\reels.css ===== */
+/* ===== sections/reels.css ===== */
+/* A note on !important in this file.
+
+   It used to carry 199 of them. Each one was removed, every page this file
+   touches was re-rendered at two widths in both themes, and the computed
+   style of every element was compared against the same dump taken before.
+   23 declarations changed something; those kept the override and are the
+   ones still here. The rest changed nothing and are gone.
+
+   So: before adding one, check whether the rule it is fighting can simply be
+   made more specific. If an override really is needed, the test above is how
+   to prove it. */
+
 /* Reels tabs, cards, comments, and modal helpers */
 :root {
   --max-reel-height-desktop: 78vh;
@@ -13764,20 +14037,8 @@ button {
 /* The sound toggle stays on the video, bottom right, as it does there. */
 /* The wrapper is the floating control now -- speaker plus level -- so it
    carries the position and the surface. It is no longer a .reel-action-button,
-   so the blanket `background: transparent !important` on those does not
-   reach it and this needs no !important of its own. */
-.reel-mute-float {
-  position: absolute !important;
-  right: 12px !important;
-  left: auto !important;
-  bottom: 320px !important; /* Above the vertical action buttons */
-  top: auto !important;
-  z-index: 20 !important;
-  border-radius: var(--radius-pill);
-  background: var(--lvl-black-45);
-  backdrop-filter: blur(6px);
-}
-
+   so the blanket `background: transparent` on those does not
+   reach it and this needs no of its own. */
 .reel-actions form {
   margin: 0;
 }
@@ -13794,29 +14055,29 @@ button {
   justify-content: center;
   gap: 1px;
   padding: 0;
-  border: none !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   color: var(--lvl-white);
   text-decoration: none;
   font-size: 11px;
   font-weight: 800;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   cursor: pointer;
   transition: transform 0.18s ease, color 0.18s ease;
   filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.85));
 }
 
 .reel-action-button:hover {
-  transform: scale(1.18) !important;
-  background: transparent !important;
-  border: none !important;
+  transform: scale(1.18);
+  background: transparent;
+  border: none;
 }
 
 .reel-action-button:active {
-  transform: scale(0.92) !important;
+  transform: scale(0.92);
 }
 
 /* Which icon is showing says whether the sound is on. It used to be carried
@@ -13832,10 +14093,10 @@ button {
 }
 
 .reel-action-button.reel-action-like.active {
-  color: var(--lvl-danger) !important;
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
+  color: var(--lvl-danger);
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 
 .reel-action-button.reel-action-like.active svg {
@@ -13847,14 +14108,14 @@ button {
 
 .reel-action-button.active:not(.reel-action-mute) {
   color: var(--lvl-danger);
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 
 .reel-action-button.danger,
 .reel-actions form button.danger {
-  color: var(--lvl-danger) !important;
+  color: var(--lvl-danger);
 }
 
 .reel-action-button:disabled {
@@ -14200,7 +14461,7 @@ button {
   line-height: 1;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -14232,18 +14493,18 @@ button {
   position: absolute;
   right: calc(100% + 14px);
   bottom: 0;
-  width: max-content !important;
-  min-width: 175px !important;
-  background: rgba(18, 18, 28, 0.96) !important;
-  backdrop-filter: blur(24px) !important;
-  -webkit-backdrop-filter: blur(24px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.16) !important;
-  border-radius: var(--radius-lg) !important;
-  padding: 6px !important;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75) !important;
+  width: max-content;
+  min-width: 175px;
+  background: rgba(18, 18, 28, 0.96);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: var(--radius-lg);
+  padding: 6px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75);
   display: flex !important;
-  flex-direction: column !important;
-  gap: 3px !important;
+  flex-direction: column;
+  gap: 3px;
   z-index: 120;
   animation: reelMorePop 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
@@ -14268,69 +14529,69 @@ button {
 
 .reel-actions .reel-more-item,
 .reel-more-item {
-  width: 100% !important;
+  width: 100%;
   height: auto !important;
   min-height: 38px !important;
   display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  justify-content: flex-start !important;
-  gap: 10px !important;
-  padding: 8px 12px !important;
-  border-radius: var(--radius-icon) !important;
-  font-size: 13px !important;
-  font-weight: 600 !important;
-  color: rgba(255, 255, 255, 0.9) !important;
-  text-decoration: none !important;
-  background: transparent !important;
-  border: none !important;
-  cursor: pointer !important;
-  text-align: left !important;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius-icon);
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
   transition: background 0.15s ease, color 0.15s ease;
-  box-sizing: border-box !important;
-  white-space: nowrap !important;
+  box-sizing: border-box;
+  white-space: nowrap;
 }
 
 .reel-actions .reel-more-item:hover,
 .reel-more-item:hover {
-  background: rgba(255, 255, 255, 0.12) !important;
-  color: var(--lvl-white) !important;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--lvl-white);
 }
 
 .reel-actions .reel-more-item svg,
 .reel-more-item svg {
-  width: 18px !important;
+  width: 18px;
   height: 18px !important;
-  min-width: 18px !important;
-  flex-shrink: 0 !important;
+  min-width: 18px;
+  flex-shrink: 0;
   display: block !important;
   opacity: 0.85;
-  margin: 0 !important;
+  margin: 0;
 }
 
 .reel-actions .reel-more-item span,
 .reel-more-item span {
   display: inline-block !important;
-  white-space: nowrap !important;
-  font-size: 13px !important;
-  font-weight: 600 !important;
-  line-height: 1 !important;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
 }
 
 .reel-actions .reel-more-item.danger,
 .reel-more-item.danger {
-  color: var(--lvl-danger) !important;
+  color: var(--lvl-danger);
 }
 
 .reel-actions .reel-more-item.danger:hover,
 .reel-more-item.danger:hover {
-  background: rgba(244, 63, 94, 0.2) !important;
-  color: var(--lvl-danger) !important;
+  background: rgba(244, 63, 94, 0.2);
+  color: var(--lvl-danger);
 }
 
 .reel-actions .reel-more-item.danger svg,
 .reel-more-item.danger svg {
-  stroke: currentColor !important;
+  stroke: currentColor;
 }
 
 .reel-comment-panel {
@@ -14434,6 +14695,7 @@ button {
 }
 
 .reel-comment-avatar {
+  display: block;
   width: 32px;
   height: 32px;
   flex-shrink: 0;
@@ -14747,13 +15009,13 @@ button {
   .reel-actions button,
   .reel-actions a,
   .reel-action-button {
-    border: none !important;
-    border-radius: 0 !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    outline: none !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    outline: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 
   .reels-pagination {
@@ -14823,35 +15085,35 @@ button {
 .bookmarks-reels-feed .reel-card {
   min-height: auto !important;
   height: auto !important;
-  padding: 0 !important;
-  width: min(100%, 420px) !important;
-  box-sizing: border-box !important;
+  padding: 0;
+  width: min(100%, 420px);
+  box-sizing: border-box;
 }
 
 .profile-reels-feed .reel-video-frame,
 .bookmarks-reels-feed .reel-video-frame {
-  width: 100% !important;
+  width: 100%;
   height: auto !important;
-  aspect-ratio: 9 / 16 !important;
-  max-height: clamp(400px, 65vh, 600px) !important;
-  border-radius: var(--radius-lg) !important;
-  overflow: hidden !important;
-  position: relative !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6) !important;
-  border: 1px solid var(--border-color) !important;
+  aspect-ratio: 9 / 16;
+  max-height: clamp(400px, 65vh, 600px);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--border-color);
 }
 
 .profile-reels-feed .reel-actions,
 .bookmarks-reels-feed .reel-actions {
-  position: absolute !important;
+  position: absolute;
   bottom: 10px !important;
-  right: 10px !important;
+  right: 10px;
   display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  gap: 4px !important;
-  width: 44px !important;
-  z-index: 5 !important;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 44px;
+  z-index: 5;
 }
 
 .profile-reels-feed .reel-action-button,
@@ -14860,15 +15122,15 @@ button {
 .bookmarks-reels-feed .reel-action-button,
 .bookmarks-reels-feed .reel-actions button,
 .bookmarks-reels-feed .reel-actions a {
-  width: 40px !important;
+  width: 40px;
   min-height: 40px !important;
   height: 40px !important;
-  font-size: 11px !important;
-  padding: 0 !important;
-  color: var(--lvl-white) !important;
-  background: transparent !important;
-  border: none !important;
-  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.85)) !important;
+  font-size: 11px;
+  padding: 0;
+  color: var(--lvl-white);
+  background: transparent;
+  border: none;
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.85));
 }
 
 .profile-saved-subtabs {
@@ -14882,29 +15144,29 @@ button {
   .reel-actions > div > button,
   .reel-actions > a,
   .reel-action-button {
-  background: transparent !important;
-  border: none !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  outline: none !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  -webkit-tap-highlight-color: transparent !important;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  outline: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .reel-actions .reel-more-menu {
-  width: max-content !important;
-  min-width: 175px !important;
-  background: rgba(18, 18, 28, 0.96) !important;
-  border: 1px solid rgba(255, 255, 255, 0.16) !important;
-  border-radius: var(--radius-lg) !important;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75) !important;
-  backdrop-filter: blur(24px) !important;
-  -webkit-backdrop-filter: blur(24px) !important;
-  padding: 6px !important;
+  width: max-content;
+  min-width: 175px;
+  background: rgba(18, 18, 28, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  padding: 6px;
   display: flex !important;
-  flex-direction: column !important;
-  gap: 3px !important;
+  flex-direction: column;
+  gap: 3px;
 }
 
 .reel-actions .reel-more-menu[hidden],
@@ -14913,56 +15175,56 @@ button {
 }
 
 .reel-actions .reel-more-item {
-  width: 100% !important;
+  width: 100%;
   height: auto !important;
   min-height: 38px !important;
   display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  justify-content: flex-start !important;
-  gap: 10px !important;
-  padding: 8px 12px !important;
-  border-radius: var(--radius-icon) !important;
-  font-size: 13px !important;
-  font-weight: 600 !important;
-  color: rgba(255, 255, 255, 0.9) !important;
-  text-decoration: none !important;
-  white-space: nowrap !important;
-  box-sizing: border-box !important;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius-icon);
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+  white-space: nowrap;
+  box-sizing: border-box;
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .reel-actions .reel-more-item svg {
-  width: 18px !important;
+  width: 18px;
   height: 18px !important;
-  min-width: 18px !important;
-  flex-shrink: 0 !important;
+  min-width: 18px;
+  flex-shrink: 0;
   display: block !important;
-  margin: 0 !important;
+  margin: 0;
 }
 
 .reel-actions .reel-more-item span {
   display: inline-block !important;
-  white-space: nowrap !important;
-  font-size: 13px !important;
-  font-weight: 600 !important;
-  line-height: 1 !important;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
 }
 
 .reel-actions .reel-more-item:hover {
-  background: rgba(255, 255, 255, 0.14) !important;
-  color: var(--lvl-white) !important;
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--lvl-white);
   transform: translateX(-4px) scale(1.02);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
 }
 
 .reel-actions .reel-more-item.danger {
-  color: var(--lvl-danger) !important;
+  color: var(--lvl-danger);
 }
 
 .reel-actions .reel-more-item.danger:hover {
-  background: rgba(244, 63, 94, 0.2) !important;
-  color: var(--lvl-danger) !important;
+  background: rgba(244, 63, 94, 0.2);
+  color: var(--lvl-danger);
 }
 
 .reel-action-button {
@@ -14971,14 +15233,14 @@ button {
 
 .reel-action-button.reel-action-like.active,
   .reel-action-like.active {
-  color: var(--lvl-danger) !important;
+  color: var(--lvl-danger);
 }
 
 .reel-action-button.reel-action-like.active svg,
   .reel-action-like.active svg {
-  fill: var(--lvl-danger) !important;
-  stroke: var(--lvl-danger) !important;
-  filter: drop-shadow(0 0 12px rgba(244, 63, 94, 0.95)) drop-shadow(0 0 22px rgba(244, 63, 94, 0.6)) !important;
+  fill: var(--lvl-danger);
+  stroke: var(--lvl-danger);
+  filter: drop-shadow(0 0 12px rgba(244, 63, 94, 0.95)) drop-shadow(0 0 22px rgba(244, 63, 94, 0.6));
 }
 
 @keyframes reelHeartBeat {
@@ -15011,14 +15273,14 @@ button {
 }
 
 .reel-action-button.reel-action-comment:hover svg {
-  filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.9)) !important;
-  color: var(--lvl-cyan) !important;
+  filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.9));
+  color: var(--lvl-cyan);
 }
 
 body.reel-comments-open .reel-action-button.reel-action-comment svg {
-  color: var(--lvl-cyan) !important;
-  stroke: var(--lvl-cyan) !important;
-  filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.95)) drop-shadow(0 0 20px rgba(56, 189, 248, 0.5)) !important;
+  color: var(--lvl-cyan);
+  stroke: var(--lvl-cyan);
+  filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.95)) drop-shadow(0 0 20px rgba(56, 189, 248, 0.5));
 }
 
 @keyframes reelCommentBounce {
@@ -15037,24 +15299,24 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 }
 
 .reel-action-button.reel-action-bookmark:hover svg {
-  transform: scale(1.22) translateY(-2px) !important;
-  color: var(--lvl-warning) !important;
-  stroke: var(--lvl-warning) !important;
-  filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.95)) drop-shadow(0 0 22px rgba(251, 191, 36, 0.5)) !important;
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease !important;
+  transform: scale(1.22) translateY(-2px);
+  color: var(--lvl-warning);
+  stroke: var(--lvl-warning);
+  filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.95)) drop-shadow(0 0 22px rgba(251, 191, 36, 0.5));
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease;
 }
 
 .reel-action-button.reel-action-bookmark.active,
   .reel-action-button.reel-action-bookmark.bookmark-active {
-  color: var(--lvl-warning) !important;
+  color: var(--lvl-warning);
 }
 
 .reel-action-button.reel-action-bookmark.active svg,
   .reel-action-button.reel-action-bookmark.bookmark-active svg {
-  fill: var(--lvl-warning) !important;
-  stroke: var(--lvl-warning) !important;
-  animation: reelBookmarkPop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-  filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.95)) drop-shadow(0 0 22px rgba(245, 158, 11, 0.6)) !important;
+  fill: var(--lvl-warning);
+  stroke: var(--lvl-warning);
+  animation: reelBookmarkPop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.95)) drop-shadow(0 0 22px rgba(245, 158, 11, 0.6));
 }
 
 @keyframes reelBookmarkPop {
@@ -15073,24 +15335,24 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 }
 
 .reel-action-button.reel-action-share:hover svg {
-  transform: scale(1.2) translate(2px, -2px) rotate(-10deg) !important;
-  color: var(--lvl-purple-strong) !important;
-  stroke: var(--lvl-purple-strong) !important;
-  filter: drop-shadow(0 0 12px rgba(192, 132, 252, 0.9)) drop-shadow(0 0 20px rgba(192, 132, 252, 0.5)) !important;
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease !important;
+  transform: scale(1.2) translate(2px, -2px) rotate(-10deg);
+  color: var(--lvl-purple-strong);
+  stroke: var(--lvl-purple-strong);
+  filter: drop-shadow(0 0 12px rgba(192, 132, 252, 0.9)) drop-shadow(0 0 20px rgba(192, 132, 252, 0.5));
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease;
 }
 
 .reel-action-button.reel-action-more:hover svg,
   .reel-more-dropdown.is-open .reel-action-button.reel-action-more svg {
-  transform: scale(1.2) rotate(90deg) !important;
-  color: var(--lvl-brand-hover) !important;
-  filter: drop-shadow(0 0 10px rgba(96, 165, 250, 0.9)) drop-shadow(0 0 18px rgba(96, 165, 250, 0.5)) !important;
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease !important;
+  transform: scale(1.2) rotate(90deg);
+  color: var(--lvl-brand-hover);
+  filter: drop-shadow(0 0 10px rgba(96, 165, 250, 0.9)) drop-shadow(0 0 18px rgba(96, 165, 250, 0.5));
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease;
 }
 
 .reel-views-pill:hover {
-  transform: scale(1.06) !important;
-  box-shadow: 0 4px 18px rgba(56, 189, 248, 0.35) !important;
+  transform: scale(1.06);
+  box-shadow: 0 4px 18px rgba(56, 189, 248, 0.35);
 }
 
 .reel-views-pill::after {
@@ -15130,8 +15392,8 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 }
 
 .reel-actions .reel-more-item[download]:hover svg {
-  color: var(--lvl-cyan) !important;
-  stroke: var(--lvl-cyan) !important;
+  color: var(--lvl-cyan);
+  stroke: var(--lvl-cyan);
 }
 
 @keyframes downloadDrop {
@@ -15146,9 +15408,9 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 }
 
 .reel-actions .reel-more-item[data-reel-copy-link]:hover svg {
-  animation: copyRotate 0.5s ease !important;
-  color: var(--lvl-success) !important;
-  stroke: var(--lvl-success) !important;
+  animation: copyRotate 0.5s ease;
+  color: var(--lvl-success);
+  stroke: var(--lvl-success);
 }
 
 @keyframes copyRotate {
@@ -15167,7 +15429,7 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 }
 
 .reel-actions .reel-more-item.danger:hover svg {
-  stroke: var(--lvl-danger) !important;
+  stroke: var(--lvl-danger);
 }
 
 @keyframes trashWiggle {
@@ -15181,7 +15443,46 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 
 }
 
-/* ===== sections\mobile-navigation.css ===== */
+/* The speaker in the clip's corner sound control. White, because it sits on
+   the picture rather than on a page surface. */
+.reel-action-mute {
+  background: transparent;
+  border: none;
+  padding: var(--space-1);
+  color: var(--lvl-white);
+  cursor: pointer;
+  /* 22x25 was under the 24px a phone needs on its narrow axis. */
+  min-width: var(--touch-target-sm);
+  min-height: var(--touch-target-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* The upload page's header row: Drafts and Save draft beside the title. */
+.reel-upload-header-actions {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* The upload status line. */
+.reel-upload-status {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin-bottom: var(--space-3);
+}
+
+.reel-upload-status.is-ok {
+  color: var(--success-color);
+}
+
+.reel-upload-status.is-error {
+  color: var(--error-color);
+}
+
+/* ===== sections/mobile-navigation.css ===== */
 /* Collapsed sidebar and mobile bottom navigation */
 /* ─── Sidebar collapsed — icons only ────────────────────────────────────── */
 .left-rail:not(.menu-open) .nav-list {
@@ -15645,7 +15946,7 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   }
 }
 
-/* ===== sections\community-highlights.css ===== */
+/* ===== sections/community-highlights.css ===== */
 /* Community highlights overflow safety */
 /* ─── New leaderboard design (lb-*) ─────────────────────────────────────── */
 
@@ -15669,15 +15970,22 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 /* Two and a bit rows visible, the rest a scroll away. Tied to the window so
    a tall screen shows more of both this and the clip under it, rather than
    this one keeping a fixed 268px and the clip taking whatever is left. */
+/* Every row is the same fixed height, and the list is sized in whole rows.
+   It used to be clamp(204px, 23vh, 268px) -- a height with no relationship to
+   the 79px a row occupies -- so whatever the window did, the last visible row
+   was sliced through the middle of its own text and the panel's rounded edge
+   cut across it. The counts below are row arithmetic, so a row either shows
+   completely or not at all. */
 .lb-list {
+  --lb-row-h: 68px;
+  --lb-row-gap: var(--space-2);
+  /* n rows and the n-1 gaps between them. */
+  --lb-rows: 3;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  /* The floor is three rows plus their gaps: the podium is the point of the
-     panel, so the medals never sit below the fold however short the window
-     is. Above that it follows the window, so a tall screen shows more of
-     this and of the clip under it. */
-  max-height: clamp(204px, 23vh, 268px);
+  gap: var(--lb-row-gap);
+  max-height: calc(var(--lb-rows) * var(--lb-row-h)
+                   + (var(--lb-rows) - 1) * var(--lb-row-gap));
   overflow-y: auto;
   overflow-x: hidden;
   scroll-behavior: smooth;
@@ -15685,14 +15993,31 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 }
 
 /* A short window cannot hold the whole podium and a clip worth watching. The
-   list gives way first, because it scrolls and the clip does not. */
+   list gives way first, because it scrolls and the clip does not. A tall one
+   spends the extra height on a fourth row. */
 @media (max-height: 820px) {
-  .lb-list {
-    max-height: clamp(138px, 18vh, 190px);
-  }
+  .lb-list { --lb-rows: 2; }
 }
 
-.lb-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin-bottom: 6px; border-radius: 12px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); transition: all 0.2s ease; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+@media (min-height: 1000px) {
+  .lb-list { --lb-rows: 4; }
+}
+
+/* height, not min-height: a name that wraps or a missing XP pill must not
+   change the pitch the list above is measured in. */
+.lb-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: var(--lb-row-h, 68px);
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--lvl-white-03);
+  border: 1px solid var(--lvl-white-05);
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
 
 .lb-row:hover { background: rgba(255, 255, 255, 0.08); transform: translateY(-2px); border-color: rgba(255, 255, 255, 0.1); }
 
@@ -15747,9 +16072,33 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   grid-column: 1;
 }
 
-.lb-level-badge {
+/* The level badge and the XP pill travel together in the identity grid's
+   second column, beside the handle rather than on a line of their own. */
+.lb-stats {
   grid-column: 2;
   justify-self: start;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* The leaderboard page has room to stack the pair at the end of the row. */
+.lb-stats-stacked {
+  flex-direction: column;
+  align-items: flex-end;
+  margin-inline-end: var(--space-5);
+}
+
+.lb-xp {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--lvl-brand);
+  background: var(--lvl-brand-soft);
+  padding: 2px 8px;
+  border-radius: var(--radius-2xl);
+  white-space: nowrap;
 }
 
 .lb-name {
@@ -16332,7 +16681,21 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   }
 }
 
-/* ===== sections\home-reels.css ===== */
+/* The avatar is a round window on a square image. Both halves lived in
+   style= attributes on the markup. */
+.leaderboard-avatar {
+  overflow: hidden;
+  border-radius: var(--radius-round);
+  border: none;
+}
+
+.leaderboard-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ===== sections/home-reels.css ===== */
 /* Desktop Home reels panel */
 /* ─── Home Reel Panel (right rail compact player) ────────────────────────── */
 /* The panel takes whatever height the rail has left rather than a guessed
@@ -16419,6 +16782,8 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
    minimum now, not a ceiling. */
 .home-reel-video-wrap {
   grid-area: content;
+  /* The corner sound control is placed against this. */
+  position: relative;
   width: 100%;
   height: 100%;
   border-radius: var(--radius-md);
@@ -16456,8 +16821,8 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   pointer-events: none;
 }
 
-/* Top-right mute control as seen in production. */
-.home-reel-video-wrap > .media-volume,
+/* A bare speaker, on a surface with no level beside it, keeps the top right
+   corner: the bottom right belongs to the sound control that has one. */
 .home-reel-video-wrap > .home-reel-mute-btn {
   position: absolute;
   top: 12px;
@@ -16576,12 +16941,12 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 }
 
 .home-reel-counts .reel-action-like.active {
-  color: var(--lvl-danger, #f43f5e) !important;
+  color: var(--lvl-danger, var(--lvl-rose-strong)) !important;
 }
 
 .home-reel-counts .reel-action-like.active svg {
-  fill: var(--lvl-danger, #f43f5e) !important;
-  stroke: var(--lvl-danger, #f43f5e) !important;
+  fill: var(--lvl-danger, var(--lvl-rose-strong)) !important;
+  stroke: var(--lvl-danger, var(--lvl-rose-strong)) !important;
 }
 
 .home-reel-counts span {
@@ -16711,7 +17076,15 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 
 }
 
-/* ===== sections\streaks.css ===== */
+/* The like form in the counts row. It was style="display:inline-block;
+   margin-right: 8px" on the element. */
+.home-reel-counts .reel-like-form {
+  display: inline-block;
+  margin: 0;
+  margin-inline-end: var(--space-3);
+}
+
+/* ===== sections/streaks.css ===== */
 /* Chat streak badges */
 /* ─── Streak badges ─────────────────────────────────────────────────────────── */
 .streak-badge {
@@ -16795,7 +17168,7 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   32% { transform: rotate(0deg); }
 }
 
-/* ===== sections\message-dock.css ===== */
+/* ===== sections/message-dock.css ===== */
 /* ---------------------------------------------------------------------------
    Message dock.
 
@@ -17135,54 +17508,66 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   }
 }
 
-/* ===== sections\share-modal.css ===== */
+/* ===== sections/share-modal.css ===== */
+/* A note on !important in this file.
+
+   It used to carry 65 of them. Each one was removed, every page this file
+   touches was re-rendered at two widths in both themes, and the computed
+   style of every element was compared against the same dump taken before.
+   5 declarations changed something; those kept the override and are the
+   ones still here. The rest changed nothing and are gone.
+
+   So: before adding one, check whether the rule it is fighting can simply be
+   made more specific. If an override really is needed, the test above is how
+   to prove it. */
+
 /* ─── Share Modal (Overlay on top of video, matching comments panel) ───────── */
 .share-modal-overlay,
 .reel-video-frame .share-modal-overlay {
-  position: absolute !important;
-  inset: auto 0 0 0 !important;
-  width: 100% !important;
-  height: 72% !important;
+  position: absolute;
+  inset: auto 0 0 0;
+  width: 100%;
+  height: 72%;
   max-height: 80% !important;
-  background: rgba(18, 18, 28, 0.94) !important;
-  backdrop-filter: blur(24px) !important;
-  -webkit-backdrop-filter: blur(24px) !important;
-  border-top: 1px solid var(--border-color) !important;
-  border-left: none !important;
-  border-right: none !important;
-  border-bottom: none !important;
-  border-top-left-radius: 20px !important;
-  border-top-right-radius: 20px !important;
-  border-bottom-left-radius: inherit !important;
-  border-bottom-right-radius: inherit !important;
-  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.65) !important;
-  z-index: 100 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: stretch !important;
-  justify-content: flex-start !important;
-  padding: 0 !important;
-  transform: translateY(105%) !important;
-  transition: transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1) !important;
-  pointer-events: none !important;
+  background: rgba(18, 18, 28, 0.94);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-top: 1px solid var(--border-color);
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  border-bottom-left-radius: inherit;
+  border-bottom-right-radius: inherit;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.65);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 0;
+  transform: translateY(105%);
+  transition: transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1);
+  pointer-events: none;
 }
 
 .share-modal-overlay.is-open,
 .reel-video-frame .share-modal-overlay.is-open {
-  transform: translateY(0) !important;
-  pointer-events: auto !important;
-  display: flex !important;
+  transform: translateY(0);
+  pointer-events: auto;
+  display: flex;
 }
 
 .share-modal-overlay[hidden]:not(.is-open),
 .reel-video-frame .share-modal-overlay[hidden]:not(.is-open) {
-  display: none !important;
-  transform: translateY(105%) !important;
-  pointer-events: none !important;
+  display: none;
+  transform: translateY(105%);
+  pointer-events: none;
 }
 
 .share-modal-content {
-  width: 100% !important;
+  width: 100%;
   max-width: 100%;
   height: 100%;
   max-height: 100% !important;
@@ -17212,15 +17597,15 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 }
 
 .share-modal-header strong {
-  font-size: 15px !important;
-  font-weight: 700 !important;
-  color: var(--lvl-white) !important;
-  white-space: nowrap !important;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--lvl-white);
+  white-space: nowrap;
 }
 
 .share-search-input {
   flex: 1;
-  background: rgba(255, 255, 255, 0.08) !important;
+  background: rgba(255, 255, 255, 0.08);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-pill);
   padding: 7px 14px;
@@ -17232,13 +17617,13 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 
 .share-search-input:focus {
   border-color: var(--lvl-cyan);
-  background: rgba(255, 255, 255, 0.12) !important;
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .close-share-modal {
-  background: transparent !important;
+  background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.7) !important;
+  color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
   padding: 4px;
   border-radius: var(--radius-round);
@@ -17250,8 +17635,8 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 }
 
 .close-share-modal:hover {
-  color: var(--lvl-white) !important;
-  background: rgba(255, 255, 255, 0.15) !important;
+  color: var(--lvl-white);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .share-friends-list {
@@ -17270,16 +17655,16 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 }
 
 .share-friends-list::-webkit-scrollbar-track {
-  background: transparent !important;
+  background: transparent;
 }
 
 .share-friends-list::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.2);
   border-radius: var(--radius-pill);
 }
 
 .share-friends-list::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.35) !important;
+  background: rgba(255, 255, 255, 0.35);
 }
 
 .share-friend-item {
@@ -17299,43 +17684,43 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-width: 0 !important;
+  min-width: 0;
   flex: 1 !important;
 }
 
 .share-friend-info img {
-  width: 34px !important;
-  height: 34px !important;
-  border-radius: var(--radius-round) !important;
-  object-fit: cover !important;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-round);
+  object-fit: cover;
   flex-shrink: 0;
 }
 
 .share-friend-info span {
-  display: flex !important;
+  display: flex;
   flex-direction: column;
-  min-width: 0 !important;
-  line-height: 1.2 !important;
+  min-width: 0;
+  line-height: 1.2;
 }
 
 .share-friend-info strong {
-  font-size: 13px !important;
-  color: var(--lvl-white) !important;
+  font-size: 13px;
+  color: var(--lvl-white);
   overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .share-friend-info small {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.6) !important;
+  color: rgba(255, 255, 255, 0.6);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .share-send-btn {
-  background: var(--lvl-brand) !important;
+  background: var(--lvl-brand);
   color: var(--lvl-white);
   border: none;
   border-radius: var(--radius-pill);
@@ -17348,7 +17733,7 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 }
 
 .share-send-btn:hover {
-  background: var(--lvl-brand-hover) !important;
+  background: var(--lvl-brand-hover);
   transform: scale(1.05);
   box-shadow: 0 0 10px rgba(14, 165, 233, 0.5);
 }
@@ -17361,7 +17746,7 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   box-shadow: none;
 }
 
-/* ===== sections\admin.css ===== */
+/* ===== sections/admin.css ===== */
 /* Admin dashboard. Operator-only surface, kept out of the product cascade. */
 
 /* ── Admin Styles ── */
@@ -17428,9 +17813,9 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 
 .admin-tabs button.active,
 .admin-tabs .guide-tab.active {
-  background: var(--lvl-brand, #38bdf8);
-  color: #000;
-  border-color: var(--lvl-brand, #38bdf8);
+  background: var(--lvl-brand, var(--lvl-cyan));
+  color: var(--lvl-black);
+  border-color: var(--lvl-brand, var(--lvl-cyan));
   font-weight: 700;
   box-shadow: 0 2px 14px rgba(56, 189, 248, 0.35);
   transform: translateY(-1px);
@@ -17452,7 +17837,7 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 .admin-tabs button.active .admin-tab-count,
 .admin-tabs .guide-tab.active .admin-tab-count {
   background: rgba(0, 0, 0, 0.25);
-  color: #000;
+  color: var(--lvl-black);
 }
 
 /* ── Section & Headers ── */
@@ -17493,7 +17878,7 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 
 .admin-add-position-form {
   margin-bottom: 24px;
-  border-color: var(--lvl-brand, #38bdf8);
+  border-color: var(--lvl-brand, var(--lvl-cyan));
 }
 
 .admin-form-actions-tight,
@@ -17564,7 +17949,7 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 .admin-position-dept {
   font-size: 13px;
   font-weight: 600;
-  color: var(--lvl-brand, #38bdf8);
+  color: var(--lvl-brand, var(--lvl-cyan));
   margin: 0;
 }
 
@@ -17590,19 +17975,19 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 }
 
 .careers-type-internship {
-  color: var(--lvl-brand, #38bdf8);
+  color: var(--lvl-brand, var(--lvl-cyan));
   border-color: rgba(56, 189, 248, 0.3);
   background: rgba(56, 189, 248, 0.1);
 }
 
 .careers-type-parttime {
-  color: var(--lvl-warning, #f59e0b);
+  color: var(--lvl-warning, var(--lvl-amber));
   border-color: rgba(245, 158, 11, 0.3);
   background: rgba(245, 158, 11, 0.1);
 }
 
 .careers-type-fulltime {
-  color: var(--lvl-success, #10b981);
+  color: var(--lvl-success, var(--lvl-emerald));
   border-color: rgba(16, 185, 129, 0.3);
   background: rgba(16, 185, 129, 0.1);
 }
@@ -17621,13 +18006,13 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 
 .admin-status-pill.active {
   background: rgba(16, 185, 129, 0.15);
-  color: #34d399;
+  color: var(--lvl-emerald-light);
   border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
 .admin-status-pill.danger {
   background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
+  color: var(--lvl-red-light);
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
@@ -17658,12 +18043,12 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 .danger-button.admin-button-xs {
   background: rgba(239, 68, 68, 0.15);
   border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #f87171;
+  color: var(--lvl-red-light);
 }
 
 .danger-button.admin-button-xs:hover {
-  background: var(--lvl-danger, #ef4444);
-  color: #fff;
+  background: var(--lvl-danger, var(--lvl-red-plain));
+  color: var(--lvl-white);
 }
 
 .admin-button-sm {
@@ -17902,7 +18287,460 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   font: inherit;
 }
 
-/* ===== sections\rtl.css ===== */
+/* The applicant's link, spelled out under the button that opens it, so an
+   admin can see where it goes before clicking. It is text someone typed, so
+   it gets no room to push the card wider. */
+.admin-portfolio-url {
+  margin-top: var(--space-2);
+  font-size: 12px;
+  word-break: break-all;
+}
+
+/* ===== sections/age-gate.css ===== */
+/* ---------------------------------------------------------------------------
+   The age gate.
+
+   Shown to someone the birthday check turned away. It deliberately does not
+   use the app shell: a reader who cannot have an account has no rail, no feed
+   and no inbox to show them, so the page is one card and a way back.
+
+   It used to carry its own <style> block with its own palette -- a second,
+   private set of surface and text colours that had drifted from the product's
+   and could not follow the theme. The colours now come from the same tokens
+   as everything else; the purple accent, which is what gave the page its own
+   identity, is kept as the product's own purple.
+   --------------------------------------------------------------------------- */
+
+.age-gate {
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg-color);
+  color: var(--text-primary);
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-10);
+  overflow: hidden;
+}
+
+/* Two soft lights behind the card, one purple and one indigo, so the page is
+   not a flat black rectangle. They are decoration: pointer-events none, and
+   they sit under everything. */
+.age-gate::before,
+.age-gate::after {
+  content: '';
+  position: fixed;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.age-gate::before {
+  top: -30%;
+  left: -20%;
+  width: 70vw;
+  height: 70vw;
+  background: radial-gradient(circle, var(--lvl-purple-strong-soft-20) 0%, transparent 70%);
+}
+
+.age-gate::after {
+  bottom: -30%;
+  right: -20%;
+  width: 60vw;
+  height: 60vw;
+  background: radial-gradient(circle, var(--lvl-purple-soft-25) 0%, transparent 70%);
+}
+
+.age-gate-brand {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.2rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  color: var(--text-primary);
+  text-decoration: none;
+  z-index: 10;
+}
+
+.age-gate-card {
+  position: relative;
+  z-index: 1;
+  background: var(--lvl-surface-raised);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-bubble);
+  padding: 48px 40px;
+  max-width: 440px;
+  width: 100%;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  animation: age-gate-rise 0.5s ease both;
+}
+
+@keyframes age-gate-rise {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .age-gate-card { animation: none; }
+}
+
+.age-gate-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-round);
+  background: linear-gradient(135deg,
+                              var(--lvl-purple-strong-soft-20),
+                              var(--lvl-purple-soft-25));
+  border: 2px solid var(--lvl-purple-strong-soft-30);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 28px;
+  font-size: 36px;
+  box-shadow: 0 0 24px var(--lvl-purple-strong-soft-35);
+}
+
+.age-gate-card h1 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 0 12px;
+  color: var(--lvl-purple-strong);
+}
+
+.age-gate-lede {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0 0 32px;
+}
+
+.age-gate-note {
+  background: var(--lvl-purple-strong-soft-08);
+  border: 1px solid var(--lvl-purple-strong-soft-20);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 32px;
+  text-align: start;
+  display: grid;
+  gap: var(--space-4);
+}
+
+.age-gate-note p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.age-gate-note strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.age-gate-note .age-gate-highlight {
+  color: var(--lvl-purple-strong);
+  font-weight: 700;
+}
+
+.age-gate-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 28px;
+  background: linear-gradient(135deg, var(--lvl-purple-strong), var(--lvl-purple));
+  color: var(--lvl-white);
+  font-weight: 700;
+  font-size: 0.95rem;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: opacity 0.2s, transform 0.15s;
+  box-shadow: 0 4px 20px var(--lvl-purple-strong-soft-35);
+}
+
+.age-gate-back:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.age-gate-back:active {
+  transform: translateY(0);
+}
+
+/* ===== sections/drafts.css ===== */
+/* ---------------------------------------------------------------------------
+   The drafts page.
+
+   This lived in a <style> block inside templates/drafts.html: 252 lines of
+   CSS that the manifest did not know about, could not be bundled, and shipped
+   again with every render of the page. Its colours were raw hex, so they did
+   not follow the theme and the token tests could not see them.
+   --------------------------------------------------------------------------- */
+
+/* The row of type badges on a draft card. */
+.draft-badges {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ── Drafts Page ─────────────────────────── */
+.drafts-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-surface, rgba(255,255,255,0.015));
+  backdrop-filter: blur(12px);
+}
+
+.drafts-header-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.drafts-header-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(139,92,246,0.15), rgba(99,102,241,0.2));
+  border: 1px solid rgba(139,92,246,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--lvl-purple-light);
+  box-shadow: 0 0 16px rgba(139,92,246,0.15);
+  flex-shrink: 0;
+}
+
+.drafts-page-header h1 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0 0 2px;
+}
+
+.drafts-page-header p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.drafts-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.drafts-feed {
+  padding: 12px 0;
+}
+
+.draft-item {
+  border-bottom: 1px solid var(--border-color);
+  transition: background 0.15s;
+}
+
+.draft-item:last-child {
+  border-bottom: none;
+}
+
+.draft-item:hover {
+  background: rgba(255,255,255,0.025);
+}
+
+.draft-item-inner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 24px;
+}
+
+.draft-media {
+  flex-shrink: 0;
+}
+
+.draft-media-thumb {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+.draft-reel-icon-thumb {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-sm);
+  background: var(--lvl-surface-raised, rgba(255,255,255,0.04));
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--lvl-rose);
+}
+
+.draft-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 5px;
+}
+
+.draft-badge.reel {
+  background: var(--lvl-rose-soft);
+  color: var(--lvl-rose);
+  border: 1px solid var(--lvl-rose-border);
+}
+
+.draft-badge.post {
+  background: var(--lvl-blue-light-soft);
+  color: var(--lvl-blue-light);
+  border: 1px solid var(--lvl-blue-light-border);
+}
+
+.draft-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.draft-body-text {
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--text-primary);
+  margin: 0 0 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.draft-image-only {
+  color: var(--text-secondary);
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+.draft-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.draft-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.draft-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.draft-edit-btn:hover {
+  background: var(--lvl-surface-hover);
+  border-color: var(--lvl-brand);
+  color: var(--lvl-brand);
+}
+
+.draft-delete-form {
+  margin: 0;
+}
+
+.draft-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.draft-delete-btn:hover {
+  background: rgba(239,68,68,0.1);
+  border-color: rgba(239,68,68,0.4);
+  color: var(--lvl-danger);
+}
+
+/* Empty state */
+.drafts-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 72px 24px 48px;
+  text-align: center;
+  gap: 14px;
+}
+
+.drafts-empty-icon {
+  width: 88px;
+  height: 88px;
+  border-radius: var(--radius-round);
+  background: linear-gradient(135deg, rgba(139,92,246,0.1), rgba(99,102,241,0.15));
+  border: 1px solid rgba(139,92,246,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--lvl-purple-light);
+  margin-bottom: 8px;
+}
+
+.drafts-empty-state h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.drafts-empty-state p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  max-width: 340px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+@media (max-width: 600px) {
+  .draft-item-inner {
+    padding: 12px 16px;
+  }
+  .drafts-page-header {
+    padding: 14px 16px;
+  }
+}
+
+/* ===== sections/rtl.css ===== */
 /* ── RTL Global Layout Support ──────────────────────────────────────────── */
 /* Applied when lang="ar" sets dir="rtl" on <html> */
 
@@ -18355,7 +19193,7 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   direction: rtl;
 }
 
-/* ===== sections\responsive.css ===== */
+/* ===== sections/responsive.css ===== */
 /* ── Responsive Design System ─────────────────────────────────────────────
    Breakpoints:
    Mobile portrait  : ≤ 599px
@@ -18406,11 +19244,16 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
     font-weight: 700;
   }
 
-  /* Timeline expands to fill space */
+  /* Right rail narrower.
 
-  /* Right rail narrower */
+     The shorthand here used to set all four sides, which threw away the
+     bottom padding that keeps the message dock's area free: below this
+     width the rail ran to the foot of the window and the dock -- fixed to
+     that corner -- sat on top of the clip's own controls. Only the inline
+     padding is this rule's business. */
   .right-rail {
-    padding: 0 14px;
+    padding-inline: 14px;
+    padding-block-start: 0;
   }
 
   /* Right rail content adjustments */

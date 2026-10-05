@@ -375,6 +375,19 @@
     border-radius: var(--radius-xl);
   }
 
+  /* A rounded box needs an outline all the way round.
+
+     These two are flow surfaces: edge to edge, separated from what follows
+     by a bottom border and nothing else. The rule above insets them and
+     rounds their corners on a phone, which turned that single border into a
+     line that curved up at each end into nothing -- a corner with no box
+     attached to it. Inset and rounded, they are cards, so they get a card's
+     border. */
+  .page-header,
+  .composer {
+    border: 1px solid var(--border-color);
+  }
+
   .post,
   .composer,
   .form-section {

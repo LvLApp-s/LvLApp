@@ -84,6 +84,8 @@
    minimum now, not a ceiling. */
 .home-reel-video-wrap {
   grid-area: content;
+  /* The corner sound control is placed against this. */
+  position: relative;
   width: 100%;
   height: 100%;
   border-radius: var(--radius-md);
@@ -121,8 +123,8 @@
   pointer-events: none;
 }
 
-/* Top-right mute control as seen in production. */
-.home-reel-video-wrap > .media-volume,
+/* A bare speaker, on a surface with no level beside it, keeps the top right
+   corner: the bottom right belongs to the sound control that has one. */
 .home-reel-video-wrap > .home-reel-mute-btn {
   position: absolute;
   top: 12px;
@@ -241,12 +243,12 @@
 }
 
 .home-reel-counts .reel-action-like.active {
-  color: var(--lvl-danger, #f43f5e) !important;
+  color: var(--lvl-danger, var(--lvl-rose-strong)) !important;
 }
 
 .home-reel-counts .reel-action-like.active svg {
-  fill: var(--lvl-danger, #f43f5e) !important;
-  stroke: var(--lvl-danger, #f43f5e) !important;
+  fill: var(--lvl-danger, var(--lvl-rose-strong)) !important;
+  stroke: var(--lvl-danger, var(--lvl-rose-strong)) !important;
 }
 
 .home-reel-counts span {
@@ -374,4 +376,12 @@
     border-right: 1px solid var(--border-color);
   }
 
+}
+
+/* The like form in the counts row. It was style="display:inline-block;
+   margin-right: 8px" on the element. */
+.home-reel-counts .reel-like-form {
+  display: inline-block;
+  margin: 0;
+  margin-inline-end: var(--space-3);
 }

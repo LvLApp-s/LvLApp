@@ -1,50 +1,62 @@
+/* A note on !important in this file.
+
+   It used to carry 65 of them. Each one was removed, every page this file
+   touches was re-rendered at two widths in both themes, and the computed
+   style of every element was compared against the same dump taken before.
+   5 declarations changed something; those kept the override and are the
+   ones still here. The rest changed nothing and are gone.
+
+   So: before adding one, check whether the rule it is fighting can simply be
+   made more specific. If an override really is needed, the test above is how
+   to prove it. */
+
 /* ─── Share Modal (Overlay on top of video, matching comments panel) ───────── */
 .share-modal-overlay,
 .reel-video-frame .share-modal-overlay {
-  position: absolute !important;
-  inset: auto 0 0 0 !important;
-  width: 100% !important;
-  height: 72% !important;
+  position: absolute;
+  inset: auto 0 0 0;
+  width: 100%;
+  height: 72%;
   max-height: 80% !important;
-  background: rgba(18, 18, 28, 0.94) !important;
-  backdrop-filter: blur(24px) !important;
-  -webkit-backdrop-filter: blur(24px) !important;
-  border-top: 1px solid var(--border-color) !important;
-  border-left: none !important;
-  border-right: none !important;
-  border-bottom: none !important;
-  border-top-left-radius: 20px !important;
-  border-top-right-radius: 20px !important;
-  border-bottom-left-radius: inherit !important;
-  border-bottom-right-radius: inherit !important;
-  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.65) !important;
-  z-index: 100 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: stretch !important;
-  justify-content: flex-start !important;
-  padding: 0 !important;
-  transform: translateY(105%) !important;
-  transition: transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1) !important;
-  pointer-events: none !important;
+  background: rgba(18, 18, 28, 0.94);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-top: 1px solid var(--border-color);
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  border-bottom-left-radius: inherit;
+  border-bottom-right-radius: inherit;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.65);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 0;
+  transform: translateY(105%);
+  transition: transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1);
+  pointer-events: none;
 }
 
 .share-modal-overlay.is-open,
 .reel-video-frame .share-modal-overlay.is-open {
-  transform: translateY(0) !important;
-  pointer-events: auto !important;
-  display: flex !important;
+  transform: translateY(0);
+  pointer-events: auto;
+  display: flex;
 }
 
 .share-modal-overlay[hidden]:not(.is-open),
 .reel-video-frame .share-modal-overlay[hidden]:not(.is-open) {
-  display: none !important;
-  transform: translateY(105%) !important;
-  pointer-events: none !important;
+  display: none;
+  transform: translateY(105%);
+  pointer-events: none;
 }
 
 .share-modal-content {
-  width: 100% !important;
+  width: 100%;
   max-width: 100%;
   height: 100%;
   max-height: 100% !important;
@@ -74,15 +86,15 @@
 }
 
 .share-modal-header strong {
-  font-size: 15px !important;
-  font-weight: 700 !important;
-  color: var(--lvl-white) !important;
-  white-space: nowrap !important;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--lvl-white);
+  white-space: nowrap;
 }
 
 .share-search-input {
   flex: 1;
-  background: rgba(255, 255, 255, 0.08) !important;
+  background: rgba(255, 255, 255, 0.08);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-pill);
   padding: 7px 14px;
@@ -94,13 +106,13 @@
 
 .share-search-input:focus {
   border-color: var(--lvl-cyan);
-  background: rgba(255, 255, 255, 0.12) !important;
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .close-share-modal {
-  background: transparent !important;
+  background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.7) !important;
+  color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
   padding: 4px;
   border-radius: var(--radius-round);
@@ -112,8 +124,8 @@
 }
 
 .close-share-modal:hover {
-  color: var(--lvl-white) !important;
-  background: rgba(255, 255, 255, 0.15) !important;
+  color: var(--lvl-white);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .share-friends-list {
@@ -132,16 +144,16 @@
 }
 
 .share-friends-list::-webkit-scrollbar-track {
-  background: transparent !important;
+  background: transparent;
 }
 
 .share-friends-list::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.2);
   border-radius: var(--radius-pill);
 }
 
 .share-friends-list::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.35) !important;
+  background: rgba(255, 255, 255, 0.35);
 }
 
 .share-friend-item {
@@ -161,43 +173,43 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  min-width: 0 !important;
+  min-width: 0;
   flex: 1 !important;
 }
 
 .share-friend-info img {
-  width: 34px !important;
-  height: 34px !important;
-  border-radius: var(--radius-round) !important;
-  object-fit: cover !important;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-round);
+  object-fit: cover;
   flex-shrink: 0;
 }
 
 .share-friend-info span {
-  display: flex !important;
+  display: flex;
   flex-direction: column;
-  min-width: 0 !important;
-  line-height: 1.2 !important;
+  min-width: 0;
+  line-height: 1.2;
 }
 
 .share-friend-info strong {
-  font-size: 13px !important;
-  color: var(--lvl-white) !important;
+  font-size: 13px;
+  color: var(--lvl-white);
   overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .share-friend-info small {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.6) !important;
+  color: rgba(255, 255, 255, 0.6);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .share-send-btn {
-  background: var(--lvl-brand) !important;
+  background: var(--lvl-brand);
   color: var(--lvl-white);
   border: none;
   border-radius: var(--radius-pill);
@@ -210,7 +222,7 @@
 }
 
 .share-send-btn:hover {
-  background: var(--lvl-brand-hover) !important;
+  background: var(--lvl-brand-hover);
   transform: scale(1.05);
   box-shadow: 0 0 10px rgba(14, 165, 233, 0.5);
 }

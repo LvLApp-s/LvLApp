@@ -20,16 +20,29 @@
                preload="none"
                muted
                {% if reel.cover_url %}poster="{{ reel.cover_url }}"{% endif %}>
-          <source src="{{ reel.video_url }}" type="video/mp4">
+          {% if reel.video_url %}<source src="{{ reel.video_url }}" type="video/mp4">{% endif %}
         </video>
-        <button class="home-reel-mute-btn" type="button" data-home-reel-mute aria-label="Toggle sound" data-i18n-aria="reel_toggle_sound">
-          {# Two icons, swapped by CSS on .active. The button only changed its
-             background before, so a muted clip looked like a playing one. #}
-          <svg class="home-reel-icon-muted" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3z"/><path d="M16.5 8.5 22 14m0-5.5L16.5 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
-          <svg class="home-reel-icon-sound" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-        </button>
+        {# The level stands above the speaker in the clip's bottom right
+           corner, the same control the clips page carries. Tap the speaker to
+           mute, drag the bar to set the level. #}
+        <div class="media-volume media-volume-corner" data-volume-control>
+          <span class="media-volume-track">
+            <input class="media-volume-slider" type="range" min="0" max="100" step="1" value="100"
+                   aria-label="Volume" data-i18n-aria="media_volume_aria" data-volume-slider>
+          </span>
+          <button class="home-reel-mute-btn media-volume-toggle" type="button" data-home-reel-mute data-volume-toggle aria-label="Toggle sound" data-i18n-aria="reel_toggle_sound">
+            {# Two icons, swapped by CSS on .active. The button only changed its
+               background before, so a muted clip looked like a playing one. #}
+            <svg class="home-reel-icon-muted" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3z"/><path d="M16.5 8.5 22 14m0-5.5L16.5 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+            <svg class="home-reel-icon-sound" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+          </button>
+        </div>
         
-        <div class="reel-comment-panel" data-reel-comment-panel aria-label="Clip comments" data-i18n-aria="reel_comments_aria" style="z-index: 10;">
+        {# Same reason as the like form below: a placeholder clip's id is not
+           an integer, and this form's action is built from it. There is
+           nothing to comment on either, so the panel is not rendered. #}
+        {% if not reel.is_demo %}
+        <div class="reel-comment-panel" data-reel-comment-panel aria-label="Clip comments" data-i18n-aria="reel_comments_aria">
           <div class="reel-comment-panel-header">
             <strong data-i18n="reel_comments">Comments</strong>
             <button class="reel-comment-panel-close" type="button" data-reel-comment-close aria-label="Close comments" data-i18n-aria="reel_close_comments">
@@ -49,6 +62,7 @@
             <button class="reel-comment-post-btn" type="submit" data-i18n="reel_comment_post">Post</button>
           </form>
         </div>
+        {% endif %}
       </div>
       <div class="home-reel-info">
         {% if reel_author.username %}
@@ -68,13 +82,25 @@
         <p class="home-reel-caption">{{ reel.caption }}</p>
         {% endif %}
         <div class="home-reel-counts">
-          <form action="{{ url_for('toggle_reel_like', reel_id=reel.id) }}" method="post" class="reel-like-form" style="display:inline-block; margin-right: 8px;" data-reel-like-form>
+          {# A demo clip has a string for an id ("demo-1"), and every clip
+             route takes <int:reel_id> -- so building this form's action for
+             one raised a ValueError that took the whole page with it. There
+             is nothing to like on a placeholder anyway, so it shows the count
+             and no form, exactly as the clips page does. #}
+          {% if reel.is_demo %}
+          <span class="reel-action-button reel-action-like">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            <span data-reel-like-count>{{ reel.like_count or 0 }}</span>
+          </span>
+          {% else %}
+          <form action="{{ url_for('toggle_reel_like', reel_id=reel.id) }}" method="post" class="reel-like-form" data-reel-like-form>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="reel-action-button reel-action-like {% if reel.viewer_liked %}active{% endif %}" type="submit" aria-label="Like clip" data-i18n-aria="reel_like">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="{% if reel.viewer_liked %}currentColor{% else %}none{% endif %}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
               <span data-reel-like-count>{{ reel.like_count or 0 }}</span>
             </button>
           </form>
+          {% endif %}
           <button class="reel-action-button reel-action-comment" type="button"
                   data-reel-comment-toggle
                   {% if not reel.is_demo %}

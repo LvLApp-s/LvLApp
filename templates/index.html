@@ -30,7 +30,7 @@
   </div>
   <div class="composer-main">
     <textarea name="content" maxlength="280" placeholder="What's happening?" data-i18n-placeholder="composer_placeholder"></textarea>
-    <div style="display: flex; gap: 12px; align-items: center; margin-top: 8px;">
+    <div class="composer-upload-row">
       <label class="video-upload-control" title="Görsel Ekle">
         <input type="file" name="image" accept="image/png,image/jpeg,image/gif,image/webp">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
@@ -47,8 +47,8 @@
       <button type="button" data-clear-image data-i18n="remove_btn">Remove</button>
     </div>
     <div class="video-upload-preview" id="composer-video-preview" hidden>
-      <video id="composer-video-player" controls playsinline muted style="max-height:240px;border-radius:var(--radius-md);width:100%;"></video>
-      <button type="button" id="composer-video-clear" data-i18n="remove_btn" style="margin-top:6px;">Remove clip</button>
+      <video id="composer-video-player" class="composer-video-player" controls playsinline muted></video>
+      <button type="button" id="composer-video-clear" data-i18n="remove_btn">Remove clip</button>
     </div>
     <div class="composer-footer">
       <div class="composer-tools composer-draft-tools">

@@ -1,6 +1,7 @@
 import io
 import json
 import os
+import re
 import tempfile
 import unittest
 import inspect
@@ -241,10 +242,21 @@ class AppRouteTests(unittest.TestCase):
         self.assertFalse(local_config["SESSION_COOKIE_SECURE"])
         self.assertEqual(local_config["SESSION_COOKIE_SAMESITE"], "Lax")
 
+        # Secure in production, but still Lax: nothing here needs the session
+        # cookie sent from another site, and SameSite is the layer that holds
+        # if the CSRF check ever has a gap.
         production_config = zapp.session_cookie_config({"VERCEL_ENV": "production"})
         self.assertTrue(production_config["SESSION_COOKIE_SECURE"])
-        self.assertEqual(production_config["SESSION_COOKIE_SAMESITE"], "None")
+        self.assertEqual(production_config["SESSION_COOKIE_SAMESITE"], "Lax")
 
+        # An embed that genuinely needs it can still ask, over HTTPS.
+        explicit_none = zapp.session_cookie_config({
+            "VERCEL_ENV": "production",
+            "SESSION_COOKIE_SAMESITE": "None",
+        })
+        self.assertEqual(explicit_none["SESSION_COOKIE_SAMESITE"], "None")
+
+        # None without Secure is rejected by browsers, so it falls back.
         invalid_local_none = zapp.session_cookie_config({
             "SESSION_COOKIE_SECURE": "0",
             "SESSION_COOKIE_SAMESITE": "None",
@@ -1517,10 +1529,13 @@ class AppRouteTests(unittest.TestCase):
              patch.object(zapp, "get_reels", return_value=(reels, False)) as get_reels:
             html = self.client.get("/").data.decode()
 
-        # Same batch as before; the rail additionally opts out of the three
-        # viewer-specific lookups, because it prints public counts only.
+        # Same batch as before. The rail opts out of the viewer-specific
+        # lookups because it prints public counts -- except whether this
+        # reader has liked the clip, which its like button renders, so that
+        # one flag is asked for on its own.
         get_reels.assert_called_once_with(7, limit=50, page=1,
-                                          include_viewer_state=False)
+                                          include_viewer_state=False,
+                                          include_viewer_likes=True)
         self.assertIn('data-i18n="leaderboard_title"', html)
         self.assertNotIn("<h2>Community Highlights</h2>", html)
         self.assertIn('data-home-reel-slides tabindex="0"', html)
@@ -2118,11 +2133,16 @@ class AppRouteTests(unittest.TestCase):
         with zapp.app.test_request_context("/admin-dashboard"):
             html = zapp.render_template("admin_dashboard.html", **context)
 
-        self.assertIn("Comments (1)", html)
-        self.assertIn("Reels (1)", html)
-        self.assertIn("Reel Replies (1)", html)
-        self.assertIn("Communities (1)", html)
-        self.assertIn("Users (1)", html)
+        # The tabs used to read "Comments (1)"; the count is a chip beside
+        # the label now, so this checks the label and its count rather than
+        # one particular way of writing them together.
+        for label in ("Comments", "Reels", "Reel Replies", "Communities", "Users"):
+            with self.subTest(tab=label):
+                tab = re.search(
+                    r"<span>" + re.escape(label) + r"</span>\s*"
+                    r'<span class="admin-tab-count">(\d+)</span>', html)
+                self.assertIsNotNone(tab, f"no {label} tab")
+                self.assertEqual(tab.group(1), "1")
         self.assertIn('value="delete_comment_global"', html)
         self.assertIn('value="delete_reel_global"', html)
         self.assertIn('value="delete_reel_comment_global"', html)
@@ -5304,19 +5324,9 @@ class AppRouteTests(unittest.TestCase):
             self.assertTrue(res.headers['Location'].endswith("/careers"))
             self.assertEqual(applications_table.inserted, [])
 
-            res = self.client.post("/careers", data={
-                "csrf_token": self.csrf(),
-                "name": "Sina",
-                "email": "sina@example.com",
-                "position": "Backend Engineer",
-                "message": "I can help with backend systems.",
-                "cv": (io.BytesIO(b"bad executable"), "resume.exe")
-            })
-            self.assertEqual(res.status_code, 302)
-            self.assertTrue(res.headers['Location'].endswith("/careers"))
-            self.assertEqual(applications_table.inserted, [])
-
-            # A CV is required, so a submission without one is rejected.
+            # The CV upload is gone -- it wrote to a read-only filesystem and
+            # took the whole application down with it. A link stands in for
+            # it, and a submission without one is rejected.
             res = self.client.post("/careers", data={
                 "csrf_token": self.csrf(),
                 "name": "Sina",
@@ -5325,6 +5335,19 @@ class AppRouteTests(unittest.TestCase):
                 "message": "I can help with backend systems."
             })
             self.assertEqual(res.status_code, 302)
+            self.assertTrue(res.headers['Location'].endswith("/careers"))
+            self.assertEqual(applications_table.inserted, [])
+
+            # And one that is not a web address is rejected too.
+            res = self.client.post("/careers", data={
+                "csrf_token": self.csrf(),
+                "name": "Sina",
+                "email": "sina@example.com",
+                "position": "Backend Engineer",
+                "message": "I can help with backend systems.",
+                "portfolio_url": "javascript:alert(1)"
+            })
+            self.assertEqual(res.status_code, 302)
             self.assertEqual(applications_table.inserted, [])
 
             res = self.client.post("/careers", data={
@@ -5333,7 +5356,7 @@ class AppRouteTests(unittest.TestCase):
                 "email": "sina@example.com",
                 "position": "Backend Engineer",
                 "message": "I can help with backend systems.",
-                "cv": (io.BytesIO(b"%PDF-1.4 resume"), "resume.pdf")
+                "portfolio_url": "github.com/sina"
             })
 
         self.assertEqual(res.status_code, 302)
@@ -5342,7 +5365,8 @@ class AppRouteTests(unittest.TestCase):
         self.assertEqual(len(applications_table.inserted), 1)
         self.assertEqual(applications_table.inserted[0]["position_id"], "position-1")
         self.assertEqual(applications_table.inserted[0]["position_title"], "Backend Engineer")
-        self.assertTrue(applications_table.inserted[0]["cv_url"].endswith(".pdf"))
+        self.assertEqual(applications_table.inserted[0]["portfolio_url"],
+                         "https://github.com/sina")
 
     def test_verification_request_cooldown_and_submission(self):
         res = self.client.get("/request_verification")
@@ -5877,8 +5901,30 @@ class CookieConsentTests(unittest.TestCase):
         self.assertNotIn("localStorage.setItem('autoplay_next_reels'", body)
 
     def test_consent_banner_clears_the_mobile_navigation(self):
+        """The notice is a bar across the foot of the window now, so it sits
+        flush on top of the navigation rather than floating a gap above it --
+        but it still has to start where the navigation ends."""
         css = Path("static/css/sections/components.css").read_text(encoding="utf-8")
-        self.assertIn("bottom: calc(var(--mobile-nav-clearance) + var(--space-5))", css)
+        banner = re.search(r"\.consent-banner \{([^}]*)\}", css)
+        self.assertIsNotNone(banner)
+        self.assertRegex(banner.group(1), r"bottom:\s*var\(--mobile-nav-clearance\)")
+
+    def test_the_navigation_clearance_matches_the_bar_it_clears(self):
+        """It said 56px while the bar rendered 77, so everything reserving
+        space for it -- this notice, the feed's padding, the clip player's
+        height -- was 21px short."""
+        base = Path("static/css/sections/base.css").read_text(encoding="utf-8")
+        height = re.search(r"--mobile-nav-height:\s*(\d+)px", base)
+        self.assertIsNotNone(height)
+        self.assertGreaterEqual(int(height.group(1)), 77)
+
+    def test_the_consent_notice_reserves_its_own_height(self):
+        """Fixed to the bottom, so without a spacer the last thing on the
+        page sits behind it and cannot be scrolled into view."""
+        css = Path("static/css/sections/components.css").read_text(encoding="utf-8")
+        self.assertRegex(css, r"\.consent-spacer \{[^}]*height:\s*var\(--consent-clearance")
+        script = Path("static/js/script.js").read_text(encoding="utf-8")
+        self.assertIn("--consent-clearance", script)
 
 
 class ContentDiversificationTests(unittest.TestCase):
@@ -5984,11 +6030,20 @@ class SavedLibraryTests(unittest.TestCase):
         self.assertIn("bookmarks_empty_posts", self.render())
         self.assertIn("bookmarks_empty_clips", self.render(tab="clips"))
 
-    def test_profile_saved_tab_points_at_the_canonical_page(self):
-        """Saved content has one implementation, not two."""
+    def test_saved_content_has_one_implementation(self):
+        """The profile used to render its own Saved tab over its own query.
+
+        It links to /bookmarks instead -- and now does not offer the tab at
+        all, because the rail carries Bookmarks on every page. What has to
+        stay true is that the profile never grows a second implementation,
+        and that the one entry point the product does offer still exists.
+        """
         profile = Path("templates/profile.html").read_text(encoding="utf-8")
-        self.assertIn("url_for('bookmarks')", profile)
         self.assertNotIn("m='saved'", profile)
+        self.assertNotIn('m="saved"', profile)
+        layout = Path("templates/layout.html").read_text(encoding="utf-8")
+        self.assertIn("url_for('bookmarks')", layout,
+                      "nothing links to the saved library any more")
 
     def test_profile_saved_mode_redirects_to_bookmarks(self):
         with patch.object(zapp, "get_current_user", return_value=self.viewer), \
@@ -6033,7 +6088,7 @@ class IndependentRouteTests(unittest.TestCase):
              patch.object(zapp, "get_community_highlights", return_value=[]):
             html = self.client.get("/careers").data.decode()
         self.assertIn('action="/careers"', html)
-        self.assertIn("careers_cv", html)
+        self.assertIn("careers_portfolio", html)
 
     def test_no_template_links_to_the_removed_guide(self):
         for path in sorted(Path("templates").glob("*.html")):
@@ -6171,11 +6226,20 @@ class RailAndPopoverTests(unittest.TestCase):
     # --- top bar -----------------------------------------------------------
 
     def test_alerts_bell_lives_in_the_top_bar(self):
+        """The bell and its unread badge are in the bar.
+
+        The panel it opens is a sibling of the bar rather than a child of it:
+        the bar clips its own overflow, so a popover inside it was cut off at
+        the bar's edge. What matters is that the trigger is in the bar and
+        the panel it names exists.
+        """
         html = self.layout()
         topbar = html.split('<header class="app-topbar', 1)[1].split('</header>', 1)[0]
         self.assertIn('data-notifications-trigger', topbar)
         self.assertIn('data-live-badge="notifications"', topbar)
-        self.assertIn('id="notifications-popover"', topbar)
+        self.assertIn('id="notifications-popover"', html)
+        self.assertNotIn('id="notifications-popover"', topbar,
+                         "back inside the bar, where it gets clipped")
         # It sits after the search field, not before it.
         self.assertLess(topbar.index('class="topbar-search"'), topbar.index('topbar-actions'))
 
@@ -6675,12 +6739,16 @@ class ClipPlayerTests(unittest.TestCase):
 
     def test_actions_sit_outside_the_video(self):
         """They used to overlay the picture; on the web Reels keeps them in a
-        column beside it."""
+        column beside it. The sound control stays on the frame, because it is
+        about the thing playing rather than about the post."""
         html = self.card()
         frame = html.split('<div class="reel-video-frame">', 1)[1].split('<aside class="reel-actions"', 1)[0]
         self.assertIn('reel-stage', html)
         self.assertNotIn('<aside class="reel-actions"', frame)
-        self.assertIn('reel-mute-float', frame)
+        self.assertIn('data-volume-control', frame)
+        # .reel-mute-float was the old floating control: a class no template
+        # used, kept alive by eleven lines of CSS and six !important.
+        self.assertNotIn('reel-mute-float', html)
 
     def test_stage_stays_portrait_for_every_clip(self):
         """A landscape source used to reshape the stage into a wide box."""

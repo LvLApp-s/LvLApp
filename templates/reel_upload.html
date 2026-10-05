@@ -12,7 +12,7 @@
       <h1 data-i18n="reel_upload_title">Upload Clip</h1>
       <p data-i18n="reel_upload_desc">Upload a short vertical video for the Clips feed. Public clips can appear in For You, follower clips stay close to your network, and community clips attach to a group.</p>
     </div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <div class="reel-upload-header-actions">
       <a class="outline-button small" href="{{ url_for('drafts') }}" data-i18n="drafts_title">Drafts</a>
       <button type="button" id="reel-save-draft-btn" class="outline-button small" title="Save caption and settings as a draft">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -22,7 +22,7 @@
     </div>
   </header>
 
-  <p id="reel-draft-status" style="color:var(--text-secondary);font-size:13px;margin-bottom:8px;" hidden></p>
+  <p id="reel-draft-status" class="reel-upload-status" hidden></p>
 
   <form class="reel-upload-form panel" action="{{ url_for('reel_upload') }}" method="post" enctype="multipart/form-data" data-reel-upload-form data-max-video-bytes="{{ max_video_bytes }}" data-upload-url="{{ url_for('api_reel_upload_url') }}" data-complete-url="{{ url_for('api_reel_complete_upload') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -95,7 +95,11 @@
   function showStatus(msg, ok) {
     if (!statusEl) return;
     statusEl.textContent = msg;
-    statusEl.style.color = ok ? 'var(--lvl-green, #22c55e)' : 'var(--lvl-red, #ef4444)';
+    // The class carries the colour; --lvl-green and --lvl-red never existed,
+    // so this always fell through to the hardcoded hex and the status line
+    // stayed the same two colours in both themes.
+    statusEl.classList.toggle('is-ok', !!ok);
+    statusEl.classList.toggle('is-error', !ok);
     statusEl.hidden = false;
     setTimeout(function () { statusEl.hidden = true; }, 3000);
   }

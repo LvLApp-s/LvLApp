@@ -90,22 +90,38 @@
 
 /* --- Cookie consent ------------------------------------------------------ */
 
+/* A bar across the foot of the window, not a card floating over the page.
+
+   It used to be a 560px card pinned to the bottom left, which is exactly
+   where the content column is: on /careers it covered the "Full Name" field
+   of the application form, and because it is fixed, scrolling moved the form
+   but not the card -- the field could not be reached at all until the notice
+   was dismissed. A full-width bar has nothing beside it to cover, and the
+   clearance below reserves its height so the page can always scroll clear
+   of it. */
 .consent-banner {
   position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  /* Sits above the mobile bottom navigation, never on top of it. */
-  bottom: calc(var(--mobile-nav-clearance) + var(--space-5));
+  left: 0;
+  right: 0;
+  /* Above the mobile bottom navigation, never on top of it. */
+  bottom: var(--mobile-nav-clearance);
   z-index: var(--z-modal);
-  width: min(100% - 32px, 520px);
   opacity: 0;
+  transform: translateY(12px);
   transition:
     opacity var(--duration-slow) var(--ease-standard),
     transform var(--duration-slow) var(--ease-standard);
+  /* The surface belongs to the bar, so it reaches both edges of the window;
+     the card inside only sets where the words sit. With the background on
+     the card instead, the notice read as another floating panel. */
+  border-top: 1px solid var(--border-color);
+  background: var(--lvl-surface-overlay);
+  box-shadow: var(--shadow-lg);
 }
 
 .consent-banner.is-visible {
   opacity: 1;
+  transform: translateY(0);
 }
 
 .consent-card {
@@ -113,10 +129,21 @@
   flex-direction: column;
   gap: var(--space-6);
   padding: var(--space-7);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-xl);
-  background: var(--lvl-surface-overlay);
-  box-shadow: var(--shadow-lg);
+  max-width: 1100px;
+  margin-inline: auto;
+}
+
+/* While the notice is up, the page keeps its height free underneath it.
+
+   This is a block in normal flow at the end of the body rather than padding
+   on a shell, because which element carries the page's bottom padding is not
+   the same on every page or at every width -- the feed hands it to .timeline
+   on phones, for instance. A spacer at the end of the document extends the
+   scroll height wherever it is used. The script measures the bar and writes
+   the value; the fallback is 0 so nothing shifts once a choice is made. */
+.consent-spacer {
+  height: var(--consent-clearance, 0px);
+  flex: 0 0 auto;
 }
 
 .consent-title {
@@ -157,36 +184,20 @@
 }
 
 @media (min-width: 768px) {
-  .consent-banner {
-    left: var(--space-10);
-    right: auto;
-    bottom: var(--space-10);
-    transform: translateY(12px);
-    width: min(100% - 48px, 560px);
-  }
-
-  .consent-banner.is-visible {
-    transform: translateY(0);
-  }
-
-  [dir="rtl"] .consent-banner {
-    left: auto;
-    right: var(--space-10);
-  }
-
   .consent-card {
     flex-direction: row;
     align-items: center;
   }
 
+  /* Side by side: the bar is wide, and stacking two short labels in a column
+     made the bar taller than the sentence beside it needed. */
   .consent-actions {
     flex: 0 0 auto;
-    flex-direction: column;
+    flex-direction: row;
   }
 
   .consent-button {
     flex: 0 0 auto;
-    width: 100%;
   }
 }
 
@@ -242,7 +253,45 @@
   min-height: 0;
   max-height: 420px;
   overflow-y: auto;
+  overflow-x: hidden;
   overscroll-behavior: contain;
+}
+
+/* One trending entry. The rail is a narrow column, so the full feed post is
+   drawn smaller here: a smaller avatar, tighter text, and the action row
+   scaled down. This was a <style> block inside layout.html, inside the loop's
+   own section -- sent again on every render of every page with a rail, and
+   out of reach of the bundle and the token tests. */
+.trending-item {
+  flex-shrink: 0;
+  display: block;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.trending-panel .timeline .post {
+  flex-shrink: 0;
+  padding: var(--space-1) var(--space-3);
+  min-height: unset;
+}
+
+.trending-panel .post-avatar img {
+  width: 24px;
+  height: 24px;
+}
+
+.trending-panel .post-content {
+  font-size: 0.8em;
+}
+
+.trending-panel .post-header {
+  margin-bottom: 0;
+  font-size: 0.85em;
+}
+
+.trending-panel .post-actions {
+  margin-top: 0;
+  transform: scale(0.75);
+  transform-origin: left;
 }
 
 /* The rail is a column, so a panel can only grow if the rail lets it. */
@@ -251,6 +300,10 @@
 .right-rail {
   display: flex;
   flex-direction: column;
+  /* Without this the panels butted into each other: the leaderboard's rounded
+     bottom edge and the "LEVELS" kicker of the panel under it shared a pixel
+     row, so the two read as one broken box. */
+  gap: var(--space-5);
 }
 
 /* Sized by their content, so the clips panel below them takes the rest.
@@ -737,26 +790,32 @@
 }
 
 /* --- Media volume --------------------------------------------------------
-   One control, two gestures, the way a phone app does it: a tap on the
-   speaker mutes or unmutes, and holding the pointer on it opens the level
-   beside it. The track stays in the layout and is clipped to zero width so
-   it can slide rather than blink in -- display:none cannot be transitioned.
+   A speaker and a level bar, side by side, on every surface that plays a
+   clip. Tap the speaker to mute or unmute; drag the bar to set the level.
+
+   The bar used to be clipped to zero width and opened on hover, focus or
+   drag. That made it invisible: nothing on the control suggested a level
+   existed, so someone who wanted to turn a clip down saw a speaker, pressed
+   it, and got silence instead of the quieter clip they wanted. A control you
+   have to discover by hovering is a control most people never find -- and on
+   a touch screen there is no hover to discover it with, which is why there
+   was already a media query forcing it open there. It is simply out now,
+   everywhere, which is what that query was working around.
    ------------------------------------------------------------------------ */
 
 .media-volume {
   display: inline-flex;
   align-items: center;
-  gap: 0;
-  padding: 0;
+  gap: var(--space-3);
+  padding-inline-end: var(--space-4);
   border-radius: var(--radius-pill);
   background: var(--lvl-black-52);
-  transition: gap var(--duration-base) var(--ease-standard),
-              padding var(--duration-base) var(--ease-standard);
 }
 
-/* Sitting against the right edge, so it opens towards the middle. */
+/* Sitting against the right edge, so the bar runs towards the middle. */
 .media-volume-end {
   flex-direction: row-reverse;
+  padding-inline: var(--space-4) 0;
 }
 
 .media-volume-toggle {
@@ -766,43 +825,79 @@
 .media-volume-track {
   display: flex;
   align-items: center;
-  max-width: 0;
-  overflow: hidden;
-  opacity: 0;
-  transition: max-width var(--duration-base) var(--ease-standard),
-              opacity var(--duration-base) var(--ease-standard);
+  flex: 0 0 auto;
 }
 
-/* is-adjusting is set while the thumb is held. A drag that wanders off the
-   pill -- which is easy, it is 30px tall -- would otherwise end the hover and
-   collapse the track out from under the pointer mid-drag. */
-.media-volume:hover,
-.media-volume:focus-within,
-.media-volume.is-adjusting {
-  gap: var(--space-3);
-  padding-inline-end: var(--space-4);
+/* The corner control: the level standing on top of the speaker, in the
+   clip's bottom right corner, the way a phone app puts it.
+
+   Laid out along the block axis, so the same markup reads as a column here
+   and as a row where the control sits in a toolbar. It is absolutely placed
+   on the frame rather than in the row of names and badges, where a reader
+   took it for another badge instead of the thing you grab to turn a clip
+   down. */
+.media-volume-corner {
+  position: absolute;
+  inset-inline-end: 12px;
+  inset-block-end: 12px;
+  inset-block-start: auto;
+  z-index: 12;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-2) var(--space-2);
+  border-radius: var(--radius-pill);
+  /* It sits on moving pictures, so it carries its own backdrop. */
+  background: var(--lvl-black-52);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  pointer-events: auto;
 }
 
-.media-volume-end:hover,
-.media-volume-end:focus-within,
-.media-volume-end.is-adjusting {
-  padding-inline: var(--space-4) 0;
+.media-volume-corner .media-volume-slider {
+  /* writing-mode is what stands a range input up these days, and it keeps
+     appearance: none -- so the track and handle below are the ones we drew.
+     The old way, appearance: slider-vertical, turns the native widget back
+     on and takes its own colours with it: the bar came back in the system
+     accent with a blue handle, which is the browser's idea of a slider and
+     not this product's. */
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 18px;
+  height: 72px;
 }
 
-.media-volume:hover .media-volume-track,
-.media-volume:focus-within .media-volume-track,
-.media-volume.is-adjusting .media-volume-track {
-  max-width: 96px;
-  opacity: 1;
+/* Vertical, so the filled part runs up from the bottom rather than in from
+   the left. */
+.media-volume-corner .media-volume-slider::-webkit-slider-runnable-track {
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(to top,
+    var(--lvl-white) 0 var(--volume-fill, 100%),
+    var(--lvl-white-22) var(--volume-fill, 100%) 100%);
 }
 
-/* A pointer that only grazes the corner should not pop the slider open, so
-   the level waits for the pointer to settle. Not while dragging: that has to
-   answer immediately. */
-@media (hover: hover) {
-  .media-volume:hover:not(.is-adjusting) .media-volume-track {
-    transition-delay: 90ms;
-  }
+.media-volume-corner .media-volume-slider::-moz-range-track {
+  width: 4px;
+  height: 100%;
+}
+
+.media-volume-corner .media-volume-slider::-webkit-slider-thumb {
+  margin-top: 0;
+  margin-left: -4px;
+}
+
+/* is-adjusting is set while the thumb is held, so the handle can grow under
+   the finger that is holding it. It no longer has to keep the bar open --
+   the bar does not close -- but a drag still deserves to be acknowledged. */
+.media-volume.is-adjusting .media-volume-slider::-webkit-slider-thumb {
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+}
+
+.media-volume.is-adjusting .media-volume-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
 }
 
 .media-volume-slider {
@@ -857,27 +952,26 @@
   box-shadow: 0 1px 4px var(--lvl-black-62);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .media-volume,
-  .media-volume-track {
-    transition: none;
-  }
-}
-
-/* No hover on a touch screen, so the level is always out. */
+/* A finger needs more of the bar to aim at than a pointer does. */
 @media (hover: none) {
-  .media-volume-track {
-    max-width: 84px;
-    opacity: 1;
+  .media-volume-slider {
+    height: 24px;
   }
 
-  .media-volume {
-    gap: var(--space-3);
-    padding-inline-end: var(--space-4);
+  .media-volume-corner .media-volume-slider {
+    width: 26px;
+    height: 84px;
   }
 
-  .media-volume-end {
-    padding-inline: var(--space-4) 0;
+  .media-volume-slider::-webkit-slider-thumb {
+    width: 14px;
+    height: 14px;
+    margin-top: -5px;
+  }
+
+  .media-volume-slider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
   }
 }
 

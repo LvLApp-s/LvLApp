@@ -22,7 +22,15 @@ def css(name):
 
 
 def rule(name, selector):
-    match = re.search(re.escape(selector) + r"\s*\{([^}]*)\}", css(name))
+    """The body of the rule whose selector list starts with this selector.
+
+    Anchored to the start of a line: without it, looking up
+    ".home-reel-mute-btn" also matched the ".home-reel-video-wrap >
+    .home-reel-mute-btn" rule above it, so a test about what the button sets
+    read the wrapper's positioning instead.
+    """
+    match = re.search(r"^" + re.escape(selector) + r"\s*(?:,[^{]*)?\{([^}]*)\}",
+                      css(name), re.M)
     return match.group(1) if match else None
 
 
@@ -72,17 +80,31 @@ class OneClipPerScreenfulTests(unittest.TestCase):
         self.assertIsNotNone(body)
         self.assertRegex(body, r"scroll-snap-stop:\s*always")
 
-    def test_the_video_takes_the_slides_remaining_height(self):
+    def test_the_video_fills_the_slide(self):
+        """The slide was a flex column -- video above, author row below -- and
+        is a single grid cell now, with the author row laid over the video
+        under a gradient. Either way the point is the same: the video takes
+        the whole box, with nothing capping it short of the rail."""
+        slide = rule("home-reels.css", ".home-reel-slide")
+        self.assertIsNotNone(slide)
+        self.assertRegex(slide, r'grid-template-areas:\s*"content"')
+
         body = rule("home-reels.css", ".home-reel-video-wrap")
         self.assertIsNotNone(body)
-        self.assertRegex(body, r"flex:\s*1 1 auto")
+        self.assertRegex(body, r"grid-area:\s*content")
+        self.assertRegex(body, r"height:\s*100%")
         self.assertNotRegex(body, r"max-height:",
                             "a ceiling here stops the clip short of the rail")
 
     def test_the_author_row_is_not_squeezed(self):
+        """It shares the cell with the video rather than taking height from
+        it, so it is sized by its own content and cannot be compressed."""
         body = rule("home-reels.css", ".home-reel-info")
         self.assertIsNotNone(body)
-        self.assertRegex(body, r"flex:\s*0 0 auto")
+        self.assertRegex(body, r"grid-area:\s*content")
+        self.assertRegex(body, r"align-self:\s*end")
+        self.assertNotRegex(body, r"height:\s*\d",
+                            "a fixed height would clip a long caption")
 
 
 class CommunityRailTests(unittest.TestCase):
@@ -120,33 +142,64 @@ class VolumeControlMarkupTests(unittest.TestCase):
 
 
 class VolumeControlStyleTests(unittest.TestCase):
-    def test_the_level_is_clipped_rather_than_removed(self):
-        """display:none cannot be transitioned, so it would blink in."""
+    """The level bar is out, on every surface, without being asked for.
+
+    It used to be clipped to max-width: 0 and opened on hover, focus or
+    drag. A control you have to discover by hovering is one most people
+    never find: the clip showed a speaker, pressing it gave silence, and the
+    bar for turning the clip *down* was never seen. These assert the bar is
+    simply there.
+    """
+
+    def test_the_level_is_not_hidden(self):
         body = rule("components.css", ".media-volume-track")
         self.assertIsNotNone(body)
-        self.assertRegex(body, r"max-width:\s*0")
+        self.assertNotRegex(body, r"max-width:\s*0")
         self.assertNotRegex(body, r"display:\s*none")
+        self.assertNotRegex(body, r"opacity:\s*0")
 
-    def test_holding_the_pointer_on_it_opens_the_level(self):
-        body = rule("components.css",
-                    ".media-volume:hover .media-volume-track,\n"
-                    ".media-volume:focus-within .media-volume-track,\n"
-                    ".media-volume.is-adjusting .media-volume-track")
+    def test_the_bar_has_a_width_to_drag_along(self):
+        body = rule("components.css", ".media-volume-slider")
         self.assertIsNotNone(body)
-        self.assertRegex(body, r"max-width:\s*\d+px")
+        width = re.search(r"width:\s*(\d+)px", body)
+        self.assertIsNotNone(width)
+        self.assertGreaterEqual(int(width.group(1)), 60,
+                                "too short to aim at")
 
-    def test_a_keyboard_opens_it_too(self):
-        self.assertIn(".media-volume:focus-within", css("components.css"))
+    def test_the_speaker_and_the_bar_are_spaced_apart(self):
+        """They are one pill; without the gap the thumb sits on the icon."""
+        body = rule("components.css", ".media-volume")
+        self.assertIsNotNone(body)
+        self.assertRegex(body, r"gap:\s*var\(--space")
 
-    def test_a_touch_screen_gets_it_without_hovering(self):
+    def test_nothing_waits_for_a_hover_to_show_the_level(self):
+        """The whole point: no rule opens it, because it never closed."""
+        sheet = css("components.css")
+        for gate in (".media-volume:hover .media-volume-track",
+                     ".media-volume:focus-within .media-volume-track",
+                     ".media-volume.is-adjusting .media-volume-track"):
+            with self.subTest(selector=gate):
+                self.assertNotIn(gate, sheet)
+
+    def test_a_touch_screen_gets_a_bigger_handle(self):
+        """A finger is blunter than a pointer. This used to be where the bar
+        was forced open, because a touch screen has no hover to open it with
+        -- the workaround that showed the default was wrong."""
         block = re.search(r"@media \(hover: none\) \{(.*?)\n\}\n",
                           css("components.css"), re.S)
-        self.assertIsNotNone(block, "there is no hover on a touch screen, so "
-                                    "the level would never open")
-        self.assertIn(".media-volume-track", block.group(1))
+        self.assertIsNotNone(block)
+        self.assertIn(".media-volume-slider", block.group(1))
+        self.assertNotIn("max-width", block.group(1))
 
     def test_the_floating_control_needs_no_important(self):
-        body = rule("reels.css", ".reel-mute-float")
+        """It used to be .reel-mute-float, which carried six !important
+        declarations and no template that used the class -- dead CSS winning
+        arguments with rules that were actually on the page. The rule that
+        positions the control now is the one on the rail's wrapper, and it
+        wins on specificity rather than by shouting."""
+        self.assertIsNone(rule("reels.css", ".reel-mute-float"),
+                          "dead rule is back")
+        body = rule("components.css", ".media-volume-corner")
         self.assertIsNotNone(body)
         self.assertNotIn("!important", body)
 
@@ -250,10 +303,15 @@ class DraggingAloneIsEnoughTests(unittest.TestCase):
         self.assertIn("window.addEventListener('pointerup', release)", handler)
         self.assertIn("window.addEventListener('pointercancel', release)", handler)
 
-    def test_the_open_delay_does_not_apply_mid_drag(self):
-        block = re.search(r"@media \(hover: hover\) \{(.*?)\n\}", css("components.css"), re.S)
-        self.assertIsNotNone(block)
-        self.assertIn(":not(.is-adjusting)", block.group(1))
+    def test_the_handle_grows_while_it_is_held(self):
+        """is-adjusting used to hold the bar open through a drag that left
+        the pill. The bar does not close any more, so the class answers the
+        drag instead: the handle grows under the finger holding it."""
+        sheet = css("components.css")
+        self.assertIn(".media-volume.is-adjusting .media-volume-slider::-webkit-slider-thumb",
+                      sheet)
+        self.assertIn(".media-volume.is-adjusting .media-volume-slider::-moz-range-thumb",
+                      sheet)
 
     def test_dragging_to_the_bottom_keeps_the_level_it_started_from(self):
         """Otherwise muting by dragging left the clip at the few percent the

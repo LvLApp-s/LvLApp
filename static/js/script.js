@@ -368,17 +368,40 @@ document.addEventListener('DOMContentLoaded', () => {
     function initCookieConsent() {
         const banner = document.querySelector('[data-consent-banner]');
 
+        /* The bar is fixed, so the page has to be told to keep that much
+           height free underneath it -- otherwise the last thing on the page
+           sits behind the notice and cannot be scrolled into view. */
+        const reserveSpace = () => {
+            if (!banner || banner.hidden) {
+                document.documentElement.style.removeProperty('--consent-clearance');
+                return;
+            }
+            document.documentElement.style.setProperty(
+                '--consent-clearance', `${Math.ceil(banner.offsetHeight)}px`);
+        };
+
         const openBanner = () => {
             if (!banner) return;
             banner.hidden = false;
-            window.requestAnimationFrame(() => banner.classList.add('is-visible'));
+            window.requestAnimationFrame(() => {
+                banner.classList.add('is-visible');
+                reserveSpace();
+            });
         };
 
         const closeBanner = () => {
             if (!banner) return;
             banner.classList.remove('is-visible');
-            window.setTimeout(() => { banner.hidden = true; }, 260);
+            window.setTimeout(() => {
+                banner.hidden = true;
+                reserveSpace();
+            }, 260);
         };
+
+        // The sentence rewraps when the window narrows or the language
+        // changes, and a taller bar needs more clearance than it did.
+        window.addEventListener('resize', reserveSpace);
+        document.addEventListener('lvl:langchange', reserveSpace);
 
         if (banner) {
             banner.querySelectorAll('[data-consent-choice]').forEach((button) => {
@@ -1856,6 +1879,15 @@ document.addEventListener('DOMContentLoaded', () => {
             || (window.navigator.platform === 'MacIntel' && window.navigator.maxTouchPoints > 1);
 
         const showPrompt = () => {
+            // One bottom sheet at a time. The cookie notice and the install
+            // prompt both dock to the foot of the window, and with both up
+            // they stacked on top of each other -- the install card drawn
+            // over the consent buttons, so neither could be answered. The
+            // consent question comes first; this one waits for the answer.
+            if (!consentChoice()) {
+                document.addEventListener('lvl:consent', showPrompt, { once: true });
+                return;
+            }
             promptEl.hidden = false;
         };
 
@@ -2371,6 +2403,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     initVolumeControls();
+
+    /* A destructive form asks before it submits, in the reader's language.
+
+       These used to be inline onsubmit="return confirm('...')" attributes
+       with the sentence written into the markup -- which is how the clip
+       delete ended up being the one dialog in the product that spoke only
+       Turkish, whatever language the rest of the page was in. The question
+       now comes from the translation table like every other string, with the
+       markup carrying only the key and an English fallback. */
+    function initConfirmForms(root) {
+        (root || document).querySelectorAll('[data-confirm]').forEach((form) => {
+            if (form.dataset.confirmBound === '1') return;
+            form.dataset.confirmBound = '1';
+            form.addEventListener('submit', (event) => {
+                const fallback = form.dataset.confirmDefault || 'Are you sure?';
+                const question = form.dataset.confirmKey
+                    ? translateUi(form.dataset.confirmKey, fallback)
+                    : fallback;
+                if (!window.confirm(question)) {
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                }
+            });
+        });
+    }
+
+    initConfirmForms(document);
 
     document.querySelectorAll('[data-copy-url]').forEach((button) => {
         button.addEventListener('click', async () => {
@@ -3628,56 +3687,37 @@ document.addEventListener('DOMContentLoaded', () => {
         const text = comment.comment || '';
         const time = comment.created_at ? new Date(comment.created_at).toLocaleDateString() : '';
         
+        /* Class names only. Every declaration that used to be set here is
+           already in the reels stylesheet, and setting them inline beat the
+           stylesheet: the hardcoded white and greys meant a comment posted
+           while the page was open stayed dark-theme coloured in daylight
+           mode, unreadable against the light panel behind it. */
         const item = document.createElement('div');
         item.className = 'reel-comment-item';
-        item.style.display = 'flex';
-        item.style.alignItems = 'flex-start';
-        item.style.gap = '10px';
 
         const img = document.createElement('img');
         img.className = 'avatar reel-comment-avatar';
         img.src = avatarSrc;
         img.alt = '';
-        img.style.display = 'block';
-        img.style.width = '32px';
-        img.style.height = '32px';
-        img.style.borderRadius = '50%';
-        img.style.objectFit = 'cover';
-        
+
         const body = document.createElement('div');
         body.className = 'reel-comment-body';
-        body.style.flex = '1';
-        body.style.minWidth = '0';
-        body.style.display = 'block';
-        
+
         const author = document.createElement('span');
         author.className = 'reel-comment-author';
         author.textContent = displayName;
-        author.style.fontWeight = '700';
-        author.style.fontSize = '13px';
-        author.style.color = 'white';
-        
+
         const handle = document.createElement('span');
         handle.className = 'reel-comment-handle';
-        if (username) handle.textContent = ' @' + username;
-        handle.style.fontSize = '12px';
-        handle.style.color = '#aaa';
-        
+        if (username) handle.textContent = '@' + username;
+
         const p = document.createElement('p');
         p.className = 'reel-comment-text';
         p.textContent = text;
-        p.style.fontSize = '14px';
-        p.style.color = 'white';
-        p.style.marginTop = '4px';
-        p.style.wordBreak = 'break-word';
-        
+
         const timeEl = document.createElement('time');
         timeEl.className = 'reel-comment-time';
         timeEl.textContent = time;
-        timeEl.style.fontSize = '11px';
-        timeEl.style.color = '#888';
-        timeEl.style.marginTop = '2px';
-        timeEl.style.display = 'block';
 
         body.appendChild(author);
         body.appendChild(handle);

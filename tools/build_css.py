@@ -49,7 +49,12 @@ def build() -> str:
     for path in sections():
         if not path.exists():
             raise SystemExit(f"manifest points at a missing file: {path}")
-        parts.append(f"\n/* ===== {path.relative_to(CSS)} ===== */\n")
+        # as_posix(), not the Path itself: formatting a path uses the host's
+        # separator, so a bundle built on Windows carried "sections\\base.css"
+        # and one built on Linux "sections/base.css". The bytes then differed
+        # with no rule having changed, and --check called a current bundle
+        # stale on whichever machine had not built it last.
+        parts.append(f"\n/* ===== {path.relative_to(CSS).as_posix()} ===== */\n")
         parts.append(path.read_text(encoding="utf-8").rstrip() + "\n")
     return "".join(parts)
 

@@ -48,11 +48,16 @@
     font-weight: 700;
   }
 
-  /* Timeline expands to fill space */
+  /* Right rail narrower.
 
-  /* Right rail narrower */
+     The shorthand here used to set all four sides, which threw away the
+     bottom padding that keeps the message dock's area free: below this
+     width the rail ran to the foot of the window and the dock -- fixed to
+     that corner -- sat on top of the clip's own controls. Only the inline
+     padding is this rule's business. */
   .right-rail {
-    padding: 0 14px;
+    padding-inline: 14px;
+    padding-block-start: 0;
   }
 
   /* Right rail content adjustments */

@@ -1,3 +1,15 @@
+/* A note on !important in this file.
+
+   It used to carry 34 of them. Each one was removed, every page this file
+   touches was re-rendered at two widths in both themes, and the computed
+   style of every element was compared against the same dump taken before.
+   5 declarations changed something; those kept the override and are the
+   ones still here. The rest changed nothing and are gone.
+
+   So: before adding one, check whether the rule it is fighting can simply be
+   made more specific. If an override really is needed, the test above is how
+   to prove it. */
+
 /* Profile header and public profile layout */
 .profile-header {
   border-bottom: 1px solid var(--border-color);
@@ -348,9 +360,9 @@
 }
 
 .pprogress-body.is-collapsed {
-  max-height: 0 !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
   visibility: hidden;
 }
 
@@ -538,52 +550,52 @@
 }
 
 .profile-reels-feed .reel-card {
-  min-height: auto !important;
-  height: auto !important;
-  padding: 0 !important;
-  width: min(100%, 420px) !important;
-  box-sizing: border-box !important;
+  min-height: auto;
+  height: auto;
+  padding: 0;
+  width: min(100%, 420px);
+  box-sizing: border-box;
 }
 
 .profile-reels-feed .reel-video-frame {
-  width: 100% !important;
-  height: auto !important;
-  aspect-ratio: 9 / 16 !important;
-  max-height: clamp(380px, 60vh, 560px) !important;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 9 / 16;
+  max-height: clamp(380px, 60vh, 560px);
   border-radius: var(--radius-xl) !important;
-  overflow: hidden !important;
+  overflow: hidden;
 }
 
 .profile-reels-feed .reel-actions,
       .profile-reels-feed .reel-actions * {
-  background: transparent !important;
+  background: transparent;
   border: none !important;
-  box-shadow: none !important;
+  box-shadow: none;
   border-radius: 0 !important;
 }
 
 .profile-reels-feed .reel-actions {
-  position: absolute !important;
-  bottom: 8px !important;
-  right: 8px !important;
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
   display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
+  flex-direction: column;
+  align-items: center;
   gap: 3px !important;
-  width: 40px !important;
-  z-index: 5 !important;
+  width: 40px;
+  z-index: 5;
 }
 
 .profile-reels-feed .reel-action-button,
       .profile-reels-feed .reel-actions button,
       .profile-reels-feed .reel-actions a {
-  width: 36px !important;
-  min-height: 36px !important;
-  height: 36px !important;
-  font-size: 10px !important;
-  padding: 0 !important;
-  color: var(--lvl-white) !important;
-  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.85)) !important;
+  width: 36px;
+  min-height: 36px;
+  height: 36px;
+  font-size: 10px;
+  padding: 0;
+  color: var(--lvl-white);
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.85));
 }
 
 /* --------------------------------------------------------------------------
@@ -705,5 +717,5 @@
 
 .reply-card-link:hover {
   background: var(--lvl-brand);
-  color: #fff;
+  color: var(--lvl-white);
 }

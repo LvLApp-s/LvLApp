@@ -66,11 +66,24 @@ class RequestCacheTests(unittest.TestCase):
         self.assertEqual(everyone, {9})
         self.assertEqual(narrowed, set(), "a candidate list must still narrow the result")
 
-    def test_mutes_and_blocks_are_cached_separately(self):
+    def test_mutes_and_blocks_share_one_lookup(self):
+        """Blocks are a subset of blocks-and-mutes, so asking both ways is one
+        round trip, not two. include_mutes used to be part of the cache key,
+        which made a page that rendered a list each way pay twice for the same
+        rows."""
         with zapp.app.test_request_context('/'), patch.object(zapp, 'supabase', self.fake):
             zapp.blocked_user_ids_for_viewer(1, include_mutes=True)
             zapp.blocked_user_ids_for_viewer(1, include_mutes=False)
-        self.assertEqual(self.counter['n'], 2, "the two queries differ, so both must run")
+            zapp.blocked_user_ids_for_viewer(1, include_mutes=True)
+        self.assertEqual(self.counter['n'], 1)
+
+    def test_sharing_the_lookup_did_not_change_who_is_hidden(self):
+        """The saving is only legitimate if the answers are identical."""
+        with zapp.app.test_request_context('/'), patch.object(zapp, 'supabase', self.fake):
+            with_mutes = zapp.blocked_user_ids_for_viewer(1, include_mutes=True)
+            blocks_only = zapp.blocked_user_ids_for_viewer(1, include_mutes=False)
+        self.assertTrue(blocks_only.issubset(with_mutes),
+                        "hiding fewer things must never hide something more")
 
     def test_each_request_starts_from_a_cold_cache(self):
         with zapp.app.test_request_context('/'), patch.object(zapp, 'supabase', self.fake):
@@ -224,12 +237,30 @@ class ReelViewerStateTests(unittest.TestCase):
         self.assertIs(inspect.signature(zapp.get_reels)
                       .parameters['include_viewer_state'].default, True)
 
-    def test_the_rail_template_reads_no_viewer_state(self):
-        """If the rail ever starts showing a like or follow state, this opt-out
-        becomes wrong -- fail here rather than render it blank."""
+    def test_the_rail_template_reads_only_the_like_flag(self):
+        """The rail gained a like button, so viewer_liked is now rendered
+        there and has to be fetched. The other three still have nothing on
+        this surface to show them -- if one appears, the opt-out below it
+        becomes wrong and the panel renders it blank."""
         from pathlib import Path
         panel = (Path(zapp.__file__).parent / 'templates' / '_home_reel_panel.html')
         markup = panel.read_text(encoding='utf-8')
-        for key in ('viewer_liked', 'viewer_bookmarked', 'author_followed', 'is_owner'):
+        self.assertIn('viewer_liked', markup)
+        for key in ('viewer_bookmarked', 'author_followed', 'is_owner'):
             with self.subTest(key=key):
                 self.assertNotIn(key, markup)
+
+    def test_the_like_flag_can_be_asked_for_on_its_own(self):
+        """One round trip, not the bundle of three."""
+        self.enrich(include_viewer_state=False, include_viewer_likes=True)
+        self.assertIn('reel_likes', self.tables)
+        self.assertNotIn('reel_bookmarks', self.tables)
+        self.assertNotIn('follows', self.tables)
+
+    def test_the_rail_asks_for_the_like_flag(self):
+        """get_home_reel_preview is what renders that button, so the opt-in
+        has to survive down the call chain."""
+        import inspect
+        source = inspect.getsource(zapp.get_home_reel_preview)
+        self.assertIn('include_viewer_likes=True', source)
+        self.assertIn('include_viewer_state=False', source)

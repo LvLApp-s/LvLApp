@@ -160,7 +160,9 @@
                 <span data-i18n="settings_banner_color">Profile Banner Color</span>
                 <div class="color-picker-wrapper">
                   <input type="color" name="profile_pic" value="{{ display_profile_color(viewer) }}" {% if not profile_color_is_unlocked %}disabled{% endif %}>
-                  <input type="text" class="hex-value" value="{{ display_profile_color(viewer) }}" maxlength="7" {% if not profile_color_is_unlocked %}disabled{% endif %}>
+                  <input type="text" class="hex-value" value="{{ display_profile_color(viewer) }}" maxlength="7"
+                         aria-label="Profile colour hex code" data-i18n-aria="settings_color_hex_aria"
+                         {% if not profile_color_is_unlocked %}disabled{% endif %}>
                 </div>
                 {% if profile_color_is_unlocked %}
                   <small><span data-i18n="settings_banner_hint">Profile colors are unlocked from LvL</span> {{ profile_color_unlock_level }}.</small>

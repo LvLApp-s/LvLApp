@@ -64,9 +64,9 @@
 
 .admin-tabs button.active,
 .admin-tabs .guide-tab.active {
-  background: var(--lvl-brand, #38bdf8);
-  color: #000;
-  border-color: var(--lvl-brand, #38bdf8);
+  background: var(--lvl-brand, var(--lvl-cyan));
+  color: var(--lvl-black);
+  border-color: var(--lvl-brand, var(--lvl-cyan));
   font-weight: 700;
   box-shadow: 0 2px 14px rgba(56, 189, 248, 0.35);
   transform: translateY(-1px);
@@ -88,7 +88,7 @@
 .admin-tabs button.active .admin-tab-count,
 .admin-tabs .guide-tab.active .admin-tab-count {
   background: rgba(0, 0, 0, 0.25);
-  color: #000;
+  color: var(--lvl-black);
 }
 
 /* ── Section & Headers ── */
@@ -129,7 +129,7 @@
 
 .admin-add-position-form {
   margin-bottom: 24px;
-  border-color: var(--lvl-brand, #38bdf8);
+  border-color: var(--lvl-brand, var(--lvl-cyan));
 }
 
 .admin-form-actions-tight,
@@ -200,7 +200,7 @@
 .admin-position-dept {
   font-size: 13px;
   font-weight: 600;
-  color: var(--lvl-brand, #38bdf8);
+  color: var(--lvl-brand, var(--lvl-cyan));
   margin: 0;
 }
 
@@ -226,19 +226,19 @@
 }
 
 .careers-type-internship {
-  color: var(--lvl-brand, #38bdf8);
+  color: var(--lvl-brand, var(--lvl-cyan));
   border-color: rgba(56, 189, 248, 0.3);
   background: rgba(56, 189, 248, 0.1);
 }
 
 .careers-type-parttime {
-  color: var(--lvl-warning, #f59e0b);
+  color: var(--lvl-warning, var(--lvl-amber));
   border-color: rgba(245, 158, 11, 0.3);
   background: rgba(245, 158, 11, 0.1);
 }
 
 .careers-type-fulltime {
-  color: var(--lvl-success, #10b981);
+  color: var(--lvl-success, var(--lvl-emerald));
   border-color: rgba(16, 185, 129, 0.3);
   background: rgba(16, 185, 129, 0.1);
 }
@@ -257,13 +257,13 @@
 
 .admin-status-pill.active {
   background: rgba(16, 185, 129, 0.15);
-  color: #34d399;
+  color: var(--lvl-emerald-light);
   border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
 .admin-status-pill.danger {
   background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
+  color: var(--lvl-red-light);
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
@@ -294,12 +294,12 @@
 .danger-button.admin-button-xs {
   background: rgba(239, 68, 68, 0.15);
   border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #f87171;
+  color: var(--lvl-red-light);
 }
 
 .danger-button.admin-button-xs:hover {
-  background: var(--lvl-danger, #ef4444);
-  color: #fff;
+  background: var(--lvl-danger, var(--lvl-red-plain));
+  color: var(--lvl-white);
 }
 
 .admin-button-sm {
@@ -536,4 +536,13 @@
   padding: 8px 12px;
   border-radius: var(--radius-sm);
   font: inherit;
+}
+
+/* The applicant's link, spelled out under the button that opens it, so an
+   admin can see where it goes before clicking. It is text someone typed, so
+   it gets no room to push the card wider. */
+.admin-portfolio-url {
+  margin-top: var(--space-2);
+  font-size: 12px;
+  word-break: break-all;
 }

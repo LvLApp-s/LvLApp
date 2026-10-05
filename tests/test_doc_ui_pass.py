@@ -21,7 +21,15 @@ def css(name):
 
 
 def rule(name, selector):
-    match = re.search(re.escape(selector) + r"\s*\{([^}]*)\}", css(name))
+    """The body of the rule whose selector list starts with this selector.
+
+    Anchored to the start of a line: without it, looking up
+    ".home-reel-mute-btn" also matched the ".home-reel-video-wrap >
+    .home-reel-mute-btn" rule above it, so a test about what the button sets
+    read the wrapper's positioning instead.
+    """
+    match = re.search(r"^" + re.escape(selector) + r"\s*(?:,[^{]*)?\{([^}]*)\}",
+                      css(name), re.M)
     return match.group(1) if match else None
 
 
@@ -52,20 +60,49 @@ class RailSectionSeparationTests(unittest.TestCase):
         self.assertIsNotNone(body)
         self.assertRegex(body, r"align-items:\s*center")
 
-    def test_the_mute_control_is_clear_of_the_dock(self):
-        """The dock is fixed bottom-right; this control used to be there too.
+    def test_the_rail_keeps_the_docks_area_free(self):
+        """The dock is fixed to the bottom right of the window, which is the
+        corner the rail ends in. The rail reserves that height so its own
+        bottom -- the clip's sound control among it -- never ends up under
+        the dock.
 
-        The position belongs to the wrapper now -- speaker plus level -- so
-        the whole control has to sit on the other side, not just the button.
+        The narrow-width rule used a padding shorthand, which set all four
+        sides and so threw the reserved height away: below that width the
+        rail ran to the foot of the window and the dock sat on the clip.
         """
-        body = rule("home-reels.css", ".home-reel-video-wrap > .media-volume")
+        base = css("base.css")
+        rail = re.search(r"^\.right-rail \{([^}]*)\}", base, re.M)
+        self.assertIsNotNone(rail)
+        self.assertIn("--dock-clearance", rail.group(1))
+
+        narrow = css("responsive.css")
+        for body in re.findall(r"^\s*\.right-rail \{([^}]*)\}", narrow, re.M):
+            with self.subTest(rule=body.strip()[:40]):
+                self.assertNotRegex(
+                    body, r"\bpadding:\s",
+                    "a padding shorthand drops the dock clearance")
+
+    def test_the_sound_control_sits_in_the_clips_corner(self):
+        """Bar above speaker, in the bottom right of the picture, the way a
+        phone app puts it."""
+        body = rule("components.css", ".media-volume-corner")
         self.assertIsNotNone(body)
-        self.assertRegex(body, r"inset-inline-start:\s*8px")
-        self.assertNotRegex(body, r"\bright:\s*8px")
-        button = rule("home-reels.css", ".home-reel-mute-btn")
-        self.assertIsNotNone(button)
-        self.assertNotRegex(button, r"position:\s*absolute",
-                            "two things positioning the same control")
+        self.assertRegex(body, r"position:\s*absolute")
+        self.assertRegex(body, r"inset-block-end:\s*\d+px")
+        self.assertRegex(body, r"inset-inline-end:\s*\d+px")
+        self.assertRegex(body, r"flex-direction:\s*column")
+        for name in ("_home_reel_panel.html", "_reel_card.html"):
+            with self.subTest(template=name):
+                markup = template(name)
+                control = markup.split("data-volume-control", 1)[1]
+                # The bar comes first in the markup, so it stacks above.
+                self.assertLess(control.index("data-volume-slider"),
+                                control.index("data-volume-toggle"))
+
+        wrap = rule("home-reels.css", ".home-reel-video-wrap")
+        self.assertIsNotNone(wrap)
+        self.assertRegex(wrap, r"position:\s*relative",
+                         "the corner is measured against this")
 
 
 class CommunityEmptyStateTests(unittest.TestCase):

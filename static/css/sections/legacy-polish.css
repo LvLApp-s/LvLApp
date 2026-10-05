@@ -1,3 +1,15 @@
+/* A note on !important in this file.
+
+   It used to carry 33 of them. Each one was removed, every page this file
+   touches was re-rendered at two widths in both themes, and the computed
+   style of every element was compared against the same dump taken before.
+   10 declarations changed something; those kept the override and are the
+   ones still here. The rest changed nothing and are gone.
+
+   So: before adding one, check whether the rule it is fighting can simply be
+   made more specific. If an override really is needed, the test above is how
+   to prove it. */
+
 
 
 
@@ -1148,22 +1160,22 @@ button {
 
   .left-rail,
   .left-rail:not(.menu-open) {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    bottom: 0 !important;
-    width: 280px !important;
-    height: 100vh !important;
-    flex-direction: column !important;
-    align-items: stretch !important;
-    justify-content: flex-start !important;
-    background: var(--bg-color) !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    height: 100vh;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    background: var(--bg-color);
     border-right: 1px solid var(--border-color) !important;
     border-top: 0 !important;
-    padding: 16px !important;
-    transform: translateX(-100%) !important;
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    z-index: 1000 !important;
+    padding: 16px;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000;
   }
 
   .left-rail.menu-open {
@@ -1175,13 +1187,13 @@ button {
   }
 
   .left-rail .nav-list a{
-    width: 100% !important;
-    justify-content: flex-start !important;
-    padding: 0 16px !important;
+    width: 100%;
+    justify-content: flex-start;
+    padding: 0 16px;
     gap: 20px !important;
     border-radius: var(--radius-pill) !important;
-    font-size: 20px !important;
-    font-weight: 500 !important;
+    font-size: 20px;
+    font-weight: 500;
     display: flex;
   }
 
@@ -1193,13 +1205,13 @@ button {
 
   .left-rail .mini-profile {
     display: flex !important;
-    width: 100% !important;
+    width: 100%;
   }
 
   .left-rail .compose-link {
     display: flex !important;
-    width: 100% !important;
-    justify-content: center !important;
+    width: 100%;
+    justify-content: center;
   }
 
 }
@@ -1661,7 +1673,7 @@ button {
 }
 
 .pprogress-body.is-collapsed {
-  max-height: 0 !important;
+  max-height: 0;
   opacity: 0;
   pointer-events: none;
   /* profile.css also sets visibility: hidden here. Untransitioned it snaps at

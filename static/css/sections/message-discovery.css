@@ -70,8 +70,23 @@
   color: var(--text-secondary);
 }
 
+/* The affordance at the end of a discovery row. It is an inline <svg> on the
+   message lists and a short word ("Send") on the share sheet, so this styles
+   both: colour and weight for the word, size and alignment for the glyph. */
 .select-arrow {
   color: var(--accent-color);
   font-weight: bold;
   font-size: 18px;
+  flex-shrink: 0;
+}
+
+svg.select-arrow {
+  /* The row is a flex line; without this the glyph sits on the text baseline
+     and rides a pixel or two low against the name beside it. */
+  align-self: center;
+}
+
+/* RTL reads the other way, so the chevron has to point the other way. */
+[dir="rtl"] svg.select-arrow {
+  transform: scaleX(-1);
 }

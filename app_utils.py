@@ -38,6 +38,18 @@ def birthday_date_limits(today=None):
     }
 
 
+def age_on(birthday, today=None):
+    """Whole years lived, counted on the calendar.
+
+    days // 365 drifts by a day for every leap year in between, so someone
+    who turned 13 yesterday could still measure as 12 and be refused the
+    account they are entitled to. Comparing (month, day) has no such drift.
+    """
+    today = today or date.today()
+    had_birthday = (today.month, today.day) >= (birthday.month, birthday.day)
+    return today.year - birthday.year - (0 if had_birthday else 1)
+
+
 def validate_birthday(value, required=False, today=None):
     value = (value or '').strip()
     if not value:
@@ -55,9 +67,11 @@ def validate_birthday(value, required=False, today=None):
     if birthday > today:
         return None, "Birthday cannot be in the future."
     if birthday > limits['max']:
-        # Calculate actual age to distinguish under-13 vs under-16
-        age = (today - birthday).days // 365
-        if age < COPPA_AGE:
+        # Under the minimum, but how far under decides which door they get:
+        # a child below the COPPA threshold is turned away entirely, while
+        # someone between it and MIN_AGE is told the rule and can correct a
+        # mistyped year.
+        if age_on(birthday, today) < COPPA_AGE:
             return None, "UNDER_13"
         return None, f"You must be at least {MIN_AGE} years old to use LvL."
     if birthday < limits['min']:

@@ -31,9 +31,13 @@
               <span class="lb-handle">@{{ person.username }}</span>
             </div>
           </a>
-          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px; margin-right: 12px;">
+          {# Same two badges as the rail's rows, stacked rather than inline
+             because this page has the width for it. The XP pill appears only
+             when there is XP: a level an admin set carries none, and "Lvl 39"
+             over "0 XP" read as a contradiction. #}
+          <div class="lb-stats lb-stats-stacked">
             <span class="lb-level-badge" style="--badge-color: {{ person.badge_color or theme_colors.muted }};">Lvl {{ person.level or 1 }}</span>
-            <span style="font-size: 0.75rem; color: var(--lvl-brand); font-weight: 700; letter-spacing: 0.5px; background: rgba(56, 189, 248, 0.1); padding: 2px 8px; border-radius: 12px; white-space: nowrap;">{{ '{:,}'.format(person.total_xp or 0) }} XP</span>
+            {% if person.total_xp %}<span class="lb-xp">{{ '{:,}'.format(person.total_xp) }} XP</span>{% endif %}
           </div>
           {% if session.get('user_id') and session.get('user_id') != person.id %}
             <form action="{{ url_for('toggle_follow') }}" method="post" class="ajax-action-form lb-follow-form" data-action="follow">

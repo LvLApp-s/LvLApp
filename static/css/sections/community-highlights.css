@@ -21,15 +21,22 @@
 /* Two and a bit rows visible, the rest a scroll away. Tied to the window so
    a tall screen shows more of both this and the clip under it, rather than
    this one keeping a fixed 268px and the clip taking whatever is left. */
+/* Every row is the same fixed height, and the list is sized in whole rows.
+   It used to be clamp(204px, 23vh, 268px) -- a height with no relationship to
+   the 79px a row occupies -- so whatever the window did, the last visible row
+   was sliced through the middle of its own text and the panel's rounded edge
+   cut across it. The counts below are row arithmetic, so a row either shows
+   completely or not at all. */
 .lb-list {
+  --lb-row-h: 68px;
+  --lb-row-gap: var(--space-2);
+  /* n rows and the n-1 gaps between them. */
+  --lb-rows: 3;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  /* The floor is three rows plus their gaps: the podium is the point of the
-     panel, so the medals never sit below the fold however short the window
-     is. Above that it follows the window, so a tall screen shows more of
-     this and of the clip under it. */
-  max-height: clamp(204px, 23vh, 268px);
+  gap: var(--lb-row-gap);
+  max-height: calc(var(--lb-rows) * var(--lb-row-h)
+                   + (var(--lb-rows) - 1) * var(--lb-row-gap));
   overflow-y: auto;
   overflow-x: hidden;
   scroll-behavior: smooth;
@@ -37,14 +44,31 @@
 }
 
 /* A short window cannot hold the whole podium and a clip worth watching. The
-   list gives way first, because it scrolls and the clip does not. */
+   list gives way first, because it scrolls and the clip does not. A tall one
+   spends the extra height on a fourth row. */
 @media (max-height: 820px) {
-  .lb-list {
-    max-height: clamp(138px, 18vh, 190px);
-  }
+  .lb-list { --lb-rows: 2; }
 }
 
-.lb-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin-bottom: 6px; border-radius: 12px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); transition: all 0.2s ease; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+@media (min-height: 1000px) {
+  .lb-list { --lb-rows: 4; }
+}
+
+/* height, not min-height: a name that wraps or a missing XP pill must not
+   change the pitch the list above is measured in. */
+.lb-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: var(--lb-row-h, 68px);
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--lvl-white-03);
+  border: 1px solid var(--lvl-white-05);
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
 
 .lb-row:hover { background: rgba(255, 255, 255, 0.08); transform: translateY(-2px); border-color: rgba(255, 255, 255, 0.1); }
 
@@ -99,9 +123,33 @@
   grid-column: 1;
 }
 
-.lb-level-badge {
+/* The level badge and the XP pill travel together in the identity grid's
+   second column, beside the handle rather than on a line of their own. */
+.lb-stats {
   grid-column: 2;
   justify-self: start;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* The leaderboard page has room to stack the pair at the end of the row. */
+.lb-stats-stacked {
+  flex-direction: column;
+  align-items: flex-end;
+  margin-inline-end: var(--space-5);
+}
+
+.lb-xp {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--lvl-brand);
+  background: var(--lvl-brand-soft);
+  padding: 2px 8px;
+  border-radius: var(--radius-2xl);
+  white-space: nowrap;
 }
 
 .lb-name {
@@ -682,4 +730,18 @@
   .lb-page-row .lb-person {
     flex: 1 1 60%;
   }
+}
+
+/* The avatar is a round window on a square image. Both halves lived in
+   style= attributes on the markup. */
+.leaderboard-avatar {
+  overflow: hidden;
+  border-radius: var(--radius-round);
+  border: none;
+}
+
+.leaderboard-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
