@@ -790,17 +790,24 @@
 }
 
 /* --- Media volume --------------------------------------------------------
-   A speaker and a level bar, side by side, on every surface that plays a
-   clip. Tap the speaker to mute or unmute; drag the bar to set the level.
+   A speaker and a level bar on every surface that plays a clip. Tap the
+   speaker to mute or unmute; drag the bar to set the level.
 
-   The bar used to be clipped to zero width and opened on hover, focus or
-   drag. That made it invisible: nothing on the control suggested a level
-   existed, so someone who wanted to turn a clip down saw a speaker, pressed
-   it, and got silence instead of the quieter clip they wanted. A control you
-   have to discover by hovering is a control most people never find -- and on
-   a touch screen there is no hover to discover it with, which is why there
-   was already a media query forcing it open there. It is simply out now,
-   everywhere, which is what that query was working around.
+   On the corner control -- the one standing on a clip -- the bar is folded
+   away until the pointer reaches the speaker, so a clip is a picture with a
+   speaker on it rather than a picture with a widget on it. Bring the pointer
+   to the speaker and the level rises above it; take it away and the level
+   folds back. The rules for that are on .media-volume-corner below, with the
+   two gestures that are not a hover (keyboard focus, and a drag that has
+   left the pill) handled alongside it.
+
+   Where the control sits in a toolbar rather than on a picture, it is a row
+   with the bar simply out: there is no picture for it to cover.
+
+   A touch screen has no pointer to bring anywhere, so the corner control is
+   unfolded there too -- see the (hover: none) query at the end of this
+   section. Hiding a level behind a gesture a phone cannot make would leave
+   it with a mute button and no way to turn a clip down.
    ------------------------------------------------------------------------ */
 
 .media-volume {
@@ -843,14 +850,74 @@
   inset-block-start: auto;
   z-index: 12;
   flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-2) var(--space-2);
+  /* Closed: a speaker and nothing else, so the control takes as little of
+     the picture as it can while nobody is using it. */
+  gap: 0;
+  padding: var(--space-2);
   border-radius: var(--radius-pill);
   /* It sits on moving pictures, so it carries its own backdrop. */
   background: var(--lvl-black-52);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   pointer-events: auto;
+  transition: gap var(--duration-base) var(--ease-standard),
+              padding var(--duration-base) var(--ease-standard);
+}
+
+/* The level is the part that comes and goes. Clipped rather than removed:
+   display:none cannot be transitioned, so the bar would blink in. */
+.media-volume-corner .media-volume-track {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height var(--duration-base) var(--ease-standard),
+              opacity var(--duration-base) var(--ease-standard);
+}
+
+/* Bring the pointer to the speaker and the level rises above it.
+
+   The control is anchored by its bottom edge and the speaker is its last
+   child, so the bar grows upward into the picture while the speaker stays
+   where it was. If the speaker moved, opening the control would slide it
+   out from under the pointer that opened it, and it would shut again.
+
+   :has(:focus-visible) is the same gesture for a keyboard. Not
+   :focus-within: clicking the handle focuses it too, so the bar stayed open
+   after a mouse drag until something else was clicked. :focus-visible is
+   the browser's own answer to "did this focus come from the keyboard",
+   which is exactly the question being asked.
+
+   is-adjusting is set while the handle is held: a drag along a 72px bar
+   leaves the pill easily, and losing the hover halfway would collapse the
+   track under the pointer making the drag. */
+.media-volume-corner:hover,
+.media-volume-corner:has(:focus-visible),
+.media-volume-corner.is-adjusting {
+  gap: var(--space-2);
+  padding-block-start: var(--space-3);
+}
+
+.media-volume-corner:hover .media-volume-track,
+.media-volume-corner:has(:focus-visible) .media-volume-track,
+.media-volume-corner.is-adjusting .media-volume-track {
+  max-height: 80px;
+  opacity: 1;
+}
+
+/* A pointer crossing the corner on its way somewhere else should not throw
+   the bar open. Not while dragging: that has to answer at once. */
+@media (hover: hover) {
+  .media-volume-corner:hover:not(.is-adjusting) .media-volume-track {
+    transition-delay: 90ms;
+  }
+}
+
+/* Someone who asked for less motion gets the bar without the slide. */
+@media (prefers-reduced-motion: reduce) {
+  .media-volume-corner,
+  .media-volume-corner .media-volume-track {
+    transition: none;
+  }
 }
 
 .media-volume-corner .media-volume-slider {
@@ -961,6 +1028,19 @@
   .media-volume-corner .media-volume-slider {
     width: 26px;
     height: 84px;
+  }
+
+  /* A touch screen has no hover to open the control with, so the level is
+     simply out there: hiding it behind a gesture that does not exist would
+     leave a phone with a mute button and no way to set a level. */
+  .media-volume-corner {
+    gap: var(--space-2);
+    padding-block-start: var(--space-3);
+  }
+
+  .media-volume-corner .media-volume-track {
+    max-height: 96px;
+    opacity: 1;
   }
 
   .media-volume-slider::-webkit-slider-thumb {

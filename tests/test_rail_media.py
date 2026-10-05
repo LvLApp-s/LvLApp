@@ -39,7 +39,7 @@ def template(name):
 
 
 def volume_handler():
-    start = SCRIPT.index("function initVolumeControls()")
+    start = SCRIPT.index("function initVolumeControls(")
     return SCRIPT[start:SCRIPT.index("initVolumeControls();", start)]
 
 
@@ -142,54 +142,146 @@ class VolumeControlMarkupTests(unittest.TestCase):
 
 
 class VolumeControlStyleTests(unittest.TestCase):
-    """The level bar is out, on every surface, without being asked for.
+    """The corner control is a speaker until the pointer reaches it.
 
-    It used to be clipped to max-width: 0 and opened on hover, focus or
-    drag. A control you have to discover by hovering is one most people
-    never find: the clip showed a speaker, pressing it gave silence, and the
-    bar for turning the clip *down* was never seen. These assert the bar is
-    simply there.
+    It sits on top of somebody's clip, so at rest it is the smallest thing
+    that still says "sound": a speaker, and nothing else. Bring the pointer
+    to the speaker and the level rises above it. A keyboard reaches it with
+    focus, a phone has it unfolded already, and a drag holds it open after
+    the pointer has left the pill -- those are the three cases below that a
+    plain :hover does not cover.
+
+    Where the control is a row in a toolbar instead of a thing on a picture,
+    the bar is simply out: .media-volume-track itself hides nothing, and only
+    the rule scoped to .media-volume-corner folds it away.
     """
 
-    def test_the_level_is_not_hidden(self):
+    def test_the_toolbar_control_hides_nothing(self):
+        """Only the corner folds. A control that is not on a picture has
+        nothing to keep out of the way of."""
         body = rule("components.css", ".media-volume-track")
         self.assertIsNotNone(body)
-        self.assertNotRegex(body, r"max-width:\s*0")
+        self.assertNotRegex(body, r"max-height:\s*0")
         self.assertNotRegex(body, r"display:\s*none")
         self.assertNotRegex(body, r"opacity:\s*0")
 
-    def test_the_bar_has_a_width_to_drag_along(self):
-        body = rule("components.css", ".media-volume-slider")
+    def test_the_corner_control_is_folded_away_at_rest(self):
+        body = rule("components.css", ".media-volume-corner .media-volume-track")
         self.assertIsNotNone(body)
-        width = re.search(r"width:\s*(\d+)px", body)
-        self.assertIsNotNone(width)
-        self.assertGreaterEqual(int(width.group(1)), 60,
+        self.assertRegex(body, r"max-height:\s*0")
+        self.assertRegex(body, r"opacity:\s*0")
+        self.assertRegex(body, r"overflow:\s*hidden")
+        # Clipped, not removed: display:none cannot be transitioned, so the
+        # bar would blink in instead of rising.
+        self.assertNotRegex(body, r"display:\s*none")
+
+    def test_the_pointer_on_the_speaker_opens_it(self):
+        body = rule("components.css",
+                    ".media-volume-corner:hover .media-volume-track")
+        self.assertIsNotNone(body)
+        self.assertRegex(body, r"max-height:\s*[1-9]")
+        self.assertRegex(body, r"opacity:\s*1")
+
+    def test_a_keyboard_and_a_drag_open_it_too(self):
+        """Three gestures, one rule. A keyboard never hovers, and a drag
+        along a 72px bar leaves a 30px pill long before it is finished."""
+        sheet = css("components.css")
+        for gate in (".media-volume-corner:has(:focus-visible) .media-volume-track",
+                     ".media-volume-corner.is-adjusting .media-volume-track"):
+            with self.subTest(selector=gate):
+                self.assertIn(gate, sheet)
+
+    def test_focus_within_is_not_what_opens_it(self):
+        """Clicking the handle focuses it, so :focus-within left the bar
+        stuck open after a mouse drag until something else was clicked.
+        :focus-visible is the browser's own answer to "was this a
+        keyboard"."""
+        self.assertNotIn(".media-volume-corner:focus-within",
+                         css("components.css"))
+
+    def test_opening_it_does_not_move_the_speaker(self):
+        """The control is anchored by its bottom edge, so the bar grows
+        upward into the picture. If the speaker moved instead, opening the
+        control would slide it out from under the pointer that opened it and
+        it would shut again."""
+        body = rule("components.css", ".media-volume-corner")
+        self.assertIsNotNone(body)
+        self.assertRegex(body, r"inset-block-end:\s*12px")
+        self.assertRegex(body, r"inset-block-start:\s*auto")
+
+    def test_the_fold_is_animated(self):
+        """A bar that snaps in and out under a passing pointer reads as a
+        glitch on the clip."""
+        for selector in (".media-volume-corner",
+                         ".media-volume-corner .media-volume-track"):
+            with self.subTest(selector=selector):
+                body = rule("components.css", selector)
+                self.assertIsNotNone(body)
+                self.assertRegex(body, r"transition:")
+
+    def test_a_passing_pointer_is_given_a_moment(self):
+        """A pointer crossing the corner on its way somewhere else should
+        not throw the bar open -- but a drag has to answer at once, so the
+        delay is excluded while the handle is held."""
+        sheet = css("components.css")
+        self.assertIn(".media-volume-corner:hover:not(.is-adjusting) "
+                      ".media-volume-track", sheet)
+
+    def test_less_motion_means_no_slide(self):
+        # There is more than one reduced-motion block in this section, so
+        # take the one that speaks about this control rather than the first.
+        blocks = [body for body in
+                  re.findall(r"@media \(prefers-reduced-motion: reduce\) \{(.*?)\n\}\n",
+                             css("components.css"), re.S)
+                  if ".media-volume-corner" in body]
+        self.assertEqual(len(blocks), 1)
+        self.assertRegex(blocks[0], r"transition:\s*none")
+
+    def test_the_bar_has_a_length_to_drag_along(self):
+        body = rule("components.css", ".media-volume-corner .media-volume-slider")
+        self.assertIsNotNone(body)
+        height = re.search(r"height:\s*(\d+)px", body)
+        self.assertIsNotNone(height)
+        self.assertGreaterEqual(int(height.group(1)), 60,
                                 "too short to aim at")
 
+    def test_the_bar_stands_up_without_the_native_widget(self):
+        """appearance: slider-vertical turns the browser's own widget back
+        on and brings the system colours with it -- the bar came back blue
+        instead of the product's white. writing-mode stands it up and keeps
+        appearance: none, so the track and handle drawn below are the ones
+        that show."""
+        body = rule("components.css", ".media-volume-corner .media-volume-slider")
+        self.assertIsNotNone(body)
+        self.assertRegex(body, r"writing-mode:\s*vertical-lr")
+        self.assertRegex(body, r"direction:\s*rtl")
+        # Without stripping the comments this reads the explanation of why
+        # the old property is not used as a use of it.
+        declarations = re.sub(r"/\*.*?\*/", "", body, flags=re.S)
+        self.assertNotIn("slider-vertical", declarations)
+
     def test_the_speaker_and_the_bar_are_spaced_apart(self):
-        """They are one pill; without the gap the thumb sits on the icon."""
+        """They are one pill; without the gap the thumb sits on the icon.
+        Closed, the gap goes -- there is nothing to space the speaker from."""
         body = rule("components.css", ".media-volume")
         self.assertIsNotNone(body)
         self.assertRegex(body, r"gap:\s*var\(--space")
+        opened = rule("components.css", ".media-volume-corner:hover")
+        self.assertIsNotNone(opened)
+        self.assertRegex(opened, r"gap:\s*var\(--space")
 
-    def test_nothing_waits_for_a_hover_to_show_the_level(self):
-        """The whole point: no rule opens it, because it never closed."""
-        sheet = css("components.css")
-        for gate in (".media-volume:hover .media-volume-track",
-                     ".media-volume:focus-within .media-volume-track",
-                     ".media-volume.is-adjusting .media-volume-track"):
-            with self.subTest(selector=gate):
-                self.assertNotIn(gate, sheet)
-
-    def test_a_touch_screen_gets_a_bigger_handle(self):
-        """A finger is blunter than a pointer. This used to be where the bar
-        was forced open, because a touch screen has no hover to open it with
-        -- the workaround that showed the default was wrong."""
+    def test_a_touch_screen_gets_the_bar_without_asking(self):
+        """A finger is blunter than a pointer, and a phone has no hover to
+        open the control with: hiding the level behind a gesture that does
+        not exist would leave it with a mute button and nothing else."""
         block = re.search(r"@media \(hover: none\) \{(.*?)\n\}\n",
                           css("components.css"), re.S)
         self.assertIsNotNone(block)
-        self.assertIn(".media-volume-slider", block.group(1))
-        self.assertNotIn("max-width", block.group(1))
+        body = block.group(1)
+        self.assertIn(".media-volume-slider", body)
+        self.assertIn(".media-volume-corner .media-volume-track", body)
+        self.assertRegex(body, r"max-height:\s*[1-9]")
+        self.assertRegex(body, r"opacity:\s*1")
 
     def test_the_floating_control_needs_no_important(self):
         """It used to be .reel-mute-float, which carried six !important
@@ -304,9 +396,9 @@ class DraggingAloneIsEnoughTests(unittest.TestCase):
         self.assertIn("window.addEventListener('pointercancel', release)", handler)
 
     def test_the_handle_grows_while_it_is_held(self):
-        """is-adjusting used to hold the bar open through a drag that left
-        the pill. The bar does not close any more, so the class answers the
-        drag instead: the handle grows under the finger holding it."""
+        """is-adjusting holds the bar open through a drag that has left the
+        pill, and it does one more thing: the handle grows under the finger
+        holding it, so the thing being dragged is visible past the cursor."""
         sheet = css("components.css")
         self.assertIn(".media-volume.is-adjusting .media-volume-slider::-webkit-slider-thumb",
                       sheet)
@@ -329,6 +421,42 @@ class DraggingAloneIsEnoughTests(unittest.TestCase):
 
     def test_almost_nothing_is_not_remembered_as_the_level(self):
         self.assertIn("video.volume > 0.05", volume_handler())
+
+
+class EveryClipGetsOneTests(unittest.TestCase):
+    """Including the clips that were not on the page when it loaded.
+
+    The feed appends slides as the reader scrolls, and the rail swaps its
+    panel for a fresh one. Those arrive after initVolumeControls() has run,
+    so a clip loaded later had a speaker that was wired to nothing: pressing
+    it did not mute, and there was no bar on it at all.
+    """
+
+    def test_a_clip_that_arrives_later_is_wired_too(self):
+        self.assertIn("new MutationObserver", SCRIPT)
+        observer = SCRIPT[SCRIPT.index("const watchForNewControls"):]
+        observer = observer[:observer.index("watchForNewControls.observe")]
+        self.assertIn("[data-volume-control]", observer)
+        self.assertIn("initVolumeControls(", observer)
+
+    def test_it_watches_the_whole_page(self):
+        """A new slide can land anywhere -- the feed, the rail, a dialog."""
+        start = SCRIPT.index("watchForNewControls.observe")
+        self.assertIn("subtree: true", SCRIPT[start:start + 200])
+        self.assertIn("childList: true", SCRIPT[start:start + 200])
+
+    def test_a_control_is_never_wired_twice(self):
+        """The observer re-runs the pass over a subtree that may already
+        hold wired controls. Listening twice would run every repaint as
+        many times as the control had been seen."""
+        handler = volume_handler()
+        self.assertIn("volumeBound", handler)
+        self.assertIn("return", handler[:handler.index("const slider")])
+
+    def test_the_pass_can_be_given_a_subtree(self):
+        """Otherwise each new slide re-scans the entire document."""
+        self.assertIn("function initVolumeControls(root)", SCRIPT)
+        self.assertIn("(root || document).querySelectorAll", SCRIPT)
 
 
 if __name__ == '__main__':

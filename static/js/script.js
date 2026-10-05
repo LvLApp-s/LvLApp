@@ -2333,8 +2333,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function initVolumeControls() {
-        document.querySelectorAll('[data-volume-control]').forEach((control) => {
+    function initVolumeControls(root) {
+        (root || document).querySelectorAll('[data-volume-control]').forEach((control) => {
+            // Wiring a control twice would stack a second set of listeners on
+            // it, so every paint would run as many times as the control had
+            // been seen.
+            if (control.dataset.volumeBound === '1') return;
+            control.dataset.volumeBound = '1';
             const slider = control.querySelector('[data-volume-slider]');
             const frame = control.closest('.home-reel-video-wrap, .reel-video-frame');
             const video = frame ? frame.querySelector('video') : null;
@@ -2403,6 +2408,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     initVolumeControls();
+
+    /* A clip that arrives after the page did gets its sound control too.
+
+       Nothing appends clip cards today -- paging through them is a page
+       load -- but "every video" has to keep meaning every video when
+       something eventually does. The observer watches for controls that
+       have not been wired and wires them; the flag above makes running it
+       again free. */
+    if (document.querySelector('[data-volume-control]') !== null
+        || document.querySelector('video') !== null) {
+        const watchForNewControls = new MutationObserver((records) => {
+            for (const record of records) {
+                for (const node of record.addedNodes) {
+                    if (node.nodeType !== 1) continue;
+                    if (node.matches('[data-volume-control]')
+                        || node.querySelector('[data-volume-control]')) {
+                        initVolumeControls(node.parentNode || document);
+                        return;
+                    }
+                }
+            }
+        });
+        watchForNewControls.observe(document.body, { childList: true, subtree: true });
+    }
 
     /* A destructive form asks before it submits, in the reader's language.
 
