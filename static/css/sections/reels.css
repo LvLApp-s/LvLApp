@@ -1729,25 +1729,15 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 
 }
 
-/* The volume control when it sits in a row of actions rather than floating
-   over the video. These five declarations used to be a style= attribute on
-   the element: the same geometry as the floating control, written out again
-   where no stylesheet could reach it. */
-.media-volume-inline {
-  display: inline-flex;
-  vertical-align: middle;
-  margin-inline-start: var(--space-3);
-  pointer-events: auto;
-}
-
+/* The speaker in the clip's corner sound control. White, because it sits on
+   the picture rather than on a page surface. */
 .reel-action-mute {
   background: transparent;
   border: none;
   padding: var(--space-1);
-  color: var(--text-primary);
+  color: var(--lvl-white);
   cursor: pointer;
-  /* 22x25 was under the 24px minimum on its narrow axis, so the speaker was
-     the one control in the row that was awkward to hit on a phone. */
+  /* 22x25 was under the 24px a phone needs on its narrow axis. */
   min-width: var(--touch-target-sm);
   min-height: var(--touch-target-sm);
   display: inline-flex;

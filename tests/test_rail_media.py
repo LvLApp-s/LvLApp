@@ -199,7 +199,7 @@ class VolumeControlStyleTests(unittest.TestCase):
         wins on specificity rather than by shouting."""
         self.assertIsNone(rule("reels.css", ".reel-mute-float"),
                           "dead rule is back")
-        body = rule("home-reels.css", ".home-reel-video-wrap > .media-volume")
+        body = rule("components.css", ".media-volume-corner")
         self.assertIsNotNone(body)
         self.assertNotIn("!important", body)
 

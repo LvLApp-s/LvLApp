@@ -84,6 +84,8 @@
    minimum now, not a ceiling. */
 .home-reel-video-wrap {
   grid-area: content;
+  /* The corner sound control is placed against this. */
+  position: relative;
   width: 100%;
   height: 100%;
   border-radius: var(--radius-md);
@@ -121,19 +123,8 @@
   pointer-events: none;
 }
 
-/* The volume control floats in the clip's top right corner. Top, not bottom:
-   the message dock is fixed to the bottom right of the window and used to
-   cover it there. The wrapper carries the position -- speaker and level
-   together -- so the button below sets only its own size and colour. */
-.home-reel-video-wrap > .media-volume {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  inset-inline-start: auto;
-  z-index: 10;
-}
-
-/* Same corner for the bare button, on a surface that has no level slider. */
+/* A bare speaker, on a surface with no level beside it, keeps the top right
+   corner: the bottom right belongs to the sound control that has one. */
 .home-reel-video-wrap > .home-reel-mute-btn {
   position: absolute;
   top: 12px;

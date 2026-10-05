@@ -828,6 +828,64 @@
   flex: 0 0 auto;
 }
 
+/* The corner control: the level standing on top of the speaker, in the
+   clip's bottom right corner, the way a phone app puts it.
+
+   Laid out along the block axis, so the same markup reads as a column here
+   and as a row where the control sits in a toolbar. It is absolutely placed
+   on the frame rather than in the row of names and badges, where a reader
+   took it for another badge instead of the thing you grab to turn a clip
+   down. */
+.media-volume-corner {
+  position: absolute;
+  inset-inline-end: 12px;
+  inset-block-end: 12px;
+  inset-block-start: auto;
+  z-index: 12;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-2) var(--space-2);
+  border-radius: var(--radius-pill);
+  /* It sits on moving pictures, so it carries its own backdrop. */
+  background: var(--lvl-black-52);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  pointer-events: auto;
+}
+
+.media-volume-corner .media-volume-slider {
+  /* writing-mode is what stands a range input up these days, and it keeps
+     appearance: none -- so the track and handle below are the ones we drew.
+     The old way, appearance: slider-vertical, turns the native widget back
+     on and takes its own colours with it: the bar came back in the system
+     accent with a blue handle, which is the browser's idea of a slider and
+     not this product's. */
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 18px;
+  height: 72px;
+}
+
+/* Vertical, so the filled part runs up from the bottom rather than in from
+   the left. */
+.media-volume-corner .media-volume-slider::-webkit-slider-runnable-track {
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(to top,
+    var(--lvl-white) 0 var(--volume-fill, 100%),
+    var(--lvl-white-22) var(--volume-fill, 100%) 100%);
+}
+
+.media-volume-corner .media-volume-slider::-moz-range-track {
+  width: 4px;
+  height: 100%;
+}
+
+.media-volume-corner .media-volume-slider::-webkit-slider-thumb {
+  margin-top: 0;
+  margin-left: -4px;
+}
+
 /* is-adjusting is set while the thumb is held, so the handle can grow under
    the finger that is holding it. It no longer has to keep the bar open --
    the bar does not close -- but a drag still deserves to be acknowledged. */
@@ -898,6 +956,11 @@
 @media (hover: none) {
   .media-volume-slider {
     height: 24px;
+  }
+
+  .media-volume-corner .media-volume-slider {
+    width: 26px;
+    height: 84px;
   }
 
   .media-volume-slider::-webkit-slider-thumb {

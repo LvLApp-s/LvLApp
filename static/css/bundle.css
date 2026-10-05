@@ -3285,6 +3285,64 @@ label.has-success input {
   flex: 0 0 auto;
 }
 
+/* The corner control: the level standing on top of the speaker, in the
+   clip's bottom right corner, the way a phone app puts it.
+
+   Laid out along the block axis, so the same markup reads as a column here
+   and as a row where the control sits in a toolbar. It is absolutely placed
+   on the frame rather than in the row of names and badges, where a reader
+   took it for another badge instead of the thing you grab to turn a clip
+   down. */
+.media-volume-corner {
+  position: absolute;
+  inset-inline-end: 12px;
+  inset-block-end: 12px;
+  inset-block-start: auto;
+  z-index: 12;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-2) var(--space-2);
+  border-radius: var(--radius-pill);
+  /* It sits on moving pictures, so it carries its own backdrop. */
+  background: var(--lvl-black-52);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  pointer-events: auto;
+}
+
+.media-volume-corner .media-volume-slider {
+  /* writing-mode is what stands a range input up these days, and it keeps
+     appearance: none -- so the track and handle below are the ones we drew.
+     The old way, appearance: slider-vertical, turns the native widget back
+     on and takes its own colours with it: the bar came back in the system
+     accent with a blue handle, which is the browser's idea of a slider and
+     not this product's. */
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 18px;
+  height: 72px;
+}
+
+/* Vertical, so the filled part runs up from the bottom rather than in from
+   the left. */
+.media-volume-corner .media-volume-slider::-webkit-slider-runnable-track {
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(to top,
+    var(--lvl-white) 0 var(--volume-fill, 100%),
+    var(--lvl-white-22) var(--volume-fill, 100%) 100%);
+}
+
+.media-volume-corner .media-volume-slider::-moz-range-track {
+  width: 4px;
+  height: 100%;
+}
+
+.media-volume-corner .media-volume-slider::-webkit-slider-thumb {
+  margin-top: 0;
+  margin-left: -4px;
+}
+
 /* is-adjusting is set while the thumb is held, so the handle can grow under
    the finger that is holding it. It no longer has to keep the bar open --
    the bar does not close -- but a drag still deserves to be acknowledged. */
@@ -3355,6 +3413,11 @@ label.has-success input {
 @media (hover: none) {
   .media-volume-slider {
     height: 24px;
+  }
+
+  .media-volume-corner .media-volume-slider {
+    width: 26px;
+    height: 84px;
   }
 
   .media-volume-slider::-webkit-slider-thumb {
@@ -15380,25 +15443,15 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
 
 }
 
-/* The volume control when it sits in a row of actions rather than floating
-   over the video. These five declarations used to be a style= attribute on
-   the element: the same geometry as the floating control, written out again
-   where no stylesheet could reach it. */
-.media-volume-inline {
-  display: inline-flex;
-  vertical-align: middle;
-  margin-inline-start: var(--space-3);
-  pointer-events: auto;
-}
-
+/* The speaker in the clip's corner sound control. White, because it sits on
+   the picture rather than on a page surface. */
 .reel-action-mute {
   background: transparent;
   border: none;
   padding: var(--space-1);
-  color: var(--text-primary);
+  color: var(--lvl-white);
   cursor: pointer;
-  /* 22x25 was under the 24px minimum on its narrow axis, so the speaker was
-     the one control in the row that was awkward to hit on a phone. */
+  /* 22x25 was under the 24px a phone needs on its narrow axis. */
   min-width: var(--touch-target-sm);
   min-height: var(--touch-target-sm);
   display: inline-flex;
@@ -16729,6 +16782,8 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
    minimum now, not a ceiling. */
 .home-reel-video-wrap {
   grid-area: content;
+  /* The corner sound control is placed against this. */
+  position: relative;
   width: 100%;
   height: 100%;
   border-radius: var(--radius-md);
@@ -16766,19 +16821,8 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
   pointer-events: none;
 }
 
-/* The volume control floats in the clip's top right corner. Top, not bottom:
-   the message dock is fixed to the bottom right of the window and used to
-   cover it there. The wrapper carries the position -- speaker and level
-   together -- so the button below sets only its own size and colour. */
-.home-reel-video-wrap > .media-volume {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  inset-inline-start: auto;
-  z-index: 10;
-}
-
-/* Same corner for the bare button, on a surface that has no level slider. */
+/* A bare speaker, on a surface with no level beside it, keeps the top right
+   corner: the bottom right belongs to the sound control that has one. */
 .home-reel-video-wrap > .home-reel-mute-btn {
   position: absolute;
   top: 12px;
@@ -19200,11 +19244,16 @@ body.reel-comments-open .reel-action-button.reel-action-comment svg {
     font-weight: 700;
   }
 
-  /* Timeline expands to fill space */
+  /* Right rail narrower.
 
-  /* Right rail narrower */
+     The shorthand here used to set all four sides, which threw away the
+     bottom padding that keeps the message dock's area free: below this
+     width the rail ran to the foot of the window and the dock -- fixed to
+     that corner -- sat on top of the clip's own controls. Only the inline
+     padding is this rule's business. */
   .right-rail {
-    padding: 0 14px;
+    padding-inline: 14px;
+    padding-block-start: 0;
   }
 
   /* Right rail content adjustments */
